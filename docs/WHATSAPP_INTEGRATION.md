@@ -17,28 +17,42 @@ Los `phone_number_id` de Meta se agregarán como secretos de entorno después de
 
 | Cuenta | WABA ID | Número | Estado cuenta | Estado número | Calidad | Negocio |
 |---|---|---|---|---|---|---|
-| Grupo Poliplast | 1620643669067135 | +54 9 11 5262-7555 | Restricted por verificación pendiente | Conectado | Alta | No verificado |
-| Penosil Distribuidor Oficial | 2497921480672168 | +54 9 11 7155-8957 | Aprobada | Sin conexión | Sin dato | No verificado |
+| Grupo Poliplast | 1620643669067135 | +54 9 11 5262-7555 | Restricted mientras Meta revisa el negocio | Conectado | Alta | En revisión |
+| Penosil Distribuidor Oficial | 2497921480672168 | +54 9 11 7155-8957 | Aprobada | Sin conexión | Sin dato | En revisión del portfolio |
 
 La restricción observada en Grupo Poliplast indica explícitamente que debe verificarse el negocio antes de enviar mensajes; no se observó una infracción de calidad. Pendientes: ambos `Phone Number ID`, App ID, permisos de Felipe y disponibilidad efectiva de coexistencia.
 
 ## Relevamiento ampliado de Claude — 28/08/2026
 
 - Portfolio: `Agente Portfolio`, ID `1411373260640662`.
-- Nombre legal cargado actualmente: `IA Agente` — tratar como incorrecto/placeholder hasta confirmación documental.
+- Nombre legal corregido y guardado: `Poliuretano y Plástico Proyectado S.R.L.`.
+- CUIT guardado en Identificación fiscal: `30-71576484-5`.
+- Domicilio guardado: Teodoro Bronzini 1148, Mar del Plata, Buenos Aires, 7600, Argentina.
+- Sitio web conservado: `https://poliplaststore.com/`.
 - Persona con acceso total: Juan Lucarelli.
-- Felipe: no asignado al Portfolio, WABAs ni app.
+- Felipe: invitado con acceso total al Portfolio mediante `felipecnokaert@gmail.com`; pendiente confirmar que la invitación haya sido aceptada y figure como usuario activo.
 - App existente: `Agente Poliplast`, App ID `857121580457426`.
 - Activos conectados a la app: ninguno observado.
 - Phone Number ID Penosil: `1336065402914038`.
 - Phone Number ID Grupo Poliplast: pendiente.
 - WABA Grupo Poliplast: restringida solo por verificación de negocio pendiente; número conectado y calidad alta.
 - WABA Penosil: aprobada; número sin conexión.
-- Centro de seguridad: negocio sin verificar y un usuario sin passkey/2FA completo.
+- Centro de seguridad: Meta no exige passkeys actualmente; su adopción sigue recomendada para Felipe y Juan.
 
-### Bloqueo de gobernanza
+## Verificación empresarial enviada — 28/08/2026
 
-No iniciar la verificación mientras el nombre legal sea `IA Agente` y Felipe no tenga acceso administrativo. Primero debe confirmarse qué razón social será titular del Portfolio, corregirse la información legal con respaldo documental y asignarse a Felipe el acceso correspondiente. No mover ni eliminar WABAs durante esta corrección.
+Meta confirmó la recepción de la información y muestra el estado **En revisión**, con una estimación aproximada de dos días laborables. El caso de uso seleccionado es `La app requiere acceso a los permisos en Meta for Developers`.
+
+Mientras continúe la revisión:
+
+- No reiniciar, duplicar ni modificar la solicitud.
+- No mover ni eliminar WABAs, números, personas o la app.
+- No iniciar una migración tradicional de los números.
+- Esperar el resultado antes de conectar activos, pedir permisos avanzados o generar credenciales definitivas.
+
+### Estado de gobernanza
+
+La identidad legal ya fue corregida y la verificación fue enviada. Sigue pendiente confirmar la aceptación efectiva de Felipe como usuario activo. Juan Lucarelli conserva su acceso total. No mover ni eliminar WABAs durante la revisión.
 
 ## Flujo objetivo
 

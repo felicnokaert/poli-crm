@@ -39,4 +39,9 @@ Este mapeo fue confirmado explícitamente por Felipe. Los perfiles conservan eso
 
 ## Estado
 
-Fase 0 — alcance y arquitectura definidos.
+- Arquitectura y flujo: completos.
+- Núcleo local: clientes, conversaciones, tareas y pipeline completos.
+- Modelo Claude integrado: 14 criterios, 11 campos de clasificación, 24 respuestas rápidas y 5 role-plays.
+- Próximo hito: prueba con conversaciones comerciales reales.
+
+La evaluación del MVP es guiada: Felipe/Codex puntúan y registran la devolución. La generación automática con IA se incorporará después de validar el flujo y definir la arquitectura online.

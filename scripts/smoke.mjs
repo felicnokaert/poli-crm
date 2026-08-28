@@ -18,6 +18,10 @@ await page.getByLabel('Próxima acción').fill('Realizar seguimiento de prueba')
 await page.getByRole('button', { name: 'Guardar y crear seguimiento' }).click();
 await page.getByRole('button', { name: 'Pipeline' }).click();
 await page.getByText('Cliente de prueba').waitFor();
-await page.screenshot({ path: 'tmp/smoke-dashboard.png', fullPage: true });
+await page.getByRole('button', { name: 'Respuestas' }).click();
+await page.getByText('Biblioteca de respuestas rápidas').waitFor();
+await page.getByRole('button', { name: 'Entrenador' }).click();
+await page.getByText('14 criterios').waitFor();
+await page.screenshot({ path: 'tmp/smoke-coach.png', fullPage: true });
 console.log('SMOKE_OK');
 await browser.close();

@@ -29,12 +29,16 @@ const CHANNELS = {
     number: '+54 9 11 5262-7555',
     profile: 'POLIPLAST',
     color: '#0d7764',
+    status: 'Meta en revisión',
+    statusTone: 'waiting',
   },
   penosil: {
     name: 'WhatsApp Penosil',
     number: '+54 9 11 7155-8957',
     profile: 'FOAM',
     color: '#d9792b',
+    status: 'Pendiente de conexión',
+    statusTone: 'offline',
   },
   call: { name: 'Llamada', number: '', profile: '', color: '#3b6d9b' },
   email: { name: 'Email', number: '', profile: '', color: '#6b5aa6' },
@@ -62,6 +66,10 @@ function formatDate(value) {
 
 function today() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function longToday() {
+  return new Intl.DateTimeFormat('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
 }
 
 function blankInteraction() {
@@ -260,7 +268,7 @@ export default function App() {
       <main>
         <header className="topbar">
           <div>
-            <span className="eyebrow">Viernes 28 de agosto</span>
+            <span className="eyebrow">{longToday()}</span>
             <h1>{nav.find(([id]) => id === view)?.[1]}</h1>
           </div>
           <div className="top-actions">
@@ -274,7 +282,7 @@ export default function App() {
             <div className="channel-card" key={key}>
               <span className="channel-dot" style={{ background: CHANNELS[key].color }} />
               <div><strong>{CHANNELS[key].name}</strong><span>{CHANNELS[key].profile} · {CHANNELS[key].number}</span></div>
-              <span className="status">Disponible</span>
+              <span className={`status ${CHANNELS[key].statusTone}`}>{CHANNELS[key].status}</span>
             </div>
           ))}
         </section>
@@ -453,7 +461,7 @@ function DataSettings({ data, setData }) {
 
 function InteractionForm({ form, setForm, onClose, onSave }) {
   const field = (name) => ({ value: form[name], onChange: (event) => setForm({ ...form, [name]: event.target.value }) });
-  return <div className="modal-backdrop"><form className="modal" onSubmit={onSave}><div className="modal-head"><div><span className="eyebrow">Registro posterior</span><h2>Nueva conversación</h2></div><button type="button" className="icon-button" onClick={onClose}><X/></button></div><div className="form-grid"><label>Empresa<input required {...field('company')} placeholder="Nombre del cliente" /></label><label>Persona / cargo<input {...field('contact')} placeholder="Ej. María · Compras" /></label><label>Canal<select {...field('channel')}>{Object.entries(CHANNELS).map(([key, item]) => <option value={key} key={key}>{item.name}</option>)}</select></label><label>Familia<select {...field('family')}>{FAMILIES.map((item) => <option key={item}>{item}</option>)}</select></label><label>Tipo de cliente<select {...field('clientType')}>{CLASSIFICATIONS.clientTypes.map((item) => <option key={item}>{item}</option>)}</select></label><label>Industria<select {...field('industry')}>{CLASSIFICATIONS.industries.map((item) => <option key={item}>{item}</option>)}</select></label><label>Encaje<select {...field('fit')}>{CLASSIFICATIONS.fit.map((item) => <option key={item}>{item}</option>)}</select></label><label>Urgencia<select {...field('urgency')}>{CLASSIFICATIONS.urgency.map((item) => <option key={item}>{item}</option>)}</select></label><label>Potencial<select {...field('potential')}>{CLASSIFICATIONS.potential.map((item) => <option key={item}>{item}</option>)}</select></label><label>Temperatura<select {...field('temperature')}><option>Frío</option><option>Tibio</option><option>Caliente</option></select></label><label className="span-2">¿Qué hablaron?<textarea {...field('summary')} placeholder="Resumen breve y factual" /></label><label className="span-2">Necesidad detectada<textarea {...field('need')} placeholder="Problema, aplicación, volumen o urgencia" /></label><label>Objeción<input {...field('objection')} placeholder="Ej. ya tiene proveedor" /></label><label>Etapa<select {...field('stage')}>{PIPELINE.map((item) => <option key={item}>{item}</option>)}</select></label><label>Fecha próxima<input type="date" {...field('nextDate')} /></label><label className="span-2">Próxima acción<input {...field('nextAction')} placeholder="Ej. llamar para confirmar consumo" /></label></div><div className="modal-actions"><button type="button" className="secondary" onClick={onClose}>Cancelar</button><button className="primary" type="submit">Guardar y crear seguimiento</button></div></form></div>;
+  return <div className="modal-backdrop"><form className="modal" onSubmit={onSave}><div className="modal-head"><div><span className="eyebrow">Registro posterior</span><h2>Nueva conversación</h2><p>Guardá lo esencial. La clasificación avanzada es opcional.</p></div><button type="button" className="icon-button" aria-label="Cerrar" onClick={onClose}><X/></button></div><div className="form-grid"><label>Empresa<input required {...field('company')} placeholder="Nombre del cliente" /></label><label>Persona / cargo<input {...field('contact')} placeholder="Ej. María · Compras" /></label><label>Canal<select {...field('channel')}>{Object.entries(CHANNELS).map(([key, item]) => <option value={key} key={key}>{item.name}</option>)}</select></label><label>Familia<select {...field('family')}>{FAMILIES.map((item) => <option key={item}>{item}</option>)}</select></label><label className="span-2">¿Qué hablaron?<textarea {...field('summary')} placeholder="Resumen breve y factual" /></label><label className="span-2">Necesidad detectada<textarea {...field('need')} placeholder="Problema, aplicación, volumen o urgencia" /></label><label>Temperatura<select {...field('temperature')}><option>Frío</option><option>Tibio</option><option>Caliente</option></select></label><label>Etapa<select {...field('stage')}>{PIPELINE.map((item) => <option key={item}>{item}</option>)}</select></label><label>Fecha próxima<input type="date" {...field('nextDate')} /></label><label className="span-2">Próxima acción<input {...field('nextAction')} placeholder="Ej. llamar para confirmar consumo" /></label></div><details className="advanced-fields"><summary>Agregar clasificación comercial y objeciones</summary><div className="form-grid"><label>Tipo de cliente<select {...field('clientType')}>{CLASSIFICATIONS.clientTypes.map((item) => <option key={item}>{item}</option>)}</select></label><label>Industria<select {...field('industry')}>{CLASSIFICATIONS.industries.map((item) => <option key={item}>{item}</option>)}</select></label><label>Encaje<select {...field('fit')}>{CLASSIFICATIONS.fit.map((item) => <option key={item}>{item}</option>)}</select></label><label>Urgencia<select {...field('urgency')}>{CLASSIFICATIONS.urgency.map((item) => <option key={item}>{item}</option>)}</select></label><label>Potencial<select {...field('potential')}>{CLASSIFICATIONS.potential.map((item) => <option key={item}>{item}</option>)}</select></label><label>Objeción<input {...field('objection')} placeholder="Ej. ya tiene proveedor" /></label></div></details><div className="modal-actions"><button type="button" className="secondary" onClick={onClose}>Cancelar</button><button className="primary" type="submit">Guardar conversación</button></div></form></div>;
 }
 
 function Goal({ title, text }) { return <div><strong>{title}</strong><p>{text}</p></div>; }

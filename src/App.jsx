@@ -45,7 +45,7 @@ const CHANNELS = {
   email: { name: 'Email', number: '', profile: '', color: '#6b5aa6' },
 };
 
-const PIPELINE = ['Nuevo', 'Contactado', 'Conversación', 'Calificado', 'Propuesta', 'Negociación', 'Ganado'];
+const PIPELINE = ['Nuevo', 'Contactado', 'Conversación', 'Calificado', 'Propuesta', 'Negociación', 'Ganado', 'Pausado', 'Perdido'];
 const FAMILIES = ['Sin definir', 'Poliuretano', 'Poliurea', 'PURMAC', 'Penosil', 'PRFV', 'Carrozados', 'Resinplast', 'Imperpur', 'Foam Factory', 'Otra'];
 const STORAGE_KEY = 'poliplast-sales-copilot-v1';
 
@@ -91,6 +91,11 @@ function blankInteraction() {
     fit: 'A confirmar',
     urgency: 'A confirmar',
     potential: 'Hipótesis media',
+    currentSupplier: '',
+    decisionMaker: '',
+    lossReason: '',
+    repurchaseTrigger: '',
+    repurchaseDate: '',
   };
 }
 
@@ -197,6 +202,11 @@ export default function App() {
       fit: form.fit,
       urgency: form.urgency,
       potential: form.potential,
+      currentSupplier: form.currentSupplier,
+      decisionMaker: form.decisionMaker,
+      lossReason: form.lossReason,
+      repurchaseTrigger: form.repurchaseTrigger,
+      repurchaseDate: form.repurchaseDate,
       lastContact: today(),
       updatedAt: stamp,
     };
@@ -349,7 +359,7 @@ export default function App() {
         {view === 'inbox' && <WhatsAppInbox items={data.inbox} onClassify={classifyInbox} />}
         {view === 'tasks' && <Tasks items={data.tasks} onToggle={toggleTask} />}
         {view === 'pipeline' && <Pipeline clients={data.clients} />}
-        {view === 'clients' && <Clients clients={filteredClients} query={query} setQuery={setQuery} />}
+        {view === 'clients' && <Clients clients={filteredClients} interactions={data.interactions} tasks={data.tasks} query={query} setQuery={setQuery} />}
         {view === 'replies' && <QuickReplies />}
         {view === 'coach' && <Coach interactions={data.interactions} data={data} setData={setData} />}
         {view === 'settings' && <DataSettings data={data} setData={setData} session={session} syncStatus={syncStatus} />}
@@ -375,11 +385,11 @@ function Dashboard({ metrics, tasks, interactions, onToggle }) {
       <section className="two-columns">
         <article className="panel">
           <div className="panel-head"><div><span className="eyebrow">Prioridad</span><h2>Próximas acciones</h2></div><CalendarCheck size={22}/></div>
-          <TaskList items={tasks.filter((task) => !task.done).sort((a, b) => a.dueDate.localeCompare(b.dueDate)).slice(0, 6)} onToggle={onToggle}/>
+          <TaskList items={tasks.filter((task) => !task.done).sort((a, b) => a.dueDate.localeCompare(b.dueDate)).slice(0, 6)} onToggle={onToggle} emptyText="Sin tareas por ahora. Registrá una conversación para que el copiloto te ayude a definir el próximo paso."/>
         </article>
         <article className="panel">
           <div className="panel-head"><div><span className="eyebrow">Actividad</span><h2>Últimas conversaciones</h2></div><MessageCircle size={22}/></div>
-          {interactions.length ? interactions.slice(0, 5).map((item) => <InteractionRow item={item} key={item.id}/>) : <Empty text="Todavía no registramos conversaciones." />}
+          {interactions.length ? interactions.slice(0, 5).map((item) => <InteractionRow item={item} key={item.id}/>) : <Empty text="Todavía no hay conversaciones registradas. La primera que cargues inicia la memoria comercial." />}
         </article>
       </section>
       <section className="panel goals">
@@ -407,8 +417,8 @@ function WhatsAppInbox({ items, onClassify }) {
 
 function InboxRow({ item, onClassify }) {
   const pending = item.classification_status === 'pending';
-  const labels = { ignored: 'Ignorado', memory: 'Solo memoria', followup: 'Seguimiento', training: 'Entrenamiento' };
-  return <article className="inbox-row"><div className="inbox-message"><span className="channel-dot" style={{ background: CHANNELS[item.channel]?.color || '#7d8790' }}/><div><strong>{item.customer_name || item.customer_wa_id || 'Contacto sin identificar'}</strong><span>{CHANNELS[item.channel]?.name || 'WhatsApp'} · {new Date(item.occurred_at).toLocaleString('es-AR')}</span><p>{item.text_body || `[${item.message_type || 'mensaje sin texto'}]`}</p></div></div>{pending ? <div className="decision-buttons"><button onClick={() => onClassify(item.event_id, 'ignore')}>Ignorar</button><button onClick={() => onClassify(item.event_id, 'memory')}>Solo memoria</button><button onClick={() => onClassify(item.event_id, 'followup')} className="recommended">Crear seguimiento</button><button onClick={() => onClassify(item.event_id, 'training')}>Entrenamiento</button></div> : <span className={`decision-tag ${item.classification_status}`}>{labels[item.classification_status] || item.classification_status}</span>}</article>;
+  const labels = { ignored: 'No requiere acción', memory: 'Contexto guardado', followup: 'Tarea creada', training: 'Enviado al entrenador' };
+  return <article className="inbox-row"><div className="inbox-message"><span className="channel-dot" style={{ background: CHANNELS[item.channel]?.color || '#7d8790' }}/><div><strong>{item.customer_name || item.customer_wa_id || 'Contacto sin identificar'}</strong><span>{CHANNELS[item.channel]?.name || 'WhatsApp'} · {new Date(item.occurred_at).toLocaleString('es-AR')}</span><p>{item.text_body || `[${item.message_type || 'mensaje sin texto'}]`}</p></div></div>{pending ? <div className="decision-buttons"><button onClick={() => onClassify(item.event_id, 'ignore')}>No requiere acción</button><button onClick={() => onClassify(item.event_id, 'memory')}>Guardar contexto</button><button onClick={() => onClassify(item.event_id, 'followup')} className="recommended">Crear tarea</button><button onClick={() => onClassify(item.event_id, 'training')}>Enviar al entrenador</button></div> : <span className={`decision-tag ${item.classification_status}`}>{labels[item.classification_status] || item.classification_status}</span>}</article>;
 }
 
 function InteractionRow({ item, expanded = false }) {
@@ -419,18 +429,27 @@ function Tasks({ items, onToggle }) {
   return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Agenda única</span><h2>Tareas comerciales</h2></div></div><TaskList items={items.sort((a, b) => Number(a.done) - Number(b.done) || a.dueDate.localeCompare(b.dueDate))} onToggle={onToggle}/></section>;
 }
 
-function TaskList({ items, onToggle }) {
-  if (!items.length) return <Empty text="No hay tareas pendientes." />;
-  return items.map((task) => <button className={`task-row ${task.done ? 'done' : ''}`} key={task.id} onClick={() => onToggle(task.id)}><span className="task-check">{task.done && <CheckCircle2 size={18}/>}</span><div><strong>{task.title}</strong><span>{task.company} · {formatDate(task.dueDate)}</span></div><span className={`priority ${task.priority.toLowerCase()}`}>{task.priority}</span></button>);
+function TaskList({ items, onToggle, emptyText = 'No hay tareas pendientes.' }) {
+  if (!items.length) return <Empty text={emptyText} />;
+  return items.map((task) => <button className={`task-row ${task.done ? 'done' : ''}`} key={task.id} onClick={() => onToggle(task.id)}><span className="task-check">{task.done && <CheckCircle2 size={18}/>}</span><div><strong>{task.title}</strong><span>{task.company} · {formatDate(task.dueDate)}{task.trigger ? ` · ${task.trigger}` : ''}</span></div><span className={`priority ${task.priority.toLowerCase()}`}>{task.priority}</span></button>);
 }
 
 function Pipeline({ clients }) {
-  return <div className="kanban">{PIPELINE.map((stage) => { const list = clients.filter((client) => client.stage === stage); return <section className="kanban-column" key={stage}><header><strong>{stage}</strong><span>{list.length}</span></header>{list.map((client) => <article className="deal-card" key={client.id}><strong>{client.company}</strong><span>{client.family}</span><small>{client.contact || 'Contacto pendiente'}</small></article>)}{!list.length && <div className="empty-slot">Sin cuentas</div>}</section>; })}</div>;
+  return <div className="kanban">{PIPELINE.map((stage) => { const list = clients.filter((client) => client.stage === stage); return <section className={`kanban-column ${['Pausado','Perdido'].includes(stage) ? 'inactive' : ''}`} key={stage}><header><strong>{stage}</strong><span>{list.length}</span></header>{list.map((client) => <article className="deal-card" key={client.id}><strong>{client.company}</strong><span>{client.family}</span><small>{client.contact || 'Contacto pendiente'}</small>{client.lossReason && <small className="loss-reason">{client.lossReason}</small>}</article>)}{!list.length && <div className="empty-slot">Sin cuentas</div>}</section>; })}</div>;
 }
 
-function Clients({ clients, query, setQuery }) {
-  return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Cartera</span><h2>Clientes y prospectos</h2></div><label className="search"><Search size={17}/><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar…" /></label></div>{clients.length ? <div className="client-table">{clients.map((client) => <div className="client-row" key={client.id}><div className="avatar">{client.company.slice(0, 2).toUpperCase()}</div><div><strong>{client.company}</strong><span>{client.contact || 'Sin contacto identificado'}</span></div><span>{client.family}</span><span className={`temp ${client.temperature.toLowerCase()}`}>{client.temperature}</span><strong>{client.stage}</strong></div>)}</div> : <Empty text="No hay clientes registrados con ese criterio." />}</section>;
+function Clients({ clients, interactions, tasks, query, setQuery }) {
+  const [selected, setSelected] = useState(null);
+  return <><section className="panel"><div className="panel-head"><div><span className="eyebrow">Cartera</span><h2>Clientes y prospectos</h2></div><label className="search"><Search size={17}/><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar…" /></label></div>{clients.length ? <div className="client-table">{clients.map((client) => <button className="client-row" onClick={() => setSelected(client)} key={client.id}><div className="avatar">{client.company.slice(0, 2).toUpperCase()}</div><div><strong>{client.company}</strong><span>{client.contact || 'Sin contacto identificado'}</span></div><span>{client.family}</span><span className={`temp ${client.temperature.toLowerCase()}`}>{client.temperature}</span><strong>{client.stage}</strong></button>)}</div> : <Empty text="Todavía no hay clientes en la cartera. Se sumarán automáticamente al registrar conversaciones." />}</section>{selected && <ClientDetail client={selected} interactions={interactions.filter((item) => item.clientId === selected.id)} tasks={tasks.filter((item) => item.clientId === selected.id)} onClose={() => setSelected(null)} />}</>;
 }
+
+function ClientDetail({ client, interactions, tasks, onClose }) {
+  const latest = interactions[0];
+  const nextTask = tasks.filter((item) => !item.done).sort((a, b) => a.dueDate.localeCompare(b.dueDate))[0];
+  return <div className="modal-backdrop"><section className="modal client-detail"><div className="modal-head"><div><span className="eyebrow">Antes de llamar</span><h2>{client.company}</h2><p>{client.contact || 'Contacto pendiente'} · {client.temperature} · {client.stage}</p></div><button type="button" className="icon-button" aria-label="Cerrar ficha" onClick={onClose}><X/></button></div><div className="call-brief"><article><span>Última conversación</span><strong>{latest?.summary || 'Sin resumen registrado'}</strong><p>{latest?.need || 'Necesidad a confirmar'}</p></article><article><span>Próximo paso</span><strong>{nextTask?.title || 'Sin seguimiento pendiente'}</strong><p>{nextTask ? formatDate(nextTask.dueDate) : 'Definir en el próximo contacto'}</p></article></div><div className="client-facts"><Fact label="Familia" value={client.family}/><Fact label="Proveedor actual" value={client.currentSupplier}/><Fact label="Decisor" value={client.decisionMaker}/><Fact label="Urgencia" value={client.urgency}/><Fact label="Potencial" value={client.potential}/><Fact label="Recompra" value={client.repurchaseDate ? `${formatDate(client.repurchaseDate)} · ${client.repurchaseTrigger || 'sin disparador'}` : client.repurchaseTrigger}/>{client.lossReason && <Fact label="Motivo de pausa/pérdida" value={client.lossReason}/>}</div><div className="history"><h3>Historial</h3>{interactions.length ? interactions.map((item) => <InteractionRow item={item} expanded key={item.id}/>) : <Empty text="Sin conversaciones registradas."/>}</div></section></div>;
+}
+
+function Fact({ label, value }) { return <div><span>{label}</span><strong>{value || 'A confirmar'}</strong></div>; }
 
 function QuickReplies() {
   const [channel, setChannel] = useState('general');
@@ -532,7 +551,7 @@ function Splash({ text }) { return <div className="login-shell"><section classNa
 
 function InteractionForm({ form, setForm, onClose, onSave }) {
   const field = (name) => ({ value: form[name], onChange: (event) => setForm({ ...form, [name]: event.target.value }) });
-  return <div className="modal-backdrop"><form className="modal" onSubmit={onSave}><div className="modal-head"><div><span className="eyebrow">Registro posterior</span><h2>Nueva conversación</h2><p>Guardá lo esencial. La clasificación avanzada es opcional.</p></div><button type="button" className="icon-button" aria-label="Cerrar" onClick={onClose}><X/></button></div><div className="form-grid"><label>Empresa<input required {...field('company')} placeholder="Nombre del cliente" /></label><label>Persona / cargo<input {...field('contact')} placeholder="Ej. María · Compras" /></label><label>Canal<select {...field('channel')}>{Object.entries(CHANNELS).map(([key, item]) => <option value={key} key={key}>{item.name}</option>)}</select></label><label>Familia<select {...field('family')}>{FAMILIES.map((item) => <option key={item}>{item}</option>)}</select></label><label className="span-2">¿Qué hablaron?<textarea {...field('summary')} placeholder="Resumen breve y factual" /></label><label className="span-2">Necesidad detectada<textarea {...field('need')} placeholder="Problema, aplicación, volumen o urgencia" /></label><label>Temperatura<select {...field('temperature')}><option>Frío</option><option>Tibio</option><option>Caliente</option></select></label><label>Etapa<select {...field('stage')}>{PIPELINE.map((item) => <option key={item}>{item}</option>)}</select></label><label>Fecha próxima<input type="date" {...field('nextDate')} /></label><label className="span-2">Próxima acción<input {...field('nextAction')} placeholder="Ej. llamar para confirmar consumo" /></label></div><details className="advanced-fields"><summary>Agregar clasificación comercial y objeciones</summary><div className="form-grid"><label>Tipo de cliente<select {...field('clientType')}>{CLASSIFICATIONS.clientTypes.map((item) => <option key={item}>{item}</option>)}</select></label><label>Industria<select {...field('industry')}>{CLASSIFICATIONS.industries.map((item) => <option key={item}>{item}</option>)}</select></label><label>Encaje<select {...field('fit')}>{CLASSIFICATIONS.fit.map((item) => <option key={item}>{item}</option>)}</select></label><label>Urgencia<select {...field('urgency')}>{CLASSIFICATIONS.urgency.map((item) => <option key={item}>{item}</option>)}</select></label><label>Potencial<select {...field('potential')}>{CLASSIFICATIONS.potential.map((item) => <option key={item}>{item}</option>)}</select></label><label>Objeción<input {...field('objection')} placeholder="Ej. ya tiene proveedor" /></label></div></details><div className="modal-actions"><button type="button" className="secondary" onClick={onClose}>Cancelar</button><button className="primary" type="submit">Guardar conversación</button></div></form></div>;
+  return <div className="modal-backdrop"><form className="modal" onSubmit={onSave}><div className="modal-head"><div><span className="eyebrow">Registro posterior</span><h2>Nueva conversación</h2><p>Guardá lo esencial. La clasificación avanzada es opcional.</p></div><button type="button" className="icon-button" aria-label="Cerrar" onClick={onClose}><X/></button></div><div className="form-grid"><label>Empresa<input required {...field('company')} placeholder="Nombre del cliente" /></label><label>Persona / cargo<input {...field('contact')} placeholder="Ej. María · Compras" /></label><label>Canal<select {...field('channel')}>{Object.entries(CHANNELS).map(([key, item]) => <option value={key} key={key}>{item.name}</option>)}</select></label><label>Familia<select {...field('family')}>{FAMILIES.map((item) => <option key={item}>{item}</option>)}</select></label><label className="span-2">¿Qué hablaron?<textarea {...field('summary')} placeholder="Resumen breve y factual" /></label><label className="span-2">Necesidad detectada<textarea {...field('need')} placeholder="Problema, aplicación, volumen o urgencia" /></label><label>Temperatura comercial<select {...field('temperature')}><option>Frío</option><option>Tibio</option><option>Caliente</option></select></label><label>Etapa<select {...field('stage')}>{PIPELINE.map((item) => <option key={item}>{item}</option>)}</select></label><label>Fecha próxima<input type="date" {...field('nextDate')} /></label><label className="span-2">Próxima acción<input {...field('nextAction')} placeholder="Ej. llamar para confirmar consumo" /></label>{['Pausado','Perdido'].includes(form.stage) && <label className="span-2">Motivo de {form.stage.toLowerCase()}<input required {...field('lossReason')} placeholder="Motivo concreto para aprender o retomar" /></label>}</div><details className="advanced-fields"><summary>Agregar clasificación comercial, proveedor y recompra</summary><div className="form-grid"><label>Tipo de cliente<select {...field('clientType')}>{CLASSIFICATIONS.clientTypes.map((item) => <option key={item}>{item}</option>)}</select></label><label>Industria<select {...field('industry')}>{CLASSIFICATIONS.industries.map((item) => <option key={item}>{item}</option>)}</select></label><label>Encaje<select {...field('fit')}>{CLASSIFICATIONS.fit.map((item) => <option key={item}>{item}</option>)}</select></label><label>Urgencia<select {...field('urgency')}>{CLASSIFICATIONS.urgency.map((item) => <option key={item}>{item}</option>)}</select></label><label>Potencial<select {...field('potential')}>{CLASSIFICATIONS.potential.map((item) => <option key={item}>{item}</option>)}</select></label><label>Objeción<input {...field('objection')} placeholder="Ej. ya tiene proveedor" /></label><label>Proveedor actual<input {...field('currentSupplier')} placeholder="Nombre o sin proveedor" /></label><label>Decisor / quién aprueba<input {...field('decisionMaker')} placeholder="Persona, cargo o a confirmar" /></label><label>Fecha estimada de recompra<input type="date" {...field('repurchaseDate')} /></label><label>Disparador de recompra<input {...field('repurchaseTrigger')} placeholder="Ej. consumo mensual, fin de obra" /></label></div></details><div className="modal-actions"><button type="button" className="secondary" onClick={onClose}>Cancelar</button><button className="primary" type="submit">Guardar conversación</button></div></form></div>;
 }
 
 function Goal({ title, text }) { return <div><strong>{title}</strong><p>{text}</p></div>; }

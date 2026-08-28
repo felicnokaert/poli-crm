@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "exportedAt": "2026-08-28T15:00:00.000Z",
+  "data": {
+    "clients": [
+      {"id":"demo-1","company":"Constructora Ficticia SRL","contact":"Laura · Obra","family":"Poliuretano","temperature":"Tibio","stage":"Conversación","currentSupplier":"A confirmar","decisionMaker":"Dirección de obra","urgency":"7–30 días","potential":"Hipótesis media","lastContact":"2026-08-28"},
+      {"id":"demo-2","company":"Frigorífico Test SA","contact":"Martín · Mantenimiento","family":"Poliuretano","temperature":"Frío","stage":"Contactado","currentSupplier":"A confirmar","decisionMaker":"Compras","urgency":"A confirmar","potential":"Hipótesis alta","lastContact":"2026-08-28"},
+      {"id":"demo-3","company":"Carrocería Demo","contact":"Sergio · Dueño","family":"Carrozados","temperature":"Tibio","stage":"Calificado","currentSupplier":"Fischer","decisionMaker":"Sergio","urgency":"Sin plazo","potential":"Hipótesis media","lastContact":"2026-08-28"},
+      {"id":"demo-4","company":"Aislaciones Prueba","contact":"Ana · Compras","family":"Poliuretano","temperature":"Caliente","stage":"Propuesta","currentSupplier":"Sin confirmar","decisionMaker":"Gerencia","urgency":"7–30 días","potential":"Confirmado por volumen/recurrencia","lastContact":"2026-08-20"},
+      {"id":"demo-5","company":"Distribuidora Ejemplo","contact":"Diego · Dueño","family":"Penosil","temperature":"Caliente","stage":"Ganado","currentSupplier":"Grupo Poliplast","decisionMaker":"Diego","urgency":"Sin plazo","potential":"Confirmado por volumen/recurrencia","repurchaseDate":"2026-09-15","repurchaseTrigger":"Reposición mensual de stock","lastContact":"2026-08-28"}
+    ],
+    "interactions": [
+      {"id":"int-1","clientId":"demo-1","company":"Constructora Ficticia SRL","contact":"Laura · Obra","channel":"general","family":"Poliuretano","summary":"Consulta si el poliuretano rígido sirve para una losa expuesta al sol.","need":"Definir sistema de aislación y protección según sustrato.","temperature":"Tibio","createdAt":"2026-08-28T12:00:00.000Z"},
+      {"id":"int-2","clientId":"demo-2","company":"Frigorífico Test SA","contact":"Martín · Mantenimiento","channel":"general","family":"Poliuretano","summary":"Pidió precio para una cámara de frío sin indicar superficie.","need":"Relevar metros cuadrados, espesor y estado del sustrato antes de cotizar.","temperature":"Frío","createdAt":"2026-08-28T12:10:00.000Z"},
+      {"id":"int-3","clientId":"demo-3","company":"Carrocería Demo","contact":"Sergio · Dueño","channel":"general","family":"Carrozados","summary":"Ya compra a Fischer y está evaluando alternativas.","need":"Entender motivo de apertura y consumo mensual.","objection":"Proveedor actual consolidado","temperature":"Tibio","createdAt":"2026-08-28T12:20:00.000Z"},
+      {"id":"int-4","clientId":"demo-4","company":"Aislaciones Prueba","contact":"Ana · Compras","channel":"general","family":"Poliuretano","summary":"Propuesta enviada; todavía sin respuesta.","need":"Confirmar revisión de propuesta y fecha de decisión.","temperature":"Caliente","createdAt":"2026-08-20T12:30:00.000Z"},
+      {"id":"int-5","clientId":"demo-5","company":"Distribuidora Ejemplo","contact":"Diego · Dueño","channel":"penosil","family":"Penosil","summary":"Cliente recurrente con reposición mensual estimada.","need":"Recordar reposición y revisar cross-selling.","temperature":"Caliente","createdAt":"2026-08-28T12:40:00.000Z"}
+    ],
+    "tasks": [
+      {"id":"task-1","clientId":"demo-1","company":"Constructora Ficticia SRL","title":"Pedir tipo de sustrato y exposición antes de derivar a técnico","dueDate":"2026-08-28","trigger":"Consulta técnica sin datos suficientes","priority":"Media","done":false},
+      {"id":"task-2","clientId":"demo-4","company":"Aislaciones Prueba","title":"Confirmar recepción y revisión de propuesta","dueDate":"2026-08-28","trigger":"Pasaron 8 días desde el envío de la propuesta","priority":"Alta","done":false},
+      {"id":"task-3","clientId":"demo-5","company":"Distribuidora Ejemplo","title":"Consultar reposición mensual y oportunidad de cross-selling","dueDate":"2026-09-15","trigger":"Fecha estimada de recompra","priority":"Media","done":false}
+    ],
+    "inbox": [
+      {"event_id":"wamid.demo-inbox-general","channel":"general","direction":"inbound","customer_wa_id":"5491100000001","customer_name":"Consulta General Demo","message_type":"text","text_body":"Necesito saber qué producto usar para aislar un techo.","occurred_at":"2026-08-28T13:00:00.000Z","classification_status":"pending"},
+      {"event_id":"wamid.demo-inbox-penosil","channel":"penosil","direction":"inbound","customer_wa_id":"5491100000002","customer_name":"Consulta Penosil Demo","message_type":"text","text_body":"¿Tienen EasySpray y cómo se aplica?","occurred_at":"2026-08-28T13:05:00.000Z","classification_status":"pending"}
+    ]
+  }
+}

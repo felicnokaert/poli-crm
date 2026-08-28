@@ -22,6 +22,7 @@ import {
   X,
 } from 'lucide-react';
 import { CLASSIFICATIONS, QUICK_REPLIES, ROLE_PLAYS, RUBRIC, scoreBand } from './knowledge';
+import { loadOnlineState, onlineConfigured, saveOnlineState, supabase } from './online';
 
 const CHANNELS = {
   general: {
@@ -95,6 +96,10 @@ function blankInteraction() {
 
 export default function App() {
   const [data, setData] = useState(loadState);
+  const [session, setSession] = useState(null);
+  const [authReady, setAuthReady] = useState(!onlineConfigured);
+  const [remoteReady, setRemoteReady] = useState(false);
+  const [syncStatus, setSyncStatus] = useState(onlineConfigured ? 'Conectando…' : 'Modo local');
   const [view, setView] = useState('dashboard');
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(blankInteraction);
@@ -103,6 +108,57 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }, [data]);
+
+  useEffect(() => {
+    if (!onlineConfigured) return undefined;
+    supabase.auth.getSession().then(({ data: authData }) => {
+      setSession(authData.session);
+      setAuthReady(true);
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setAuthReady(true);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!onlineConfigured || !session?.user?.id) {
+      setRemoteReady(false);
+      return undefined;
+    }
+    let active = true;
+    setSyncStatus('Sincronizando…');
+    loadOnlineState(session.user.id).then(({ state }) => {
+      if (!active) return;
+      setData({ ...initialState, ...state, inbox: state.inbox || [] });
+      setRemoteReady(true);
+      setSyncStatus('Sincronizado');
+    }).catch(() => active && setSyncStatus('Error de sincronización'));
+
+    const channel = supabase.channel('whatsapp-inbox').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'whatsapp_events' }, ({ new: event }) => {
+      if (event.direction === 'status') return;
+      setData((current) => current.inbox.some((item) => item.event_id === event.event_id)
+        ? current
+        : { ...current, inbox: [{ ...event, classification_status: 'pending' }, ...current.inbox] });
+    }).subscribe();
+    return () => {
+      active = false;
+      supabase.removeChannel(channel);
+    };
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (!onlineConfigured || !remoteReady || !session?.user?.id) return undefined;
+    setSyncStatus('Guardando…');
+    const timer = setTimeout(() => {
+      saveOnlineState(session.user.id, data).then(() => setSyncStatus('Sincronizado')).catch(() => setSyncStatus('Error de sincronización'));
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [data, remoteReady, session?.user?.id]);
+
+  if (!authReady) return <Splash text="Preparando acceso seguro…" />;
+  if (onlineConfigured && !session) return <LoginScreen />;
 
   const metrics = useMemo(() => {
     const now = today();
@@ -272,6 +328,7 @@ export default function App() {
             <h1>{nav.find(([id]) => id === view)?.[1]}</h1>
           </div>
           <div className="top-actions">
+            <span className={`sync-pill ${syncStatus === 'Sincronizado' ? 'ok' : ''}`}>{syncStatus}</span>
             <div className="profile-pill">FC</div>
             <button className="primary" onClick={() => setShowForm(true)}><Plus size={18} /> Registrar conversación</button>
           </div>
@@ -295,7 +352,7 @@ export default function App() {
         {view === 'clients' && <Clients clients={filteredClients} query={query} setQuery={setQuery} />}
         {view === 'replies' && <QuickReplies />}
         {view === 'coach' && <Coach interactions={data.interactions} data={data} setData={setData} />}
-        {view === 'settings' && <DataSettings data={data} setData={setData} />}
+        {view === 'settings' && <DataSettings data={data} setData={setData} session={session} syncStatus={syncStatus} />}
       </main>
 
       {showForm && <InteractionForm form={form} setForm={setForm} onClose={() => setShowForm(false)} onSave={saveInteraction} />}
@@ -408,7 +465,7 @@ function Training() {
   return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Formación</span><h2>Role-play semanal</h2></div><GraduationCap size={22}/></div><div className="role-grid">{ROLE_PLAYS.map(([title, goal], index) => <article key={title}><span>Ejercicio {index + 1}</span><strong>{title}</strong><p>{goal}</p></article>)}</div><div className="cadence-grid"><Goal title="Diaria · 5 min" text="Revisar puntajes bajos y riesgos."/><Goal title="Semanal · 30 min" text="Un role-play y 2–3 conversaciones."/><Goal title="Mensual · 60 min" text="Tendencias, recompra y ajustes."/></div></section>;
 }
 
-function DataSettings({ data, setData }) {
+function DataSettings({ data, setData, session, syncStatus }) {
   const [message, setMessage] = useState('');
 
   function exportBackup() {
@@ -456,8 +513,22 @@ function DataSettings({ data, setData }) {
     }
   }
 
-  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Portabilidad</span><h2>Datos y respaldos</h2></div><Database size={22}/></div><div className="data-cards"><article><Download size={24}/><h3>Exportar respaldo</h3><p>Descarga clientes, conversaciones, tareas, evaluaciones y bandeja en un archivo JSON versionado.</p><button className="primary" onClick={exportBackup}>Descargar respaldo</button></article><article><Upload size={24}/><h3>Importar respaldo</h3><p>Restaura un respaldo del copiloto en este navegador. Reemplaza el estado local actual.</p><label className="secondary upload-button">Elegir archivo<input type="file" accept="application/json,.json" onChange={importBackup}/></label></article><article><Inbox size={24}/><h3>Importar eventos WhatsApp</h3><p>Prueba la bandeja con eventos normalizados. Deduplica por ID y omite estados técnicos.</p><label className="secondary upload-button">Elegir eventos<input type="file" accept="application/json,.json" onChange={importWebhookEvents}/></label></article></div>{message && <div className="system-message">{message}</div>}</section><section className="panel"><div className="panel-head"><div><span className="eyebrow">Estado local</span><h2>Contenido guardado</h2></div></div><div className="storage-summary"><div><strong>{data.clients.length}</strong><span>Clientes</span></div><div><strong>{data.interactions.length}</strong><span>Conversaciones</span></div><div><strong>{data.tasks.length}</strong><span>Tareas</span></div><div><strong>{data.inbox.filter((item) => item.classification_status === 'pending').length}</strong><span>WhatsApp pendientes</span></div></div><div className="quality-note"><CircleAlert size={19}/><p>Durante el piloto, los datos viven en este navegador. Exportá un respaldo al terminar cada jornada. La próxima versión utilizará una base online con usuarios y permisos.</p></div></section></div>;
+  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Portabilidad</span><h2>Datos y respaldos</h2></div><Database size={22}/></div><div className="data-cards"><article><Download size={24}/><h3>Exportar respaldo</h3><p>Descarga clientes, conversaciones, tareas, evaluaciones y bandeja en un archivo JSON versionado.</p><button className="primary" onClick={exportBackup}>Descargar respaldo</button></article><article><Upload size={24}/><h3>Importar respaldo</h3><p>Restaura un respaldo del copiloto en este navegador. Reemplaza el estado actual.</p><label className="secondary upload-button">Elegir archivo<input type="file" accept="application/json,.json" onChange={importBackup}/></label></article><article><Inbox size={24}/><h3>Importar eventos WhatsApp</h3><p>Prueba la bandeja con eventos normalizados. Deduplica por ID y omite estados técnicos.</p><label className="secondary upload-button">Elegir eventos<input type="file" accept="application/json,.json" onChange={importWebhookEvents}/></label></article></div>{message && <div className="system-message">{message}</div>}</section><section className="panel"><div className="panel-head"><div><span className="eyebrow">{onlineConfigured ? 'Estado online' : 'Estado local'}</span><h2>Contenido guardado</h2></div></div><div className="storage-summary"><div><strong>{data.clients.length}</strong><span>Clientes</span></div><div><strong>{data.interactions.length}</strong><span>Conversaciones</span></div><div><strong>{data.tasks.length}</strong><span>Tareas</span></div><div><strong>{data.inbox.filter((item) => item.classification_status === 'pending').length}</strong><span>WhatsApp pendientes</span></div></div><div className="quality-note"><CircleAlert size={19}/><p>{onlineConfigured ? `${syncStatus}. Usuario: ${session?.user?.email || 'sin identificar'}. Los cambios se guardan online y siguen teniendo respaldo local.` : 'Modo local de prueba. Exportá un respaldo al terminar cada jornada; al configurar la base, el mismo CRM activará acceso y sincronización online.'}</p></div>{onlineConfigured && <button className="secondary signout" onClick={() => supabase.auth.signOut()}>Cerrar sesión</button>}</section></div>;
 }
+
+function LoginScreen() {
+  const [email, setEmail] = useState('');
+  const [message, setMessage] = useState('');
+  async function submit(event) {
+    event.preventDefault();
+    setMessage('Enviando acceso…');
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin, shouldCreateUser: false } });
+    setMessage(error ? 'No se pudo enviar el acceso. Verificá que el usuario esté habilitado.' : 'Revisá tu correo y abrí el enlace de acceso.');
+  }
+  return <div className="login-shell"><section className="login-card"><div className="brand-mark">P</div><span className="eyebrow">Acceso privado</span><h1>Poliplast Sales Copilot</h1><p>Ingresá con el correo habilitado. No necesitás recordar una contraseña.</p><form onSubmit={submit}><label>Correo<input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="nombre@empresa.com" /></label><button className="primary" type="submit">Enviar enlace de acceso</button></form>{message && <div className="system-message">{message}</div>}</section></div>;
+}
+
+function Splash({ text }) { return <div className="login-shell"><section className="login-card"><div className="brand-mark">P</div><h1>Poliplast Sales Copilot</h1><p>{text}</p></section></div>; }
 
 function InteractionForm({ form, setForm, onClose, onSave }) {
   const field = (name) => ({ value: form[name], onChange: (event) => setForm({ ...form, [name]: event.target.value }) });

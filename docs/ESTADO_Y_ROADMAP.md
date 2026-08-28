@@ -7,15 +7,15 @@ Actualizado: 28/08/2026.
 | Frente | Avance | Estado |
 |---|---:|---|
 | Definición del producto y arquitectura | 100% | Alcance, canales, límites y flujo definidos. |
-| UX/UI del MVP | 75% | Navegación, escritorio y móvil operativos; falta validación con uso real. |
-| CRM local | 80% | Clientes, conversaciones, tareas, pipeline, respuestas y respaldos funcionando. |
-| Bandeja WhatsApp | 70% | Autorización y clasificación funcionando con eventos simulados; falta fuente en vivo. |
+| UX/UI del MVP | 85% | Navegación, formulario simplificado, escritorio y móvil probados; falta validación con uso real. |
+| CRM local | 90% | Clientes, conversaciones, tareas, pipeline, respuestas y respaldos funcionando. |
+| Bandeja WhatsApp | 85% | Autorización, clasificación, tiempo real y simulador implementados; falta activar infraestructura. |
 | Entrenamiento comercial | 55% | Rúbrica y devolución manual listas; falta análisis automático con IA. |
-| Base online y usuarios | 25% | Esquema diseñado; falta crear infraestructura, autenticación y sincronización. |
-| Integración oficial con Meta | 45% | WABAs/app relevados y webhook implementado; verificación empresarial en revisión. |
-| Operación productiva | 30% | Faltan despliegue privado, monitoreo, copias automáticas y piloto con mensajes reales. |
+| Base online y usuarios | 70% | Esquema, RLS, acceso por email y sincronización implementados; falta crear los servicios externos. |
+| Integración oficial con Meta | 50% | WABAs/app relevados y webhook implementado; verificación empresarial en revisión. |
+| Operación productiva | 45% | Despliegue preparado; faltan activar servicios, monitoreo y piloto con mensajes reales. |
 
-Avance global estimado del MVP: **60%**. No equivale todavía a un CRM productivo conectado.
+Avance global estimado del MVP: **74%**. No equivale todavía a un CRM productivo conectado: la infraestructura externa aún no fue creada.
 
 ## Cómo se sincronizará
 

@@ -1,8 +1,8 @@
--- Esquema de referencia para la futura base online.
--- No ejecutar todavía: requiere definir proveedor, autenticación y políticas de acceso.
+-- Esquema inicial de Supabase para Poliplast Sales Copilot.
+-- Ejecutar una sola vez en un proyecto nuevo y privado.
 
 create table accounts (
-  id uuid primary key,
+  id uuid primary key default gen_random_uuid(),
   name text not null,
   client_type text,
   industry text,
@@ -15,7 +15,7 @@ create table accounts (
 );
 
 create table contacts (
-  id uuid primary key,
+  id uuid primary key default gen_random_uuid(),
   account_id uuid not null references accounts(id),
   name text,
   role text,
@@ -26,7 +26,7 @@ create table contacts (
 );
 
 create table conversations (
-  id uuid primary key,
+  id uuid primary key default gen_random_uuid(),
   account_id uuid not null references accounts(id),
   contact_id uuid references contacts(id),
   channel text not null,
@@ -44,7 +44,7 @@ create table conversations (
 );
 
 create table tasks (
-  id uuid primary key,
+  id uuid primary key default gen_random_uuid(),
   account_id uuid references accounts(id),
   conversation_id uuid references conversations(id),
   title text not null,
@@ -57,7 +57,7 @@ create table tasks (
 );
 
 create table evaluations (
-  id uuid primary key,
+  id uuid primary key default gen_random_uuid(),
   conversation_id uuid not null references conversations(id),
   scores jsonb not null,
   total integer not null check (total between 0 and 28),
@@ -68,7 +68,7 @@ create table evaluations (
 );
 
 create table quick_reply_templates (
-  id uuid primary key,
+  id uuid primary key default gen_random_uuid(),
   channel text not null,
   title text not null,
   guidance text not null,
@@ -96,3 +96,43 @@ create table whatsapp_events (
 
 create index whatsapp_events_pending_idx
   on whatsapp_events (classification_status, occurred_at desc);
+
+create table copilot_states (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  data jsonb not null default '{"clients":[],"interactions":[],"tasks":[],"inbox":[]}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+-- Seguridad: el piloto online queda limitado al correo confirmado de Felipe.
+-- La service role del webhook no se expone al navegador y omite RLS por diseño.
+alter table accounts enable row level security;
+alter table contacts enable row level security;
+alter table conversations enable row level security;
+alter table tasks enable row level security;
+alter table evaluations enable row level security;
+alter table quick_reply_templates enable row level security;
+alter table whatsapp_events enable row level security;
+alter table copilot_states enable row level security;
+
+revoke all on accounts, contacts, conversations, tasks, evaluations, quick_reply_templates, whatsapp_events, copilot_states from anon;
+grant select, insert, update, delete on accounts, contacts, conversations, tasks, evaluations, quick_reply_templates, copilot_states to authenticated;
+grant select on whatsapp_events to authenticated;
+
+create policy "Felipe opera cuentas" on accounts for all to authenticated using (lower(auth.jwt() ->> 'email') = 'felipecnokaert@gmail.com') with check (lower(auth.jwt() ->> 'email') = 'felipecnokaert@gmail.com');
+create policy "Felipe opera contactos" on contacts for all to authenticated using (lower(auth.jwt() ->> 'email') = 'felipecnokaert@gmail.com') with check (lower(auth.jwt() ->> 'email') = 'felipecnokaert@gmail.com');
+create policy "Felipe opera conversaciones" on conversations for all to authenticated using (lower(auth.jwt() ->> 'email') = 'felipecnokaert@gmail.com') with check (lower(auth.jwt() ->> 'email') = 'felipecnokaert@gmail.com');
+create policy "Felipe opera tareas" on tasks for all to authenticated using (lower(auth.jwt() ->> 'email') = 'felipecnokaert@gmail.com') with check (lower(auth.jwt() ->> 'email') = 'felipecnokaert@gmail.com');
+create policy "Felipe opera evaluaciones" on evaluations for all to authenticated using (lower(auth.jwt() ->> 'email') = 'felipecnokaert@gmail.com') with check (lower(auth.jwt() ->> 'email') = 'felipecnokaert@gmail.com');
+create policy "Felipe opera respuestas" on quick_reply_templates for all to authenticated using (lower(auth.jwt() ->> 'email') = 'felipecnokaert@gmail.com') with check (lower(auth.jwt() ->> 'email') = 'felipecnokaert@gmail.com');
+create policy "Felipe lee eventos" on whatsapp_events for select to authenticated using (lower(auth.jwt() ->> 'email') = 'felipecnokaert@gmail.com');
+create policy "Felipe sincroniza su estado" on copilot_states for all to authenticated using (auth.uid() = user_id and lower(auth.jwt() ->> 'email') = 'felipecnokaert@gmail.com') with check (auth.uid() = user_id and lower(auth.jwt() ->> 'email') = 'felipecnokaert@gmail.com');
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'whatsapp_events'
+  ) then
+    alter publication supabase_realtime add table whatsapp_events;
+  end if;
+end $$;

@@ -10,11 +10,11 @@
     "test": "node --test"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.4",
     "@vitejs/plugin-react": "latest",
-    "vite": "latest",
+    "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "lucide-react": "latest"
-  },
-  "devDependencies": {}
+    "vite": "latest"
+  }
 }

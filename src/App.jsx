@@ -15,6 +15,9 @@ import {
   Target,
   GraduationCap,
   Sparkles,
+  Database,
+  Download,
+  Upload,
   X,
 } from 'lucide-react';
 import { CLASSIFICATIONS, QUICK_REPLIES, ROLE_PLAYS, RUBRIC, scoreBand } from './knowledge';
@@ -169,6 +172,7 @@ export default function App() {
     ['clients', 'Clientes', Building2],
     ['replies', 'Respuestas', BookOpen],
     ['coach', 'Entrenador', GraduationCap],
+    ['settings', 'Datos', Database],
   ];
 
   return (
@@ -220,6 +224,7 @@ export default function App() {
         {view === 'clients' && <Clients clients={filteredClients} query={query} setQuery={setQuery} />}
         {view === 'replies' && <QuickReplies />}
         {view === 'coach' && <Coach interactions={data.interactions} data={data} setData={setData} />}
+        {view === 'settings' && <DataSettings data={data} setData={setData} />}
       </main>
 
       {showForm && <InteractionForm form={form} setForm={setForm} onClose={() => setShowForm(false)} onSave={saveInteraction} />}
@@ -318,6 +323,39 @@ function Coach({ interactions, data, setData }) {
 
 function Training() {
   return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Formación</span><h2>Role-play semanal</h2></div><GraduationCap size={22}/></div><div className="role-grid">{ROLE_PLAYS.map(([title, goal], index) => <article key={title}><span>Ejercicio {index + 1}</span><strong>{title}</strong><p>{goal}</p></article>)}</div><div className="cadence-grid"><Goal title="Diaria · 5 min" text="Revisar puntajes bajos y riesgos."/><Goal title="Semanal · 30 min" text="Un role-play y 2–3 conversaciones."/><Goal title="Mensual · 60 min" text="Tendencias, recompra y ajustes."/></div></section>;
+}
+
+function DataSettings({ data, setData }) {
+  const [message, setMessage] = useState('');
+
+  function exportBackup() {
+    const payload = { schemaVersion: 1, exportedAt: new Date().toISOString(), channels: CHANNELS, data };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `poliplast-sales-copilot-${today()}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setMessage('Respaldo exportado correctamente.');
+  }
+
+  async function importBackup(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const payload = JSON.parse(await file.text());
+      if (payload.schemaVersion !== 1 || !payload.data?.clients || !payload.data?.interactions || !payload.data?.tasks) throw new Error('Formato inválido');
+      setData(payload.data);
+      setMessage(`Respaldo importado: ${payload.data.clients.length} clientes y ${payload.data.interactions.length} conversaciones.`);
+    } catch {
+      setMessage('No se pudo importar: el archivo no corresponde a un respaldo válido.');
+    } finally {
+      event.target.value = '';
+    }
+  }
+
+  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Portabilidad</span><h2>Datos y respaldos</h2></div><Database size={22}/></div><div className="data-cards"><article><Download size={24}/><h3>Exportar respaldo</h3><p>Descarga clientes, conversaciones, tareas y evaluaciones en un archivo JSON versionado.</p><button className="primary" onClick={exportBackup}>Descargar respaldo</button></article><article><Upload size={24}/><h3>Importar respaldo</h3><p>Restaura un respaldo del copiloto en este navegador. Reemplaza el estado local actual.</p><label className="secondary upload-button">Elegir archivo<input type="file" accept="application/json,.json" onChange={importBackup}/></label></article></div>{message && <div className="system-message">{message}</div>}</section><section className="panel"><div className="panel-head"><div><span className="eyebrow">Estado local</span><h2>Contenido guardado</h2></div></div><div className="storage-summary"><div><strong>{data.clients.length}</strong><span>Clientes</span></div><div><strong>{data.interactions.length}</strong><span>Conversaciones</span></div><div><strong>{data.tasks.length}</strong><span>Tareas</span></div><div><strong>{data.interactions.filter((item) => item.evaluation).length}</strong><span>Evaluaciones</span></div></div><div className="quality-note"><CircleAlert size={19}/><p>Durante el piloto, los datos viven en este navegador. Exportá un respaldo al terminar cada jornada. La próxima versión utilizará una base online con usuarios y permisos.</p></div></section></div>;
 }
 
 function InteractionForm({ form, setForm, onClose, onSave }) {

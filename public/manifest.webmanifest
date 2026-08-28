@@ -1,0 +1,10 @@
+{
+  "name": "Poliplast Sales Copilot",
+  "short_name": "Sales Copilot",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f3f5f1",
+  "theme_color": "#103b32",
+  "description": "CRM, memoria comercial y entrenador de ventas de Grupo Poliplast",
+  "icons": []
+}

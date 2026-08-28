@@ -33,6 +33,8 @@ Estas acciones crean recursos externos y se realizan con Felipe presente:
 
 ## Prueba sin Meta
 
+`/api/health` distingue configuración técnica de estado operativo: `database` indica que las variables existen y `databaseReachable` realiza una lectura mínima real. Los indicadores de canal confirman que el backend recibió cada `phone_number_id`; no reemplazan el estado comercial mostrado por Meta o por la aplicación de WhatsApp Business.
+
 Con base y despliegue activos, un evento ficticio se envía al simulador con:
 
 - canal `general` o `penosil`;
@@ -45,4 +47,3 @@ El resultado esperado es que el mensaje aparezca en la Bandeja WhatsApp en tiemp
 ## Secretos
 
 `SUPABASE_SERVICE_ROLE_KEY`, `META_APP_SECRET`, tokens de Meta y `COPILOT_SIMULATOR_TOKEN` son secretos de servidor. No deben incluirse en variables `VITE_*`, archivos versionados, capturas o mensajes.
-

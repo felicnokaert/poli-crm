@@ -30,7 +30,7 @@ const CHANNELS = {
     number: '+54 9 11 5262-7555',
     profile: 'POLIPLAST',
     color: '#0d7764',
-    status: 'Aprobado · conectado',
+    status: 'Meta aprobado · app conectada',
     statusTone: 'online',
   },
   penosil: {
@@ -38,7 +38,7 @@ const CHANNELS = {
     number: '+54 9 11 7155-8957',
     profile: 'FOAM',
     color: '#d9792b',
-    status: 'Pendiente de conexión',
+    status: 'Meta aprobado · conexión pendiente',
     statusTone: 'offline',
   },
   call: { name: 'Llamada', number: '', profile: '', color: '#3b6d9b' },

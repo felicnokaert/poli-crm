@@ -12,12 +12,13 @@ function responseRecorder() {
   };
 }
 
-test('health exposes configuration state without secret values', () => {
+test('health exposes configuration state without secret values', async () => {
   const response = responseRecorder();
-  health({}, response);
+  await health({}, response);
   assert.equal(response.statusCode, 200);
   assert.equal(response.payload.ok, true);
-  assert.deepEqual(Object.keys(response.payload), ['ok', 'database', 'metaWebhook', 'generalChannel', 'penosilChannel', 'simulator']);
+  assert.deepEqual(Object.keys(response.payload), ['ok', 'database', 'databaseReachable', 'metaWebhook', 'generalChannel', 'penosilChannel', 'simulator']);
+  assert.equal(response.payload.databaseReachable, false);
 });
 
 test('simulator rejects requests without its bearer token', async () => {
@@ -43,4 +44,3 @@ test('simulator normalizes a fake message without requiring Meta', async () => {
   assert.match(response.payload.eventId, /^sim\./);
   process.env.COPILOT_SIMULATOR_TOKEN = previous;
 });
-

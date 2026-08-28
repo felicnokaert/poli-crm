@@ -12,10 +12,10 @@ Actualizado: 28/08/2026.
 | Bandeja WhatsApp | 85% | Autorización, clasificación, tiempo real y simulador implementados; falta activar infraestructura. |
 | Entrenamiento comercial | 65% | Rúbrica, devolución y casos realistas probados; falta análisis automático con IA. |
 | Base online y usuarios | 70% | Esquema, RLS, acceso por email y sincronización implementados; falta crear los servicios externos. |
-| Integración oficial con Meta | 50% | WABAs/app relevados y webhook implementado; verificación empresarial en revisión. |
+| Integración oficial con Meta | 65% | Negocio y ambas WABA aprobados; webhook implementado. Faltan activos, coexistencia y pruebas reales. |
 | Operación productiva | 45% | Despliegue preparado; faltan activar servicios, monitoreo y piloto con mensajes reales. |
 
-Avance global estimado del MVP: **78%**. No equivale todavía a un CRM productivo conectado: la infraestructura externa aún no fue creada.
+Avance global estimado del MVP: **80%**. No equivale todavía a un CRM productivo conectado: falta activar y probar la infraestructura externa.
 
 ## Cómo se sincronizará
 
@@ -38,7 +38,6 @@ Avance global estimado del MVP: **78%**. No equivale todavía a un CRM productiv
 
 ## Trabajo que depende de Meta
 
-- Aprobación empresarial.
 - Confirmar acceso activo de Felipe y asignación de activos.
 - Obtener el `phone_number_id` de Grupo Poliplast.
 - Vincular WABAs con la app correcta.

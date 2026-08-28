@@ -44,7 +44,7 @@ Este mapeo fue confirmado explícitamente por Felipe. Los perfiles conservan eso
 - Núcleo local: clientes, conversaciones, tareas y pipeline completos.
 - Modelo Claude integrado: 14 criterios, 11 campos de clasificación, 24 respuestas rápidas y 5 role-plays.
 - Bandeja WhatsApp lista: permite ignorar, guardar como memoria, crear seguimiento o autorizar entrenamiento sin responder automáticamente.
-- Verificación empresarial de Meta: enviada y en revisión desde el 28/08/2026.
-- Próximo hito: base online, autenticación y prueba con conversaciones comerciales reales.
+- Verificación empresarial de Meta: aprobada el 28/08/2026; ambas WABA figuran aprobadas.
+- Próximo hito: activar base online y autenticación, desplegar y probar ambos canales.
 
 La evaluación del MVP es guiada: Felipe/Codex puntúan y registran la devolución. La generación automática con IA se incorporará después de validar el flujo y definir la arquitectura online.

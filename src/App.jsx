@@ -30,8 +30,8 @@ const CHANNELS = {
     number: '+54 9 11 5262-7555',
     profile: 'POLIPLAST',
     color: '#0d7764',
-    status: 'Meta en revisión',
-    statusTone: 'waiting',
+    status: 'Aprobado · conectado',
+    statusTone: 'online',
   },
   penosil: {
     name: 'WhatsApp Penosil',

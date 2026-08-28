@@ -17,10 +17,10 @@ Los `phone_number_id` de Meta se agregarán como secretos de entorno después de
 
 | Cuenta | WABA ID | Número | Estado cuenta | Estado número | Calidad | Negocio |
 |---|---|---|---|---|---|---|
-| Grupo Poliplast | 1620643669067135 | +54 9 11 5262-7555 | Restricted mientras Meta revisa el negocio | Conectado | Alta | En revisión |
-| Penosil Distribuidor Oficial | 2497921480672168 | +54 9 11 7155-8957 | Aprobada | Sin conexión | Sin dato | En revisión del portfolio |
+| Grupo Poliplast | 1620643669067135 | +54 9 11 5262-7555 | Aprobada | Conectado | Alta | Verificado |
+| Penosil Distribuidor Oficial | 2497921480672168 | +54 9 11 7155-8957 | Aprobada | Sin conexión | Sin dato | Verificado |
 
-La restricción observada en Grupo Poliplast indica explícitamente que debe verificarse el negocio antes de enviar mensajes; no se observó una infracción de calidad. Pendientes: ambos `Phone Number ID`, App ID, permisos de Felipe y disponibilidad efectiva de coexistencia.
+La verificación empresarial fue aprobada el 28/08/2026 y eliminó la restricción observada en Grupo Poliplast. Pendientes: `Phone Number ID` de Grupo Poliplast, confirmar permisos efectivos de Felipe, vincular activos con la app y completar coexistencia/conexión de Penosil.
 
 ## Relevamiento ampliado de Claude — 28/08/2026
 
@@ -35,24 +35,17 @@ La restricción observada en Grupo Poliplast indica explícitamente que debe ver
 - Activos conectados a la app: ninguno observado.
 - Phone Number ID Penosil: `1336065402914038`.
 - Phone Number ID Grupo Poliplast: pendiente.
-- WABA Grupo Poliplast: restringida solo por verificación de negocio pendiente; número conectado y calidad alta.
+- WABA Grupo Poliplast: aprobada; número conectado y calidad alta.
 - WABA Penosil: aprobada; número sin conexión.
 - Centro de seguridad: Meta no exige passkeys actualmente; su adopción sigue recomendada para Felipe y Juan.
 
-## Verificación empresarial enviada — 28/08/2026
+## Verificación empresarial aprobada — 28/08/2026
 
-Meta confirmó la recepción de la información y muestra el estado **En revisión**, con una estimación aproximada de dos días laborables. El caso de uso seleccionado es `La app requiere acceso a los permisos en Meta for Developers`.
-
-Mientras continúe la revisión:
-
-- No reiniciar, duplicar ni modificar la solicitud.
-- No mover ni eliminar WABAs, números, personas o la app.
-- No iniciar una migración tradicional de los números.
-- Esperar el resultado antes de conectar activos, pedir permisos avanzados o generar credenciales definitivas.
+Meta muestra el negocio **Verificado** y ambas cuentas de WhatsApp Business **Aprobadas**. El caso de uso seleccionado fue `La app requiere acceso a los permisos en Meta for Developers`. La conexión debe continuar exclusivamente por coexistencia compatible con WhatsApp Business App; no mediante migración tradicional.
 
 ### Estado de gobernanza
 
-La identidad legal ya fue corregida y la verificación fue enviada. Sigue pendiente confirmar la aceptación efectiva de Felipe como usuario activo. Juan Lucarelli conserva su acceso total. No mover ni eliminar WABAs durante la revisión.
+La identidad legal fue corregida y la verificación quedó aprobada. Sigue pendiente confirmar la aceptación efectiva de Felipe como usuario activo. Juan Lucarelli conserva su acceso total.
 
 ## Flujo objetivo
 

@@ -77,3 +77,22 @@ create table quick_reply_templates (
   active boolean not null default true,
   updated_at timestamptz not null default now()
 );
+
+create table whatsapp_events (
+  event_id text primary key,
+  phone_number_id text not null,
+  display_phone_number text,
+  channel text not null,
+  direction text not null,
+  customer_wa_id text,
+  customer_name text,
+  message_type text,
+  text_body text,
+  occurred_at timestamptz not null,
+  classification_status text not null default 'pending',
+  raw_payload jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index whatsapp_events_pending_idx
+  on whatsapp_events (classification_status, occurred_at desc);

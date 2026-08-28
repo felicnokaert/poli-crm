@@ -10,6 +10,15 @@ Que ninguna conversación comercial dependa de la memoria de Felipe y que cada i
 - Codex: dueño del sistema operativo, CRM, tareas, pipeline y métricas.
 - Claude: entrenador comercial; analiza conversaciones y mejora argumentarios sin editar el CRM.
 
+## Canales y perfiles confirmados
+
+| Perfil de navegador | Canal | Número |
+|---|---|---|
+| POLIPLAST | WhatsApp General | +54 9 11 5262-7555 |
+| FOAM | WhatsApp Penosil | +54 9 11 7155-8957 |
+
+Los nombres de perfil no deben cambiarse: representan además los frentes Poliplast y FOAM. El mapeo fue confirmado directamente por Felipe.
+
 ## Flujo
 
 1. Entra o se inicia una conversación.
@@ -99,4 +108,3 @@ El copiloto observa si el vendedor:
 - Sin credenciales ni información financiera sensible.
 - Registro de origen de cada conversación.
 - La integración automática futura utilizará el canal oficial de WhatsApp Business Platform.
-

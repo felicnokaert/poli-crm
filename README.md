@@ -12,6 +12,13 @@ Registrar clientes, conversaciones y próximos pasos; ayudar a Felipe a conducir
 - WhatsApp Penosil: +54 9 11 7155-8957
 - Operador inicial: Felipe
 
+## Mapeo de perfiles de navegador
+
+- Perfil `POLIPLAST` → WhatsApp General (+54 9 11 5262-7555).
+- Perfil `FOAM` → WhatsApp Penosil (+54 9 11 7155-8957).
+
+Este mapeo fue confirmado explícitamente por Felipe. Los perfiles conservan esos nombres porque también se utilizarán para operar los frentes Poliplast y FOAM. Antes de leer u operar un canal se validará el perfil y el número; no se inferirá la cuenta solamente por foto o contenido.
+
 ## Límites del MVP
 
 - No responde mensajes automáticamente.
@@ -33,4 +40,3 @@ Registrar clientes, conversaciones y próximos pasos; ayudar a Felipe a conducir
 ## Estado
 
 Fase 0 — alcance y arquitectura definidos.
-

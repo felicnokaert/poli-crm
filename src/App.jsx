@@ -10,6 +10,7 @@ import {
   ClipboardList,
   LayoutDashboard,
   MessageCircle,
+  Inbox,
   Plus,
   Search,
   Target,
@@ -43,11 +44,12 @@ const PIPELINE = ['Nuevo', 'Contactado', 'Conversación', 'Calificado', 'Propues
 const FAMILIES = ['Sin definir', 'Poliuretano', 'Poliurea', 'PURMAC', 'Penosil', 'PRFV', 'Carrozados', 'Resinplast', 'Imperpur', 'Foam Factory', 'Otra'];
 const STORAGE_KEY = 'poliplast-sales-copilot-v1';
 
-const initialState = { clients: [], interactions: [], tasks: [] };
+const initialState = { clients: [], interactions: [], tasks: [], inbox: [] };
 
 function loadState() {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || initialState;
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    return stored ? { ...initialState, ...stored, inbox: stored.inbox || [] } : initialState;
   } catch {
     return initialState;
   }
@@ -164,9 +166,69 @@ export default function App() {
     setData({ ...data, tasks: data.tasks.map((task) => (task.id === id ? { ...task, done: !task.done } : task)) });
   }
 
+  function classifyInbox(eventId, decision) {
+    const event = data.inbox.find((item) => item.event_id === eventId);
+    if (!event) return;
+    const stamp = new Date().toISOString();
+    const status = decision === 'ignore' ? 'ignored' : decision;
+    if (decision === 'ignore') {
+      setData({ ...data, inbox: data.inbox.map((item) => item.event_id === eventId ? { ...item, classification_status: status, classifiedAt: stamp } : item) });
+      return;
+    }
+
+    const company = event.customer_name || event.customer_wa_id || 'Contacto de WhatsApp';
+    const existing = data.clients.find((client) => client.whatsappId === event.customer_wa_id);
+    const clientId = existing?.id || crypto.randomUUID();
+    const client = existing || {
+      id: clientId,
+      company,
+      contact: event.customer_name || '',
+      whatsappId: event.customer_wa_id,
+      family: 'Sin definir',
+      temperature: 'Tibio',
+      stage: decision === 'followup' ? 'Contactado' : 'Conversación',
+      clientType: 'Desconocido',
+      industry: 'Desconocida',
+      fit: 'A confirmar',
+      urgency: 'A confirmar',
+      potential: 'Hipótesis media',
+      lastContact: today(),
+      updatedAt: stamp,
+    };
+    const interaction = {
+      id: crypto.randomUUID(),
+      clientId,
+      sourceEventId: event.event_id,
+      company,
+      contact: event.customer_name || '',
+      channel: event.channel === 'penosil' ? 'penosil' : 'general',
+      family: 'Sin definir',
+      summary: event.text_body || `[${event.message_type || 'mensaje'}]`,
+      need: '',
+      objection: '',
+      temperature: 'Tibio',
+      stage: client.stage,
+      authorization: decision,
+      trainingAllowed: decision === 'training',
+      createdAt: event.occurred_at || stamp,
+    };
+    const newTask = decision === 'followup' ? {
+      id: crypto.randomUUID(), clientId, company, title: 'Revisar y responder conversación de WhatsApp',
+      dueDate: today(), cadence: 'Diaria', priority: 'Media', done: false, createdAt: stamp,
+    } : null;
+    setData({
+      ...data,
+      clients: existing ? data.clients.map((item) => item.id === clientId ? { ...item, lastContact: today(), updatedAt: stamp } : item) : [...data.clients, client],
+      interactions: [interaction, ...data.interactions],
+      tasks: newTask ? [...data.tasks, newTask] : data.tasks,
+      inbox: data.inbox.map((item) => item.event_id === eventId ? { ...item, classification_status: status, classifiedAt: stamp } : item),
+    });
+  }
+
   const nav = [
     ['dashboard', 'Inicio', LayoutDashboard],
     ['conversations', 'Conversaciones', MessageCircle],
+    ['inbox', 'Bandeja WhatsApp', Inbox],
     ['tasks', 'Tareas', ClipboardList],
     ['pipeline', 'Pipeline', Target],
     ['clients', 'Clientes', Building2],
@@ -219,6 +281,7 @@ export default function App() {
 
         {view === 'dashboard' && <Dashboard metrics={metrics} tasks={data.tasks} interactions={data.interactions} onToggle={toggleTask} />}
         {view === 'conversations' && <Conversations items={data.interactions} />}
+        {view === 'inbox' && <WhatsAppInbox items={data.inbox} onClassify={classifyInbox} />}
         {view === 'tasks' && <Tasks items={data.tasks} onToggle={toggleTask} />}
         {view === 'pipeline' && <Pipeline clients={data.clients} />}
         {view === 'clients' && <Clients clients={filteredClients} query={query} setQuery={setQuery} />}
@@ -269,6 +332,18 @@ function Dashboard({ metrics, tasks, interactions, onToggle }) {
 
 function Conversations({ items }) {
   return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Memoria comercial</span><h2>Historial de conversaciones</h2></div></div>{items.length ? items.map((item) => <InteractionRow item={item} key={item.id} expanded />) : <Empty text="Registrá la primera conversación para comenzar la memoria comercial." />}</section>;
+}
+
+function WhatsAppInbox({ items, onClassify }) {
+  const pending = items.filter((item) => item.classification_status === 'pending');
+  const processed = items.filter((item) => item.classification_status !== 'pending');
+  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Autorización humana</span><h2>Mensajes pendientes</h2></div><span className="inbox-count">{pending.length}</span></div>{pending.length ? pending.map((item) => <InboxRow item={item} onClassify={onClassify} key={item.event_id}/>) : <Empty text="No hay mensajes esperando clasificación." />}</section>{processed.length > 0 && <section className="panel"><div className="panel-head"><div><span className="eyebrow">Trazabilidad</span><h2>Procesados recientemente</h2></div></div>{processed.slice(0, 12).map((item) => <InboxRow item={item} key={item.event_id}/>)}</section>}</div>;
+}
+
+function InboxRow({ item, onClassify }) {
+  const pending = item.classification_status === 'pending';
+  const labels = { ignored: 'Ignorado', memory: 'Solo memoria', followup: 'Seguimiento', training: 'Entrenamiento' };
+  return <article className="inbox-row"><div className="inbox-message"><span className="channel-dot" style={{ background: CHANNELS[item.channel]?.color || '#7d8790' }}/><div><strong>{item.customer_name || item.customer_wa_id || 'Contacto sin identificar'}</strong><span>{CHANNELS[item.channel]?.name || 'WhatsApp'} · {new Date(item.occurred_at).toLocaleString('es-AR')}</span><p>{item.text_body || `[${item.message_type || 'mensaje sin texto'}]`}</p></div></div>{pending ? <div className="decision-buttons"><button onClick={() => onClassify(item.event_id, 'ignore')}>Ignorar</button><button onClick={() => onClassify(item.event_id, 'memory')}>Solo memoria</button><button onClick={() => onClassify(item.event_id, 'followup')} className="recommended">Crear seguimiento</button><button onClick={() => onClassify(item.event_id, 'training')}>Entrenamiento</button></div> : <span className={`decision-tag ${item.classification_status}`}>{labels[item.classification_status] || item.classification_status}</span>}</article>;
 }
 
 function InteractionRow({ item, expanded = false }) {
@@ -346,7 +421,7 @@ function DataSettings({ data, setData }) {
     try {
       const payload = JSON.parse(await file.text());
       if (payload.schemaVersion !== 1 || !payload.data?.clients || !payload.data?.interactions || !payload.data?.tasks) throw new Error('Formato inválido');
-      setData(payload.data);
+      setData({ ...initialState, ...payload.data, inbox: payload.data.inbox || [] });
       setMessage(`Respaldo importado: ${payload.data.clients.length} clientes y ${payload.data.interactions.length} conversaciones.`);
     } catch {
       setMessage('No se pudo importar: el archivo no corresponde a un respaldo válido.');
@@ -355,7 +430,25 @@ function DataSettings({ data, setData }) {
     }
   }
 
-  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Portabilidad</span><h2>Datos y respaldos</h2></div><Database size={22}/></div><div className="data-cards"><article><Download size={24}/><h3>Exportar respaldo</h3><p>Descarga clientes, conversaciones, tareas y evaluaciones en un archivo JSON versionado.</p><button className="primary" onClick={exportBackup}>Descargar respaldo</button></article><article><Upload size={24}/><h3>Importar respaldo</h3><p>Restaura un respaldo del copiloto en este navegador. Reemplaza el estado local actual.</p><label className="secondary upload-button">Elegir archivo<input type="file" accept="application/json,.json" onChange={importBackup}/></label></article></div>{message && <div className="system-message">{message}</div>}</section><section className="panel"><div className="panel-head"><div><span className="eyebrow">Estado local</span><h2>Contenido guardado</h2></div></div><div className="storage-summary"><div><strong>{data.clients.length}</strong><span>Clientes</span></div><div><strong>{data.interactions.length}</strong><span>Conversaciones</span></div><div><strong>{data.tasks.length}</strong><span>Tareas</span></div><div><strong>{data.interactions.filter((item) => item.evaluation).length}</strong><span>Evaluaciones</span></div></div><div className="quality-note"><CircleAlert size={19}/><p>Durante el piloto, los datos viven en este navegador. Exportá un respaldo al terminar cada jornada. La próxima versión utilizará una base online con usuarios y permisos.</p></div></section></div>;
+  async function importWebhookEvents(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const payload = JSON.parse(await file.text());
+      const incoming = Array.isArray(payload) ? payload : payload.events;
+      if (!Array.isArray(incoming)) throw new Error('Formato inválido');
+      const known = new Set(data.inbox.map((item) => item.event_id));
+      const valid = incoming.filter((item) => item.event_id && !known.has(item.event_id) && item.direction !== 'status');
+      setData({ ...data, inbox: [...valid.map((item) => ({ ...item, classification_status: item.classification_status || 'pending' })), ...data.inbox] });
+      setMessage(`${valid.length} mensajes nuevos incorporados a la bandeja; ${incoming.length - valid.length} duplicados o eventos de sistema omitidos.`);
+    } catch {
+      setMessage('No se pudo importar: se esperaba un arreglo de eventos normalizados del webhook.');
+    } finally {
+      event.target.value = '';
+    }
+  }
+
+  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Portabilidad</span><h2>Datos y respaldos</h2></div><Database size={22}/></div><div className="data-cards"><article><Download size={24}/><h3>Exportar respaldo</h3><p>Descarga clientes, conversaciones, tareas, evaluaciones y bandeja en un archivo JSON versionado.</p><button className="primary" onClick={exportBackup}>Descargar respaldo</button></article><article><Upload size={24}/><h3>Importar respaldo</h3><p>Restaura un respaldo del copiloto en este navegador. Reemplaza el estado local actual.</p><label className="secondary upload-button">Elegir archivo<input type="file" accept="application/json,.json" onChange={importBackup}/></label></article><article><Inbox size={24}/><h3>Importar eventos WhatsApp</h3><p>Prueba la bandeja con eventos normalizados. Deduplica por ID y omite estados técnicos.</p><label className="secondary upload-button">Elegir eventos<input type="file" accept="application/json,.json" onChange={importWebhookEvents}/></label></article></div>{message && <div className="system-message">{message}</div>}</section><section className="panel"><div className="panel-head"><div><span className="eyebrow">Estado local</span><h2>Contenido guardado</h2></div></div><div className="storage-summary"><div><strong>{data.clients.length}</strong><span>Clientes</span></div><div><strong>{data.interactions.length}</strong><span>Conversaciones</span></div><div><strong>{data.tasks.length}</strong><span>Tareas</span></div><div><strong>{data.inbox.filter((item) => item.classification_status === 'pending').length}</strong><span>WhatsApp pendientes</span></div></div><div className="quality-note"><CircleAlert size={19}/><p>Durante el piloto, los datos viven en este navegador. Exportá un respaldo al terminar cada jornada. La próxima versión utilizará una base online con usuarios y permisos.</p></div></section></div>;
 }
 
 function InteractionForm({ form, setForm, onClose, onSave }) {

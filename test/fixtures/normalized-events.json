@@ -1,0 +1,15 @@
+[
+  {
+    "event_id": "wamid.demo-general-001",
+    "phone_number_id": "demo-general",
+    "display_phone_number": "+54 9 11 5262-7555",
+    "channel": "general",
+    "direction": "inbound",
+    "customer_wa_id": "5491100000000",
+    "customer_name": "Cliente de prueba",
+    "message_type": "text",
+    "text_body": "Hola, necesito asesoramiento para aislar un techo.",
+    "occurred_at": "2026-08-28T12:00:00.000Z",
+    "classification_status": "pending"
+  }
+]

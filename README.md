@@ -36,12 +36,15 @@ Este mapeo fue confirmado explícitamente por Felipe. Los perfiles conservan eso
 5. Respuestas rápidas por canal.
 6. Evaluación y coaching de conversaciones.
 7. Panel diario, semanal, mensual y trimestral.
+8. Bandeja de autorización para mensajes capturados por el webhook.
 
 ## Estado
 
 - Arquitectura y flujo: completos.
 - Núcleo local: clientes, conversaciones, tareas y pipeline completos.
 - Modelo Claude integrado: 14 criterios, 11 campos de clasificación, 24 respuestas rápidas y 5 role-plays.
-- Próximo hito: prueba con conversaciones comerciales reales.
+- Bandeja WhatsApp lista: permite ignorar, guardar como memoria, crear seguimiento o autorizar entrenamiento sin responder automáticamente.
+- Verificación empresarial de Meta: enviada y en revisión desde el 28/08/2026.
+- Próximo hito: base online, autenticación y prueba con conversaciones comerciales reales.
 
 La evaluación del MVP es guiada: Felipe/Codex puntúan y registran la devolución. La generación automática con IA se incorporará después de validar el flujo y definir la arquitectura online.

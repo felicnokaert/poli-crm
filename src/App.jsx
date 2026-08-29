@@ -51,6 +51,41 @@ const STORAGE_KEY = 'poliplast-sales-copilot-v1';
 
 const initialState = { clients: [], interactions: [], tasks: [], inbox: [] };
 
+function addDays(days) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function draftFromWhatsApp(event) {
+  const text = (event.text_body || '').trim();
+  const lower = text.toLowerCase();
+  const familyRules = [
+    ['Penosil', ['penosil', 'easyspray', 'espuma aerosol']],
+    ['Poliurea', ['poliurea']],
+    ['Poliuretano', ['poliuretano', 'espuma rígida', 'espuma rigida', 'aislación', 'aislacion']],
+    ['PURMAC', ['purmac', 'máquina', 'maquina', 'repuesto']],
+    ['PRFV', ['prfv', 'fibra de vidrio', 'resina poliéster', 'resina poliester']],
+    ['Carrozados', ['carrozado', 'furgón', 'furgon']],
+    ['Resinplast', ['resinplast']],
+    ['Imperpur', ['imperpur', 'impermeabil']],
+  ];
+  const family = familyRules.find(([, words]) => words.some((word) => lower.includes(word)))?.[0] || 'Sin definir';
+  const urgent = /hoy|urgente|mañana|manana|esta semana|para el viernes|cuanto antes/.test(lower);
+  const commercial = /precio|cotiz|comprar|necesito|kg|litros|unidades|cantidad|stock/.test(lower);
+  return {
+    company: event.customer_name || '',
+    contact: event.customer_name || '',
+    family,
+    summary: text || `[${event.message_type || 'mensaje sin texto'}]`,
+    need: text,
+    temperature: urgent && commercial ? 'Caliente' : commercial ? 'Tibio' : 'Frío',
+    stage: commercial ? 'Contactado' : 'Conversación',
+    nextAction: commercial ? 'Responder y completar diagnóstico comercial' : 'Revisar conversación de WhatsApp',
+    nextDate: urgent ? today() : addDays(commercial ? 1 : 2),
+  };
+}
+
 function loadState() {
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
@@ -108,6 +143,7 @@ export default function App() {
   const [view, setView] = useState('dashboard');
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(blankInteraction);
+  const [inboxDraft, setInboxDraft] = useState(null);
   const [query, setQuery] = useState('');
 
   useEffect(() => {
@@ -134,7 +170,7 @@ export default function App() {
     }
     let active = true;
     setSyncStatus('Sincronizando…');
-    loadOnlineState(session.user.id).then(({ state }) => {
+    loadOnlineState().then(({ state }) => {
       if (!active) return;
       setData({ ...initialState, ...state, inbox: state.inbox || [] });
       setRemoteReady(true);
@@ -157,7 +193,7 @@ export default function App() {
     if (!onlineConfigured || !remoteReady || !session?.user?.id) return undefined;
     setSyncStatus('Guardando…');
     const timer = setTimeout(() => {
-      saveOnlineState(session.user.id, data).then(() => setSyncStatus('Sincronizado')).catch(() => setSyncStatus('Error de sincronización'));
+      saveOnlineState(session.user.id, session.user.email, data).then(() => setSyncStatus('Sincronizado')).catch(() => setSyncStatus('Error de sincronización'));
     }, 700);
     return () => clearTimeout(timer);
   }, [data, remoteReady, session?.user?.id]);
@@ -299,6 +335,53 @@ export default function App() {
     });
   }
 
+  function openInboxDraft(eventId) {
+    const event = data.inbox.find((item) => item.event_id === eventId);
+    if (event) setInboxDraft({ event, form: draftFromWhatsApp(event) });
+  }
+
+  function confirmInboxDraft(event) {
+    event.preventDefault();
+    if (!inboxDraft) return;
+    const source = inboxDraft.event;
+    const draft = inboxDraft.form;
+    const stamp = new Date().toISOString();
+    const existing = data.clients.find((client) => client.whatsappId === source.customer_wa_id)
+      || data.clients.find((client) => draft.company && client.company.toLowerCase() === draft.company.trim().toLowerCase());
+    const clientId = existing?.id || crypto.randomUUID();
+    const company = draft.company.trim() || source.customer_name || source.customer_wa_id || 'Contacto de WhatsApp';
+    const client = {
+      ...(existing || {}), id: clientId, company, contact: draft.contact.trim(), whatsappId: source.customer_wa_id,
+      family: draft.family, temperature: draft.temperature, stage: draft.stage,
+      clientType: existing?.clientType || 'Desconocido', industry: existing?.industry || 'Desconocida',
+      fit: existing?.fit || 'A confirmar', urgency: draft.nextDate === today() ? 'Alta' : existing?.urgency || 'A confirmar',
+      potential: existing?.potential || 'Hipótesis media', lastContact: today(), updatedAt: stamp,
+      updatedBy: session?.user?.email || '',
+    };
+    const interaction = {
+      id: crypto.randomUUID(), clientId, sourceEventId: source.event_id, company, contact: draft.contact.trim(),
+      channel: source.channel === 'penosil' ? 'penosil' : 'general', family: draft.family,
+      summary: draft.summary.trim(), need: draft.need.trim(), objection: '', temperature: draft.temperature,
+      stage: draft.stage, authorization: 'confirmed-draft', trainingAllowed: false,
+      createdAt: source.occurred_at || stamp, createdBy: session?.user?.email || '',
+    };
+    const task = draft.nextAction.trim() ? {
+      id: crypto.randomUUID(), clientId, company, title: draft.nextAction.trim(), dueDate: draft.nextDate,
+      cadence: 'Diaria', priority: draft.temperature === 'Caliente' ? 'Alta' : 'Media', done: false,
+      createdAt: stamp, createdBy: session?.user?.email || '', trigger: 'Borrador confirmado desde WhatsApp',
+    } : null;
+    setData({
+      ...data,
+      clients: existing ? data.clients.map((item) => item.id === clientId ? client : item) : [...data.clients, client],
+      interactions: [interaction, ...data.interactions],
+      tasks: task ? [...data.tasks, task] : data.tasks,
+      inbox: data.inbox.map((item) => item.event_id === source.event_id
+        ? { ...item, classification_status: 'confirmed', classifiedAt: stamp, classifiedBy: session?.user?.email || '' }
+        : item),
+    });
+    setInboxDraft(null);
+  }
+
   const nav = [
     ['dashboard', 'Inicio', LayoutDashboard],
     ['conversations', 'Conversaciones', MessageCircle],
@@ -326,8 +409,8 @@ export default function App() {
           ))}
         </nav>
         <div className="sidebar-note">
-          <span className="eyebrow">MVP local</span>
-          <p>La información permanece en este navegador durante el piloto.</p>
+          <span className="eyebrow">{onlineConfigured ? 'Equipo conectado' : 'MVP local'}</span>
+          <p>{onlineConfigured ? 'La cartera se comparte con los usuarios autorizados.' : 'La información permanece en este navegador durante el piloto.'}</p>
         </div>
       </aside>
 
@@ -356,7 +439,7 @@ export default function App() {
 
         {view === 'dashboard' && <Dashboard metrics={metrics} tasks={data.tasks} interactions={data.interactions} onToggle={toggleTask} />}
         {view === 'conversations' && <Conversations items={data.interactions} />}
-        {view === 'inbox' && <WhatsAppInbox items={data.inbox} onClassify={classifyInbox} />}
+        {view === 'inbox' && <WhatsAppInbox items={data.inbox} onClassify={classifyInbox} onDraft={openInboxDraft} />}
         {view === 'tasks' && <Tasks items={data.tasks} onToggle={toggleTask} />}
         {view === 'pipeline' && <Pipeline clients={data.clients} />}
         {view === 'clients' && <Clients clients={filteredClients} interactions={data.interactions} tasks={data.tasks} query={query} setQuery={setQuery} />}
@@ -366,6 +449,7 @@ export default function App() {
       </main>
 
       {showForm && <InteractionForm form={form} setForm={setForm} onClose={() => setShowForm(false)} onSave={saveInteraction} />}
+      {inboxDraft && <InboxDraftModal draft={inboxDraft} setDraft={setInboxDraft} onClose={() => setInboxDraft(null)} onConfirm={confirmInboxDraft} />}
     </div>
   );
 }
@@ -409,16 +493,22 @@ function Conversations({ items }) {
   return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Memoria comercial</span><h2>Historial de conversaciones</h2></div></div>{items.length ? items.map((item) => <InteractionRow item={item} key={item.id} expanded />) : <Empty text="Registrá la primera conversación para comenzar la memoria comercial." />}</section>;
 }
 
-function WhatsAppInbox({ items, onClassify }) {
+function WhatsAppInbox({ items, onClassify, onDraft }) {
   const pending = items.filter((item) => item.classification_status === 'pending');
   const processed = items.filter((item) => item.classification_status !== 'pending');
-  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Autorización humana</span><h2>Mensajes pendientes</h2></div><span className="inbox-count">{pending.length}</span></div>{pending.length ? pending.map((item) => <InboxRow item={item} onClassify={onClassify} key={item.event_id}/>) : <Empty text="No hay mensajes esperando clasificación." />}</section>{processed.length > 0 && <section className="panel"><div className="panel-head"><div><span className="eyebrow">Trazabilidad</span><h2>Procesados recientemente</h2></div></div>{processed.slice(0, 12).map((item) => <InboxRow item={item} key={item.event_id}/>)}</section>}</div>;
+  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Autorización humana</span><h2>Mensajes pendientes</h2></div><span className="inbox-count">{pending.length}</span></div>{pending.length ? pending.map((item) => <InboxRow item={item} onClassify={onClassify} onDraft={onDraft} key={item.event_id}/>) : <Empty text="No hay mensajes esperando clasificación." />}</section>{processed.length > 0 && <section className="panel"><div className="panel-head"><div><span className="eyebrow">Trazabilidad</span><h2>Procesados recientemente</h2></div></div>{processed.slice(0, 12).map((item) => <InboxRow item={item} key={item.event_id}/>)}</section>}</div>;
 }
 
-function InboxRow({ item, onClassify }) {
+function InboxRow({ item, onClassify, onDraft }) {
   const pending = item.classification_status === 'pending';
-  const labels = { ignored: 'No requiere acción', memory: 'Contexto guardado', followup: 'Tarea creada', training: 'Enviado al entrenador' };
-  return <article className="inbox-row"><div className="inbox-message"><span className="channel-dot" style={{ background: CHANNELS[item.channel]?.color || '#7d8790' }}/><div><strong>{item.customer_name || item.customer_wa_id || 'Contacto sin identificar'}</strong><span>{CHANNELS[item.channel]?.name || 'WhatsApp'} · {new Date(item.occurred_at).toLocaleString('es-AR')}</span><p>{item.text_body || `[${item.message_type || 'mensaje sin texto'}]`}</p></div></div>{pending ? <div className="decision-buttons"><button onClick={() => onClassify(item.event_id, 'ignore')}>No requiere acción</button><button onClick={() => onClassify(item.event_id, 'memory')}>Guardar contexto</button><button onClick={() => onClassify(item.event_id, 'followup')} className="recommended">Crear tarea</button><button onClick={() => onClassify(item.event_id, 'training')}>Enviar al entrenador</button></div> : <span className={`decision-tag ${item.classification_status}`}>{labels[item.classification_status] || item.classification_status}</span>}</article>;
+  const labels = { ignored: 'No requiere acción', memory: 'Contexto guardado', followup: 'Tarea creada', training: 'Enviado al entrenador', confirmed: 'Borrador confirmado' };
+  return <article className="inbox-row"><div className="inbox-message"><span className="channel-dot" style={{ background: CHANNELS[item.channel]?.color || '#7d8790' }}/><div><strong>{item.customer_name || item.customer_wa_id || 'Contacto sin identificar'}</strong><span>{CHANNELS[item.channel]?.name || 'WhatsApp'} · {new Date(item.occurred_at).toLocaleString('es-AR')}</span><p>{item.text_body || `[${item.message_type || 'mensaje sin texto'}]`}</p></div></div>{pending ? <div className="decision-buttons"><button onClick={() => onDraft(item.event_id)} className="recommended">Revisar borrador</button><button onClick={() => onClassify(item.event_id, 'ignore')}>No requiere acción</button><button onClick={() => onClassify(item.event_id, 'memory')}>Solo contexto</button><button onClick={() => onClassify(item.event_id, 'training')}>Entrenador</button></div> : <span className={`decision-tag ${item.classification_status}`}>{labels[item.classification_status] || item.classification_status}</span>}</article>;
+}
+
+function InboxDraftModal({ draft, setDraft, onClose, onConfirm }) {
+  const update = (name, value) => setDraft({ ...draft, form: { ...draft.form, [name]: value } });
+  const form = draft.form;
+  return <div className="modal-backdrop"><form className="modal" onSubmit={onConfirm}><div className="modal-head"><div><span className="eyebrow">Borrador automático · confirmar antes de guardar</span><h2>Convertir mensaje en oportunidad</h2><p>Revisá y corregí. El CRM no responde al cliente.</p></div><button type="button" className="icon-button" aria-label="Cerrar borrador" onClick={onClose}><X/></button></div><div className="source-message"><strong>Mensaje original</strong><p>{draft.event.text_body || `[${draft.event.message_type || 'mensaje sin texto'}]`}</p></div><div className="form-grid"><label>Empresa / cliente<input required value={form.company} onChange={(event) => update('company', event.target.value)} placeholder="Confirmar empresa" /></label><label>Persona / contacto<input value={form.contact} onChange={(event) => update('contact', event.target.value)} /></label><label>Familia<select value={form.family} onChange={(event) => update('family', event.target.value)}>{FAMILIES.map((item) => <option key={item}>{item}</option>)}</select></label><label>Temperatura<select value={form.temperature} onChange={(event) => update('temperature', event.target.value)}><option>Frío</option><option>Tibio</option><option>Caliente</option></select></label><label>Etapa<select value={form.stage} onChange={(event) => update('stage', event.target.value)}>{PIPELINE.map((item) => <option key={item}>{item}</option>)}</select></label><label>Fecha próxima<input type="date" value={form.nextDate} onChange={(event) => update('nextDate', event.target.value)} /></label><label className="span-2">Resumen<textarea value={form.summary} onChange={(event) => update('summary', event.target.value)} /></label><label className="span-2">Necesidad detectada<textarea value={form.need} onChange={(event) => update('need', event.target.value)} /></label><label className="span-2">Próxima acción<input value={form.nextAction} onChange={(event) => update('nextAction', event.target.value)} /></label></div><div className="modal-actions"><button type="button" className="secondary" onClick={onClose}>Cancelar</button><button className="primary" type="submit">Confirmar y crear seguimiento</button></div></form></div>;
 }
 
 function InteractionRow({ item, expanded = false }) {

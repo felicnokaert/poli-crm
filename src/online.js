@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const WORKSPACE_KEY = 'grupo-poliplast';
 
 export const onlineConfigured = Boolean(url && anonKey);
 export const supabase = onlineConfigured
@@ -10,9 +11,9 @@ export const supabase = onlineConfigured
     })
   : null;
 
-export async function loadOnlineState(userId) {
+export async function loadOnlineState() {
   const [{ data: stateRow, error: stateError }, { data: events, error: eventsError }] = await Promise.all([
-    supabase.from('copilot_states').select('data,updated_at').eq('user_id', userId).maybeSingle(),
+    supabase.from('workspace_states').select('data,updated_at,updated_by_email').eq('workspace_key', WORKSPACE_KEY).maybeSingle(),
     supabase.from('whatsapp_events').select('*').neq('direction', 'status').order('occurred_at', { ascending: false }).limit(500),
   ]);
   if (stateError) throw stateError;
@@ -20,11 +21,20 @@ export async function loadOnlineState(userId) {
   const state = stateRow?.data || null;
   const savedEvents = new Map((state?.inbox || []).map((item) => [item.event_id, item]));
   const inbox = (events || []).map((event) => ({ ...event, ...(savedEvents.get(event.event_id) || {}) }));
-  return { state: state ? { ...state, inbox } : { clients: [], interactions: [], tasks: [], inbox }, updatedAt: stateRow?.updated_at };
+  return {
+    state: state ? { ...state, inbox } : { clients: [], interactions: [], tasks: [], inbox },
+    updatedAt: stateRow?.updated_at,
+    updatedBy: stateRow?.updated_by_email,
+  };
 }
 
-export async function saveOnlineState(userId, data) {
-  const { error } = await supabase.from('copilot_states').upsert({ user_id: userId, data, updated_at: new Date().toISOString() });
+export async function saveOnlineState(userId, email, data) {
+  const { error } = await supabase.from('workspace_states').upsert({
+    workspace_key: WORKSPACE_KEY,
+    data,
+    updated_by: userId,
+    updated_by_email: email,
+    updated_at: new Date().toISOString(),
+  });
   if (error) throw error;
 }
-

@@ -41,6 +41,7 @@ export async function connectWhatsApp(session) {
         response_type: 'code',
         override_default_response_type: true,
         extras: {
+          version: 'v4',
           featureType: 'whatsapp_business_app_onboarding',
           sessionInfoVersion: '3',
         },

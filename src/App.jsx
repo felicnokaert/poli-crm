@@ -162,9 +162,6 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [data, remoteReady, session?.user?.id]);
 
-  if (!authReady) return <Splash text="Preparando acceso seguro…" />;
-  if (onlineConfigured && !session) return <LoginScreen />;
-
   const metrics = useMemo(() => {
     const now = today();
     const weekAgo = new Date();
@@ -180,6 +177,9 @@ export default function App() {
       dueToday: data.tasks.filter((task) => !task.done && task.dueDate === now).length,
     };
   }, [data]);
+
+  if (!authReady) return <Splash text="Preparando acceso seguro…" />;
+  if (onlineConfigured && !session) return <LoginScreen />;
 
   const filteredClients = data.clients.filter((client) =>
     `${client.company} ${client.contact} ${client.family}`.toLowerCase().includes(query.toLowerCase()),

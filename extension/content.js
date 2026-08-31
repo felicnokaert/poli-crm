@@ -33,20 +33,33 @@ function messageNodes() {
 
 async function capture() {
   if (state.sending) return;
-  const name = chatName();
-  if (!name) return;
   const config = await chrome.storage.local.get(['channel', 'endpoint', 'token']);
   if (!config.channel || !config.endpoint || !config.token) return;
   const events = [];
-  for (const node of messageNodes().slice(-80)) {
-    const text = [...node.querySelectorAll('.selectable-text, [data-testid="selectable-text"]')]
-      .map((item) => item.textContent).join('\n').trim();
-    if (!text) continue;
-    const direction = node.closest('.message-out') || node.classList.contains('message-out') ? 'outbound' : 'inbound';
-    const metadata = node.querySelector('[data-pre-plain-text]')?.getAttribute('data-pre-plain-text') || '';
-    const eventId = `bridge.${await digest(`${config.channel}|${name}|${direction}|${metadata}|${text}`)}`;
+  const name = chatName();
+  if (name) {
+    for (const node of messageNodes().slice(-80)) {
+      const text = [...node.querySelectorAll('.selectable-text, [data-testid="selectable-text"]')]
+        .map((item) => item.textContent).join('\n').trim();
+      if (!text) continue;
+      const direction = node.closest('.message-out') || node.classList.contains('message-out') ? 'outbound' : 'inbound';
+      const metadata = node.querySelector('[data-pre-plain-text]')?.getAttribute('data-pre-plain-text') || '';
+      const eventId = `bridge.${await digest(`${config.channel}|${name}|${direction}|${metadata}|${text}`)}`;
+      if (state.sent.has(eventId)) continue;
+      events.push({ event_id: eventId, channel: config.channel, direction, chat_id: chatKey(name), chat_name: name, text_body: text, occurred_at: new Date().toISOString() });
+    }
+  }
+  const chatRows = [...document.querySelectorAll('[role="grid"] [role="row"]')].filter((row) =>
+    row.querySelector('[aria-label*="mensaje no leído"], [aria-label*="mensajes no leídos"]'));
+  for (const row of chatRows.slice(0, 30)) {
+    const parts = [...row.querySelectorAll('span[dir="auto"]')].map((item) => item.textContent?.trim()).filter(Boolean);
+    const rowName = parts[0] || row.querySelector('[title]')?.getAttribute('title') || '';
+    const preview = parts.at(-1) || '';
+    if (!rowName || !preview || rowName === preview) continue;
+    const direction = /(^|\s)Tú\s*:/i.test(row.innerText) ? 'outbound' : 'inbound';
+    const eventId = `bridge.${await digest(`${config.channel}|preview|${rowName}|${direction}|${preview}`)}`;
     if (state.sent.has(eventId)) continue;
-    events.push({ event_id: eventId, channel: config.channel, direction, chat_id: chatKey(name), chat_name: name, text_body: text, occurred_at: new Date().toISOString() });
+    events.push({ event_id: eventId, channel: config.channel, direction, chat_id: chatKey(rowName), chat_name: rowName, text_body: preview, occurred_at: new Date().toISOString() });
   }
   if (!events.length) return;
   state.sending = true;

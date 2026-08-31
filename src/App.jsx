@@ -219,9 +219,24 @@ export default function App() {
 
     const channel = supabase.channel('whatsapp-inbox').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'whatsapp_events' }, ({ new: event }) => {
       if (event.direction === 'status') return;
-      setData((current) => current.inbox.some((item) => item.event_id === event.event_id)
-        ? current
-        : { ...current, inbox: [{ ...event, classification_status: 'pending' }, ...current.inbox] });
+      setData((current) => {
+        if (current.inbox.some((item) => item.event_id === event.event_id)) return current;
+        const client = current.clients.find((item) => item.whatsappId && item.whatsappId === event.customer_wa_id)
+          || current.clients.find((item) => event.customer_name && item.company?.toLowerCase() === event.customer_name.toLowerCase());
+        const taskTitle = 'Revisar nuevo mensaje de WhatsApp';
+        const hasReminder = client && current.tasks.some((item) => item.clientId === client.id && !item.done && item.title === taskTitle);
+        const reminder = event.direction === 'inbound' && client && !hasReminder ? {
+          id: crypto.randomUUID(), clientId: client.id, company: client.company, title: taskTitle,
+          dueDate: today(), cadence: 'Diaria', priority: 'Media', done: false,
+          createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+          trigger: `Nuevo mensaje recibido por ${CHANNELS[event.channel]?.name || 'WhatsApp'}`,
+        } : null;
+        return {
+          ...current,
+          inbox: [{ ...event, classification_status: event.classification_status || 'pending' }, ...current.inbox],
+          tasks: reminder ? [...current.tasks, reminder] : current.tasks,
+        };
+      });
     }).subscribe();
     const workspaceChannel = supabase.channel('workspace-state').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'workspace_states', filter: 'workspace_key=eq.grupo-poliplast' }, ({ new: row }) => {
       if (!row?.data || row.updated_by === session.user.id) return;
@@ -437,6 +452,18 @@ export default function App() {
     setInboxDraft({ event: { ...event, transcript, messageCount: events.length }, form: { ...draftFromWhatsApp(event), summary: transcript } });
   }
 
+  function openInboxContact(eventId) {
+    const event = data.inbox.find((item) => item.event_id === eventId);
+    if (!event) return;
+    const client = data.clients.find((item) => item.whatsappId && item.whatsappId === event.customer_wa_id)
+      || data.clients.find((item) => event.customer_name && item.company?.toLowerCase() === event.customer_name.toLowerCase());
+    if (client) {
+      setSelectedClientId(client.id);
+      return;
+    }
+    openInboxDraft(eventId);
+  }
+
   function confirmInboxDraft(event) {
     event.preventDefault();
     if (!inboxDraft) return;
@@ -470,11 +497,12 @@ export default function App() {
       cadence: 'Diaria', priority: draft.temperature === 'Caliente' ? 'Alta' : 'Media', done: false,
       createdAt: stamp, updatedAt: stamp, createdBy: session?.user?.email || '', trigger: 'Borrador confirmado desde WhatsApp',
     } : null;
+    const hasOpenFollowup = data.tasks.some((item) => item.clientId === clientId && !item.done && item.title === task?.title);
     setData({
       ...data,
       clients: existing ? data.clients.map((item) => item.id === clientId ? client : item) : [...data.clients, client],
       interactions: [interaction, ...data.interactions],
-      tasks: task ? [...data.tasks, task] : data.tasks,
+      tasks: task && !hasOpenFollowup ? [...data.tasks, task] : data.tasks,
       inbox: data.inbox.map((item) => whatsappThreadKey(item) === whatsappThreadKey(source)
         ? { ...item, classification_status: 'confirmed', classifiedAt: stamp, classifiedBy: session?.user?.email || '' }
         : item),
@@ -572,7 +600,7 @@ export default function App() {
 
         {view === 'dashboard' && <Dashboard metrics={metrics} tasks={data.tasks} interactions={data.interactions} onToggle={toggleTask} onOpenTask={setSelectedTaskId} onOpenInteraction={setSelectedInteractionId} />}
         {view === 'conversations' && <Conversations items={data.interactions} onOpen={setSelectedInteractionId} />}
-        {view === 'inbox' && <WhatsAppInbox items={data.inbox} onClassify={classifyInbox} onDraft={openInboxDraft} />}
+        {view === 'inbox' && <WhatsAppInbox items={data.inbox} onClassify={classifyInbox} onDraft={openInboxDraft} onOpen={openInboxContact} />}
         {view === 'tasks' && <Tasks items={data.tasks} onToggle={toggleTask} onOpen={setSelectedTaskId} onNew={() => setShowTaskForm(true)} />}
         {view === 'pipeline' && <Pipeline clients={data.clients} onOpenClient={setSelectedClientId} />}
         {view === 'clients' && <Clients clients={filteredClients} query={query} setQuery={setQuery} onOpenClient={setSelectedClientId} />}
@@ -632,17 +660,18 @@ function Conversations({ items, onOpen }) {
   return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Memoria comercial</span><h2>Historial de conversaciones</h2></div><label className="search"><Search size={17}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar conversación…"/></label></div>{filtered.length ? filtered.map((item) => <InteractionRow item={item} key={item.id} expanded onOpen={onOpen} />) : <Empty text={items.length ? 'No hay conversaciones que coincidan con la búsqueda.' : 'Registrá la primera conversación para comenzar la memoria comercial.'} />}</section>;
 }
 
-function WhatsAppInbox({ items, onClassify, onDraft }) {
+function WhatsAppInbox({ items, onClassify, onDraft, onOpen }) {
   const threads = groupWhatsAppThreads(items);
   const pending = threads.filter((item) => item.classification_status === 'pending');
   const processed = threads.filter((item) => item.classification_status !== 'pending');
-  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Autorización humana</span><h2>Conversaciones pendientes</h2></div><span className="inbox-count">{pending.length}</span></div>{pending.length ? pending.map((item) => <InboxRow item={item} onClassify={onClassify} onDraft={onDraft} key={item.threadKey}/>) : <Empty text="No hay conversaciones esperando clasificación." />}</section>{processed.length > 0 && <section className="panel"><div className="panel-head"><div><span className="eyebrow">Trazabilidad por contacto</span><h2>Conversaciones procesadas</h2></div></div>{processed.slice(0, 12).map((item) => <InboxRow item={item} key={item.threadKey}/>)}</section>}</div>;
+  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Autorización humana</span><h2>Conversaciones pendientes</h2></div><span className="inbox-count">{pending.length}</span></div>{pending.length ? pending.map((item) => <InboxRow item={item} onClassify={onClassify} onDraft={onDraft} onOpen={onOpen} key={item.threadKey}/>) : <Empty text="No hay conversaciones esperando clasificación." />}</section>{processed.length > 0 && <section className="panel"><div className="panel-head"><div><span className="eyebrow">Trazabilidad por contacto</span><h2>Conversaciones procesadas</h2></div></div>{processed.slice(0, 20).map((item) => <InboxRow item={item} onOpen={onOpen} key={item.threadKey}/>)}</section>}</div>;
 }
 
-function InboxRow({ item, onClassify, onDraft }) {
+function InboxRow({ item, onClassify, onDraft, onOpen }) {
   const pending = item.classification_status === 'pending';
   const labels = { ignored: 'No requiere acción', memory: 'Contexto guardado', followup: 'Tarea creada', training: 'Enviado al entrenador', confirmed: 'Borrador confirmado' };
-  return <article className="inbox-row"><div className="inbox-message"><span className="channel-dot" style={{ background: CHANNELS[item.channel]?.color || '#7d8790' }}/><div><strong>{item.customer_name || item.customer_wa_id || 'Contacto sin identificar'}</strong><span>{CHANNELS[item.channel]?.name || 'WhatsApp'} · {new Date(item.occurred_at).toLocaleString('es-AR')} · {item.messageCount || 1} {(item.messageCount || 1) === 1 ? 'mensaje' : 'mensajes'}</span><p>{item.text_body || `[${item.message_type || 'mensaje sin texto'}]`}</p></div></div>{pending ? <div className="decision-buttons"><button onClick={() => onDraft(item.event_id)} className="recommended">Revisar conversación</button><button onClick={() => onClassify(item.event_id, 'ignore')}>No requiere acción</button><button onClick={() => onClassify(item.event_id, 'memory')}>Solo contexto</button><button onClick={() => onClassify(item.event_id, 'training')}>Entrenador</button></div> : <span className={`decision-tag ${item.classification_status}`}>{labels[item.classification_status] || item.classification_status}</span>}</article>;
+  const name = item.customer_name || item.customer_wa_id || 'Contacto sin identificar';
+  return <article className="inbox-row"><button type="button" className="inbox-message inbox-open" aria-label={`Abrir ficha de ${name}`} onClick={() => onOpen?.(item.event_id)}><span className="channel-dot" style={{ background: CHANNELS[item.channel]?.color || '#7d8790' }}/><div><strong>{name}</strong><span>{CHANNELS[item.channel]?.name || 'WhatsApp'} · {new Date(item.occurred_at).toLocaleString('es-AR')} · {item.messageCount || 1} {(item.messageCount || 1) === 1 ? 'mensaje' : 'mensajes'}</span><p>{item.text_body || `[${item.message_type || 'mensaje sin texto'}]`}</p></div><ChevronRight size={18}/></button>{pending ? <div className="decision-buttons"><button onClick={() => onDraft(item.event_id)} className="recommended">Revisar conversación</button><button onClick={() => onClassify(item.event_id, 'ignore')}>No requiere acción</button><button onClick={() => onClassify(item.event_id, 'memory')}>Solo contexto</button><button onClick={() => onClassify(item.event_id, 'training')}>Entrenador</button></div> : <span className={`decision-tag ${item.classification_status}`}>{labels[item.classification_status] || item.classification_status}</span>}</article>;
 }
 
 function InboxDraftModal({ draft, setDraft, onClose, onConfirm }) {

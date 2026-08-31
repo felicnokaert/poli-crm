@@ -413,6 +413,7 @@ export default function App() {
         <div className="sidebar-note">
           <span className="eyebrow">{onlineConfigured ? 'Equipo conectado' : 'MVP local'}</span>
           <p>{onlineConfigured ? 'La cartera se comparte con los usuarios autorizados.' : 'La información permanece en este navegador durante el piloto.'}</p>
+          <div className="legal-links"><a href="/privacidad.html" target="_blank" rel="noreferrer">Privacidad</a><a href="/terminos.html" target="_blank" rel="noreferrer">Términos</a><a href="/eliminacion-datos.html" target="_blank" rel="noreferrer">Eliminar datos</a></div>
         </div>
       </aside>
 
@@ -650,7 +651,7 @@ function LoginScreen() {
     const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin, shouldCreateUser: false } });
     setMessage(error ? 'No se pudo enviar el acceso. Verificá que el usuario esté habilitado.' : 'Revisá tu correo y abrí el enlace de acceso.');
   }
-  return <div className="login-shell"><section className="login-card"><div className="brand-mark">P</div><span className="eyebrow">Acceso privado</span><h1>Poliplast Sales Copilot</h1><p>Ingresá con el correo habilitado. No necesitás recordar una contraseña.</p><form onSubmit={submit}><label>Correo<input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="nombre@empresa.com" /></label><button className="primary" type="submit">Enviar enlace de acceso</button></form>{message && <div className="system-message">{message}</div>}</section></div>;
+  return <div className="login-shell"><section className="login-card"><div className="brand-mark">P</div><span className="eyebrow">Acceso privado</span><h1>Poliplast Sales Copilot</h1><p>Ingresá con el correo habilitado. No necesitás recordar una contraseña.</p><form onSubmit={submit}><label>Correo<input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="nombre@empresa.com" /></label><button className="primary" type="submit">Enviar enlace de acceso</button></form>{message && <div className="system-message">{message}</div>}<div className="login-legal"><a href="/privacidad.html">Privacidad</a><a href="/terminos.html">Términos</a><a href="/eliminacion-datos.html">Eliminación de datos</a></div></section></div>;
 }
 
 function Splash({ text }) { return <div className="login-shell"><section className="login-card"><div className="brand-mark">P</div><h1>Poliplast Sales Copilot</h1><p>{text}</p></section></div>; }

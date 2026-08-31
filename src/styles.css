@@ -12,6 +12,7 @@ button { cursor: pointer; }
 .brand strong, .brand span { display: block; }.brand strong { font: 700 15px 'Manrope'; }.brand span { color: #aac8bd; font-size: 12px; margin-top: 2px; }
 nav { display: grid; gap: 6px; } nav button { border: 0; color: #b9d0c8; background: transparent; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; text-align: left; } nav button:hover, nav button.active { background: #1d5045; color: #fff; }
 .sidebar-note { margin-top: auto; border-top: 1px solid #2b5a50; padding: 20px 10px 0; }.sidebar-note p { color: #aac8bd; font-size: 12px; line-height: 1.5; margin-bottom: 0; }
+.legal-links, .login-legal { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 12px; }.legal-links a { color: #aac8bd; font-size: 11px; }.login-legal { justify-content: center; margin-top: 18px; }.login-legal a { color: #56736b; font-size: 11px; }
 main { padding: 30px 36px 56px; min-width: 0; }
 .topbar, .top-actions, .panel-head, .channel-card, .interaction-row, .task-row, .client-row { display: flex; align-items: center; }
 .topbar { justify-content: space-between; margin-bottom: 24px; }.topbar h1 { margin: 3px 0 0; font: 800 28px 'Manrope'; color: #12372f; }.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #69827b; }

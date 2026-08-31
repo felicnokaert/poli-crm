@@ -145,6 +145,7 @@ export default function App() {
   const [query, setQuery] = useState('');
   const [selectedInteractionId, setSelectedInteractionId] = useState(null);
   const [selectedClientId, setSelectedClientId] = useState(null);
+  const [selectedTaskId, setSelectedTaskId] = useState(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -447,10 +448,10 @@ export default function App() {
           ))}
         </section>
 
-        {view === 'dashboard' && <Dashboard metrics={metrics} tasks={data.tasks} interactions={data.interactions} onToggle={toggleTask} onOpenInteraction={setSelectedInteractionId} />}
+        {view === 'dashboard' && <Dashboard metrics={metrics} tasks={data.tasks} interactions={data.interactions} onToggle={toggleTask} onOpenTask={setSelectedTaskId} onOpenInteraction={setSelectedInteractionId} />}
         {view === 'conversations' && <Conversations items={data.interactions} onOpen={setSelectedInteractionId} />}
         {view === 'inbox' && <WhatsAppInbox items={data.inbox} onClassify={classifyInbox} onDraft={openInboxDraft} />}
-        {view === 'tasks' && <Tasks items={data.tasks} onToggle={toggleTask} />}
+        {view === 'tasks' && <Tasks items={data.tasks} onToggle={toggleTask} onOpen={setSelectedTaskId} />}
         {view === 'pipeline' && <Pipeline clients={data.clients} onOpenClient={setSelectedClientId} />}
         {view === 'clients' && <Clients clients={filteredClients} query={query} setQuery={setQuery} onOpenClient={setSelectedClientId} />}
         {view === 'replies' && <QuickReplies />}
@@ -462,11 +463,12 @@ export default function App() {
       {inboxDraft && <InboxDraftModal draft={inboxDraft} setDraft={setInboxDraft} onClose={() => setInboxDraft(null)} onConfirm={confirmInboxDraft} />}
       {selectedInteractionId && <InteractionDetail interaction={data.interactions.find((item) => item.id === selectedInteractionId)} client={data.clients.find((item) => item.id === data.interactions.find((entry) => entry.id === selectedInteractionId)?.clientId)} onClose={() => setSelectedInteractionId(null)} onOpenClient={(clientId) => { setSelectedInteractionId(null); setSelectedClientId(clientId); }} />}
       {selectedClientId && <ClientDetail client={data.clients.find((item) => item.id === selectedClientId)} interactions={data.interactions.filter((item) => item.clientId === selectedClientId)} tasks={data.tasks.filter((item) => item.clientId === selectedClientId)} onClose={() => setSelectedClientId(null)} onOpenInteraction={setSelectedInteractionId} />}
+      {selectedTaskId && <TaskDetail task={data.tasks.find((item) => item.id === selectedTaskId)} client={data.clients.find((item) => item.id === data.tasks.find((task) => task.id === selectedTaskId)?.clientId)} onClose={() => setSelectedTaskId(null)} onToggle={(taskId) => { toggleTask(taskId); setSelectedTaskId(null); }} onOpenClient={(clientId) => { setSelectedTaskId(null); setSelectedClientId(clientId); }} />}
     </div>
   );
 }
 
-function Dashboard({ metrics, tasks, interactions, onToggle, onOpenInteraction }) {
+function Dashboard({ metrics, tasks, interactions, onToggle, onOpenTask, onOpenInteraction }) {
   const cards = [
     ['Contactos esta semana', metrics.contacts, 'Meta: 15', MessageCircle],
     ['Contactos efectivos', metrics.effective, 'Meta: 8–10', CheckCircle2],
@@ -481,7 +483,7 @@ function Dashboard({ metrics, tasks, interactions, onToggle, onOpenInteraction }
       <section className="two-columns">
         <article className="panel">
           <div className="panel-head"><div><span className="eyebrow">Prioridad</span><h2>Próximas acciones</h2></div><CalendarCheck size={22}/></div>
-          <TaskList items={tasks.filter((task) => !task.done).sort((a, b) => a.dueDate.localeCompare(b.dueDate)).slice(0, 6)} onToggle={onToggle} emptyText="Sin tareas por ahora. Registrá una conversación para que el copiloto te ayude a definir el próximo paso."/>
+          <TaskList items={tasks.filter((task) => !task.done).sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || '')).slice(0, 6)} onToggle={onToggle} onOpen={onOpenTask} emptyText="Sin tareas por ahora. Registrá una conversación para que el copiloto te ayude a definir el próximo paso."/>
         </article>
         <article className="panel">
           <div className="panel-head"><div><span className="eyebrow">Actividad</span><h2>Últimas conversaciones</h2></div><MessageCircle size={22}/></div>
@@ -533,14 +535,23 @@ function InteractionDetail({ interaction, client, onClose, onOpenClient }) {
   return <div className="modal-backdrop"><section className="modal interaction-detail"><div className="modal-head"><div><span className="eyebrow">Conversación registrada</span><h2>{interaction.company}</h2><p>{interaction.contact || 'Contacto sin identificar'} · {formatDate(interaction.createdAt)}</p></div><button type="button" className="icon-button" aria-label="Cerrar conversación" onClick={onClose}><X/></button></div><div className="conversation-detail-grid"><Fact label="Canal" value={CHANNELS[interaction.channel]?.name}/><Fact label="Familia" value={interaction.family}/><Fact label="Temperatura" value={interaction.temperature}/><Fact label="Etapa" value={interaction.stage}/></div><div className="detail-block"><span>Qué hablaron</span><p>{interaction.summary || 'Sin resumen registrado.'}</p></div><div className="detail-block"><span>Necesidad detectada</span><p>{interaction.need || 'Necesidad pendiente de confirmar.'}</p></div><div className="detail-block"><span>Próxima acción</span><p>{interaction.nextAction || 'Sin próxima acción definida.'}{interaction.nextDate ? ` · ${formatDate(interaction.nextDate)}` : ''}</p></div><div className="modal-actions"><button className="secondary" type="button" onClick={onClose}>Cerrar</button>{client && <button className="primary" type="button" onClick={() => onOpenClient(client.id)}>Ver ficha del cliente</button>}</div></section></div>;
 }
 
-function Tasks({ items, onToggle }) {
+function Tasks({ items, onToggle, onOpen }) {
   const ordered = [...items].sort((a, b) => Number(a.done) - Number(b.done) || (a.dueDate || '').localeCompare(b.dueDate || ''));
-  return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Agenda única</span><h2>Tareas comerciales</h2></div></div><TaskList items={ordered} onToggle={onToggle}/></section>;
+  return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Agenda única</span><h2>Tareas comerciales</h2></div></div><TaskList items={ordered} onToggle={onToggle} onOpen={onOpen}/></section>;
 }
 
-function TaskList({ items, onToggle, emptyText = 'No hay tareas pendientes.' }) {
+function TaskList({ items, onToggle, onOpen, emptyText = 'No hay tareas pendientes.' }) {
   if (!items.length) return <Empty text={emptyText} />;
-  return items.map((task) => <button className={`task-row ${task.done ? 'done' : ''}`} key={task.id} onClick={() => onToggle(task.id)}><span className="task-check">{task.done && <CheckCircle2 size={18}/>}</span><div><strong>{task.title}</strong><span>{task.company} · {formatDate(task.dueDate)}{task.trigger ? ` · ${task.trigger}` : ''}</span></div><span className={`priority ${task.priority.toLowerCase()}`}>{task.priority}</span></button>);
+  return items.map((task) => <article className={`task-row ${task.done ? 'done' : ''}`} key={task.id}>
+    <button className="task-check" type="button" aria-label={task.done ? `Marcar ${task.title} como pendiente` : `Completar ${task.title}`} onClick={() => onToggle(task.id)}>{task.done && <CheckCircle2 size={18}/>}</button>
+    <button className="task-main" type="button" onClick={() => onOpen?.(task.id)}><strong>{task.title}</strong><span>{task.company} · {formatDate(task.dueDate)}{task.trigger ? ` · ${task.trigger}` : ''}</span></button>
+    <span className={`priority ${(task.priority || 'Media').toLowerCase()}`}>{task.priority || 'Media'}</span>
+  </article>);
+}
+
+function TaskDetail({ task, client, onClose, onToggle, onOpenClient }) {
+  if (!task) return null;
+  return <div className="modal-backdrop"><section className="modal interaction-detail"><div className="modal-head"><div><span className="eyebrow">Tarea comercial</span><h2>{task.title}</h2><p>{task.company || 'Sin empresa vinculada'}</p></div><button type="button" className="icon-button" aria-label="Cerrar tarea" onClick={onClose}><X/></button></div><div className="conversation-detail-grid"><Fact label="Vencimiento" value={formatDate(task.dueDate)}/><Fact label="Prioridad" value={task.priority || 'Media'}/><Fact label="Cadencia" value={task.cadence || 'Seguimiento'}/><Fact label="Estado" value={task.done ? 'Completada' : 'Pendiente'}/></div>{task.trigger && <div className="detail-block"><span>Por qué aparece hoy</span><p>{task.trigger}</p></div>}<div className="modal-actions"><button className="secondary" type="button" onClick={onClose}>Cerrar</button>{client && <button className="secondary" type="button" onClick={() => onOpenClient(client.id)}>Ver cliente</button>}<button className="primary" type="button" onClick={() => onToggle(task.id)}>{task.done ? 'Marcar pendiente' : 'Completar tarea'}</button></div></section></div>;
 }
 
 function Pipeline({ clients, onOpenClient }) {

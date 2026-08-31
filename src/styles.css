@@ -5,6 +5,7 @@
 body { margin: 0; min-width: 320px; min-height: 100vh; }
 button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid #e0a34f; outline-offset: 2px; }
 .app-shell { display: grid; grid-template-columns: 238px 1fr; min-height: 100vh; }
 .sidebar { background: #103b32; color: #fff; padding: 26px 18px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
 .brand { display: flex; gap: 12px; align-items: center; padding: 0 8px 28px; }

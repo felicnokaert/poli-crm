@@ -107,6 +107,14 @@ function longToday() {
   return new Intl.DateTimeFormat('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
 }
 
+function useModalEscape(onClose) {
+  useEffect(() => {
+    const handleKey = (event) => event.key === 'Escape' && onClose();
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+}
+
 function blankInteraction() {
   return {
     company: '',
@@ -608,6 +616,7 @@ function InboxRow({ item, onClassify, onDraft }) {
 }
 
 function InboxDraftModal({ draft, setDraft, onClose, onConfirm }) {
+  useModalEscape(onClose);
   const update = (name, value) => setDraft({ ...draft, form: { ...draft.form, [name]: value } });
   const form = draft.form;
   return <div className="modal-backdrop"><form className="modal" onSubmit={onConfirm}><div className="modal-head"><div><span className="eyebrow">Borrador automático · confirmar antes de guardar</span><h2>Convertir mensaje en oportunidad</h2><p>Revisá y corregí. El CRM no responde al cliente.</p></div><button type="button" className="icon-button" aria-label="Cerrar borrador" onClick={onClose}><X/></button></div><div className="source-message"><strong>Mensaje original</strong><p>{draft.event.text_body || `[${draft.event.message_type || 'mensaje sin texto'}]`}</p></div><div className="form-grid"><label>Empresa / cliente<input required value={form.company} onChange={(event) => update('company', event.target.value)} placeholder="Confirmar empresa" /></label><label>Persona / contacto<input value={form.contact} onChange={(event) => update('contact', event.target.value)} /></label><label>Familia<select value={form.family} onChange={(event) => update('family', event.target.value)}>{FAMILIES.map((item) => <option key={item}>{item}</option>)}</select></label><label>Temperatura<select value={form.temperature} onChange={(event) => update('temperature', event.target.value)}><option>Frío</option><option>Tibio</option><option>Caliente</option></select></label><label>Etapa<select value={form.stage} onChange={(event) => update('stage', event.target.value)}>{PIPELINE.map((item) => <option key={item}>{item}</option>)}</select></label><label>Fecha próxima<input type="date" value={form.nextDate} onChange={(event) => update('nextDate', event.target.value)} /></label><label className="span-2">Resumen<textarea value={form.summary} onChange={(event) => update('summary', event.target.value)} /></label><label className="span-2">Necesidad detectada<textarea value={form.need} onChange={(event) => update('need', event.target.value)} /></label><label className="span-2">Próxima acción<input value={form.nextAction} onChange={(event) => update('nextAction', event.target.value)} /></label></div><div className="modal-actions"><button type="button" className="secondary" onClick={onClose}>Cancelar</button><button className="primary" type="submit">Confirmar y crear seguimiento</button></div></form></div>;
@@ -619,6 +628,7 @@ function InteractionRow({ item, expanded = false, onOpen }) {
 }
 
 function InteractionDetail({ interaction, client, onClose, onEdit, onOpenClient }) {
+  useModalEscape(onClose);
   if (!interaction) return null;
   return <div className="modal-backdrop"><section className="modal interaction-detail"><div className="modal-head"><div><span className="eyebrow">Conversación registrada</span><h2>{interaction.company}</h2><p>{interaction.contact || 'Contacto sin identificar'} · {formatDate(interaction.createdAt)}</p></div><button type="button" className="icon-button" aria-label="Cerrar conversación" onClick={onClose}><X/></button></div><div className="conversation-detail-grid"><Fact label="Canal" value={CHANNELS[interaction.channel]?.name}/><Fact label="Familia" value={interaction.family}/><Fact label="Temperatura" value={interaction.temperature}/><Fact label="Etapa" value={interaction.stage}/></div><div className="detail-block"><span>Qué hablaron</span><p>{interaction.summary || 'Sin resumen registrado.'}</p></div><div className="detail-block"><span>Necesidad detectada</span><p>{interaction.need || 'Necesidad pendiente de confirmar.'}</p></div><div className="detail-block"><span>Próxima acción</span><p>{interaction.nextAction || 'Sin próxima acción definida.'}{interaction.nextDate ? ` · ${formatDate(interaction.nextDate)}` : ''}</p></div><div className="modal-actions"><button className="secondary" type="button" onClick={onClose}>Cerrar</button><button className="secondary" type="button" onClick={() => onEdit(interaction)}>Editar</button>{client && <button className="primary" type="button" onClick={() => onOpenClient(client.id)}>Ver ficha del cliente</button>}</div></section></div>;
 }
@@ -641,6 +651,7 @@ function TaskList({ items, onToggle, onOpen, emptyText = 'No hay tareas pendient
 }
 
 function TaskDetail({ task, client, onClose, onToggle, onSave, onOpenClient }) {
+  useModalEscape(onClose);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(task || {});
   useEffect(() => setDraft(task || {}), [task?.id]);
@@ -654,6 +665,7 @@ function TaskDetail({ task, client, onClose, onToggle, onSave, onOpenClient }) {
 }
 
 function TaskForm({ form, setForm, clients, onClose, onSave }) {
+  useModalEscape(onClose);
   const field = (name) => ({ value: form[name] || '', onChange: (event) => setForm({ ...form, [name]: event.target.value }) });
   return <div className="modal-backdrop"><form className="modal interaction-detail" onSubmit={onSave}><div className="modal-head"><div><span className="eyebrow">Agenda comercial</span><h2>Nueva tarea</h2><p>Definí una acción concreta, una fecha y por qué debe hacerse.</p></div><button type="button" className="icon-button" aria-label="Cerrar tarea" onClick={onClose}><X/></button></div><div className="form-grid"><label>Cliente<select {...field('clientId')}><option value="">Sin cliente vinculado</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.company}</option>)}</select></label>{!form.clientId && <label>Empresa / referencia<input {...field('company')} placeholder="Opcional"/></label>}<label className="span-2">Acción<input required {...field('title')} placeholder="Ej. llamar para confirmar consumo mensual"/></label><label>Vencimiento<input required type="date" {...field('dueDate')}/></label><label>Prioridad<select {...field('priority')}><option>Alta</option><option>Media</option><option>Baja</option></select></label><label className="span-2">Disparador / contexto<input {...field('trigger')} placeholder="Ej. pasaron 7 días desde la propuesta"/></label></div><div className="modal-actions"><button className="secondary" type="button" onClick={onClose}>Cancelar</button><button className="primary" type="submit">Crear tarea</button></div></form></div>;
 }
@@ -667,6 +679,7 @@ function Clients({ clients, query, setQuery, onOpenClient }) {
 }
 
 function ClientDetail({ client, interactions, tasks, onClose, onOpenInteraction, onNewInteraction, onNewTask, onSave }) {
+  useModalEscape(onClose);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(client || {});
   useEffect(() => setDraft(client || {}), [client?.id]);
@@ -818,6 +831,7 @@ function LoginScreen() {
 function Splash({ text }) { return <div className="login-shell"><section className="login-card"><div className="brand-mark">P</div><h1>Poliplast Sales Copilot</h1><p>{text}</p></section></div>; }
 
 function InteractionForm({ form, setForm, editing = false, onClose, onSave }) {
+  useModalEscape(onClose);
   const field = (name) => ({ value: form[name], onChange: (event) => setForm({ ...form, [name]: event.target.value }) });
   return <div className="modal-backdrop"><form className="modal" onSubmit={onSave}><div className="modal-head"><div><span className="eyebrow">{editing ? 'Corrección de registro' : 'Registro posterior'}</span><h2>{editing ? 'Editar conversación' : 'Nueva conversación'}</h2><p>{editing ? 'Corregí el registro sin crear una conversación duplicada.' : 'Guardá lo esencial. La clasificación avanzada es opcional.'}</p></div><button type="button" className="icon-button" aria-label="Cerrar" onClick={onClose}><X/></button></div><div className="form-grid"><label>Empresa<input required {...field('company')} placeholder="Nombre del cliente" /></label><label>Persona / cargo<input {...field('contact')} placeholder="Ej. María · Compras" /></label><label>Canal<select {...field('channel')}>{Object.entries(CHANNELS).map(([key, item]) => <option value={key} key={key}>{item.name}</option>)}</select></label><label>Familia<select {...field('family')}>{FAMILIES.map((item) => <option key={item}>{item}</option>)}</select></label><label className="span-2">¿Qué hablaron?<textarea {...field('summary')} placeholder="Resumen breve y factual" /></label><label className="span-2">Necesidad detectada<textarea {...field('need')} placeholder="Problema, aplicación, volumen o urgencia" /></label><label>Temperatura comercial<select {...field('temperature')}><option>Frío</option><option>Tibio</option><option>Caliente</option></select></label><label>Etapa<select {...field('stage')}>{PIPELINE.map((item) => <option key={item}>{item}</option>)}</select></label><label>Fecha próxima<input type="date" {...field('nextDate')} /></label><label className="span-2">Próxima acción<input {...field('nextAction')} placeholder="Ej. llamar para confirmar consumo" /></label>{['Pausado','Perdido'].includes(form.stage) && <label className="span-2">Motivo de {form.stage.toLowerCase()}<input required {...field('lossReason')} placeholder="Motivo concreto para aprender o retomar" /></label>}</div><details className="advanced-fields"><summary>Agregar clasificación comercial, proveedor y recompra</summary><div className="form-grid"><label>Tipo de cliente<select {...field('clientType')}>{CLASSIFICATIONS.clientTypes.map((item) => <option key={item}>{item}</option>)}</select></label><label>Industria<select {...field('industry')}>{CLASSIFICATIONS.industries.map((item) => <option key={item}>{item}</option>)}</select></label><label>Encaje<select {...field('fit')}>{CLASSIFICATIONS.fit.map((item) => <option key={item}>{item}</option>)}</select></label><label>Urgencia<select {...field('urgency')}>{CLASSIFICATIONS.urgency.map((item) => <option key={item}>{item}</option>)}</select></label><label>Potencial<select {...field('potential')}>{CLASSIFICATIONS.potential.map((item) => <option key={item}>{item}</option>)}</select></label><label>Objeción<input {...field('objection')} placeholder="Ej. ya tiene proveedor" /></label><label>Proveedor actual<input {...field('currentSupplier')} placeholder="Nombre o sin proveedor" /></label><label>Decisor / quién aprueba<input {...field('decisionMaker')} placeholder="Persona, cargo o a confirmar" /></label><label>Fecha estimada de recompra<input type="date" {...field('repurchaseDate')} /></label><label>Disparador de recompra<input {...field('repurchaseTrigger')} placeholder="Ej. consumo mensual, fin de obra" /></label></div></details><div className="modal-actions"><button type="button" className="secondary" onClick={onClose}>Cancelar</button><button className="primary" type="submit">{editing ? 'Guardar cambios' : 'Guardar conversación'}</button></div></form></div>;
 }

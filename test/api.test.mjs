@@ -4,6 +4,7 @@ import health from '../api/health.js';
 import simulate from '../api/simulate-whatsapp.js';
 import readiness from '../api/readiness.js';
 import browserBridge from '../api/browser-bridge.js';
+import bridgePair from '../api/bridge-pair.js';
 
 function responseRecorder() {
   return {
@@ -62,4 +63,11 @@ test('browser bridge rejects requests without its private token', async () => {
   assert.equal(response.statusCode, 401);
   assert.equal(response.payload.error, 'Puente no autorizado.');
   process.env.WHATSAPP_BRIDGE_TOKEN = previous;
+});
+
+test('browser pairing requires a corporate session', async () => {
+  const response = responseRecorder();
+  await bridgePair({ method: 'POST', headers: {}, body: { channel: 'penosil' } }, response);
+  assert.equal(response.statusCode, 401);
+  assert.equal(response.payload.error, 'Acceso corporativo requerido.');
 });

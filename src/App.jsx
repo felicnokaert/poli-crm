@@ -778,6 +778,47 @@ function DataSettings({ data, setData, session, syncStatus }) {
   const [message, setMessage] = useState('');
   const [connecting, setConnecting] = useState(false);
 
+  async function pairBrowser(channel) {
+    if (!session?.access_token) {
+      setMessage('Volvé a ingresar al CRM para vincular esta computadora.');
+      return;
+    }
+    setConnecting(true);
+    setMessage(`Vinculando esta computadora a ${channel === 'general' ? 'WhatsApp General' : 'WhatsApp Penosil'}…`);
+    try {
+      const response = await fetch('/api/bridge-pair', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channel }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'No se pudo preparar la vinculación.');
+      const paired = new Promise((resolve) => {
+        const listener = (event) => {
+          if (event.source === window && event.data?.type === 'POLIPLAST_BRIDGE_PAIRED' && event.data.channel === channel) {
+            window.removeEventListener('message', listener);
+            resolve(true);
+          }
+        };
+        window.addEventListener('message', listener);
+        setTimeout(() => {
+          window.removeEventListener('message', listener);
+          resolve(false);
+        }, 3500);
+      });
+      window.postMessage({ type: 'POLIPLAST_BRIDGE_CONFIG', channel: payload.channel, endpoint: payload.endpoint, token: payload.token }, window.location.origin);
+      if (await paired) {
+        setMessage(`Listo. Esta computadora quedó vinculada a ${channel === 'general' ? 'WhatsApp General' : 'WhatsApp Penosil'}. La memoria se actualiza al usar WhatsApp Web; no tenés que activarla cada día.`);
+      } else {
+        setMessage('No encontré el conector en este navegador. Instalalo una sola vez, recargá el CRM y volvé a vincular.');
+      }
+    } catch (error) {
+      setMessage(error.message || 'No se pudo vincular esta computadora.');
+    } finally {
+      setConnecting(false);
+    }
+  }
+
   async function startWhatsAppConnection() {
     setConnecting(true);
     setMessage('Abriendo conexión segura con Meta…');
@@ -869,7 +910,7 @@ function DataSettings({ data, setData, session, syncStatus }) {
     }
   }
 
-  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Canales oficiales</span><h2>Conectar WhatsApp Business</h2></div><Link2 size={22}/></div><p>Autoriza un número existente mediante el registro oficial de Meta. El teléfono conserva WhatsApp Business y el CRM recibe los mensajes para clasificarlos; nunca responde automáticamente.</p><div className="modal-actions"><button className="secondary" disabled={connecting} onClick={activateOfficialChannels}>Activar recepción de ambos canales</button><button className="primary" disabled={connecting} onClick={startWhatsAppConnection}>{connecting ? 'Conectando…' : 'Conectar número con Meta'}</button></div>{message && <div className="system-message">{message}</div>}</section><section className="panel"><div className="panel-head"><div><span className="eyebrow">Inicio de Ventas</span><h2>Cohorte comercial vigente</h2></div><Target size={22}/></div><p>Las 34 cuentas operativas de Seguimiento se incorporan automáticamente. La base de inteligencia completa de 195 empresas continúa en Google Sheets y no se mezcla con la cartera activa.</p><button className="secondary" type="button" onClick={importCommercialCohort}>Verificar cohorte de Seguimiento</button></section><section className="panel"><div className="panel-head"><div><span className="eyebrow">Portabilidad</span><h2>Datos y respaldos</h2></div><Database size={22}/></div><div className="data-cards"><article><Download size={24}/><h3>Exportar respaldo</h3><p>Descarga clientes, conversaciones, tareas, evaluaciones y bandeja en un archivo JSON versionado.</p><button className="primary" onClick={exportBackup}>Descargar respaldo</button></article><article><Upload size={24}/><h3>Importar respaldo</h3><p>Restaura un respaldo del copiloto en este navegador. Reemplaza el estado actual.</p><label className="secondary upload-button">Elegir archivo<input type="file" accept="application/json,.json" onChange={importBackup}/></label></article><article><Inbox size={24}/><h3>Importar eventos WhatsApp</h3><p>Prueba la bandeja con eventos normalizados. Deduplica por ID y omite estados técnicos.</p><label className="secondary upload-button">Elegir eventos<input type="file" accept="application/json,.json" onChange={importWebhookEvents}/></label></article></div></section><section className="panel"><div className="panel-head"><div><span className="eyebrow">{onlineConfigured ? 'Estado online' : 'Estado local'}</span><h2>Contenido guardado</h2></div></div><div className="storage-summary"><div><strong>{data.clients.length}</strong><span>Clientes</span></div><div><strong>{data.interactions.length}</strong><span>Conversaciones</span></div><div><strong>{data.tasks.length}</strong><span>Tareas</span></div><div><strong>{data.inbox.filter((item) => item.classification_status === 'pending').length}</strong><span>WhatsApp pendientes</span></div></div><div className="quality-note"><CircleAlert size={19}/><p>{onlineConfigured ? `${syncStatus}. Usuario: ${session?.user?.email || 'sin identificar'}. Los cambios se guardan online y siguen teniendo respaldo local.` : 'Modo local de prueba. Exportá un respaldo al terminar cada jornada; al configurar la base, el mismo CRM activará acceso y sincronización online.'}</p></div>{onlineConfigured && <button className="secondary signout" onClick={() => supabase.auth.signOut()}>Cerrar sesión</button>}</section></div>;
+  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Memoria automática</span><h2>Vincular esta computadora</h2></div><Link2 size={22}/></div><p>Instalá el conector una sola vez y elegí qué WhatsApp Business está abierto en este perfil. Después funciona solo al usar WhatsApp Web: el CRM agrupa la conversación por persona o empresa y nunca responde por vos.</p><div className="modal-actions"><button className="secondary" disabled={connecting} onClick={() => pairBrowser('general')}>Vincular a WhatsApp General</button><button className="primary" disabled={connecting} onClick={() => pairBrowser('penosil')}>{connecting ? 'Vinculando…' : 'Vincular a WhatsApp Penosil'}</button></div>{message && <div className="system-message">{message}</div>}<details><summary>Configuración avanzada de Meta</summary><p>El canal General también recibe eventos por la integración oficial. Usá estas opciones solo para mantenimiento técnico.</p><div className="modal-actions"><button className="secondary" disabled={connecting} onClick={activateOfficialChannels}>Activar recepción oficial</button><button className="secondary" disabled={connecting} onClick={startWhatsAppConnection}>Conectar otro número con Meta</button></div></details></section><section className="panel"><div className="panel-head"><div><span className="eyebrow">Inicio de Ventas</span><h2>Cohorte comercial vigente</h2></div><Target size={22}/></div><p>Las 34 cuentas operativas de Seguimiento se incorporan automáticamente. La base de inteligencia completa de 195 empresas continúa en Google Sheets y no se mezcla con la cartera activa.</p><button className="secondary" type="button" onClick={importCommercialCohort}>Verificar cohorte de Seguimiento</button></section><section className="panel"><div className="panel-head"><div><span className="eyebrow">Portabilidad</span><h2>Datos y respaldos</h2></div><Database size={22}/></div><div className="data-cards"><article><Download size={24}/><h3>Exportar respaldo</h3><p>Descarga clientes, conversaciones, tareas, evaluaciones y bandeja en un archivo JSON versionado.</p><button className="primary" onClick={exportBackup}>Descargar respaldo</button></article><article><Upload size={24}/><h3>Importar respaldo</h3><p>Restaura un respaldo del copiloto en este navegador. Reemplaza el estado actual.</p><label className="secondary upload-button">Elegir archivo<input type="file" accept="application/json,.json" onChange={importBackup}/></label></article><article><Inbox size={24}/><h3>Importar eventos WhatsApp</h3><p>Prueba la bandeja con eventos normalizados. Deduplica por ID y omite estados técnicos.</p><label className="secondary upload-button">Elegir eventos<input type="file" accept="application/json,.json" onChange={importWebhookEvents}/></label></article></div></section><section className="panel"><div className="panel-head"><div><span className="eyebrow">{onlineConfigured ? 'Estado online' : 'Estado local'}</span><h2>Contenido guardado</h2></div></div><div className="storage-summary"><div><strong>{data.clients.length}</strong><span>Clientes</span></div><div><strong>{data.interactions.length}</strong><span>Conversaciones</span></div><div><strong>{data.tasks.length}</strong><span>Tareas</span></div><div><strong>{data.inbox.filter((item) => item.classification_status === 'pending').length}</strong><span>Conversaciones WhatsApp pendientes</span></div></div><div className="quality-note"><CircleAlert size={19}/><p>{onlineConfigured ? `${syncStatus}. Usuario: ${session?.user?.email || 'sin identificar'}. Los cambios se guardan online y siguen teniendo respaldo local.` : 'Modo local de prueba. Exportá un respaldo al terminar cada jornada; al configurar la base, el mismo CRM activará acceso y sincronización online.'}</p></div>{onlineConfigured && <button className="secondary signout" onClick={() => supabase.auth.signOut()}>Cerrar sesión</button>}</section></div>;
 }
 
 function LoginScreen() {

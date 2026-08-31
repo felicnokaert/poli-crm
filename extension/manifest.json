@@ -2,14 +2,13 @@
   "manifest_version": 3,
   "name": "Poliplast CRM — Memoria WhatsApp",
   "version": "0.1.0",
-  "description": "Sincroniza únicamente las conversaciones autorizadas con Poliplast Sales Copilot.",
+  "description": "Mantiene la memoria comercial de WhatsApp sincronizada con Poliplast Sales Copilot.",
   "permissions": ["storage"],
   "host_permissions": ["https://web.whatsapp.com/*", "https://poli-crm.vercel.app/*"],
   "content_scripts": [{
-    "matches": ["https://web.whatsapp.com/*"],
+    "matches": ["https://web.whatsapp.com/*", "https://poli-crm.vercel.app/*"],
     "js": ["content.js"],
     "run_at": "document_idle"
   }],
-  "options_page": "options.html",
-  "action": { "default_title": "Configurar memoria Poliplast" }
+  "action": { "default_title": "Memoria comercial Poliplast" }
 }

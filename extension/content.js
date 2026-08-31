@@ -1,4 +1,17 @@
-const state = { authorized: new Set(), sent: new Set(), sending: false, observer: null, button: null, timer: null };
+const state = { sent: new Set(), sending: false, observer: null, timer: null };
+
+if (location.hostname === 'poli-crm.vercel.app') {
+  window.addEventListener('message', (event) => {
+    if (event.source !== window || event.data?.type !== 'POLIPLAST_BRIDGE_CONFIG') return;
+    const { channel, endpoint, token } = event.data;
+    if (!['general', 'penosil'].includes(channel) || !endpoint || !token) return;
+    chrome.storage.local.set({ channel, endpoint, token, pairedAt: new Date().toISOString() }, () => {
+      window.postMessage({ type: 'POLIPLAST_BRIDGE_PAIRED', channel }, location.origin);
+    });
+  });
+} else {
+  startWhatsAppCapture();
+}
 
 function chatName() {
   return document.querySelector('#main header [title]')?.getAttribute('title')
@@ -22,10 +35,9 @@ function messageNodes() {
 async function capture() {
   if (state.sending) return;
   const name = chatName();
-  if (!name || !state.authorized.has(chatKey(name))) return;
+  if (!name) return;
   const config = await chrome.storage.local.get(['channel', 'endpoint', 'token']);
   if (!config.channel || !config.endpoint || !config.token) return;
-
   const events = [];
   for (const node of messageNodes().slice(-80)) {
     const text = [...node.querySelectorAll('.selectable-text, [data-testid="selectable-text"]')]
@@ -40,49 +52,22 @@ async function capture() {
   if (!events.length) return;
   state.sending = true;
   try {
-    const response = await fetch(config.endpoint, { method: 'POST', headers: { Authorization: `Bearer ${config.token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ events }) });
+    const response = await fetch(config.endpoint, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${config.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ events }),
+    });
     if (response.ok) events.forEach((event) => state.sent.add(event.event_id));
   } finally {
     state.sending = false;
-    updateButton();
   }
 }
 
-function updateButton() {
-  if (!state.button) return;
-  const active = state.authorized.has(chatKey(chatName()));
-  state.button.textContent = active ? 'Copiloto ON' : 'Activar copiloto';
-  state.button.dataset.active = active ? 'true' : 'false';
-}
-
-function mountButton() {
-  const header = document.querySelector('#main header');
-  if (!header || state.button?.isConnected) return;
-  const button = document.createElement('button');
-  button.id = 'poliplast-copilot-toggle';
-  button.type = 'button';
-  button.style.cssText = 'margin:8px;padding:7px 10px;border:1px solid #0d7764;border-radius:8px;background:#fff;color:#0d7764;font:600 12px system-ui;cursor:pointer;z-index:20';
-  button.addEventListener('click', async () => {
-    const key = chatKey(chatName());
-    if (!key) return;
-    state.authorized.has(key) ? state.authorized.delete(key) : state.authorized.add(key);
-    await chrome.storage.local.set({ authorizedChats: [...state.authorized] });
-    updateButton();
-    capture();
-  });
-  header.append(button);
-  state.button = button;
-  updateButton();
-}
-
-chrome.storage.local.get(['authorizedChats'], ({ authorizedChats = [] }) => {
-  state.authorized = new Set(authorizedChats);
+function startWhatsAppCapture() {
   state.observer = new MutationObserver(() => {
-    mountButton();
-    updateButton();
     clearTimeout(state.timer);
-    state.timer = setTimeout(capture, 450);
+    state.timer = setTimeout(capture, 500);
   });
-  state.observer.observe(document.body, { childList: true, subtree: true });
-  mountButton();
-});
+  state.observer.observe(document.documentElement, { childList: true, subtree: true });
+  capture();
+}

@@ -132,6 +132,10 @@ function blankInteraction() {
   };
 }
 
+function blankTask() {
+  return { clientId: '', company: '', title: '', dueDate: today(), priority: 'Media', cadence: 'Seguimiento', trigger: '' };
+}
+
 export default function App() {
   const [data, setData] = useState(loadState);
   const [session, setSession] = useState(null);
@@ -140,6 +144,9 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState(onlineConfigured ? 'Conectando…' : 'Modo local');
   const [view, setView] = useState('dashboard');
   const [showForm, setShowForm] = useState(false);
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [taskForm, setTaskForm] = useState(blankTask);
+  const [editingInteractionId, setEditingInteractionId] = useState(null);
   const [form, setForm] = useState(blankInteraction);
   const [inboxDraft, setInboxDraft] = useState(null);
   const [query, setQuery] = useState('');
@@ -234,7 +241,9 @@ export default function App() {
   function saveInteraction(event) {
     event.preventDefault();
     const stamp = new Date().toISOString();
-    const existing = data.clients.find((client) => client.company.toLowerCase() === form.company.trim().toLowerCase());
+    const editingInteraction = editingInteractionId ? data.interactions.find((item) => item.id === editingInteractionId) : null;
+    const existing = data.clients.find((client) => client.id === editingInteraction?.clientId)
+      || data.clients.find((client) => client.company.toLowerCase() === form.company.trim().toLowerCase());
     const clientId = existing?.id || crypto.randomUUID();
     const client = {
       id: clientId,
@@ -256,8 +265,8 @@ export default function App() {
       lastContact: today(),
       updatedAt: stamp,
     };
-    const interaction = { ...form, id: crypto.randomUUID(), clientId, createdAt: stamp };
-    const tasks = form.nextAction.trim()
+    const interaction = { ...editingInteraction, ...form, id: editingInteraction?.id || crypto.randomUUID(), clientId, createdAt: editingInteraction?.createdAt || stamp, updatedAt: stamp };
+    const tasks = !editingInteraction && form.nextAction.trim()
       ? [
           ...data.tasks,
           {
@@ -277,10 +286,24 @@ export default function App() {
     setData({
       ...data,
       clients: existing ? data.clients.map((item) => (item.id === clientId ? { ...item, ...client } : item)) : [...data.clients, client],
-      interactions: [interaction, ...data.interactions],
+      interactions: editingInteraction ? data.interactions.map((item) => item.id === interaction.id ? interaction : item) : [interaction, ...data.interactions],
       tasks,
     });
     setForm(blankInteraction());
+    setEditingInteractionId(null);
+    setShowForm(false);
+  }
+
+  function editInteraction(interaction) {
+    setForm({ ...blankInteraction(), ...interaction });
+    setEditingInteractionId(interaction.id);
+    setSelectedInteractionId(null);
+    setShowForm(true);
+  }
+
+  function closeInteractionForm() {
+    setForm(blankInteraction());
+    setEditingInteractionId(null);
     setShowForm(false);
   }
 
@@ -409,6 +432,16 @@ export default function App() {
     setData((current) => ({ ...current, tasks: current.tasks.map((task) => task.id === updatedTask.id ? { ...task, ...updatedTask, updatedAt: stamp } : task) }));
   }
 
+  function saveManualTask(event) {
+    event.preventDefault();
+    const stamp = new Date().toISOString();
+    const client = data.clients.find((item) => item.id === taskForm.clientId);
+    const task = { ...taskForm, id: crypto.randomUUID(), company: client?.company || taskForm.company.trim() || 'Sin empresa', done: false, createdAt: stamp, updatedAt: stamp };
+    setData((current) => ({ ...current, tasks: [...current.tasks, task] }));
+    setTaskForm(blankTask());
+    setShowTaskForm(false);
+  }
+
   const nav = [
     ['dashboard', 'Inicio', LayoutDashboard],
     ['conversations', 'Conversaciones', MessageCircle],
@@ -468,7 +501,7 @@ export default function App() {
         {view === 'dashboard' && <Dashboard metrics={metrics} tasks={data.tasks} interactions={data.interactions} onToggle={toggleTask} onOpenTask={setSelectedTaskId} onOpenInteraction={setSelectedInteractionId} />}
         {view === 'conversations' && <Conversations items={data.interactions} onOpen={setSelectedInteractionId} />}
         {view === 'inbox' && <WhatsAppInbox items={data.inbox} onClassify={classifyInbox} onDraft={openInboxDraft} />}
-        {view === 'tasks' && <Tasks items={data.tasks} onToggle={toggleTask} onOpen={setSelectedTaskId} />}
+        {view === 'tasks' && <Tasks items={data.tasks} onToggle={toggleTask} onOpen={setSelectedTaskId} onNew={() => setShowTaskForm(true)} />}
         {view === 'pipeline' && <Pipeline clients={data.clients} onOpenClient={setSelectedClientId} />}
         {view === 'clients' && <Clients clients={filteredClients} query={query} setQuery={setQuery} onOpenClient={setSelectedClientId} />}
         {view === 'replies' && <QuickReplies />}
@@ -476,9 +509,10 @@ export default function App() {
         {view === 'settings' && <DataSettings data={data} setData={setData} session={session} syncStatus={syncStatus} />}
       </main>
 
-      {showForm && <InteractionForm form={form} setForm={setForm} onClose={() => setShowForm(false)} onSave={saveInteraction} />}
+      {showForm && <InteractionForm form={form} setForm={setForm} editing={Boolean(editingInteractionId)} onClose={closeInteractionForm} onSave={saveInteraction} />}
+      {showTaskForm && <TaskForm form={taskForm} setForm={setTaskForm} clients={data.clients} onClose={() => { setTaskForm(blankTask()); setShowTaskForm(false); }} onSave={saveManualTask} />}
       {inboxDraft && <InboxDraftModal draft={inboxDraft} setDraft={setInboxDraft} onClose={() => setInboxDraft(null)} onConfirm={confirmInboxDraft} />}
-      {selectedInteractionId && <InteractionDetail interaction={data.interactions.find((item) => item.id === selectedInteractionId)} client={data.clients.find((item) => item.id === data.interactions.find((entry) => entry.id === selectedInteractionId)?.clientId)} onClose={() => setSelectedInteractionId(null)} onOpenClient={(clientId) => { setSelectedInteractionId(null); setSelectedClientId(clientId); }} />}
+      {selectedInteractionId && <InteractionDetail interaction={data.interactions.find((item) => item.id === selectedInteractionId)} client={data.clients.find((item) => item.id === data.interactions.find((entry) => entry.id === selectedInteractionId)?.clientId)} onClose={() => setSelectedInteractionId(null)} onEdit={editInteraction} onOpenClient={(clientId) => { setSelectedInteractionId(null); setSelectedClientId(clientId); }} />}
       {selectedClientId && <ClientDetail client={data.clients.find((item) => item.id === selectedClientId)} interactions={data.interactions.filter((item) => item.clientId === selectedClientId)} tasks={data.tasks.filter((item) => item.clientId === selectedClientId)} onClose={() => setSelectedClientId(null)} onOpenInteraction={setSelectedInteractionId} onSave={updateClient} />}
       {selectedTaskId && <TaskDetail task={data.tasks.find((item) => item.id === selectedTaskId)} client={data.clients.find((item) => item.id === data.tasks.find((task) => task.id === selectedTaskId)?.clientId)} onClose={() => setSelectedTaskId(null)} onToggle={(taskId) => { toggleTask(taskId); setSelectedTaskId(null); }} onSave={updateTask} onOpenClient={(clientId) => { setSelectedTaskId(null); setSelectedClientId(clientId); }} />}
     </div>
@@ -547,14 +581,14 @@ function InteractionRow({ item, expanded = false, onOpen }) {
   return onOpen ? <button className={`interaction-row ${expanded ? 'expanded' : ''}`} onClick={() => onOpen(item.id)}>{content}</button> : <div className={`interaction-row ${expanded ? 'expanded' : ''}`}>{content}</div>;
 }
 
-function InteractionDetail({ interaction, client, onClose, onOpenClient }) {
+function InteractionDetail({ interaction, client, onClose, onEdit, onOpenClient }) {
   if (!interaction) return null;
-  return <div className="modal-backdrop"><section className="modal interaction-detail"><div className="modal-head"><div><span className="eyebrow">Conversación registrada</span><h2>{interaction.company}</h2><p>{interaction.contact || 'Contacto sin identificar'} · {formatDate(interaction.createdAt)}</p></div><button type="button" className="icon-button" aria-label="Cerrar conversación" onClick={onClose}><X/></button></div><div className="conversation-detail-grid"><Fact label="Canal" value={CHANNELS[interaction.channel]?.name}/><Fact label="Familia" value={interaction.family}/><Fact label="Temperatura" value={interaction.temperature}/><Fact label="Etapa" value={interaction.stage}/></div><div className="detail-block"><span>Qué hablaron</span><p>{interaction.summary || 'Sin resumen registrado.'}</p></div><div className="detail-block"><span>Necesidad detectada</span><p>{interaction.need || 'Necesidad pendiente de confirmar.'}</p></div><div className="detail-block"><span>Próxima acción</span><p>{interaction.nextAction || 'Sin próxima acción definida.'}{interaction.nextDate ? ` · ${formatDate(interaction.nextDate)}` : ''}</p></div><div className="modal-actions"><button className="secondary" type="button" onClick={onClose}>Cerrar</button>{client && <button className="primary" type="button" onClick={() => onOpenClient(client.id)}>Ver ficha del cliente</button>}</div></section></div>;
+  return <div className="modal-backdrop"><section className="modal interaction-detail"><div className="modal-head"><div><span className="eyebrow">Conversación registrada</span><h2>{interaction.company}</h2><p>{interaction.contact || 'Contacto sin identificar'} · {formatDate(interaction.createdAt)}</p></div><button type="button" className="icon-button" aria-label="Cerrar conversación" onClick={onClose}><X/></button></div><div className="conversation-detail-grid"><Fact label="Canal" value={CHANNELS[interaction.channel]?.name}/><Fact label="Familia" value={interaction.family}/><Fact label="Temperatura" value={interaction.temperature}/><Fact label="Etapa" value={interaction.stage}/></div><div className="detail-block"><span>Qué hablaron</span><p>{interaction.summary || 'Sin resumen registrado.'}</p></div><div className="detail-block"><span>Necesidad detectada</span><p>{interaction.need || 'Necesidad pendiente de confirmar.'}</p></div><div className="detail-block"><span>Próxima acción</span><p>{interaction.nextAction || 'Sin próxima acción definida.'}{interaction.nextDate ? ` · ${formatDate(interaction.nextDate)}` : ''}</p></div><div className="modal-actions"><button className="secondary" type="button" onClick={onClose}>Cerrar</button><button className="secondary" type="button" onClick={() => onEdit(interaction)}>Editar</button>{client && <button className="primary" type="button" onClick={() => onOpenClient(client.id)}>Ver ficha del cliente</button>}</div></section></div>;
 }
 
-function Tasks({ items, onToggle, onOpen }) {
+function Tasks({ items, onToggle, onOpen, onNew }) {
   const ordered = [...items].sort((a, b) => Number(a.done) - Number(b.done) || (a.dueDate || '').localeCompare(b.dueDate || ''));
-  return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Agenda única</span><h2>Tareas comerciales</h2></div></div><TaskList items={ordered} onToggle={onToggle} onOpen={onOpen}/></section>;
+  return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Agenda única</span><h2>Tareas comerciales</h2></div><button className="primary" type="button" onClick={onNew}><Plus size={17}/> Nueva tarea</button></div><TaskList items={ordered} onToggle={onToggle} onOpen={onOpen}/></section>;
 }
 
 function TaskList({ items, onToggle, onOpen, emptyText = 'No hay tareas pendientes.' }) {
@@ -577,6 +611,11 @@ function TaskDetail({ task, client, onClose, onToggle, onSave, onOpenClient }) {
     setEditing(false);
   }
   return <div className="modal-backdrop"><section className="modal interaction-detail"><div className="modal-head"><div><span className="eyebrow">Tarea comercial</span><h2>{task.title}</h2><p>{task.company || 'Sin empresa vinculada'}</p></div><button type="button" className="icon-button" aria-label="Cerrar tarea" onClick={onClose}><X/></button></div>{editing ? <form onSubmit={submit}><div className="form-grid"><label className="span-2">Acción<input required value={draft.title || ''} onChange={(event) => setDraft({ ...draft, title: event.target.value })}/></label><label>Vencimiento<input required type="date" value={draft.dueDate || ''} onChange={(event) => setDraft({ ...draft, dueDate: event.target.value })}/></label><label>Prioridad<select value={draft.priority || 'Media'} onChange={(event) => setDraft({ ...draft, priority: event.target.value })}><option>Alta</option><option>Media</option><option>Baja</option></select></label><label className="span-2">Disparador / contexto<input value={draft.trigger || ''} onChange={(event) => setDraft({ ...draft, trigger: event.target.value })}/></label></div><div className="modal-actions"><button className="secondary" type="button" onClick={() => { setDraft(task); setEditing(false); }}>Cancelar</button><button className="primary" type="submit">Guardar cambios</button></div></form> : <><div className="conversation-detail-grid"><Fact label="Vencimiento" value={formatDate(task.dueDate)}/><Fact label="Prioridad" value={task.priority || 'Media'}/><Fact label="Cadencia" value={task.cadence || 'Seguimiento'}/><Fact label="Estado" value={task.done ? 'Completada' : 'Pendiente'}/></div>{task.trigger && <div className="detail-block"><span>Por qué aparece hoy</span><p>{task.trigger}</p></div>}<div className="modal-actions"><button className="secondary" type="button" onClick={onClose}>Cerrar</button>{client && <button className="secondary" type="button" onClick={() => onOpenClient(client.id)}>Ver cliente</button>}<button className="secondary" type="button" onClick={() => setEditing(true)}>Editar</button><button className="primary" type="button" onClick={() => onToggle(task.id)}>{task.done ? 'Marcar pendiente' : 'Completar tarea'}</button></div></>}</section></div>;
+}
+
+function TaskForm({ form, setForm, clients, onClose, onSave }) {
+  const field = (name) => ({ value: form[name] || '', onChange: (event) => setForm({ ...form, [name]: event.target.value }) });
+  return <div className="modal-backdrop"><form className="modal interaction-detail" onSubmit={onSave}><div className="modal-head"><div><span className="eyebrow">Agenda comercial</span><h2>Nueva tarea</h2><p>Definí una acción concreta, una fecha y por qué debe hacerse.</p></div><button type="button" className="icon-button" aria-label="Cerrar tarea" onClick={onClose}><X/></button></div><div className="form-grid"><label>Cliente<select {...field('clientId')}><option value="">Sin cliente vinculado</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.company}</option>)}</select></label>{!form.clientId && <label>Empresa / referencia<input {...field('company')} placeholder="Opcional"/></label>}<label className="span-2">Acción<input required {...field('title')} placeholder="Ej. llamar para confirmar consumo mensual"/></label><label>Vencimiento<input required type="date" {...field('dueDate')}/></label><label>Prioridad<select {...field('priority')}><option>Alta</option><option>Media</option><option>Baja</option></select></label><label className="span-2">Disparador / contexto<input {...field('trigger')} placeholder="Ej. pasaron 7 días desde la propuesta"/></label></div><div className="modal-actions"><button className="secondary" type="button" onClick={onClose}>Cancelar</button><button className="primary" type="submit">Crear tarea</button></div></form></div>;
 }
 
 function Pipeline({ clients, onOpenClient }) {
@@ -731,9 +770,9 @@ function LoginScreen() {
 
 function Splash({ text }) { return <div className="login-shell"><section className="login-card"><div className="brand-mark">P</div><h1>Poliplast Sales Copilot</h1><p>{text}</p></section></div>; }
 
-function InteractionForm({ form, setForm, onClose, onSave }) {
+function InteractionForm({ form, setForm, editing = false, onClose, onSave }) {
   const field = (name) => ({ value: form[name], onChange: (event) => setForm({ ...form, [name]: event.target.value }) });
-  return <div className="modal-backdrop"><form className="modal" onSubmit={onSave}><div className="modal-head"><div><span className="eyebrow">Registro posterior</span><h2>Nueva conversación</h2><p>Guardá lo esencial. La clasificación avanzada es opcional.</p></div><button type="button" className="icon-button" aria-label="Cerrar" onClick={onClose}><X/></button></div><div className="form-grid"><label>Empresa<input required {...field('company')} placeholder="Nombre del cliente" /></label><label>Persona / cargo<input {...field('contact')} placeholder="Ej. María · Compras" /></label><label>Canal<select {...field('channel')}>{Object.entries(CHANNELS).map(([key, item]) => <option value={key} key={key}>{item.name}</option>)}</select></label><label>Familia<select {...field('family')}>{FAMILIES.map((item) => <option key={item}>{item}</option>)}</select></label><label className="span-2">¿Qué hablaron?<textarea {...field('summary')} placeholder="Resumen breve y factual" /></label><label className="span-2">Necesidad detectada<textarea {...field('need')} placeholder="Problema, aplicación, volumen o urgencia" /></label><label>Temperatura comercial<select {...field('temperature')}><option>Frío</option><option>Tibio</option><option>Caliente</option></select></label><label>Etapa<select {...field('stage')}>{PIPELINE.map((item) => <option key={item}>{item}</option>)}</select></label><label>Fecha próxima<input type="date" {...field('nextDate')} /></label><label className="span-2">Próxima acción<input {...field('nextAction')} placeholder="Ej. llamar para confirmar consumo" /></label>{['Pausado','Perdido'].includes(form.stage) && <label className="span-2">Motivo de {form.stage.toLowerCase()}<input required {...field('lossReason')} placeholder="Motivo concreto para aprender o retomar" /></label>}</div><details className="advanced-fields"><summary>Agregar clasificación comercial, proveedor y recompra</summary><div className="form-grid"><label>Tipo de cliente<select {...field('clientType')}>{CLASSIFICATIONS.clientTypes.map((item) => <option key={item}>{item}</option>)}</select></label><label>Industria<select {...field('industry')}>{CLASSIFICATIONS.industries.map((item) => <option key={item}>{item}</option>)}</select></label><label>Encaje<select {...field('fit')}>{CLASSIFICATIONS.fit.map((item) => <option key={item}>{item}</option>)}</select></label><label>Urgencia<select {...field('urgency')}>{CLASSIFICATIONS.urgency.map((item) => <option key={item}>{item}</option>)}</select></label><label>Potencial<select {...field('potential')}>{CLASSIFICATIONS.potential.map((item) => <option key={item}>{item}</option>)}</select></label><label>Objeción<input {...field('objection')} placeholder="Ej. ya tiene proveedor" /></label><label>Proveedor actual<input {...field('currentSupplier')} placeholder="Nombre o sin proveedor" /></label><label>Decisor / quién aprueba<input {...field('decisionMaker')} placeholder="Persona, cargo o a confirmar" /></label><label>Fecha estimada de recompra<input type="date" {...field('repurchaseDate')} /></label><label>Disparador de recompra<input {...field('repurchaseTrigger')} placeholder="Ej. consumo mensual, fin de obra" /></label></div></details><div className="modal-actions"><button type="button" className="secondary" onClick={onClose}>Cancelar</button><button className="primary" type="submit">Guardar conversación</button></div></form></div>;
+  return <div className="modal-backdrop"><form className="modal" onSubmit={onSave}><div className="modal-head"><div><span className="eyebrow">{editing ? 'Corrección de registro' : 'Registro posterior'}</span><h2>{editing ? 'Editar conversación' : 'Nueva conversación'}</h2><p>{editing ? 'Corregí el registro sin crear una conversación duplicada.' : 'Guardá lo esencial. La clasificación avanzada es opcional.'}</p></div><button type="button" className="icon-button" aria-label="Cerrar" onClick={onClose}><X/></button></div><div className="form-grid"><label>Empresa<input required {...field('company')} placeholder="Nombre del cliente" /></label><label>Persona / cargo<input {...field('contact')} placeholder="Ej. María · Compras" /></label><label>Canal<select {...field('channel')}>{Object.entries(CHANNELS).map(([key, item]) => <option value={key} key={key}>{item.name}</option>)}</select></label><label>Familia<select {...field('family')}>{FAMILIES.map((item) => <option key={item}>{item}</option>)}</select></label><label className="span-2">¿Qué hablaron?<textarea {...field('summary')} placeholder="Resumen breve y factual" /></label><label className="span-2">Necesidad detectada<textarea {...field('need')} placeholder="Problema, aplicación, volumen o urgencia" /></label><label>Temperatura comercial<select {...field('temperature')}><option>Frío</option><option>Tibio</option><option>Caliente</option></select></label><label>Etapa<select {...field('stage')}>{PIPELINE.map((item) => <option key={item}>{item}</option>)}</select></label><label>Fecha próxima<input type="date" {...field('nextDate')} /></label><label className="span-2">Próxima acción<input {...field('nextAction')} placeholder="Ej. llamar para confirmar consumo" /></label>{['Pausado','Perdido'].includes(form.stage) && <label className="span-2">Motivo de {form.stage.toLowerCase()}<input required {...field('lossReason')} placeholder="Motivo concreto para aprender o retomar" /></label>}</div><details className="advanced-fields"><summary>Agregar clasificación comercial, proveedor y recompra</summary><div className="form-grid"><label>Tipo de cliente<select {...field('clientType')}>{CLASSIFICATIONS.clientTypes.map((item) => <option key={item}>{item}</option>)}</select></label><label>Industria<select {...field('industry')}>{CLASSIFICATIONS.industries.map((item) => <option key={item}>{item}</option>)}</select></label><label>Encaje<select {...field('fit')}>{CLASSIFICATIONS.fit.map((item) => <option key={item}>{item}</option>)}</select></label><label>Urgencia<select {...field('urgency')}>{CLASSIFICATIONS.urgency.map((item) => <option key={item}>{item}</option>)}</select></label><label>Potencial<select {...field('potential')}>{CLASSIFICATIONS.potential.map((item) => <option key={item}>{item}</option>)}</select></label><label>Objeción<input {...field('objection')} placeholder="Ej. ya tiene proveedor" /></label><label>Proveedor actual<input {...field('currentSupplier')} placeholder="Nombre o sin proveedor" /></label><label>Decisor / quién aprueba<input {...field('decisionMaker')} placeholder="Persona, cargo o a confirmar" /></label><label>Fecha estimada de recompra<input type="date" {...field('repurchaseDate')} /></label><label>Disparador de recompra<input {...field('repurchaseTrigger')} placeholder="Ej. consumo mensual, fin de obra" /></label></div></details><div className="modal-actions"><button type="button" className="secondary" onClick={onClose}>Cancelar</button><button className="primary" type="submit">{editing ? 'Guardar cambios' : 'Guardar conversación'}</button></div></form></div>;
 }
 
 function Goal({ title, text }) { return <div><strong>{title}</strong><p>{text}</p></div>; }

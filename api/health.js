@@ -21,6 +21,7 @@ export default async function handler(_request, response) {
     metaWebhook: Boolean(process.env.WHATSAPP_VERIFY_TOKEN && process.env.META_APP_SECRET),
     generalChannel: Boolean(process.env.WHATSAPP_GENERAL_PHONE_ID),
     penosilChannel: Boolean(process.env.WHATSAPP_PENOSIL_PHONE_ID),
+    browserBridge: Boolean(process.env.WHATSAPP_BRIDGE_TOKEN),
     simulator: Boolean(process.env.COPILOT_SIMULATOR_TOKEN),
   });
 }

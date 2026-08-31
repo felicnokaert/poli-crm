@@ -19,7 +19,7 @@ test('health exposes configuration state without secret values', async () => {
   await health({}, response);
   assert.equal(response.statusCode, 200);
   assert.equal(response.payload.ok, true);
-  assert.deepEqual(Object.keys(response.payload), ['ok', 'database', 'databaseReachable', 'metaWebhook', 'generalChannel', 'penosilChannel', 'simulator']);
+  assert.deepEqual(Object.keys(response.payload), ['ok', 'database', 'databaseReachable', 'metaWebhook', 'generalChannel', 'penosilChannel', 'browserBridge', 'simulator']);
   assert.equal(response.payload.databaseReachable, false);
 });
 

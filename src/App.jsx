@@ -147,6 +147,8 @@ export default function App() {
   const [form, setForm] = useState(blankInteraction);
   const [inboxDraft, setInboxDraft] = useState(null);
   const [query, setQuery] = useState('');
+  const [selectedInteractionId, setSelectedInteractionId] = useState(null);
+  const [selectedClientId, setSelectedClientId] = useState(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -266,6 +268,7 @@ export default function App() {
         ]
       : data.tasks;
     setData({
+      ...data,
       clients: existing ? data.clients.map((item) => (item.id === clientId ? { ...item, ...client } : item)) : [...data.clients, client],
       interactions: [interaction, ...data.interactions],
       tasks,
@@ -440,12 +443,12 @@ export default function App() {
           ))}
         </section>
 
-        {view === 'dashboard' && <Dashboard metrics={metrics} tasks={data.tasks} interactions={data.interactions} onToggle={toggleTask} />}
-        {view === 'conversations' && <Conversations items={data.interactions} />}
+        {view === 'dashboard' && <Dashboard metrics={metrics} tasks={data.tasks} interactions={data.interactions} onToggle={toggleTask} onOpenInteraction={setSelectedInteractionId} />}
+        {view === 'conversations' && <Conversations items={data.interactions} onOpen={setSelectedInteractionId} />}
         {view === 'inbox' && <WhatsAppInbox items={data.inbox} onClassify={classifyInbox} onDraft={openInboxDraft} />}
         {view === 'tasks' && <Tasks items={data.tasks} onToggle={toggleTask} />}
-        {view === 'pipeline' && <Pipeline clients={data.clients} />}
-        {view === 'clients' && <Clients clients={filteredClients} interactions={data.interactions} tasks={data.tasks} query={query} setQuery={setQuery} />}
+        {view === 'pipeline' && <Pipeline clients={data.clients} onOpenClient={setSelectedClientId} />}
+        {view === 'clients' && <Clients clients={filteredClients} query={query} setQuery={setQuery} onOpenClient={setSelectedClientId} />}
         {view === 'replies' && <QuickReplies />}
         {view === 'coach' && <Coach interactions={data.interactions} data={data} setData={setData} />}
         {view === 'settings' && <DataSettings data={data} setData={setData} session={session} syncStatus={syncStatus} />}
@@ -453,11 +456,13 @@ export default function App() {
 
       {showForm && <InteractionForm form={form} setForm={setForm} onClose={() => setShowForm(false)} onSave={saveInteraction} />}
       {inboxDraft && <InboxDraftModal draft={inboxDraft} setDraft={setInboxDraft} onClose={() => setInboxDraft(null)} onConfirm={confirmInboxDraft} />}
+      {selectedInteractionId && <InteractionDetail interaction={data.interactions.find((item) => item.id === selectedInteractionId)} client={data.clients.find((item) => item.id === data.interactions.find((entry) => entry.id === selectedInteractionId)?.clientId)} onClose={() => setSelectedInteractionId(null)} onOpenClient={(clientId) => { setSelectedInteractionId(null); setSelectedClientId(clientId); }} />}
+      {selectedClientId && <ClientDetail client={data.clients.find((item) => item.id === selectedClientId)} interactions={data.interactions.filter((item) => item.clientId === selectedClientId)} tasks={data.tasks.filter((item) => item.clientId === selectedClientId)} onClose={() => setSelectedClientId(null)} onOpenInteraction={setSelectedInteractionId} />}
     </div>
   );
 }
 
-function Dashboard({ metrics, tasks, interactions, onToggle }) {
+function Dashboard({ metrics, tasks, interactions, onToggle, onOpenInteraction }) {
   const cards = [
     ['Contactos esta semana', metrics.contacts, 'Meta: 15', MessageCircle],
     ['Contactos efectivos', metrics.effective, 'Meta: 8–10', CheckCircle2],
@@ -476,7 +481,7 @@ function Dashboard({ metrics, tasks, interactions, onToggle }) {
         </article>
         <article className="panel">
           <div className="panel-head"><div><span className="eyebrow">Actividad</span><h2>Últimas conversaciones</h2></div><MessageCircle size={22}/></div>
-          {interactions.length ? interactions.slice(0, 5).map((item) => <InteractionRow item={item} key={item.id}/>) : <Empty text="Todavía no hay conversaciones registradas. La primera que cargues inicia la memoria comercial." />}
+          {interactions.length ? interactions.slice(0, 5).map((item) => <InteractionRow item={item} key={item.id} onOpen={onOpenInteraction}/>) : <Empty text="Todavía no hay conversaciones registradas. La primera que cargues inicia la memoria comercial." />}
         </article>
       </section>
       <section className="panel goals">
@@ -492,8 +497,8 @@ function Dashboard({ metrics, tasks, interactions, onToggle }) {
   );
 }
 
-function Conversations({ items }) {
-  return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Memoria comercial</span><h2>Historial de conversaciones</h2></div></div>{items.length ? items.map((item) => <InteractionRow item={item} key={item.id} expanded />) : <Empty text="Registrá la primera conversación para comenzar la memoria comercial." />}</section>;
+function Conversations({ items, onOpen }) {
+  return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Memoria comercial</span><h2>Historial de conversaciones</h2></div></div>{items.length ? items.map((item) => <InteractionRow item={item} key={item.id} expanded onOpen={onOpen} />) : <Empty text="Registrá la primera conversación para comenzar la memoria comercial." />}</section>;
 }
 
 function WhatsAppInbox({ items, onClassify, onDraft }) {
@@ -514,12 +519,19 @@ function InboxDraftModal({ draft, setDraft, onClose, onConfirm }) {
   return <div className="modal-backdrop"><form className="modal" onSubmit={onConfirm}><div className="modal-head"><div><span className="eyebrow">Borrador automático · confirmar antes de guardar</span><h2>Convertir mensaje en oportunidad</h2><p>Revisá y corregí. El CRM no responde al cliente.</p></div><button type="button" className="icon-button" aria-label="Cerrar borrador" onClick={onClose}><X/></button></div><div className="source-message"><strong>Mensaje original</strong><p>{draft.event.text_body || `[${draft.event.message_type || 'mensaje sin texto'}]`}</p></div><div className="form-grid"><label>Empresa / cliente<input required value={form.company} onChange={(event) => update('company', event.target.value)} placeholder="Confirmar empresa" /></label><label>Persona / contacto<input value={form.contact} onChange={(event) => update('contact', event.target.value)} /></label><label>Familia<select value={form.family} onChange={(event) => update('family', event.target.value)}>{FAMILIES.map((item) => <option key={item}>{item}</option>)}</select></label><label>Temperatura<select value={form.temperature} onChange={(event) => update('temperature', event.target.value)}><option>Frío</option><option>Tibio</option><option>Caliente</option></select></label><label>Etapa<select value={form.stage} onChange={(event) => update('stage', event.target.value)}>{PIPELINE.map((item) => <option key={item}>{item}</option>)}</select></label><label>Fecha próxima<input type="date" value={form.nextDate} onChange={(event) => update('nextDate', event.target.value)} /></label><label className="span-2">Resumen<textarea value={form.summary} onChange={(event) => update('summary', event.target.value)} /></label><label className="span-2">Necesidad detectada<textarea value={form.need} onChange={(event) => update('need', event.target.value)} /></label><label className="span-2">Próxima acción<input value={form.nextAction} onChange={(event) => update('nextAction', event.target.value)} /></label></div><div className="modal-actions"><button type="button" className="secondary" onClick={onClose}>Cancelar</button><button className="primary" type="submit">Confirmar y crear seguimiento</button></div></form></div>;
 }
 
-function InteractionRow({ item, expanded = false }) {
-  return <div className={`interaction-row ${expanded ? 'expanded' : ''}`}><span className="channel-dot" style={{ background: CHANNELS[item.channel]?.color }} /><div><strong>{item.company}</strong><span>{item.contact || CHANNELS[item.channel]?.name} · {new Date(item.createdAt).toLocaleString('es-AR')}</span>{expanded && <p>{item.summary || item.need || 'Sin resumen'}</p>}</div><div className="row-tail"><span className={`temp ${item.temperature.toLowerCase()}`}>{item.temperature}</span><ChevronRight size={17}/></div></div>;
+function InteractionRow({ item, expanded = false, onOpen }) {
+  const content = <><span className="channel-dot" style={{ background: CHANNELS[item.channel]?.color || '#7d8790' }} /><div><strong>{item.company}</strong><span>{item.contact || CHANNELS[item.channel]?.name || 'Contacto sin identificar'} · {new Date(item.createdAt).toLocaleString('es-AR')}</span>{expanded && <p>{item.summary || item.need || 'Sin resumen'}</p>}</div><div className="row-tail"><span className={`temp ${(item.temperature || 'Tibio').toLowerCase()}`}>{item.temperature || 'Tibio'}</span><ChevronRight size={17}/></div></>;
+  return onOpen ? <button className={`interaction-row ${expanded ? 'expanded' : ''}`} onClick={() => onOpen(item.id)}>{content}</button> : <div className={`interaction-row ${expanded ? 'expanded' : ''}`}>{content}</div>;
+}
+
+function InteractionDetail({ interaction, client, onClose, onOpenClient }) {
+  if (!interaction) return null;
+  return <div className="modal-backdrop"><section className="modal interaction-detail"><div className="modal-head"><div><span className="eyebrow">Conversación registrada</span><h2>{interaction.company}</h2><p>{interaction.contact || 'Contacto sin identificar'} · {formatDate(interaction.createdAt)}</p></div><button type="button" className="icon-button" aria-label="Cerrar conversación" onClick={onClose}><X/></button></div><div className="conversation-detail-grid"><Fact label="Canal" value={CHANNELS[interaction.channel]?.name}/><Fact label="Familia" value={interaction.family}/><Fact label="Temperatura" value={interaction.temperature}/><Fact label="Etapa" value={interaction.stage}/></div><div className="detail-block"><span>Qué hablaron</span><p>{interaction.summary || 'Sin resumen registrado.'}</p></div><div className="detail-block"><span>Necesidad detectada</span><p>{interaction.need || 'Necesidad pendiente de confirmar.'}</p></div><div className="detail-block"><span>Próxima acción</span><p>{interaction.nextAction || 'Sin próxima acción definida.'}{interaction.nextDate ? ` · ${formatDate(interaction.nextDate)}` : ''}</p></div><div className="modal-actions"><button className="secondary" type="button" onClick={onClose}>Cerrar</button>{client && <button className="primary" type="button" onClick={() => onOpenClient(client.id)}>Ver ficha del cliente</button>}</div></section></div>;
 }
 
 function Tasks({ items, onToggle }) {
-  return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Agenda única</span><h2>Tareas comerciales</h2></div></div><TaskList items={items.sort((a, b) => Number(a.done) - Number(b.done) || a.dueDate.localeCompare(b.dueDate))} onToggle={onToggle}/></section>;
+  const ordered = [...items].sort((a, b) => Number(a.done) - Number(b.done) || (a.dueDate || '').localeCompare(b.dueDate || ''));
+  return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Agenda única</span><h2>Tareas comerciales</h2></div></div><TaskList items={ordered} onToggle={onToggle}/></section>;
 }
 
 function TaskList({ items, onToggle, emptyText = 'No hay tareas pendientes.' }) {
@@ -527,19 +539,19 @@ function TaskList({ items, onToggle, emptyText = 'No hay tareas pendientes.' }) 
   return items.map((task) => <button className={`task-row ${task.done ? 'done' : ''}`} key={task.id} onClick={() => onToggle(task.id)}><span className="task-check">{task.done && <CheckCircle2 size={18}/>}</span><div><strong>{task.title}</strong><span>{task.company} · {formatDate(task.dueDate)}{task.trigger ? ` · ${task.trigger}` : ''}</span></div><span className={`priority ${task.priority.toLowerCase()}`}>{task.priority}</span></button>);
 }
 
-function Pipeline({ clients }) {
-  return <div className="kanban">{PIPELINE.map((stage) => { const list = clients.filter((client) => client.stage === stage); return <section className={`kanban-column ${['Pausado','Perdido'].includes(stage) ? 'inactive' : ''}`} key={stage}><header><strong>{stage}</strong><span>{list.length}</span></header>{list.map((client) => <article className="deal-card" key={client.id}><strong>{client.company}</strong><span>{client.family}</span><small>{client.contact || 'Contacto pendiente'}</small>{client.lossReason && <small className="loss-reason">{client.lossReason}</small>}</article>)}{!list.length && <div className="empty-slot">Sin cuentas</div>}</section>; })}</div>;
+function Pipeline({ clients, onOpenClient }) {
+  return <div className="kanban">{PIPELINE.map((stage) => { const list = clients.filter((client) => client.stage === stage); return <section className={`kanban-column ${['Pausado','Perdido'].includes(stage) ? 'inactive' : ''}`} key={stage}><header><strong>{stage}</strong><span>{list.length}</span></header>{list.map((client) => <button className="deal-card" key={client.id} onClick={() => onOpenClient(client.id)}><strong>{client.company}</strong><span>{client.family}</span><small>{client.contact || 'Contacto pendiente'}</small>{client.lossReason && <small className="loss-reason">{client.lossReason}</small>}</button>)}{!list.length && <div className="empty-slot">Sin cuentas</div>}</section>; })}</div>;
 }
 
-function Clients({ clients, interactions, tasks, query, setQuery }) {
-  const [selected, setSelected] = useState(null);
-  return <><section className="panel"><div className="panel-head"><div><span className="eyebrow">Cartera</span><h2>Clientes y prospectos</h2></div><label className="search"><Search size={17}/><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar…" /></label></div>{clients.length ? <div className="client-table">{clients.map((client) => <button className="client-row" onClick={() => setSelected(client)} key={client.id}><div className="avatar">{client.company.slice(0, 2).toUpperCase()}</div><div><strong>{client.company}</strong><span>{client.contact || 'Sin contacto identificado'}</span></div><span>{client.family}</span><span className={`temp ${client.temperature.toLowerCase()}`}>{client.temperature}</span><strong>{client.stage}</strong></button>)}</div> : <Empty text="Todavía no hay clientes en la cartera. Se sumarán automáticamente al registrar conversaciones." />}</section>{selected && <ClientDetail client={selected} interactions={interactions.filter((item) => item.clientId === selected.id)} tasks={tasks.filter((item) => item.clientId === selected.id)} onClose={() => setSelected(null)} />}</>;
+function Clients({ clients, query, setQuery, onOpenClient }) {
+  return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Cartera</span><h2>Clientes y prospectos</h2></div><label className="search"><Search size={17}/><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar…" /></label></div>{clients.length ? <div className="client-table">{clients.map((client) => <button className="client-row" onClick={() => onOpenClient(client.id)} key={client.id}><div className="avatar">{client.company.slice(0, 2).toUpperCase()}</div><div><strong>{client.company}</strong><span>{client.contact || 'Sin contacto identificado'}</span></div><span>{client.family}</span><span className={`temp ${(client.temperature || 'Tibio').toLowerCase()}`}>{client.temperature || 'Tibio'}</span><strong>{client.stage}</strong></button>)}</div> : <Empty text="Todavía no hay clientes en la cartera. Se sumarán automáticamente al registrar conversaciones." />}</section>;
 }
 
-function ClientDetail({ client, interactions, tasks, onClose }) {
+function ClientDetail({ client, interactions, tasks, onClose, onOpenInteraction }) {
+  if (!client) return null;
   const latest = interactions[0];
   const nextTask = tasks.filter((item) => !item.done).sort((a, b) => a.dueDate.localeCompare(b.dueDate))[0];
-  return <div className="modal-backdrop"><section className="modal client-detail"><div className="modal-head"><div><span className="eyebrow">Antes de llamar</span><h2>{client.company}</h2><p>{client.contact || 'Contacto pendiente'} · {client.temperature} · {client.stage}</p></div><button type="button" className="icon-button" aria-label="Cerrar ficha" onClick={onClose}><X/></button></div><div className="call-brief"><article><span>Última conversación</span><strong>{latest?.summary || 'Sin resumen registrado'}</strong><p>{latest?.need || 'Necesidad a confirmar'}</p></article><article><span>Próximo paso</span><strong>{nextTask?.title || 'Sin seguimiento pendiente'}</strong><p>{nextTask ? formatDate(nextTask.dueDate) : 'Definir en el próximo contacto'}</p></article></div><div className="client-facts"><Fact label="Familia" value={client.family}/><Fact label="Proveedor actual" value={client.currentSupplier}/><Fact label="Decisor" value={client.decisionMaker}/><Fact label="Urgencia" value={client.urgency}/><Fact label="Potencial" value={client.potential}/><Fact label="Recompra" value={client.repurchaseDate ? `${formatDate(client.repurchaseDate)} · ${client.repurchaseTrigger || 'sin disparador'}` : client.repurchaseTrigger}/>{client.lossReason && <Fact label="Motivo de pausa/pérdida" value={client.lossReason}/>}</div><div className="history"><h3>Historial</h3>{interactions.length ? interactions.map((item) => <InteractionRow item={item} expanded key={item.id}/>) : <Empty text="Sin conversaciones registradas."/>}</div></section></div>;
+  return <div className="modal-backdrop"><section className="modal client-detail"><div className="modal-head"><div><span className="eyebrow">Antes de llamar</span><h2>{client.company}</h2><p>{client.contact || 'Contacto pendiente'} · {client.temperature || 'Tibio'} · {client.stage}</p></div><button type="button" className="icon-button" aria-label="Cerrar ficha" onClick={onClose}><X/></button></div><div className="call-brief"><article><span>Última conversación</span><strong>{latest?.summary || 'Sin resumen registrado'}</strong><p>{latest?.need || 'Necesidad a confirmar'}</p></article><article><span>Próximo paso</span><strong>{nextTask?.title || 'Sin seguimiento pendiente'}</strong><p>{nextTask ? formatDate(nextTask.dueDate) : 'Definir en el próximo contacto'}</p></article></div><div className="client-facts"><Fact label="Familia" value={client.family}/><Fact label="Proveedor actual" value={client.currentSupplier}/><Fact label="Decisor" value={client.decisionMaker}/><Fact label="Urgencia" value={client.urgency}/><Fact label="Potencial" value={client.potential}/><Fact label="Recompra" value={client.repurchaseDate ? `${formatDate(client.repurchaseDate)} · ${client.repurchaseTrigger || 'sin disparador'}` : client.repurchaseTrigger}/>{client.lossReason && <Fact label="Motivo de pausa/pérdida" value={client.lossReason}/>}</div><div className="history"><h3>Historial</h3>{interactions.length ? interactions.map((item) => <InteractionRow item={item} expanded key={item.id} onOpen={(id) => { onClose(); onOpenInteraction(id); }} />) : <Empty text="Sin conversaciones registradas."/>}</div></section></div>;
 }
 
 function Fact({ label, value }) { return <div><span>{label}</span><strong>{value || 'A confirmar'}</strong></div>; }
@@ -558,9 +570,13 @@ function Coach({ interactions, data, setData }) {
   const band = scoreBand(total);
 
   useEffect(() => {
-    if (!interaction?.evaluation) return;
-    setScores(interaction.evaluation.scores);
-    setFeedback(interaction.evaluation.feedback);
+    if (interaction?.evaluation) {
+      setScores(interaction.evaluation.scores);
+      setFeedback(interaction.evaluation.feedback);
+      return;
+    }
+    setScores(Object.fromEntries(RUBRIC.map(([id]) => [id, 0])));
+    setFeedback({ good: '', missing: '', risk: '', suggested: '', learning: '' });
   }, [selected]);
 
   function saveEvaluation() {

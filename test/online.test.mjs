@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { mergeWorkspaceState } from '../src/workspace.mjs';
+
+test('merges concurrent workspace changes without dropping records', () => {
+  const local = {
+    clients: [{ id: 'a', company: 'Local', updatedAt: '2026-08-31T10:00:00Z' }],
+    interactions: [{ id: 'i1', createdAt: '2026-08-31T10:00:00Z' }],
+    tasks: [{ id: 't1', done: true, updatedAt: '2026-08-31T11:00:00Z' }],
+    inbox: [{ event_id: 'w1', classification_status: 'confirmed', classifiedAt: '2026-08-31T11:00:00Z' }],
+  };
+  const remote = {
+    clients: [{ id: 'b', company: 'Remoto', updatedAt: '2026-08-31T10:30:00Z' }],
+    interactions: [{ id: 'i2', createdAt: '2026-08-31T10:30:00Z' }],
+    tasks: [{ id: 't1', done: false, updatedAt: '2026-08-31T10:30:00Z' }],
+    inbox: [{ event_id: 'w1', classification_status: 'pending', occurred_at: '2026-08-31T09:00:00Z' }],
+  };
+  const merged = mergeWorkspaceState(local, remote);
+  assert.deepEqual(merged.clients.map((item) => item.id).sort(), ['a', 'b']);
+  assert.deepEqual(merged.interactions.map((item) => item.id).sort(), ['i1', 'i2']);
+  assert.equal(merged.tasks[0].done, true);
+  assert.equal(merged.inbox[0].classification_status, 'confirmed');
+});

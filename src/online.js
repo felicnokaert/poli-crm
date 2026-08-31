@@ -1,8 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
+export { mergeWorkspaceState } from './workspace.mjs';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const WORKSPACE_KEY = 'grupo-poliplast';
+const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [] };
 
 export const onlineConfigured = Boolean(url && anonKey);
 export const supabase = onlineConfigured
@@ -22,7 +24,7 @@ export async function loadOnlineState() {
   const savedEvents = new Map((state?.inbox || []).map((item) => [item.event_id, item]));
   const inbox = (events || []).map((event) => ({ ...event, ...(savedEvents.get(event.event_id) || {}) }));
   return {
-    state: state ? { ...state, inbox } : { clients: [], interactions: [], tasks: [], inbox },
+    state: state ? { ...EMPTY_STATE, ...state, inbox } : { ...EMPTY_STATE, inbox },
     updatedAt: stateRow?.updated_at,
     updatedBy: stateRow?.updated_by_email,
   };

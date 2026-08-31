@@ -23,7 +23,7 @@ import {
   Link2,
 } from 'lucide-react';
 import { CLASSIFICATIONS, QUICK_REPLIES, ROLE_PLAYS, RUBRIC, scoreBand } from './knowledge';
-import { loadOnlineState, onlineConfigured, saveOnlineState, supabase } from './online';
+import { loadOnlineState, mergeWorkspaceState, onlineConfigured, saveOnlineState, supabase } from './online';
 import { connectWhatsApp } from './meta-onboarding';
 import { formatDate } from './utils.mjs';
 
@@ -183,9 +183,15 @@ export default function App() {
         ? current
         : { ...current, inbox: [{ ...event, classification_status: 'pending' }, ...current.inbox] });
     }).subscribe();
+    const workspaceChannel = supabase.channel('workspace-state').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'workspace_states', filter: 'workspace_key=eq.grupo-poliplast' }, ({ new: row }) => {
+      if (!row?.data || row.updated_by === session.user.id) return;
+      setData((current) => mergeWorkspaceState(current, row.data));
+      setSyncStatus(`Actualizado por ${row.updated_by_email || 'el equipo'}`);
+    }).subscribe();
     return () => {
       active = false;
       supabase.removeChannel(channel);
+      supabase.removeChannel(workspaceChannel);
     };
   }, [session?.user?.id]);
 
@@ -260,6 +266,7 @@ export default function App() {
             priority: form.temperature === 'Caliente' ? 'Alta' : 'Media',
             done: false,
             createdAt: stamp,
+            updatedAt: stamp,
           },
         ]
       : data.tasks;
@@ -274,7 +281,8 @@ export default function App() {
   }
 
   function toggleTask(id) {
-    setData({ ...data, tasks: data.tasks.map((task) => (task.id === id ? { ...task, done: !task.done } : task)) });
+    const stamp = new Date().toISOString();
+    setData({ ...data, tasks: data.tasks.map((task) => (task.id === id ? { ...task, done: !task.done, updatedAt: stamp } : task)) });
   }
 
   function classifyInbox(eventId, decision) {
@@ -369,7 +377,7 @@ export default function App() {
     const task = draft.nextAction.trim() ? {
       id: crypto.randomUUID(), clientId, company, title: draft.nextAction.trim(), dueDate: draft.nextDate,
       cadence: 'Diaria', priority: draft.temperature === 'Caliente' ? 'Alta' : 'Media', done: false,
-      createdAt: stamp, createdBy: session?.user?.email || '', trigger: 'Borrador confirmado desde WhatsApp',
+      createdAt: stamp, updatedAt: stamp, createdBy: session?.user?.email || '', trigger: 'Borrador confirmado desde WhatsApp',
     } : null;
     setData({
       ...data,

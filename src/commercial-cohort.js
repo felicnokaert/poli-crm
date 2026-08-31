@@ -57,3 +57,18 @@ export function buildCommercialCohort() {
   }));
   return { clients, tasks, source: SOURCE };
 }
+
+export function mergeCommercialCohort(state) {
+  const cohort = buildCommercialCohort();
+  const normalize = (value) => (value || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const existingNames = new Set((state.clients || []).map((item) => normalize(item.company)));
+  const newClients = cohort.clients.filter((item) => !existingNames.has(normalize(item.company)));
+  if (!newClients.length) return { state, addedClients: 0, addedTasks: 0 };
+  const newIds = new Set(newClients.map((item) => item.id));
+  const newTasks = cohort.tasks.filter((item) => newIds.has(item.clientId));
+  return {
+    state: { ...state, clients: [...(state.clients || []), ...newClients], tasks: [...(state.tasks || []), ...newTasks] },
+    addedClients: newClients.length,
+    addedTasks: newTasks.length,
+  };
+}

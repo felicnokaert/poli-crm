@@ -23,7 +23,7 @@ import {
   Link2,
 } from 'lucide-react';
 import { CLASSIFICATIONS, QUICK_REPLIES, ROLE_PLAYS, RUBRIC, scoreBand } from './knowledge';
-import { loadOnlineState, mergeWorkspaceState, onlineConfigured, saveOnlineState, supabase } from './online';
+import { loadOnlineState, mergeWorkspaceState, onlineConfigured, saveOnlineState, supabase, workspaceStatesEqual } from './online';
 import { connectWhatsApp } from './meta-onboarding';
 import { formatDate } from './utils.mjs';
 
@@ -186,7 +186,10 @@ export default function App() {
     }).subscribe();
     const workspaceChannel = supabase.channel('workspace-state').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'workspace_states', filter: 'workspace_key=eq.grupo-poliplast' }, ({ new: row }) => {
       if (!row?.data || row.updated_by === session.user.id) return;
-      setData((current) => mergeWorkspaceState(current, row.data));
+      setData((current) => {
+        const merged = mergeWorkspaceState(current, row.data);
+        return workspaceStatesEqual(current, merged) ? current : merged;
+      });
       setSyncStatus(`Actualizado por ${row.updated_by_email || 'el equipo'}`);
     }).subscribe();
     return () => {
@@ -565,7 +568,7 @@ function Clients({ clients, query, setQuery, onOpenClient }) {
 function ClientDetail({ client, interactions, tasks, onClose, onOpenInteraction }) {
   if (!client) return null;
   const latest = interactions[0];
-  const nextTask = tasks.filter((item) => !item.done).sort((a, b) => a.dueDate.localeCompare(b.dueDate))[0];
+  const nextTask = tasks.filter((item) => !item.done).sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''))[0];
   return <div className="modal-backdrop"><section className="modal client-detail"><div className="modal-head"><div><span className="eyebrow">Antes de llamar</span><h2>{client.company}</h2><p>{client.contact || 'Contacto pendiente'} · {client.temperature || 'Tibio'} · {client.stage}</p></div><button type="button" className="icon-button" aria-label="Cerrar ficha" onClick={onClose}><X/></button></div><div className="call-brief"><article><span>Última conversación</span><strong>{latest?.summary || 'Sin resumen registrado'}</strong><p>{latest?.need || 'Necesidad a confirmar'}</p></article><article><span>Próximo paso</span><strong>{nextTask?.title || 'Sin seguimiento pendiente'}</strong><p>{nextTask ? formatDate(nextTask.dueDate) : 'Definir en el próximo contacto'}</p></article></div><div className="client-facts"><Fact label="Familia" value={client.family}/><Fact label="Proveedor actual" value={client.currentSupplier}/><Fact label="Decisor" value={client.decisionMaker}/><Fact label="Urgencia" value={client.urgency}/><Fact label="Potencial" value={client.potential}/><Fact label="Recompra" value={client.repurchaseDate ? `${formatDate(client.repurchaseDate)} · ${client.repurchaseTrigger || 'sin disparador'}` : client.repurchaseTrigger}/>{client.lossReason && <Fact label="Motivo de pausa/pérdida" value={client.lossReason}/>}</div><div className="history"><h3>Historial</h3>{interactions.length ? interactions.map((item) => <InteractionRow item={item} expanded key={item.id} onOpen={(id) => { onClose(); onOpenInteraction(id); }} />) : <Empty text="Sin conversaciones registradas."/>}</div></section></div>;
 }
 
@@ -573,7 +576,17 @@ function Fact({ label, value }) { return <div><span>{label}</span><strong>{value
 
 function QuickReplies() {
   const [channel, setChannel] = useState('general');
-  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Sugerencias editables</span><h2>Biblioteca de respuestas rápidas</h2></div><div className="segmented"><button className={channel === 'general' ? 'selected' : ''} onClick={() => setChannel('general')}>General</button><button className={channel === 'penosil' ? 'selected' : ''} onClick={() => setChannel('penosil')}>Penosil</button></div></div><div className="reply-grid">{QUICK_REPLIES[channel].map(([title, guidance], index) => <article className="reply-card" key={title}><span>{String(index + 1).padStart(2, '0')}</span><h3>{title}</h3><p>{guidance}</p><button onClick={() => navigator.clipboard?.writeText(guidance)}>Copiar criterio</button></article>)}</div><div className="quality-note"><CircleAlert size={19}/><p>Estas entradas orientan la conversación. Nunca envían mensajes automáticamente. Todo dato técnico, precio, stock, descuento o plazo debe validarse.</p></div></section><Training /></div>;
+  const [copied, setCopied] = useState('');
+  async function copyReply(title, guidance) {
+    try {
+      await navigator.clipboard.writeText(guidance);
+      setCopied(title);
+      setTimeout(() => setCopied(''), 1800);
+    } catch {
+      setCopied('error');
+    }
+  }
+  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Sugerencias editables</span><h2>Biblioteca de respuestas rápidas</h2></div><div className="segmented"><button className={channel === 'general' ? 'selected' : ''} onClick={() => setChannel('general')}>General</button><button className={channel === 'penosil' ? 'selected' : ''} onClick={() => setChannel('penosil')}>Penosil</button></div></div><div className="reply-grid">{QUICK_REPLIES[channel].map(([title, guidance], index) => <article className="reply-card" key={title}><span>{String(index + 1).padStart(2, '0')}</span><h3>{title}</h3><p>{guidance}</p><button onClick={() => copyReply(title, guidance)}>{copied === title ? 'Copiado ✓' : 'Copiar criterio'}</button></article>)}</div>{copied === 'error' && <div className="system-message">No se pudo copiar automáticamente. Seleccioná el texto manualmente.</div>}<div className="quality-note"><CircleAlert size={19}/><p>Estas entradas orientan la conversación. Nunca envían mensajes automáticamente. Todo dato técnico, precio, stock, descuento o plazo debe validarse.</p></div></section><Training /></div>;
 }
 
 function Coach({ interactions, data, setData }) {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { mergeWorkspaceState } from '../src/workspace.mjs';
+import { mergeWorkspaceState, workspaceStatesEqual } from '../src/workspace.mjs';
 
 test('merges concurrent workspace changes without dropping records', () => {
   const local = {
@@ -20,4 +20,16 @@ test('merges concurrent workspace changes without dropping records', () => {
   assert.deepEqual(merged.interactions.map((item) => item.id).sort(), ['i1', 'i2']);
   assert.equal(merged.tasks[0].done, true);
   assert.equal(merged.inbox[0].classification_status, 'confirmed');
+});
+
+test('recognizes equivalent workspace states regardless of record order', () => {
+  const first = { clients: [{ id: 'b' }, { id: 'a' }], interactions: [], tasks: [], inbox: [] };
+  const second = { clients: [{ id: 'a' }, { id: 'b' }], interactions: [], tasks: [], inbox: [] };
+  assert.equal(workspaceStatesEqual(first, second), true);
+});
+
+test('detects a real remote workspace change', () => {
+  const first = { clients: [{ id: 'a', stage: 'Nuevo', updatedAt: '1' }], interactions: [], tasks: [], inbox: [] };
+  const second = { clients: [{ id: 'a', stage: 'Ganado', updatedAt: '2' }], interactions: [], tasks: [], inbox: [] };
+  assert.equal(workspaceStatesEqual(first, second), false);
 });

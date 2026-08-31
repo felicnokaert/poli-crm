@@ -12,7 +12,7 @@ function mergeRecords(local = [], remote = [], key = 'id') {
     const current = merged.get(id);
     if (!current || recordStamp(record) >= recordStamp(current)) merged.set(id, { ...current, ...record });
   }
-  return [...merged.values()];
+  return [...merged.values()].sort((a, b) => String(a?.[key] || '').localeCompare(String(b?.[key] || '')));
 }
 
 export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
@@ -22,4 +22,8 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
     tasks: mergeRecords(local.tasks, remote.tasks),
     inbox: mergeRecords(local.inbox, remote.inbox, 'event_id').sort((a, b) => (b.occurred_at || '').localeCompare(a.occurred_at || '')),
   };
+}
+
+export function workspaceStatesEqual(left = EMPTY_STATE, right = EMPTY_STATE) {
+  return JSON.stringify(mergeWorkspaceState(EMPTY_STATE, left)) === JSON.stringify(mergeWorkspaceState(EMPTY_STATE, right));
 }

@@ -94,6 +94,24 @@ function draftFromWhatsApp(event) {
   };
 }
 
+function whatsappThreadKey(event) {
+  return `${event.channel || 'unknown'}:${event.customer_wa_id || event.customer_name || event.event_id}`.toLocaleLowerCase('es-AR');
+}
+
+function groupWhatsAppThreads(items) {
+  const groups = new Map();
+  for (const item of items) {
+    const key = whatsappThreadKey(item);
+    groups.set(key, [...(groups.get(key) || []), item]);
+  }
+  return [...groups.entries()].map(([threadKey, events]) => {
+    const ordered = [...events].sort((a, b) => new Date(a.occurred_at) - new Date(b.occurred_at));
+    const latest = ordered.at(-1);
+    const pendingCount = ordered.filter((item) => item.classification_status === 'pending').length;
+    return { ...latest, threadKey, events: ordered, messageCount: ordered.length, pendingCount, classification_status: pendingCount ? 'pending' : latest.classification_status };
+  }).sort((a, b) => new Date(b.occurred_at) - new Date(a.occurred_at));
+}
+
 function loadState() {
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
@@ -357,7 +375,8 @@ export default function App() {
     const stamp = new Date().toISOString();
     const status = decision === 'ignore' ? 'ignored' : decision;
     if (decision === 'ignore') {
-      setData({ ...data, inbox: data.inbox.map((item) => item.event_id === eventId ? { ...item, classification_status: status, classifiedAt: stamp } : item) });
+      const threadKey = whatsappThreadKey(event);
+      setData({ ...data, inbox: data.inbox.map((item) => whatsappThreadKey(item) === threadKey ? { ...item, classification_status: status, classifiedAt: stamp } : item) });
       return;
     }
 
@@ -406,13 +425,16 @@ export default function App() {
       clients: existing ? data.clients.map((item) => item.id === clientId ? { ...item, lastContact: today(), updatedAt: stamp } : item) : [...data.clients, client],
       interactions: [interaction, ...data.interactions],
       tasks: newTask ? [...data.tasks, newTask] : data.tasks,
-      inbox: data.inbox.map((item) => item.event_id === eventId ? { ...item, classification_status: status, classifiedAt: stamp } : item),
+      inbox: data.inbox.map((item) => whatsappThreadKey(item) === whatsappThreadKey(event) ? { ...item, classification_status: status, classifiedAt: stamp } : item),
     });
   }
 
   function openInboxDraft(eventId) {
     const event = data.inbox.find((item) => item.event_id === eventId);
-    if (event) setInboxDraft({ event, form: draftFromWhatsApp(event) });
+    if (!event) return;
+    const events = data.inbox.filter((item) => whatsappThreadKey(item) === whatsappThreadKey(event)).sort((a, b) => new Date(a.occurred_at) - new Date(b.occurred_at));
+    const transcript = events.slice(-20).map((item) => `${item.direction === 'outbound' ? 'Equipo' : item.customer_name || 'Contacto'}: ${item.text_body || `[${item.message_type || 'mensaje'}]`}`).join('\n');
+    setInboxDraft({ event: { ...event, transcript, messageCount: events.length }, form: { ...draftFromWhatsApp(event), summary: transcript } });
   }
 
   function confirmInboxDraft(event) {
@@ -453,7 +475,7 @@ export default function App() {
       clients: existing ? data.clients.map((item) => item.id === clientId ? client : item) : [...data.clients, client],
       interactions: [interaction, ...data.interactions],
       tasks: task ? [...data.tasks, task] : data.tasks,
-      inbox: data.inbox.map((item) => item.event_id === source.event_id
+      inbox: data.inbox.map((item) => whatsappThreadKey(item) === whatsappThreadKey(source)
         ? { ...item, classification_status: 'confirmed', classifiedAt: stamp, classifiedBy: session?.user?.email || '' }
         : item),
     });
@@ -611,15 +633,16 @@ function Conversations({ items, onOpen }) {
 }
 
 function WhatsAppInbox({ items, onClassify, onDraft }) {
-  const pending = items.filter((item) => item.classification_status === 'pending');
-  const processed = items.filter((item) => item.classification_status !== 'pending');
-  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Autorización humana</span><h2>Mensajes pendientes</h2></div><span className="inbox-count">{pending.length}</span></div>{pending.length ? pending.map((item) => <InboxRow item={item} onClassify={onClassify} onDraft={onDraft} key={item.event_id}/>) : <Empty text="No hay mensajes esperando clasificación." />}</section>{processed.length > 0 && <section className="panel"><div className="panel-head"><div><span className="eyebrow">Trazabilidad</span><h2>Procesados recientemente</h2></div></div>{processed.slice(0, 12).map((item) => <InboxRow item={item} key={item.event_id}/>)}</section>}</div>;
+  const threads = groupWhatsAppThreads(items);
+  const pending = threads.filter((item) => item.classification_status === 'pending');
+  const processed = threads.filter((item) => item.classification_status !== 'pending');
+  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Autorización humana</span><h2>Conversaciones pendientes</h2></div><span className="inbox-count">{pending.length}</span></div>{pending.length ? pending.map((item) => <InboxRow item={item} onClassify={onClassify} onDraft={onDraft} key={item.threadKey}/>) : <Empty text="No hay conversaciones esperando clasificación." />}</section>{processed.length > 0 && <section className="panel"><div className="panel-head"><div><span className="eyebrow">Trazabilidad por contacto</span><h2>Conversaciones procesadas</h2></div></div>{processed.slice(0, 12).map((item) => <InboxRow item={item} key={item.threadKey}/>)}</section>}</div>;
 }
 
 function InboxRow({ item, onClassify, onDraft }) {
   const pending = item.classification_status === 'pending';
   const labels = { ignored: 'No requiere acción', memory: 'Contexto guardado', followup: 'Tarea creada', training: 'Enviado al entrenador', confirmed: 'Borrador confirmado' };
-  return <article className="inbox-row"><div className="inbox-message"><span className="channel-dot" style={{ background: CHANNELS[item.channel]?.color || '#7d8790' }}/><div><strong>{item.customer_name || item.customer_wa_id || 'Contacto sin identificar'}</strong><span>{CHANNELS[item.channel]?.name || 'WhatsApp'} · {new Date(item.occurred_at).toLocaleString('es-AR')}</span><p>{item.text_body || `[${item.message_type || 'mensaje sin texto'}]`}</p></div></div>{pending ? <div className="decision-buttons"><button onClick={() => onDraft(item.event_id)} className="recommended">Revisar borrador</button><button onClick={() => onClassify(item.event_id, 'ignore')}>No requiere acción</button><button onClick={() => onClassify(item.event_id, 'memory')}>Solo contexto</button><button onClick={() => onClassify(item.event_id, 'training')}>Entrenador</button></div> : <span className={`decision-tag ${item.classification_status}`}>{labels[item.classification_status] || item.classification_status}</span>}</article>;
+  return <article className="inbox-row"><div className="inbox-message"><span className="channel-dot" style={{ background: CHANNELS[item.channel]?.color || '#7d8790' }}/><div><strong>{item.customer_name || item.customer_wa_id || 'Contacto sin identificar'}</strong><span>{CHANNELS[item.channel]?.name || 'WhatsApp'} · {new Date(item.occurred_at).toLocaleString('es-AR')} · {item.messageCount || 1} {(item.messageCount || 1) === 1 ? 'mensaje' : 'mensajes'}</span><p>{item.text_body || `[${item.message_type || 'mensaje sin texto'}]`}</p></div></div>{pending ? <div className="decision-buttons"><button onClick={() => onDraft(item.event_id)} className="recommended">Revisar conversación</button><button onClick={() => onClassify(item.event_id, 'ignore')}>No requiere acción</button><button onClick={() => onClassify(item.event_id, 'memory')}>Solo contexto</button><button onClick={() => onClassify(item.event_id, 'training')}>Entrenador</button></div> : <span className={`decision-tag ${item.classification_status}`}>{labels[item.classification_status] || item.classification_status}</span>}</article>;
 }
 
 function InboxDraftModal({ draft, setDraft, onClose, onConfirm }) {

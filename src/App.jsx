@@ -87,6 +87,10 @@ function draftFromWhatsApp(event) {
     stage: commercial ? 'Contactado' : 'Conversación',
     nextAction: commercial ? 'Responder y completar diagnóstico comercial' : 'Revisar conversación de WhatsApp',
     nextDate: urgent ? today() : addDays(commercial ? 1 : 2),
+    relationship: 'A confirmar',
+    representsCompany: 'A confirmar',
+    sellerOpinion: '',
+    memoryNote: '',
   };
 }
 
@@ -427,12 +431,15 @@ export default function App() {
       clientType: existing?.clientType || 'Desconocido', industry: existing?.industry || 'Desconocida',
       fit: existing?.fit || 'A confirmar', urgency: draft.nextDate === today() ? 'Alta' : existing?.urgency || 'A confirmar',
       potential: existing?.potential || 'Hipótesis media', lastContact: today(), updatedAt: stamp,
+      relationship: draft.relationship, representsCompany: draft.representsCompany,
+      sellerOpinion: draft.sellerOpinion.trim(), memoryNote: draft.memoryNote.trim(),
       updatedBy: session?.user?.email || '',
     };
     const interaction = {
       id: crypto.randomUUID(), clientId, sourceEventId: source.event_id, company, contact: draft.contact.trim(),
       channel: source.channel === 'penosil' ? 'penosil' : 'general', family: draft.family,
       summary: draft.summary.trim(), need: draft.need.trim(), objection: '', temperature: draft.temperature,
+      sellerOpinion: draft.sellerOpinion.trim(), memoryNote: draft.memoryNote.trim(),
       stage: draft.stage, authorization: 'confirmed-draft', trainingAllowed: false,
       createdAt: source.occurred_at || stamp, createdBy: session?.user?.email || '',
     };
@@ -492,7 +499,7 @@ export default function App() {
   function displayedChannel(key) {
     const status = readiness?.channels?.[key];
     if (!status) return CHANNELS[key];
-    if (status.inboundEvents > 0) return { ...CHANNELS[key], status: `Operativo · ${status.inboundEvents} mensajes recibidos`, statusTone: 'online' };
+    if (status.inboundEvents > 0) return { ...CHANNELS[key], status: `${status.source === 'browser-bridge' ? 'Memoria activa' : 'Operativo'} · ${status.inboundEvents} mensajes reales`, statusTone: 'online' };
     if (status.configured) return { ...CHANNELS[key], status: 'Configurado · falta prueba entrante', statusTone: 'waiting' };
     return { ...CHANNELS[key], status: 'Conexión pendiente', statusTone: 'offline' };
   }
@@ -619,7 +626,7 @@ function InboxDraftModal({ draft, setDraft, onClose, onConfirm }) {
   useModalEscape(onClose);
   const update = (name, value) => setDraft({ ...draft, form: { ...draft.form, [name]: value } });
   const form = draft.form;
-  return <div className="modal-backdrop"><form className="modal" onSubmit={onConfirm}><div className="modal-head"><div><span className="eyebrow">Borrador automático · confirmar antes de guardar</span><h2>Convertir mensaje en oportunidad</h2><p>Revisá y corregí. El CRM no responde al cliente.</p></div><button type="button" className="icon-button" aria-label="Cerrar borrador" onClick={onClose}><X/></button></div><div className="source-message"><strong>Mensaje original</strong><p>{draft.event.text_body || `[${draft.event.message_type || 'mensaje sin texto'}]`}</p></div><div className="form-grid"><label>Empresa / cliente<input required value={form.company} onChange={(event) => update('company', event.target.value)} placeholder="Confirmar empresa" /></label><label>Persona / contacto<input value={form.contact} onChange={(event) => update('contact', event.target.value)} /></label><label>Familia<select value={form.family} onChange={(event) => update('family', event.target.value)}>{FAMILIES.map((item) => <option key={item}>{item}</option>)}</select></label><label>Temperatura<select value={form.temperature} onChange={(event) => update('temperature', event.target.value)}><option>Frío</option><option>Tibio</option><option>Caliente</option></select></label><label>Etapa<select value={form.stage} onChange={(event) => update('stage', event.target.value)}>{PIPELINE.map((item) => <option key={item}>{item}</option>)}</select></label><label>Fecha próxima<input type="date" value={form.nextDate} onChange={(event) => update('nextDate', event.target.value)} /></label><label className="span-2">Resumen<textarea value={form.summary} onChange={(event) => update('summary', event.target.value)} /></label><label className="span-2">Necesidad detectada<textarea value={form.need} onChange={(event) => update('need', event.target.value)} /></label><label className="span-2">Próxima acción<input value={form.nextAction} onChange={(event) => update('nextAction', event.target.value)} /></label></div><div className="modal-actions"><button type="button" className="secondary" onClick={onClose}>Cancelar</button><button className="primary" type="submit">Confirmar y crear seguimiento</button></div></form></div>;
+  return <div className="modal-backdrop"><form className="modal" onSubmit={onConfirm}><div className="modal-head"><div><span className="eyebrow">Copiloto · vos aportás el criterio</span><h2>¿Quién es y qué hacemos con esta conversación?</h2><p>Confirmá lo que el mensaje no puede decirnos. El CRM nunca responde al contacto.</p></div><button type="button" className="icon-button" aria-label="Cerrar borrador" onClick={onClose}><X/></button></div><div className="source-message"><strong>Conversación detectada</strong><p>{draft.event.text_body || `[${draft.event.message_type || 'mensaje sin texto'}]`}</p></div><div className="form-grid"><label>¿Qué relación tiene?<select value={form.relationship} onChange={(event) => update('relationship', event.target.value)}><option>A confirmar</option><option>Cliente actual</option><option>Prospecto</option><option>Proveedor</option><option>Socio / aliado</option><option>Contacto personal</option><option>No comercial</option></select></label><label>¿Representa una empresa?<select value={form.representsCompany} onChange={(event) => update('representsCompany', event.target.value)}><option>A confirmar</option><option>Sí</option><option>No</option></select></label><label>Empresa / referencia<input required value={form.company} onChange={(event) => update('company', event.target.value)} placeholder="Nombre o referencia" /></label><label>Persona / contacto<input value={form.contact} onChange={(event) => update('contact', event.target.value)} /></label><label className="span-2">¿Qué pensás de este contacto?<textarea value={form.sellerOpinion} onChange={(event) => update('sellerOpinion', event.target.value)} placeholder="Ej. serio, pregunta mucho pero decide; conoce el producto; necesita seguimiento cercano" /></label><label className="span-2">¿Qué querés que recuerde para la próxima vez?<textarea value={form.memoryNote} onChange={(event) => update('memoryNote', event.target.value)} placeholder="Preferencias, promesas, contexto humano o comercial" /></label><label>Familia<select value={form.family} onChange={(event) => update('family', event.target.value)}>{FAMILIES.map((item) => <option key={item}>{item}</option>)}</select></label><label>Temperatura<select value={form.temperature} onChange={(event) => update('temperature', event.target.value)}><option>Frío</option><option>Tibio</option><option>Caliente</option></select></label><label>Etapa<select value={form.stage} onChange={(event) => update('stage', event.target.value)}>{PIPELINE.map((item) => <option key={item}>{item}</option>)}</select></label><label>Fecha próxima<input type="date" value={form.nextDate} onChange={(event) => update('nextDate', event.target.value)} /></label><label className="span-2">Resumen sugerido<textarea value={form.summary} onChange={(event) => update('summary', event.target.value)} /></label><label className="span-2">Necesidad detectada<textarea value={form.need} onChange={(event) => update('need', event.target.value)} /></label><label className="span-2">Próxima acción<input value={form.nextAction} onChange={(event) => update('nextAction', event.target.value)} /></label></div><div className="modal-actions"><button type="button" className="secondary" onClick={onClose}>Ahora no</button><button className="primary" type="submit">Guardar memoria y seguimiento</button></div></form></div>;
 }
 
 function InteractionRow({ item, expanded = false, onOpen }) {

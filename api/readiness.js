@@ -36,11 +36,13 @@ export default async function handler(request, response) {
       : process.env.WHATSAPP_PENOSIL_PHONE_ID;
     // Simulator fixtures use synthetic phone IDs. They are useful for UI tests,
     // but must never make a real WhatsApp channel look operational.
-    const channelEvents = events.filter((event) => event.channel === key && event.phone_number_id === expectedPhoneId);
+    const channelEvents = events.filter((event) => event.channel === key && [expectedPhoneId, `browser-bridge:${key}`].includes(event.phone_number_id));
+    const officialEvents = channelEvents.filter((event) => event.phone_number_id === expectedPhoneId);
     channels[key] = {
       configured: Boolean(expectedPhoneId),
       inboundEvents: channelEvents.length,
       lastInboundAt: channelEvents[0]?.occurred_at || null,
+      source: officialEvents.length ? 'meta' : channelEvents.length ? 'browser-bridge' : null,
     };
   }
   return response.status(200).json({

@@ -3,6 +3,7 @@ import test from 'node:test';
 import health from '../api/health.js';
 import simulate from '../api/simulate-whatsapp.js';
 import readiness from '../api/readiness.js';
+import browserBridge from '../api/browser-bridge.js';
 
 function responseRecorder() {
   return {
@@ -51,4 +52,14 @@ test('operational readiness requires a corporate session', async () => {
   await readiness({ method: 'GET', headers: {} }, response);
   assert.equal(response.statusCode, 401);
   assert.equal(response.payload.error, 'Acceso corporativo requerido.');
+});
+
+test('browser bridge rejects requests without its private token', async () => {
+  const previous = process.env.WHATSAPP_BRIDGE_TOKEN;
+  process.env.WHATSAPP_BRIDGE_TOKEN = 'bridge-test-token';
+  const response = responseRecorder();
+  await browserBridge({ method: 'POST', headers: {}, body: { events: [] } }, response);
+  assert.equal(response.statusCode, 401);
+  assert.equal(response.payload.error, 'Puente no autorizado.');
+  process.env.WHATSAPP_BRIDGE_TOKEN = previous;
 });

@@ -761,6 +761,32 @@ function DataSettings({ data, setData, session, syncStatus }) {
     }
   }
 
+  async function activateOfficialChannels() {
+    if (!session?.access_token) return;
+    setConnecting(true);
+    setMessage('Activando la recepción oficial de ambos canales…');
+    try {
+      const results = await Promise.all(['general', 'penosil'].map(async (channel) => {
+        const response = await fetch('/api/meta-subscribe', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ channel }),
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || `No se pudo activar ${channel}.`);
+        return payload.channel;
+      }));
+      setMessage(`Recepción técnica activada para ${results.join(' y ')}. Falta confirmar que cada teléfono esté conectado mediante coexistencia.`);
+    } catch (error) {
+      setMessage(error.message || 'No se pudieron activar los canales oficiales.');
+    } finally {
+      setConnecting(false);
+    }
+  }
+
   function importCommercialCohort() {
     const cohort = buildCommercialCohort();
     const result = mergeCommercialCohort(data);
@@ -813,7 +839,7 @@ function DataSettings({ data, setData, session, syncStatus }) {
     }
   }
 
-  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Canales oficiales</span><h2>Conectar WhatsApp Business</h2></div><Link2 size={22}/></div><p>Autoriza un número existente mediante el registro oficial de Meta. El teléfono conserva WhatsApp Business y el CRM recibe los mensajes para clasificarlos; nunca responde automáticamente.</p><button className="primary" disabled={connecting} onClick={startWhatsAppConnection}>{connecting ? 'Conectando…' : 'Conectar número con Meta'}</button>{message && <div className="system-message">{message}</div>}</section><section className="panel"><div className="panel-head"><div><span className="eyebrow">Inicio de Ventas</span><h2>Cohorte comercial vigente</h2></div><Target size={22}/></div><p>Las 34 cuentas operativas de Seguimiento se incorporan automáticamente. La base de inteligencia completa de 195 empresas continúa en Google Sheets y no se mezcla con la cartera activa.</p><button className="secondary" type="button" onClick={importCommercialCohort}>Verificar cohorte de Seguimiento</button></section><section className="panel"><div className="panel-head"><div><span className="eyebrow">Portabilidad</span><h2>Datos y respaldos</h2></div><Database size={22}/></div><div className="data-cards"><article><Download size={24}/><h3>Exportar respaldo</h3><p>Descarga clientes, conversaciones, tareas, evaluaciones y bandeja en un archivo JSON versionado.</p><button className="primary" onClick={exportBackup}>Descargar respaldo</button></article><article><Upload size={24}/><h3>Importar respaldo</h3><p>Restaura un respaldo del copiloto en este navegador. Reemplaza el estado actual.</p><label className="secondary upload-button">Elegir archivo<input type="file" accept="application/json,.json" onChange={importBackup}/></label></article><article><Inbox size={24}/><h3>Importar eventos WhatsApp</h3><p>Prueba la bandeja con eventos normalizados. Deduplica por ID y omite estados técnicos.</p><label className="secondary upload-button">Elegir eventos<input type="file" accept="application/json,.json" onChange={importWebhookEvents}/></label></article></div></section><section className="panel"><div className="panel-head"><div><span className="eyebrow">{onlineConfigured ? 'Estado online' : 'Estado local'}</span><h2>Contenido guardado</h2></div></div><div className="storage-summary"><div><strong>{data.clients.length}</strong><span>Clientes</span></div><div><strong>{data.interactions.length}</strong><span>Conversaciones</span></div><div><strong>{data.tasks.length}</strong><span>Tareas</span></div><div><strong>{data.inbox.filter((item) => item.classification_status === 'pending').length}</strong><span>WhatsApp pendientes</span></div></div><div className="quality-note"><CircleAlert size={19}/><p>{onlineConfigured ? `${syncStatus}. Usuario: ${session?.user?.email || 'sin identificar'}. Los cambios se guardan online y siguen teniendo respaldo local.` : 'Modo local de prueba. Exportá un respaldo al terminar cada jornada; al configurar la base, el mismo CRM activará acceso y sincronización online.'}</p></div>{onlineConfigured && <button className="secondary signout" onClick={() => supabase.auth.signOut()}>Cerrar sesión</button>}</section></div>;
+  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Canales oficiales</span><h2>Conectar WhatsApp Business</h2></div><Link2 size={22}/></div><p>Autoriza un número existente mediante el registro oficial de Meta. El teléfono conserva WhatsApp Business y el CRM recibe los mensajes para clasificarlos; nunca responde automáticamente.</p><div className="modal-actions"><button className="secondary" disabled={connecting} onClick={activateOfficialChannels}>Activar recepción de ambos canales</button><button className="primary" disabled={connecting} onClick={startWhatsAppConnection}>{connecting ? 'Conectando…' : 'Conectar número con Meta'}</button></div>{message && <div className="system-message">{message}</div>}</section><section className="panel"><div className="panel-head"><div><span className="eyebrow">Inicio de Ventas</span><h2>Cohorte comercial vigente</h2></div><Target size={22}/></div><p>Las 34 cuentas operativas de Seguimiento se incorporan automáticamente. La base de inteligencia completa de 195 empresas continúa en Google Sheets y no se mezcla con la cartera activa.</p><button className="secondary" type="button" onClick={importCommercialCohort}>Verificar cohorte de Seguimiento</button></section><section className="panel"><div className="panel-head"><div><span className="eyebrow">Portabilidad</span><h2>Datos y respaldos</h2></div><Database size={22}/></div><div className="data-cards"><article><Download size={24}/><h3>Exportar respaldo</h3><p>Descarga clientes, conversaciones, tareas, evaluaciones y bandeja en un archivo JSON versionado.</p><button className="primary" onClick={exportBackup}>Descargar respaldo</button></article><article><Upload size={24}/><h3>Importar respaldo</h3><p>Restaura un respaldo del copiloto en este navegador. Reemplaza el estado actual.</p><label className="secondary upload-button">Elegir archivo<input type="file" accept="application/json,.json" onChange={importBackup}/></label></article><article><Inbox size={24}/><h3>Importar eventos WhatsApp</h3><p>Prueba la bandeja con eventos normalizados. Deduplica por ID y omite estados técnicos.</p><label className="secondary upload-button">Elegir eventos<input type="file" accept="application/json,.json" onChange={importWebhookEvents}/></label></article></div></section><section className="panel"><div className="panel-head"><div><span className="eyebrow">{onlineConfigured ? 'Estado online' : 'Estado local'}</span><h2>Contenido guardado</h2></div></div><div className="storage-summary"><div><strong>{data.clients.length}</strong><span>Clientes</span></div><div><strong>{data.interactions.length}</strong><span>Conversaciones</span></div><div><strong>{data.tasks.length}</strong><span>Tareas</span></div><div><strong>{data.inbox.filter((item) => item.classification_status === 'pending').length}</strong><span>WhatsApp pendientes</span></div></div><div className="quality-note"><CircleAlert size={19}/><p>{onlineConfigured ? `${syncStatus}. Usuario: ${session?.user?.email || 'sin identificar'}. Los cambios se guardan online y siguen teniendo respaldo local.` : 'Modo local de prueba. Exportá un respaldo al terminar cada jornada; al configurar la base, el mismo CRM activará acceso y sincronización online.'}</p></div>{onlineConfigured && <button className="secondary signout" onClick={() => supabase.auth.signOut()}>Cerrar sesión</button>}</section></div>;
 }
 
 function LoginScreen() {

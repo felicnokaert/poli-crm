@@ -404,6 +404,11 @@ export default function App() {
     }));
   }
 
+  function updateTask(updatedTask) {
+    const stamp = new Date().toISOString();
+    setData((current) => ({ ...current, tasks: current.tasks.map((task) => task.id === updatedTask.id ? { ...task, ...updatedTask, updatedAt: stamp } : task) }));
+  }
+
   const nav = [
     ['dashboard', 'Inicio', LayoutDashboard],
     ['conversations', 'Conversaciones', MessageCircle],
@@ -475,7 +480,7 @@ export default function App() {
       {inboxDraft && <InboxDraftModal draft={inboxDraft} setDraft={setInboxDraft} onClose={() => setInboxDraft(null)} onConfirm={confirmInboxDraft} />}
       {selectedInteractionId && <InteractionDetail interaction={data.interactions.find((item) => item.id === selectedInteractionId)} client={data.clients.find((item) => item.id === data.interactions.find((entry) => entry.id === selectedInteractionId)?.clientId)} onClose={() => setSelectedInteractionId(null)} onOpenClient={(clientId) => { setSelectedInteractionId(null); setSelectedClientId(clientId); }} />}
       {selectedClientId && <ClientDetail client={data.clients.find((item) => item.id === selectedClientId)} interactions={data.interactions.filter((item) => item.clientId === selectedClientId)} tasks={data.tasks.filter((item) => item.clientId === selectedClientId)} onClose={() => setSelectedClientId(null)} onOpenInteraction={setSelectedInteractionId} onSave={updateClient} />}
-      {selectedTaskId && <TaskDetail task={data.tasks.find((item) => item.id === selectedTaskId)} client={data.clients.find((item) => item.id === data.tasks.find((task) => task.id === selectedTaskId)?.clientId)} onClose={() => setSelectedTaskId(null)} onToggle={(taskId) => { toggleTask(taskId); setSelectedTaskId(null); }} onOpenClient={(clientId) => { setSelectedTaskId(null); setSelectedClientId(clientId); }} />}
+      {selectedTaskId && <TaskDetail task={data.tasks.find((item) => item.id === selectedTaskId)} client={data.clients.find((item) => item.id === data.tasks.find((task) => task.id === selectedTaskId)?.clientId)} onClose={() => setSelectedTaskId(null)} onToggle={(taskId) => { toggleTask(taskId); setSelectedTaskId(null); }} onSave={updateTask} onOpenClient={(clientId) => { setSelectedTaskId(null); setSelectedClientId(clientId); }} />}
     </div>
   );
 }
@@ -561,9 +566,17 @@ function TaskList({ items, onToggle, onOpen, emptyText = 'No hay tareas pendient
   </article>);
 }
 
-function TaskDetail({ task, client, onClose, onToggle, onOpenClient }) {
+function TaskDetail({ task, client, onClose, onToggle, onSave, onOpenClient }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(task || {});
+  useEffect(() => setDraft(task || {}), [task?.id]);
   if (!task) return null;
-  return <div className="modal-backdrop"><section className="modal interaction-detail"><div className="modal-head"><div><span className="eyebrow">Tarea comercial</span><h2>{task.title}</h2><p>{task.company || 'Sin empresa vinculada'}</p></div><button type="button" className="icon-button" aria-label="Cerrar tarea" onClick={onClose}><X/></button></div><div className="conversation-detail-grid"><Fact label="Vencimiento" value={formatDate(task.dueDate)}/><Fact label="Prioridad" value={task.priority || 'Media'}/><Fact label="Cadencia" value={task.cadence || 'Seguimiento'}/><Fact label="Estado" value={task.done ? 'Completada' : 'Pendiente'}/></div>{task.trigger && <div className="detail-block"><span>Por qué aparece hoy</span><p>{task.trigger}</p></div>}<div className="modal-actions"><button className="secondary" type="button" onClick={onClose}>Cerrar</button>{client && <button className="secondary" type="button" onClick={() => onOpenClient(client.id)}>Ver cliente</button>}<button className="primary" type="button" onClick={() => onToggle(task.id)}>{task.done ? 'Marcar pendiente' : 'Completar tarea'}</button></div></section></div>;
+  function submit(event) {
+    event.preventDefault();
+    onSave({ ...draft, title: draft.title.trim() });
+    setEditing(false);
+  }
+  return <div className="modal-backdrop"><section className="modal interaction-detail"><div className="modal-head"><div><span className="eyebrow">Tarea comercial</span><h2>{task.title}</h2><p>{task.company || 'Sin empresa vinculada'}</p></div><button type="button" className="icon-button" aria-label="Cerrar tarea" onClick={onClose}><X/></button></div>{editing ? <form onSubmit={submit}><div className="form-grid"><label className="span-2">Acción<input required value={draft.title || ''} onChange={(event) => setDraft({ ...draft, title: event.target.value })}/></label><label>Vencimiento<input required type="date" value={draft.dueDate || ''} onChange={(event) => setDraft({ ...draft, dueDate: event.target.value })}/></label><label>Prioridad<select value={draft.priority || 'Media'} onChange={(event) => setDraft({ ...draft, priority: event.target.value })}><option>Alta</option><option>Media</option><option>Baja</option></select></label><label className="span-2">Disparador / contexto<input value={draft.trigger || ''} onChange={(event) => setDraft({ ...draft, trigger: event.target.value })}/></label></div><div className="modal-actions"><button className="secondary" type="button" onClick={() => { setDraft(task); setEditing(false); }}>Cancelar</button><button className="primary" type="submit">Guardar cambios</button></div></form> : <><div className="conversation-detail-grid"><Fact label="Vencimiento" value={formatDate(task.dueDate)}/><Fact label="Prioridad" value={task.priority || 'Media'}/><Fact label="Cadencia" value={task.cadence || 'Seguimiento'}/><Fact label="Estado" value={task.done ? 'Completada' : 'Pendiente'}/></div>{task.trigger && <div className="detail-block"><span>Por qué aparece hoy</span><p>{task.trigger}</p></div>}<div className="modal-actions"><button className="secondary" type="button" onClick={onClose}>Cerrar</button>{client && <button className="secondary" type="button" onClick={() => onOpenClient(client.id)}>Ver cliente</button>}<button className="secondary" type="button" onClick={() => setEditing(true)}>Editar</button><button className="primary" type="button" onClick={() => onToggle(task.id)}>{task.done ? 'Marcar pendiente' : 'Completar tarea'}</button></div></>}</section></div>;
 }
 
 function Pipeline({ clients, onOpenClient }) {

@@ -25,6 +25,7 @@ import {
 import { CLASSIFICATIONS, QUICK_REPLIES, ROLE_PLAYS, RUBRIC, scoreBand } from './knowledge';
 import { loadOnlineState, onlineConfigured, saveOnlineState, supabase } from './online';
 import { connectWhatsApp } from './meta-onboarding';
+import { formatDate } from './utils.mjs';
 
 const CHANNELS = {
   general: {
@@ -95,11 +96,6 @@ function loadState() {
   } catch {
     return initialState;
   }
-}
-
-function formatDate(value) {
-  if (!value) return 'Sin fecha';
-  return new Intl.DateTimeFormat('es-AR', { day: '2-digit', month: 'short' }).format(new Date(`${value}T12:00:00`));
 }
 
 function today() {

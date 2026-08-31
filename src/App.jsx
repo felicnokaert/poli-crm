@@ -143,6 +143,7 @@ export default function App() {
   const [authReady, setAuthReady] = useState(!onlineConfigured);
   const [remoteReady, setRemoteReady] = useState(false);
   const [syncStatus, setSyncStatus] = useState(onlineConfigured ? 'Conectando…' : 'Modo local');
+  const [readiness, setReadiness] = useState(null);
   const [view, setView] = useState('dashboard');
   const [showForm, setShowForm] = useState(false);
   const [showTaskForm, setShowTaskForm] = useState(false);
@@ -206,6 +207,14 @@ export default function App() {
       supabase.removeChannel(workspaceChannel);
     };
   }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (!session?.access_token || syncStatus !== 'Sincronizado') return;
+    fetch('/api/readiness', { headers: { Authorization: `Bearer ${session.access_token}` } })
+      .then((response) => response.ok ? response.json() : null)
+      .then((result) => result && setReadiness(result))
+      .catch(() => setReadiness(null));
+  }, [session?.access_token, syncStatus]);
 
   useEffect(() => {
     if (!onlineConfigured || !remoteReady || !session?.user?.id) return undefined;
@@ -472,6 +481,14 @@ export default function App() {
     ['settings', 'Datos', Database],
   ];
 
+  function displayedChannel(key) {
+    const status = readiness?.channels?.[key];
+    if (!status) return CHANNELS[key];
+    if (status.inboundEvents > 0) return { ...CHANNELS[key], status: `Operativo · ${status.inboundEvents} mensajes recibidos`, statusTone: 'online' };
+    if (status.configured) return { ...CHANNELS[key], status: 'Configurado · falta prueba entrante', statusTone: 'waiting' };
+    return { ...CHANNELS[key], status: 'Conexión pendiente', statusTone: 'offline' };
+  }
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -509,9 +526,9 @@ export default function App() {
         <section className="channel-strip">
           {['general', 'penosil'].map((key) => (
             <div className="channel-card" key={key}>
-              <span className="channel-dot" style={{ background: CHANNELS[key].color }} />
-              <div><strong>{CHANNELS[key].name}</strong><span>{CHANNELS[key].profile} · {CHANNELS[key].number}</span></div>
-              <span className={`status ${CHANNELS[key].statusTone}`}>{CHANNELS[key].status}</span>
+              <span className="channel-dot" style={{ background: displayedChannel(key).color }} />
+              <div><strong>{displayedChannel(key).name}</strong><span>{displayedChannel(key).profile} · {displayedChannel(key).number}</span></div>
+              <span className={`status ${displayedChannel(key).statusTone}`}>{displayedChannel(key).status}</span>
             </div>
           ))}
         </section>

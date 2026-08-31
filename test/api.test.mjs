@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import health from '../api/health.js';
 import simulate from '../api/simulate-whatsapp.js';
+import readiness from '../api/readiness.js';
 
 function responseRecorder() {
   return {
@@ -43,4 +44,11 @@ test('simulator normalizes a fake message without requiring Meta', async () => {
   assert.equal(response.payload.ok, true);
   assert.match(response.payload.eventId, /^sim\./);
   process.env.COPILOT_SIMULATOR_TOKEN = previous;
+});
+
+test('operational readiness requires a corporate session', async () => {
+  const response = responseRecorder();
+  await readiness({ method: 'GET', headers: {} }, response);
+  assert.equal(response.statusCode, 401);
+  assert.equal(response.payload.error, 'Acceso corporativo requerido.');
 });

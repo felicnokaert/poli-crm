@@ -14,8 +14,7 @@ if (location.hostname === 'poli-crm.vercel.app') {
 }
 
 function chatName() {
-  return document.querySelector('#main header [title]')?.getAttribute('title')
-    || document.querySelector('#main header span[dir="auto"]')?.textContent?.trim()
+  return document.querySelector('#main header span[dir="auto"]')?.textContent?.trim()
     || '';
 }
 
@@ -52,12 +51,8 @@ async function capture() {
   if (!events.length) return;
   state.sending = true;
   try {
-    const response = await fetch(config.endpoint, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${config.token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ events }),
-    });
-    if (response.ok) events.forEach((event) => state.sent.add(event.event_id));
+    const result = await chrome.runtime.sendMessage({ type: 'POLIPLAST_BRIDGE_EVENTS', events });
+    if (result?.ok) events.forEach((event) => state.sent.add(event.event_id));
   } finally {
     state.sending = false;
   }

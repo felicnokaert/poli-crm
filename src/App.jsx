@@ -555,7 +555,9 @@ function Dashboard({ metrics, tasks, interactions, onToggle, onOpenTask, onOpenI
 }
 
 function Conversations({ items, onOpen }) {
-  return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Memoria comercial</span><h2>Historial de conversaciones</h2></div></div>{items.length ? items.map((item) => <InteractionRow item={item} key={item.id} expanded onOpen={onOpen} />) : <Empty text="Registrá la primera conversación para comenzar la memoria comercial." />}</section>;
+  const [query, setQuery] = useState('');
+  const filtered = items.filter((item) => `${item.company || ''} ${item.contact || ''} ${item.summary || ''} ${item.need || ''} ${item.family || ''}`.toLowerCase().includes(query.toLowerCase()));
+  return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Memoria comercial</span><h2>Historial de conversaciones</h2></div><label className="search"><Search size={17}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar conversación…"/></label></div>{filtered.length ? filtered.map((item) => <InteractionRow item={item} key={item.id} expanded onOpen={onOpen} />) : <Empty text={items.length ? 'No hay conversaciones que coincidan con la búsqueda.' : 'Registrá la primera conversación para comenzar la memoria comercial.'} />}</section>;
 }
 
 function WhatsAppInbox({ items, onClassify, onDraft }) {
@@ -587,8 +589,11 @@ function InteractionDetail({ interaction, client, onClose, onEdit, onOpenClient 
 }
 
 function Tasks({ items, onToggle, onOpen, onNew }) {
+  const [filter, setFilter] = useState('pending');
+  const [query, setQuery] = useState('');
   const ordered = [...items].sort((a, b) => Number(a.done) - Number(b.done) || (a.dueDate || '').localeCompare(b.dueDate || ''));
-  return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Agenda única</span><h2>Tareas comerciales</h2></div><button className="primary" type="button" onClick={onNew}><Plus size={17}/> Nueva tarea</button></div><TaskList items={ordered} onToggle={onToggle} onOpen={onOpen}/></section>;
+  const filtered = ordered.filter((task) => (filter === 'all' || (filter === 'pending' ? !task.done : task.done)) && `${task.title || ''} ${task.company || ''} ${task.trigger || ''}`.toLowerCase().includes(query.toLowerCase()));
+  return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Agenda única</span><h2>Tareas comerciales</h2></div><button className="primary" type="button" onClick={onNew}><Plus size={17}/> Nueva tarea</button></div><div className="list-toolbar"><label className="search"><Search size={17}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar tarea…"/></label><div className="segmented"><button className={filter === 'pending' ? 'selected' : ''} onClick={() => setFilter('pending')}>Pendientes</button><button className={filter === 'done' ? 'selected' : ''} onClick={() => setFilter('done')}>Completadas</button><button className={filter === 'all' ? 'selected' : ''} onClick={() => setFilter('all')}>Todas</button></div></div><TaskList items={filtered} onToggle={onToggle} onOpen={onOpen} emptyText={items.length ? 'No hay tareas que coincidan con este filtro.' : 'Todavía no hay tareas. Creá la primera acción comercial.'}/></section>;
 }
 
 function TaskList({ items, onToggle, onOpen, emptyText = 'No hay tareas pendientes.' }) {

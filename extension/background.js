@@ -1,5 +1,19 @@
 const MAX_QUEUE = 200;
 
+async function digest(value) {
+  const bytes = new TextEncoder().encode(value);
+  const hash = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(hash)].map((item) => item.toString(16).padStart(2, '0')).join('');
+}
+
+async function normalizeEvents(events = []) {
+  return Promise.all(events.map(async (event) => ({
+    ...event,
+    event_id: event.event_id || `bridge.open.${await digest(event.event_key || '')}`,
+    event_key: undefined,
+  })));
+}
+
 function uniqueEvents(items = []) {
   return [...new Map(items.filter((item) => item?.event_id).map((item) => [item.event_id, item])).values()].slice(-MAX_QUEUE);
 }
@@ -30,7 +44,8 @@ async function postEvents(endpoint, token, events) {
 
 async function deliver(incoming) {
   const stored = await chrome.storage.local.get(['endpoint', 'token', 'pendingEvents']);
-  const events = uniqueEvents([...(stored.pendingEvents || []), ...incoming]);
+  const normalized = await normalizeEvents(incoming);
+  const events = uniqueEvents([...(stored.pendingEvents || []), ...normalized]);
   if (!stored.endpoint || !stored.token) {
     await chrome.storage.local.set({ pendingEvents: events, lastError: 'Conector sin vincular.', lastAttemptAt: new Date().toISOString() });
     return { ok: false, queued: events.length, error: 'Conector sin vincular.' };

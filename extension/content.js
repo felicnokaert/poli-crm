@@ -11,18 +11,16 @@ function stopCapture() {
   clearInterval(state.interval);
 }
 
-function safeStorageGet(keys) {
-  return new Promise((resolve) => {
-    if (!extensionAvailable()) return resolve(null);
-    try {
-      chrome.storage.local.get(keys, (result) => {
-        try {
-          if (chrome.runtime.lastError) return resolve(null);
-          return resolve(result || null);
-        } catch { return resolve(null); }
-      });
-    } catch { resolve(null); }
-  });
+function safeStorageGet(keys, done) {
+  if (!extensionAvailable()) return done(null);
+  try {
+    chrome.storage.local.get(keys, (result) => {
+      try {
+        if (chrome.runtime.lastError) return done(null);
+        return done(result || null);
+      } catch { return done(null); }
+    });
+  } catch { done(null); }
 }
 
 function safeStorageSet(values) {
@@ -34,18 +32,16 @@ function safeStorageSet(values) {
   } catch { /* contexto anterior */ }
 }
 
-function safeSendEvents(events) {
-  return new Promise((resolve) => {
-    if (!extensionAvailable()) return resolve(null);
-    try {
-      chrome.runtime.sendMessage({ type: 'POLIPLAST_BRIDGE_EVENTS', events }, (result) => {
-        try {
-          if (chrome.runtime.lastError) return resolve(null);
-          return resolve(result || null);
-        } catch { return resolve(null); }
-      });
-    } catch { resolve(null); }
-  });
+function safeSendEvents(events, done) {
+  if (!extensionAvailable()) return done(null);
+  try {
+    chrome.runtime.sendMessage({ type: 'POLIPLAST_BRIDGE_EVENTS', events }, (result) => {
+      try {
+        if (chrome.runtime.lastError) return done(null);
+        return done(result || null);
+      } catch { return done(null); }
+    });
+  } catch { done(null); }
 }
 
 if (location.hostname === 'poli-crm.vercel.app') {
@@ -75,9 +71,7 @@ function configureBridge({ channel, endpoint, token }) {
 
 function queueCapture() {
   if (state.stopped) return;
-  Promise.resolve().then(capture).catch(() => {
-    if (!extensionAvailable()) stopCapture();
-  });
+  try { capture(); } catch { if (!extensionAvailable()) stopCapture(); }
 }
 
 function chatName() {
@@ -86,12 +80,6 @@ function chatName() {
 }
 
 function chatKey(name) { return name.toLocaleLowerCase('es-AR'); }
-
-async function digest(value) {
-  const bytes = new TextEncoder().encode(value);
-  const hash = await crypto.subtle.digest('SHA-256', bytes);
-  return [...new Uint8Array(hash)].map((item) => item.toString(16).padStart(2, '0')).join('');
-}
 
 function messageNodes() {
   return [...document.querySelectorAll('#main .message-in, #main .message-out')];
@@ -125,40 +113,35 @@ function messageIdentity(node, metadata, text, direction, index) {
   return whatsappId ? `wa:${whatsappId}` : `${direction}|${index}|${text}`;
 }
 
-async function capture() {
+function capture() {
   if (state.sending || state.stopped) return;
   if (!extensionAvailable()) return stopCapture();
-  const config = await safeStorageGet(['channel', 'endpoint', 'token']);
-  if (!config) return stopCapture();
-  if (!config.channel || !config.endpoint || !config.token) return;
-  const events = [];
-  const name = chatName();
-  if (name && !openChatIsGroup()) {
-    const nodes = messageNodes().slice(-80);
-    for (const [index, node] of nodes.entries()) {
-      const text = messageText(node);
-      if (!text) continue;
-      const direction = node.closest('.message-out') || node.classList.contains('message-out') ? 'outbound' : 'inbound';
-      const metadata = node.querySelector('[data-pre-plain-text]')?.getAttribute('data-pre-plain-text') || '';
-      const identity = messageIdentity(node, metadata, text, direction, index);
-      const eventId = `bridge.open.${await digest(`${config.channel}|${name}|${identity}`)}`;
-      if (state.sent.has(eventId)) continue;
-      events.push({ event_id: eventId, channel: config.channel, direction, chat_id: chatKey(name), chat_name: name, text_body: text, occurred_at: new Date().toISOString() });
-    }
-  }
-  if (!events.length) return;
-  safeStorageSet({
-    lastDetectedAt: new Date().toISOString(),
-    lastDetectedChat: name,
-    lastDetectedEvents: events.length,
-  });
   state.sending = true;
-  try {
-    const result = await safeSendEvents(events);
-    if (result?.ok) events.forEach((event) => state.sent.add(event.event_id));
-  } finally {
-    state.sending = false;
-  }
+  safeStorageGet(['channel', 'endpoint', 'token'], (config) => {
+    if (!config) { state.sending = false; return stopCapture(); }
+    if (!config.channel || !config.endpoint || !config.token) { state.sending = false; return; }
+    const events = [];
+    const name = chatName();
+    if (name && !openChatIsGroup()) {
+      const nodes = messageNodes().slice(-80);
+      for (const [index, node] of nodes.entries()) {
+        const text = messageText(node);
+        if (!text) continue;
+        const direction = node.closest('.message-out') || node.classList.contains('message-out') ? 'outbound' : 'inbound';
+        const metadata = node.querySelector('[data-pre-plain-text]')?.getAttribute('data-pre-plain-text') || '';
+        const identity = messageIdentity(node, metadata, text, direction, index);
+        const eventKey = `${config.channel}|${name}|${identity}`;
+        if (state.sent.has(eventKey)) continue;
+        events.push({ event_key: eventKey, channel: config.channel, direction, chat_id: chatKey(name), chat_name: name, text_body: text, occurred_at: new Date().toISOString() });
+      }
+    }
+    if (!events.length) { state.sending = false; return; }
+    safeStorageSet({ lastDetectedAt: new Date().toISOString(), lastDetectedChat: name, lastDetectedEvents: events.length });
+    safeSendEvents(events, (result) => {
+      if (result?.ok) events.forEach((event) => state.sent.add(event.event_key));
+      state.sending = false;
+    });
+  });
 }
 
 function startWhatsAppCapture() {

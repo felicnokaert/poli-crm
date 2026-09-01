@@ -135,8 +135,13 @@ function unreadPreviews(channel) {
     const titled = [...row.querySelectorAll('span[title]')].map((item) => item.getAttribute('title')?.trim()).filter(Boolean);
     const name = titled[0] || row.querySelector('span[dir="auto"]')?.textContent?.trim() || '';
     if (!name || openChatIsSelf(name)) return [];
-    const identity = `unread-notice|${chatKey(name)}|${unreadCount}`;
-    return [{ event_key: `${channel}|${identity}`, source_message_key: identity, unread_notice: true, channel, direction: 'inbound', chat_id: chatKey(name), chat_name: name, text_body: `${unreadCount} ${unreadCount === 1 ? 'mensaje no leído' : 'mensajes no leídos'} en WhatsApp`, occurred_at: new Date().toISOString() }];
+    const candidates = [...row.querySelectorAll('span[dir="auto"]')]
+      .map((item) => item.textContent?.trim())
+      .filter((text) => text && text !== name && !/^\d{1,2}:\d{2}$/.test(text) && !/^\d+$/.test(text) && !/mensajes?\s+no\s+le[ií]dos?/i.test(text));
+    const visiblePreview = [...candidates].reverse().find((text) => !/^(tú|tu|you):/i.test(text));
+    const preview = visiblePreview || `${unreadCount} ${unreadCount === 1 ? 'mensaje no leído' : 'mensajes no leídos'} en WhatsApp`;
+    const identity = `verified-unread|${chatKey(name)}|${unreadCount}|${preview}`;
+    return [{ event_key: `${channel}|${identity}`, source_message_key: identity, verified_unread_preview: true, unread_count: unreadCount, channel, direction: 'inbound', chat_id: chatKey(name), chat_name: name, text_body: preview, occurred_at: new Date().toISOString() }];
   });
 }
 

@@ -24,7 +24,7 @@ export async function loadOnlineState() {
     supabase.from('workspace_states').select('data,updated_at,updated_by_email').eq('workspace_key', WORKSPACE_KEY).maybeSingle(),
     // La bandeja comercial nace de consultas entrantes. Los mensajes enviados
     // por el equipo no crean alertas ni conversaciones por sí solos.
-    supabase.from('whatsapp_events').select('*').eq('direction', 'inbound').neq('message_type', 'unread_preview').order('occurred_at', { ascending: false }).limit(500),
+    supabase.from('whatsapp_events').select('*').eq('direction', 'inbound').neq('message_type', 'unread_preview').neq('message_type', 'unread_notice').order('occurred_at', { ascending: false }).limit(500),
   ]);
   if (stateError) throw stateError;
   if (eventsError) throw eventsError;

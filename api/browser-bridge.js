@@ -22,11 +22,11 @@ export default async function handler(request, response) {
       direction: item.direction,
       customer_wa_id: String(item.chat_id || '').slice(0, 240),
       customer_name: String(item.chat_name || '').slice(0, 240),
-      message_type: item.preview_only ? 'unread_preview' : 'text',
+      message_type: item.unread_notice ? 'unread_notice' : 'text',
       text_body: String(item.text_body || '').slice(0, MAX_TEXT),
       occurred_at: item.occurred_at && !Number.isNaN(Date.parse(item.occurred_at)) ? item.occurred_at : new Date().toISOString(),
       classification_status: item.direction === 'inbound' ? 'pending' : 'system',
-      raw_payload: { source: 'authorized-whatsapp-web-chat', source_message_key: String(item.source_message_key || '').slice(0, 1000), preview_only: Boolean(item.preview_only) },
+      raw_payload: { source: 'authorized-whatsapp-web-chat', source_message_key: String(item.source_message_key || '').slice(0, 1000), unread_notice: Boolean(item.unread_notice) },
     }];
   });
 

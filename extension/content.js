@@ -122,15 +122,21 @@ function openChatIsSelf(name) {
 function unreadPreviews(channel) {
   const rows = [...document.querySelectorAll('#pane-side [role="row"], #pane-side [role="listitem"]')];
   return rows.flatMap((row) => {
-    const unread = row.querySelector('[aria-label*="no leído" i], [aria-label*="no leídos" i], [aria-label*="unread" i]');
+    // WhatsApp también usa "No leído" en el estado de un mensaje SALIENTE.
+    // Un chat con entradas pendientes expone un contador accesible que incluye
+    // una cantidad (por ejemplo: "2 mensajes no leídos").
+    const unread = [...row.querySelectorAll('[aria-label]')].find((item) => {
+      const label = item.getAttribute('aria-label') || '';
+      return /\d+\s+mensajes?\s+no\s+le[ií]dos?/i.test(label) || /\d+\s+unread\s+messages?/i.test(label);
+    });
     if (!unread) return [];
+    const unreadLabel = unread.getAttribute('aria-label') || '';
+    const unreadCount = Number(unreadLabel.match(/\d+/)?.[0] || 1);
     const titled = [...row.querySelectorAll('span[title]')].map((item) => item.getAttribute('title')?.trim()).filter(Boolean);
     const name = titled[0] || row.querySelector('span[dir="auto"]')?.textContent?.trim() || '';
     if (!name || openChatIsSelf(name)) return [];
-    const texts = [...row.querySelectorAll('span[dir="auto"]')].map((item) => item.textContent?.trim()).filter(Boolean);
-    const preview = [...texts].reverse().find((text) => text !== name && !/^\d{1,2}:\d{2}$/.test(text)) || '[mensaje no leído]';
-    const identity = `unread-preview|${chatKey(name)}|${preview}`;
-    return [{ event_key: `${channel}|${identity}`, source_message_key: identity, preview_only: true, channel, direction: 'inbound', chat_id: chatKey(name), chat_name: name, text_body: preview, occurred_at: new Date().toISOString() }];
+    const identity = `unread-notice|${chatKey(name)}|${unreadCount}`;
+    return [{ event_key: `${channel}|${identity}`, source_message_key: identity, unread_notice: true, channel, direction: 'inbound', chat_id: chatKey(name), chat_name: name, text_body: `${unreadCount} ${unreadCount === 1 ? 'mensaje no leído' : 'mensajes no leídos'} en WhatsApp`, occurred_at: new Date().toISOString() }];
   });
 }
 

@@ -1,0 +1,17 @@
+export const COMMERCIAL_PLAN = [
+  { month: 'Septiembre', family: 'Carrozados', title: 'Revisar contactos previos y aprobar los primeros cinco', owner: 'Felipe', phase: 'Preparar' },
+  { month: 'Septiembre', family: 'Carrozados', title: 'Contactar la primera tanda prioritaria', owner: 'Felipe', phase: 'Contactar' },
+  { month: 'Septiembre', family: 'Carrozados', title: 'Registrar respuestas y segundo intento', owner: 'Felipe', phase: 'Medir' },
+  { month: 'Septiembre', family: 'Resinplast', title: 'Validar 8–10 finalistas con evidencia y decisor', owner: 'IA + Felipe', phase: 'Preparar' },
+  { month: 'Septiembre', family: 'Resinplast', title: 'Contactar la tanda prioritaria y registrar respuestas', owner: 'Felipe', phase: 'Contactar' },
+  { month: 'Septiembre', family: 'PURMAC', title: 'Limpiar matriz y decidir alianzas o descartes', owner: 'IA + Felipe', phase: 'Preparar' },
+  { month: 'Septiembre', family: 'PURMAC', title: 'Contactar finalistas y medir resultado', owner: 'Felipe', phase: 'Contactar' },
+  { month: 'Octubre', family: 'Poliuretano', title: 'Completar contactos y validar finalistas', owner: 'IA + Felipe', phase: 'Preparar' },
+  { month: 'Octubre', family: 'Poliuretano', title: 'Contactar y registrar respuestas', owner: 'Felipe', phase: 'Contactar' },
+  { month: 'Octubre', family: 'Poliurea', title: 'Completar contactos, aprobar finalistas y contactar', owner: 'IA + Felipe', phase: 'Contactar' },
+  { month: 'Noviembre', family: 'Penosil', title: 'Priorizar revendedores/mayoristas y ejecutar primera tanda', owner: 'IA + Felipe', phase: 'Contactar' },
+  { month: 'Noviembre', family: 'Baldes', title: 'Validar compradores naturales y ejecutar primera tanda', owner: 'IA + Felipe', phase: 'Contactar' },
+  { month: 'Noviembre', family: 'Pisos', title: 'Validar compradores naturales y ejecutar primera tanda', owner: 'IA + Felipe', phase: 'Contactar' },
+  { month: 'Noviembre', family: 'EPP', title: 'Trabajar únicamente como cross-sell, no como campaña independiente', owner: 'Equipo', phase: 'Regla' },
+  { month: 'Noviembre', family: 'Todas', title: 'Balance trimestral y decisión de segunda ronda', owner: 'Felipe', phase: 'Medir' },
+].map((item, index) => ({ ...item, id: `plan-${String(index + 1).padStart(2, '0')}` }));

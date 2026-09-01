@@ -1,4 +1,4 @@
-const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [] };
+const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '' };
 
 function recordStamp(record) {
   return record.updatedAt || record.classifiedAt || record.createdAt || record.occurred_at || '';
@@ -26,6 +26,8 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
     opportunities: mergeRecords(local.opportunities, remote.opportunities),
     dismissedInboxEventIds,
     ignoredWhatsAppContacts: mergeRecords(local.ignoredWhatsAppContacts, remote.ignoredWhatsAppContacts, 'key'),
+    planChecks: { ...(remote.planChecks || {}), ...(local.planChecks || {}) },
+    commercialMasterVersion: local.commercialMasterVersion || remote.commercialMasterVersion || '',
   };
 }
 

@@ -727,6 +727,15 @@ export default function App() {
 }
 
 function Dashboard({ metrics, tasks, interactions, onToggle, onOpenTask, onOpenInteraction }) {
+  const latestByContact = [];
+  const seenContacts = new Set();
+  for (const interaction of interactions) {
+    const contactKey = String(interaction.contact || interaction.clientId || interaction.company || interaction.id)
+      .trim().toLocaleLowerCase('es-AR');
+    if (seenContacts.has(contactKey)) continue;
+    seenContacts.add(contactKey);
+    latestByContact.push(interaction);
+  }
   const cards = [
     ['Contactos esta semana', metrics.contacts, 'Meta: 15', MessageCircle],
     ['Contactos efectivos', metrics.effective, 'Meta: 8–10', CheckCircle2],
@@ -745,7 +754,7 @@ function Dashboard({ metrics, tasks, interactions, onToggle, onOpenTask, onOpenI
         </article>
         <article className="panel">
           <div className="panel-head"><div><span className="eyebrow">Actividad</span><h2>Últimas conversaciones</h2></div><MessageCircle size={22}/></div>
-          {interactions.length ? interactions.slice(0, 5).map((item) => <InteractionRow item={item} key={item.id} onOpen={onOpenInteraction}/>) : <Empty text="Todavía no hay conversaciones registradas. La primera que cargues inicia la memoria comercial." />}
+          {latestByContact.length ? latestByContact.slice(0, 5).map((item) => <InteractionRow item={item} key={item.id} onOpen={onOpenInteraction}/>) : <Empty text="Todavía no hay conversaciones registradas. La primera que cargues inicia la memoria comercial." />}
         </article>
       </section>
       <section className="panel goals">

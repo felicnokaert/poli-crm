@@ -52,7 +52,10 @@ function messageIdentity(node, metadata, text, direction, index) {
   // quede confundida con otra que ya fue procesada o eliminada del CRM.
   const container = node.closest('[data-id]') || node.querySelector('[data-id]');
   const whatsappId = container?.getAttribute('data-id') || '';
-  return whatsappId || `${metadata}|${direction}|${index}|${text}`;
+  // Conserva el ID histórico cuando WhatsApp expone fecha/remitente, para no
+  // reimportar conversaciones antiguas después de actualizar la extensión.
+  if (metadata) return `${direction}|${metadata}|${text}`;
+  return whatsappId ? `wa:${whatsappId}` : `${direction}|${index}|${text}`;
 }
 
 async function capture() {

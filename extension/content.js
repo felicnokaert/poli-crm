@@ -1,3 +1,12 @@
+// Chrome invalida el mundo aislado anterior cuando una extensión sin empaquetar
+// se recarga. Esa condición es esperable y no representa una falla del puente.
+// Evitamos que quede registrada como un error persistente, pero conservamos
+// cualquier otro rechazo para no esconder problemas reales.
+globalThis.addEventListener('unhandledrejection', (event) => {
+  const message = String(event.reason?.message || event.reason || '');
+  if (/Extension context invalidated/i.test(message)) event.preventDefault();
+});
+
 const state = { sent: new Set(), sending: false, stopped: false, observer: null, timer: null, interval: null };
 
 function extensionAvailable() {

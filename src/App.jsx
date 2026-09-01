@@ -60,6 +60,8 @@ const PIPELINE = ['Nuevo', 'Contactado', 'Conversación', 'Calificado', 'Propues
 const FAMILIES = ['Sin definir', 'Poliuretano', 'Poliurea', 'PURMAC', 'Penosil', 'Carrozados', 'Resinplast', 'Baldes', 'Pisos', 'EPP', 'Almohadas', 'PRFV', 'Imperpur', 'Foam Factory', 'Otra'];
 const INTENTS = ['Información', 'Precio / cotización', 'Compra', 'Consulta técnica', 'Postventa', 'Reclamo', 'Recompra', 'No comercial', 'A confirmar'];
 const STORAGE_KEY = 'poliplast-sales-copilot-v1';
+const PENOSIL_V016_CUTOFF = '2026-09-01T22:35:19.000Z';
+const PENOSIL_CLEANUP_KEY = 'poliplast-penosil-v016-cleanup';
 
 const initialState = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '' };
 
@@ -184,6 +186,7 @@ export default function App() {
   const [selectedInteractionId, setSelectedInteractionId] = useState(null);
   const [selectedClientId, setSelectedClientId] = useState(null);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
+  const [penosilCleanupRunning, setPenosilCleanupRunning] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -269,6 +272,24 @@ export default function App() {
     }, 700);
     return () => clearTimeout(timer);
   }, [data, remoteReady, session?.user?.id]);
+
+  useEffect(() => {
+    if (!remoteReady || !session?.access_token || penosilCleanupRunning || localStorage.getItem(PENOSIL_CLEANUP_KEY)) return;
+    const obsoleteIds = data.inbox.filter((item) => item.channel === 'penosil'
+      && item.phone_number_id === 'browser-bridge:penosil'
+      && item.occurred_at < PENOSIL_V016_CUTOFF).map((item) => item.event_id);
+    if (!obsoleteIds.length) {
+      localStorage.setItem(PENOSIL_CLEANUP_KEY, 'clean');
+      return;
+    }
+    setPenosilCleanupRunning(true);
+    fetch('/api/inbox-delete', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ eventIds: obsoleteIds }) })
+      .then((response) => {
+        if (!response.ok) throw new Error('cleanup failed');
+        setData((current) => ({ ...current, inbox: current.inbox.filter((item) => !obsoleteIds.includes(item.event_id)), dismissedInboxEventIds: [...new Set([...(current.dismissedInboxEventIds || []), ...obsoleteIds])] }));
+        localStorage.setItem(PENOSIL_CLEANUP_KEY, 'clean');
+      }).catch(() => setPenosilCleanupRunning(false));
+  }, [remoteReady, session?.access_token, data.inbox, penosilCleanupRunning]);
 
   useEffect(() => {
     if (!remoteReady) return;
@@ -534,6 +555,7 @@ export default function App() {
     if (!window.confirm(`¿Eliminar del CRM la memoria de ${name}? Esto no borra el chat original de WhatsApp.`)) return;
     const deletedIds = data.inbox.filter((item) => whatsappThreadKey(item) === whatsappThreadKey(event)).map((item) => item.event_id);
     setData({ ...data, inbox: data.inbox.filter((item) => !deletedIds.includes(item.event_id)), dismissedInboxEventIds: [...new Set([...(data.dismissedInboxEventIds || []), ...deletedIds])] });
+    if (session?.access_token) fetch('/api/inbox-delete', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ eventIds: deletedIds }) }).catch(() => {});
   }
 
   function batchClassifyInbox(eventIds, decision) {
@@ -566,6 +588,7 @@ export default function App() {
     if (!keys.size || !window.confirm(`¿Eliminar del CRM ${keys.size} ${keys.size === 1 ? 'contacto seleccionado' : 'contactos seleccionados'}? Los chats originales de WhatsApp no se modifican.`)) return;
     const deletedIds = data.inbox.filter((item) => keys.has(whatsappThreadKey(item))).map((item) => item.event_id);
     setData({ ...data, inbox: data.inbox.filter((item) => !deletedIds.includes(item.event_id)), dismissedInboxEventIds: [...new Set([...(data.dismissedInboxEventIds || []), ...deletedIds])] });
+    if (session?.access_token) fetch('/api/inbox-delete', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ eventIds: deletedIds }) }).catch(() => {});
   }
 
   function deleteLegacyInbox(eventId) {
@@ -694,10 +717,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="brand">
-          <img className="brand-logo" src="/poliplast-logo.png" alt="Grupo Poliplast" />
-          <div><strong>Sales Copilot</strong><span>Inteligencia comercial</span></div>
-        </div>
+        <div className="brand"><img className="brand-logo" src="/poliplast-logo.png" alt="Grupo Poliplast" /></div>
         <nav>
           {nav.map(([id, label, Icon]) => (
             <button key={id} className={view === id ? 'active' : ''} onClick={() => setView(id)}>
@@ -737,7 +757,7 @@ export default function App() {
 
         {view === 'dashboard' && <Dashboard metrics={metrics} tasks={data.tasks} interactions={data.interactions} onToggle={toggleTask} onOpenTask={setSelectedTaskId} onOpenInteraction={setSelectedInteractionId} />}
         {view === 'conversations' && <Conversations items={data.interactions} onOpen={setSelectedInteractionId} />}
-        {view === 'inbox' && <WhatsAppInbox items={data.inbox} onClassify={classifyInbox} onDraft={openInboxDraft} onOpen={openInboxContact} onArchive={archiveInbox} onRestore={restoreInbox} onDelete={deleteInbox} onDeleteLegacy={deleteLegacyInbox} onExclude={excludeInboxContact} onRestoreCommercial={restoreCommercialContact} onBatchClassify={batchClassifyInbox} onBatchArchive={batchArchiveInbox} onBatchExclude={batchExcludeInbox} onBatchDelete={batchDeleteInbox} />}
+        {view === 'inbox' && <WhatsAppInbox items={data.inbox} clients={data.clients} onClassify={classifyInbox} onDraft={openInboxDraft} onOpen={openInboxContact} onArchive={archiveInbox} onRestore={restoreInbox} onDelete={deleteInbox} onDeleteLegacy={deleteLegacyInbox} onExclude={excludeInboxContact} onRestoreCommercial={restoreCommercialContact} onBatchClassify={batchClassifyInbox} onBatchArchive={batchArchiveInbox} onBatchExclude={batchExcludeInbox} onBatchDelete={batchDeleteInbox} />}
         {view === 'tasks' && <Tasks items={data.tasks} onToggle={toggleTask} onOpen={setSelectedTaskId} onNew={() => setShowTaskForm(true)} />}
         {view === 'pipeline' && <Pipeline clients={data.clients.filter((client) => client.pipelineActive !== false)} onOpenClient={setSelectedClientId} />}
         {view === 'opportunities' && <Opportunities items={data.opportunities || []} clients={data.clients} onSave={saveOpportunity} onDelete={deleteOpportunity} />}
@@ -808,18 +828,26 @@ function Conversations({ items, onOpen }) {
   return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Memoria comercial</span><h2>Historial de conversaciones</h2></div><label className="search"><Search size={17}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar conversación…"/></label></div>{filtered.length ? filtered.map((item) => <InteractionRow item={item} key={item.id} expanded onOpen={onOpen} />) : <Empty text={items.length ? 'No hay conversaciones que coincidan con la búsqueda.' : 'Registrá la primera conversación para comenzar la memoria comercial.'} />}</section>;
 }
 
-function WhatsAppInbox({ items, onClassify, onDraft, onOpen, onArchive, onRestore, onDelete, onDeleteLegacy, onExclude, onRestoreCommercial, onBatchClassify, onBatchArchive, onBatchExclude, onBatchDelete }) {
+function WhatsAppInbox({ items, clients, onClassify, onDraft, onOpen, onArchive, onRestore, onDelete, onDeleteLegacy, onExclude, onRestoreCommercial, onBatchClassify, onBatchArchive, onBatchExclude, onBatchDelete }) {
   const [showArchived, setShowArchived] = useState(false);
   const [showExcluded, setShowExcluded] = useState(false);
   const [query, setQuery] = useState('');
   const [channel, setChannel] = useState('all');
+  const [family, setFamily] = useState('all');
+  const [priority, setPriority] = useState('all');
   const [selected, setSelected] = useState([]);
-  const threads = groupWhatsAppThreads(items.filter((item) => !item.legacyCapture));
+  const threads = groupWhatsAppThreads(items.filter((item) => !item.legacyCapture)).map((item) => {
+    const client = clients.find((entry) => entry.whatsappId && entry.whatsappId === item.customer_wa_id)
+      || clients.find((entry) => item.customer_name && entry.company?.toLowerCase() === item.customer_name.toLowerCase());
+    return { ...item, commercialFamily: client?.family || 'Sin definir', commercialPriority: client?.temperature || 'A confirmar' };
+  });
   const legacyThreads = groupWhatsAppThreads(items.filter((item) => item.legacyCapture));
   const visible = threads.filter((item) => {
     const matchesChannel = channel === 'all' || (item.channels || [item.channel]).includes(channel);
+    const matchesFamily = family === 'all' || item.commercialFamily === family;
+    const matchesPriority = priority === 'all' || item.commercialPriority === priority;
     const haystack = `${item.customer_name || ''} ${item.customer_wa_id || ''} ${item.text_body || ''}`.toLowerCase();
-    return matchesChannel && haystack.includes(query.trim().toLowerCase());
+    return matchesChannel && matchesFamily && matchesPriority && haystack.includes(query.trim().toLowerCase());
   });
   const archived = visible.filter((item) => item.classification_status === 'archived');
   const excluded = visible.filter((item) => item.classification_status === 'excluded');
@@ -838,7 +866,7 @@ function WhatsAppInbox({ items, onClassify, onDraft, onOpen, onArchive, onRestor
     <section className="panel">
       <div className="panel-head"><div><span className="eyebrow">Bandeja comercial por contacto</span><h2>WhatsApp</h2></div><span className="inbox-count">{pending.length}</span></div>
       <div className="channel-legend"><span className="legend-general">General</span><span className="legend-penosil">Penosil</span></div>
-      <div className="list-toolbar"><label className="search"><Search size={17}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar contacto o mensaje…"/></label><div className="segmented"><button className={channel === 'all' ? 'selected' : ''} onClick={() => setChannel('all')}>Todos</button><button className={channel === 'general' ? 'selected' : ''} onClick={() => setChannel('general')}>General</button><button className={channel === 'penosil' ? 'selected' : ''} onClick={() => setChannel('penosil')}>Penosil</button></div></div>
+      <div className="list-toolbar inbox-filters"><label className="search"><Search size={17}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar contacto o mensaje…"/></label><select value={family} onChange={(event) => setFamily(event.target.value)}><option value="all">Todas las familias</option>{FAMILIES.map((item) => <option key={item}>{item}</option>)}</select><select value={priority} onChange={(event) => setPriority(event.target.value)}><option value="all">Todas las prioridades</option><option>Caliente</option><option>Tibio</option><option>Frío</option><option>A confirmar</option></select><div className="segmented"><button className={channel === 'all' ? 'selected' : ''} onClick={() => setChannel('all')}>Todos</button><button className={channel === 'general' ? 'selected' : ''} onClick={() => setChannel('general')}>General</button><button className={channel === 'penosil' ? 'selected' : ''} onClick={() => setChannel('penosil')}>Penosil</button></div></div>
       <div className="batch-toolbar"><label><input type="checkbox" checked={visibleKeys.length > 0 && visibleKeys.every((key) => selected.includes(key))} onChange={selectAllVisible}/> Seleccionar visibles</label><span>{selectedVisible.length ? `${selectedVisible.length} seleccionados` : 'Selección masiva por contacto'}</span>{selectedVisible.length > 0 && <div className="batch-actions"><button onClick={() => finishBatch(() => onBatchClassify(selectedIds, 'ignore'))}>No requiere acción</button><button onClick={() => finishBatch(() => onBatchClassify(selectedIds, 'memory'))}>Solo contexto</button><select defaultValue="" onChange={(event) => { const category = event.target.value; if (category) finishBatch(() => onBatchExclude(selectedIds, category)); event.target.value = ''; }}><option value="">Clasificar como…</option><option value="Equipo interno">Equipo interno</option><option value="Familiar / personal">Familiar / personal</option><option value="Proveedor / colaborador">Proveedor / colaborador</option><option value="Otro no comercial">Otro no comercial</option></select><button onClick={() => finishBatch(() => onBatchArchive(selectedIds))}>Archivar</button><button className="danger-link" onClick={() => finishBatch(() => onBatchDelete(selectedIds))}>Eliminar</button></div>}</div>
       <div className="inbox-section-title"><strong>Por revisar</strong><span>{pending.length}</span></div>
       {pending.length ? pending.map((item) => <InboxRow item={item} {...rowProps} selected={selected.includes(item.threadKey)} onToggleSelected={toggleSelected} key={item.threadKey}/>) : <Empty text="No hay conversaciones esperando clasificación con este filtro." />}
@@ -856,6 +884,7 @@ function LegacyInboxRow({ item, onDelete }) {
 }
 
 function InboxRow({ item, onClassify, onDraft, onOpen, onArchive, onRestore, onDelete, onExclude, onRestoreCommercial, selected, onToggleSelected }) {
+  const [showActions, setShowActions] = useState(false);
   const pending = item.classification_status === 'pending';
   const archived = item.classification_status === 'archived';
   const labels = { ignored: 'No requiere acción', memory: 'Contexto guardado', followup: 'Tarea creada', training: 'Enviado al entrenador', confirmed: 'Borrador confirmado', archived: 'Archivada', excluded: `No comercial${item.excludedCategory ? ` · ${item.excludedCategory}` : ''}` };
@@ -865,9 +894,10 @@ function InboxRow({ item, onClassify, onDraft, onOpen, onArchive, onRestore, onD
   const occurred = new Date(item.occurred_at);
   const dateTime = `${occurred.toLocaleDateString('es-AR')} · ${occurred.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })} hs`;
   const excludeSelect = <select className="contact-exclusion" defaultValue="" aria-label={`Marcar ${name} como contacto no comercial`} onChange={(event) => { onExclude?.(item.event_id, event.target.value); event.target.value = ''; }}><option value="">No es cliente…</option><option value="Equipo interno">Equipo interno</option><option value="Familiar / personal">Familiar / personal</option><option value="Proveedor / colaborador">Proveedor / colaborador</option><option value="Otro no comercial">Otro no comercial</option></select>;
-  return <article className={`inbox-row ${selected ? 'batch-selected' : ''}`}>
+  return <article className={`inbox-row ${selected ? 'batch-selected' : ''} ${showActions ? 'actions-open' : ''}`}>
     <label className="inbox-select" aria-label={`Seleccionar ${name}`}><input type="checkbox" checked={Boolean(selected)} onChange={() => onToggleSelected?.(item.threadKey)}/></label>
     <button type="button" className="inbox-message inbox-open" aria-label={`Abrir ficha de ${name}`} onClick={() => onOpen?.(item.event_id)}><span className="channel-dot" style={{ background: CHANNELS[item.channel]?.color || '#7d8790' }}/><div><div className="inbox-name"><strong>{name}</strong><span className={`intent-tag intent-${intent.toLowerCase().replaceAll(/[^a-záéíóúñ]+/g, '-')}`}>{intent}</span>{item.channelConflict && <span className="channel-warning">Canal duplicado corregido</span>}</div><span>{channelNames} · {dateTime} · {item.messageCount || 1} {(item.messageCount || 1) === 1 ? 'mensaje' : 'mensajes'}</span><p>{item.text_body || `[${item.message_type || 'mensaje sin texto'}]`}</p></div><ChevronRight size={18}/></button>
+    <button type="button" className="row-actions-toggle" onClick={() => setShowActions((value) => !value)}>{showActions ? 'Cerrar' : 'Acciones'}</button>
     {pending ? <div className="decision-buttons"><button onClick={() => onDraft(item.event_id)} className="recommended">Revisar conversación</button><button onClick={() => onClassify(item.event_id, 'ignore')}>No requiere acción</button><button onClick={() => onClassify(item.event_id, 'memory')}>Solo contexto</button><button onClick={() => onClassify(item.event_id, 'training')}>Entrenador</button>{excludeSelect}<button onClick={() => onArchive(item.event_id)}>Archivar</button><button className="danger-link" onClick={() => onDelete(item.event_id)}>Eliminar del CRM</button></div> : <div className="processed-actions"><span className={`decision-tag ${item.classification_status}`}>{labels[item.classification_status] || item.classification_status}</span>{item.classification_status === 'excluded' ? <button onClick={() => onRestoreCommercial?.(item.event_id)}>Corregir: es cliente</button> : excludeSelect}{archived ? <button onClick={() => onRestore(item.event_id)}>Restaurar</button> : <button onClick={() => onArchive(item.event_id)}>Archivar</button>}<button className="danger-link" onClick={() => onDelete(item.event_id)}>Eliminar del CRM</button></div>}
   </article>;
 }

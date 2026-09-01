@@ -5,6 +5,7 @@ import simulate from '../api/simulate-whatsapp.js';
 import readiness from '../api/readiness.js';
 import browserBridge from '../api/browser-bridge.js';
 import bridgePair from '../api/bridge-pair.js';
+import inboxDelete from '../api/inbox-delete.js';
 
 function responseRecorder() {
   return {
@@ -70,4 +71,11 @@ test('browser pairing requires a corporate session', async () => {
   await bridgePair({ method: 'POST', headers: {}, body: { channel: 'penosil' } }, response);
   assert.equal(response.statusCode, 401);
   assert.equal(response.payload.error, 'Acceso corporativo requerido.');
+});
+
+test('permanent inbox deletion requires an authenticated user', async () => {
+  const response = responseRecorder();
+  await inboxDelete({ method: 'POST', headers: {}, body: { eventIds: ['event-1'] } }, response);
+  assert.equal(response.statusCode, 401);
+  assert.equal(response.payload.error, 'Sesión no autorizada.');
 });

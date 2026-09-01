@@ -1,4 +1,15 @@
-const state = { sent: new Set(), sending: false, observer: null, timer: null };
+const state = { sent: new Set(), sending: false, stopped: false, observer: null, timer: null, interval: null };
+
+function extensionAvailable() {
+  try { return Boolean(chrome?.runtime?.id); } catch { return false; }
+}
+
+function stopCapture() {
+  state.stopped = true;
+  state.observer?.disconnect();
+  clearTimeout(state.timer);
+  clearInterval(state.interval);
+}
 
 if (location.hostname === 'poli-crm.vercel.app') {
   window.addEventListener('message', (event) => {
@@ -59,8 +70,14 @@ function messageIdentity(node, metadata, text, direction, index) {
 }
 
 async function capture() {
-  if (state.sending) return;
-  const config = await chrome.storage.local.get(['channel', 'endpoint', 'token']);
+  if (state.sending || state.stopped) return;
+  if (!extensionAvailable()) return stopCapture();
+  let config;
+  try {
+    config = await chrome.storage.local.get(['channel', 'endpoint', 'token']);
+  } catch {
+    return stopCapture();
+  }
   if (!config.channel || !config.endpoint || !config.token) return;
   const events = [];
   const name = chatName();
@@ -82,6 +99,8 @@ async function capture() {
   try {
     const result = await chrome.runtime.sendMessage({ type: 'POLIPLAST_BRIDGE_EVENTS', events });
     if (result?.ok) events.forEach((event) => state.sent.add(event.event_id));
+  } catch {
+    if (!extensionAvailable()) stopCapture();
   } finally {
     state.sending = false;
   }
@@ -96,7 +115,7 @@ function startWhatsAppCapture() {
   // WhatsApp puede actualizar contadores o mensajes sin una mutación útil en #main.
   // La revisión periódica hace que el puente se recupere solo después de suspensión,
   // cambio de pestaña o una actualización silenciosa de WhatsApp Web.
-  setInterval(capture, 5000);
+  state.interval = setInterval(capture, 5000);
   window.addEventListener('focus', capture);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') capture();

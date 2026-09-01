@@ -5,7 +5,11 @@ export { mergeWorkspaceState, workspaceStatesEqual } from './workspace.mjs';
 const url = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const WORKSPACE_KEY = 'grupo-poliplast';
-const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], dismissedInboxEventIds: [] };
+const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [] };
+
+function threadKey(event) {
+  return `${event.channel || 'unknown'}:${event.customer_wa_id || event.customer_name || event.event_id}`.toLocaleLowerCase('es-AR');
+}
 
 export const onlineConfigured = Boolean(url && anonKey);
 export const supabase = onlineConfigured
@@ -23,7 +27,16 @@ export async function loadOnlineState() {
   if (eventsError) throw eventsError;
   const state = stateRow?.data || null;
   const savedEvents = new Map((state?.inbox || []).map((item) => [item.event_id, item]));
-  const inbox = filterDismissedEvents(events || [], state?.dismissedInboxEventIds || []).map((event) => ({ ...event, ...(savedEvents.get(event.event_id) || {}), legacyCapture: isLegacyWhatsAppPreview(event) }));
+  const ignored = new Map((state?.ignoredWhatsAppContacts || []).map((item) => [item.key, item]));
+  const inbox = filterDismissedEvents(events || [], state?.dismissedInboxEventIds || []).map((event) => {
+    const rule = ignored.get(threadKey(event));
+    return {
+      ...event,
+      ...(savedEvents.get(event.event_id) || {}),
+      ...(rule ? { classification_status: 'excluded', excludedCategory: rule.category } : {}),
+      legacyCapture: isLegacyWhatsAppPreview(event),
+    };
+  });
   return {
     state: state ? { ...EMPTY_STATE, ...state, inbox } : { ...EMPTY_STATE, inbox },
     updatedAt: stateRow?.updated_at,

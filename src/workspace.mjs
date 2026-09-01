@@ -1,4 +1,4 @@
-const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], dismissedInboxEventIds: [] };
+const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [] };
 
 function recordStamp(record) {
   return record.updatedAt || record.classifiedAt || record.createdAt || record.occurred_at || '';
@@ -25,6 +25,7 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
     inbox: mergeRecords(local.inbox, remote.inbox, 'event_id').filter((item) => !dismissed.has(item.event_id)).sort((a, b) => (b.occurred_at || '').localeCompare(a.occurred_at || '')),
     opportunities: mergeRecords(local.opportunities, remote.opportunities),
     dismissedInboxEventIds,
+    ignoredWhatsAppContacts: mergeRecords(local.ignoredWhatsAppContacts, remote.ignoredWhatsAppContacts, 'key'),
   };
 }
 

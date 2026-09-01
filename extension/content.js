@@ -31,13 +31,25 @@ function messageNodes() {
     node.querySelector('.selectable-text, [data-testid="selectable-text"]') || node.matches('.message-in, .message-out'));
 }
 
+function openChatIsGroup() {
+  const header = document.querySelector('#main header');
+  if (!header) return false;
+  return Boolean(header.querySelector('button[aria-label*="grupo" i]'))
+    || /información del grupo/i.test(header.innerText || '');
+}
+
+function listRowIsGroup(row) {
+  const lines = (row.innerText || '').split('\n').map((line) => line.trim()).filter(Boolean);
+  return lines.some((line) => line === ':' || line === ': ');
+}
+
 async function capture() {
   if (state.sending) return;
   const config = await chrome.storage.local.get(['channel', 'endpoint', 'token']);
   if (!config.channel || !config.endpoint || !config.token) return;
   const events = [];
   const name = chatName();
-  if (name) {
+  if (name && !openChatIsGroup()) {
     for (const node of messageNodes().slice(-80)) {
       const text = [...node.querySelectorAll('.selectable-text, [data-testid="selectable-text"]')]
         .map((item) => item.textContent).join('\n').trim();
@@ -50,7 +62,7 @@ async function capture() {
     }
   }
   const chatRows = [...document.querySelectorAll('[role="grid"] [role="row"]')].filter((row) =>
-    row.querySelector('[aria-label*="mensaje no leído"], [aria-label*="mensajes no leídos"]'));
+    row.querySelector('[aria-label*="mensaje no leído"], [aria-label*="mensajes no leídos"]') && !listRowIsGroup(row));
   for (const row of chatRows.slice(0, 30)) {
     const parts = [...row.querySelectorAll('span[dir="auto"]')].map((item) => item.textContent?.trim()).filter(Boolean);
     const rowName = parts[0] || row.querySelector('[title]')?.getAttribute('title') || '';

@@ -1,24 +1,31 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap');
 
-:root { font-family: 'DM Sans', sans-serif; color: #18352f; background: #f3f5f1; font-synthesis: none; }
+:root { font-family: 'DM Sans', sans-serif; color: #282828; background: #f5f5f6; font-synthesis: none; --brand-red: #ed1c24; --brand-red-dark: #c9151c; --brand-charcoal: #292929; --brand-gray: #999b9e; }
 * { box-sizing: border-box; }
+.login-logo { width: min(260px, 82%); height: auto; object-fit: contain; margin: 0 auto 22px; display: block; }
 body { margin: 0; min-width: 320px; min-height: 100vh; }
 button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
-button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid #e0a34f; outline-offset: 2px; }
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid var(--brand-red); outline-offset: 2px; }
 .app-shell { display: grid; grid-template-columns: 238px 1fr; min-height: 100vh; }
-.sidebar { background: #103b32; color: #fff; padding: 26px 18px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+.sidebar { background: #242424; color: #fff; padding: 26px 18px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
 .brand { display: flex; gap: 12px; align-items: center; padding: 0 8px 28px; }
-.brand-mark { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: #e0a34f; color: #103b32; font: 800 20px 'Manrope'; }
+.brand-logo { width: 78px; height: 42px; object-fit: contain; border-radius: 8px; background: #fff; padding: 4px; }
 .brand strong, .brand span { display: block; }.brand strong { font: 700 15px 'Manrope'; }.brand span { color: #aac8bd; font-size: 12px; margin-top: 2px; }
-nav { display: grid; gap: 6px; } nav button { border: 0; color: #b9d0c8; background: transparent; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; text-align: left; } nav button:hover, nav button.active { background: #1d5045; color: #fff; }
+nav { display: grid; gap: 6px; } nav button { border: 0; color: #c7c7c9; background: transparent; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; text-align: left; } nav button:hover, nav button.active { background: #3a3a3b; color: #fff; } nav button.active { box-shadow: inset 3px 0 0 var(--brand-red); }
 .sidebar-note { margin-top: auto; border-top: 1px solid #2b5a50; padding: 20px 10px 0; }.sidebar-note p { color: #aac8bd; font-size: 12px; line-height: 1.5; margin-bottom: 0; }
 .legal-links, .login-legal { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 12px; }.legal-links a { color: #aac8bd; font-size: 11px; }.login-legal { justify-content: center; margin-top: 18px; }.login-legal a { color: #56736b; font-size: 11px; }
 main { padding: 30px 36px 56px; min-width: 0; }
 .topbar, .top-actions, .panel-head, .channel-card, .interaction-row, .task-row, .client-row { display: flex; align-items: center; }
 .topbar { justify-content: space-between; margin-bottom: 24px; }.topbar h1 { margin: 3px 0 0; font: 800 28px 'Manrope'; color: #12372f; }.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #69827b; }
 .top-actions { gap: 12px; }.profile-pill { width: 38px; height: 38px; border: 1px solid #d5ddd8; border-radius: 50%; display: grid; place-items: center; background: white; font-weight: 700; }.sync-pill { color: #6c7e78; background: #e7ece9; border-radius: 999px; padding: 6px 10px; font-size: 11px; font-weight: 700; }.sync-pill.ok { color: #347663; background: #e3f2eb; }
-.primary, .secondary { border: 0; border-radius: 10px; padding: 11px 16px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; }.primary { background: #d98a35; color: #fff; box-shadow: 0 5px 16px #d98a3530; }.primary:hover { background: #c67725; }.secondary { color: #38564f; background: #edf1ee; }
+.primary, .secondary { border: 0; border-radius: 10px; padding: 11px 16px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; }.primary { background: var(--brand-red); color: #fff; box-shadow: 0 5px 16px #ed1c2430; }.primary:hover { background: var(--brand-red-dark); }.secondary { color: #444; background: #ededee; }
+.inbox-section-title { display: flex; align-items: center; justify-content: space-between; padding: 12px 2px 7px; color: #626266; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+.inbox-section-title span { min-width: 24px; text-align: center; border-radius: 999px; padding: 3px 7px; background: #f1f1f2; color: #555; }
+.inbox-row { padding: 8px 0; }
+.inbox-open { padding: 9px 10px; min-height: 64px; }
+.inbox-message p { margin: 4px 0 0; max-width: min(720px, 62vw); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.decision-buttons, .processed-actions { padding-top: 6px; gap: 6px; }
 .channel-strip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 22px; }.channel-card { background: white; padding: 15px 18px; border: 1px solid #dfe5e1; border-radius: 14px; gap: 12px; }.channel-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }.channel-card strong, .channel-card span { display: block; }.channel-card div span { color: #72847f; font-size: 12px; margin-top: 3px; }.status { margin-left: auto; color: #347663; background: #e8f5ef; border-radius: 999px; padding: 5px 9px; font-size: 11px; font-weight: 700; white-space: nowrap; }.status.waiting { color: #8b671e; background: #fff3d9; }.status.offline { color: #8a5148; background: #f8e9e6; }
 .content-stack { display: grid; gap: 20px; }.metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }.metric-card, .panel { background: #fff; border: 1px solid #dfe5e1; border-radius: 16px; }.metric-card { padding: 18px; display: grid; grid-template-columns: 1fr auto; gap: 8px; }.metric-card svg { color: #b16f2e; }.metric-card span { grid-column: 1; font-size: 13px; color: #667a74; }.metric-card strong { grid-column: 1; font: 800 28px 'Manrope'; }.metric-card small { grid-column: 1 / -1; color: #82908c; }
 .two-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }.panel { padding: 22px; }.panel-head { justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid #e9eeeb; }.panel-head h2 { margin: 3px 0 0; font: 700 18px 'Manrope'; }.panel-head > svg { color: #7f928c; }

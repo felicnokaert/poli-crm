@@ -74,18 +74,20 @@ function draftFromWhatsApp(event) {
     ['Resinplast', ['resinplast']],
     ['Imperpur', ['imperpur', 'impermeabil']],
   ];
-  const family = familyRules.find(([, words]) => words.some((word) => lower.includes(word)))?.[0] || 'Sin definir';
+  const genericInfo = /m[aá]s informaci[oó]n|informaci[oó]n sobre esto|info sobre esto|quisiera informaci[oó]n|quiero saber m[aá]s/.test(lower);
+  const penosilOpening = event.channel === 'penosil' && genericInfo;
+  const family = familyRules.find(([, words]) => words.some((word) => lower.includes(word)))?.[0] || (penosilOpening ? 'Penosil' : 'Sin definir');
   const urgent = /hoy|urgente|mañana|manana|esta semana|para el viernes|cuanto antes/.test(lower);
-  const commercial = /precio|cotiz|comprar|necesito|kg|litros|unidades|cantidad|stock/.test(lower);
+  const commercial = /precio|cotiz|comprar|necesito|kg|litros|unidades|cantidad|stock/.test(lower) || genericInfo;
   return {
     company: event.customer_name || '',
     contact: event.customer_name || '',
     family,
     summary: text || `[${event.message_type || 'mensaje sin texto'}]`,
-    need: text,
+    need: penosilOpening ? 'Consulta inicial de Penosil; aplicación y volumen todavía sin confirmar.' : text,
     temperature: urgent && commercial ? 'Caliente' : commercial ? 'Tibio' : 'Frío',
     stage: commercial ? 'Contactado' : 'Conversación',
-    nextAction: commercial ? 'Responder y completar diagnóstico comercial' : 'Revisar conversación de WhatsApp',
+    nextAction: penosilOpening ? 'Preguntar aplicación, superficie, cantidad, ubicación y para cuándo lo necesita' : commercial ? 'Responder y completar diagnóstico comercial' : 'Revisar conversación de WhatsApp',
     nextDate: urgent ? today() : addDays(commercial ? 1 : 2),
     relationship: 'A confirmar',
     representsCompany: 'A confirmar',
@@ -583,8 +585,8 @@ export default function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">P</div>
-          <div><strong>Sales Copilot</strong><span>Grupo Poliplast</span></div>
+          <img className="brand-logo" src="/poliplast-logo.png" alt="Grupo Poliplast" />
+          <div><strong>Sales Copilot</strong><span>Inteligencia comercial</span></div>
         </div>
         <nav>
           {nav.map(([id, label, Icon]) => (
@@ -687,13 +689,20 @@ function Conversations({ items, onOpen }) {
 
 function WhatsAppInbox({ items, onClassify, onDraft, onOpen, onArchive, onRestore, onDelete }) {
   const [showArchived, setShowArchived] = useState(false);
+  const [query, setQuery] = useState('');
+  const [channel, setChannel] = useState('all');
   const threads = groupWhatsAppThreads(items);
-  const archived = threads.filter((item) => item.classification_status === 'archived');
-  const active = threads.filter((item) => item.classification_status !== 'archived');
+  const visible = threads.filter((item) => {
+    const matchesChannel = channel === 'all' || item.channel === channel;
+    const haystack = `${item.customer_name || ''} ${item.customer_wa_id || ''} ${item.text_body || ''}`.toLowerCase();
+    return matchesChannel && haystack.includes(query.trim().toLowerCase());
+  });
+  const archived = visible.filter((item) => item.classification_status === 'archived');
+  const active = visible.filter((item) => item.classification_status !== 'archived');
   const pending = active.filter((item) => item.classification_status === 'pending');
   const processed = active.filter((item) => item.classification_status !== 'pending');
   const rowProps = { onClassify, onDraft, onOpen, onArchive, onRestore, onDelete };
-  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Autorización humana</span><h2>Conversaciones pendientes</h2></div><span className="inbox-count">{pending.length}</span></div>{pending.length ? pending.map((item) => <InboxRow item={item} {...rowProps} key={item.threadKey}/>) : <Empty text="No hay conversaciones esperando clasificación." />}</section>{processed.length > 0 && <section className="panel"><div className="panel-head"><div><span className="eyebrow">Trazabilidad por contacto</span><h2>Conversaciones procesadas</h2></div></div>{processed.slice(0, 20).map((item) => <InboxRow item={item} {...rowProps} key={item.threadKey}/>)}</section>}{archived.length > 0 && <section className="panel"><div className="panel-head"><div><span className="eyebrow">Fuera de la vista diaria</span><h2>Conversaciones archivadas</h2></div><button className="secondary" type="button" onClick={() => setShowArchived(!showArchived)}>{showArchived ? 'Ocultar' : `Mostrar (${archived.length})`}</button></div>{showArchived && archived.map((item) => <InboxRow item={item} {...rowProps} key={item.threadKey}/>)}</section>}</div>;
+  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Bandeja comercial por contacto</span><h2>WhatsApp</h2></div><span className="inbox-count">{pending.length}</span></div><div className="list-toolbar"><label className="search"><Search size={17}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar contacto o mensaje…"/></label><div className="segmented"><button className={channel === 'all' ? 'selected' : ''} onClick={() => setChannel('all')}>Todos</button><button className={channel === 'general' ? 'selected' : ''} onClick={() => setChannel('general')}>General</button><button className={channel === 'penosil' ? 'selected' : ''} onClick={() => setChannel('penosil')}>Penosil</button></div></div><div className="inbox-section-title"><strong>Por revisar</strong><span>{pending.length}</span></div>{pending.length ? pending.map((item) => <InboxRow item={item} {...rowProps} key={item.threadKey}/>) : <Empty text="No hay conversaciones esperando clasificación con este filtro." />}</section>{processed.length > 0 && <section className="panel"><div className="panel-head"><div><span className="eyebrow">Memoria por contacto</span><h2>Conversaciones procesadas</h2></div></div>{processed.slice(0, 30).map((item) => <InboxRow item={item} {...rowProps} key={item.threadKey}/>)}</section>}{archived.length > 0 && <section className="panel"><div className="panel-head"><div><span className="eyebrow">Fuera de la vista diaria</span><h2>Conversaciones archivadas</h2></div><button className="secondary" type="button" onClick={() => setShowArchived(!showArchived)}>{showArchived ? 'Ocultar' : `Mostrar (${archived.length})`}</button></div>{showArchived && archived.map((item) => <InboxRow item={item} {...rowProps} key={item.threadKey}/>)}</section>}</div>;
 }
 
 function InboxRow({ item, onClassify, onDraft, onOpen, onArchive, onRestore, onDelete }) {
@@ -981,7 +990,7 @@ function LoginScreen() {
     const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin, shouldCreateUser: false } });
     setMessage(error ? 'No se pudo enviar el acceso. Verificá que el usuario esté habilitado.' : 'Revisá tu correo y abrí el enlace de acceso.');
   }
-  return <div className="login-shell"><section className="login-card"><div className="brand-mark">P</div><span className="eyebrow">Acceso privado</span><h1>Poliplast Sales Copilot</h1><p>Ingresá con el correo habilitado. No necesitás recordar una contraseña.</p><form onSubmit={submit}><label>Correo<input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="nombre@empresa.com" /></label><button className="primary" type="submit">Enviar enlace de acceso</button></form>{message && <div className="system-message">{message}</div>}<div className="login-legal"><a href="/privacidad.html">Privacidad</a><a href="/terminos.html">Términos</a><a href="/eliminacion-datos.html">Eliminación de datos</a></div></section></div>;
+  return <div className="login-shell"><section className="login-card"><img className="login-logo" src="/poliplast-logo.png" alt="Grupo Poliplast" /><span className="eyebrow">Acceso privado</span><h1>Poliplast Sales Copilot</h1><p>Ingresá con el correo habilitado. No necesitás recordar una contraseña.</p><form onSubmit={submit}><label>Correo<input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="nombre@empresa.com" /></label><button className="primary" type="submit">Enviar enlace de acceso</button></form>{message && <div className="system-message">{message}</div>}<div className="login-legal"><a href="/privacidad.html">Privacidad</a><a href="/terminos.html">Términos</a><a href="/eliminacion-datos.html">Eliminación de datos</a></div></section></div>;
 }
 
 function Splash({ text }) { return <div className="login-shell"><section className="login-card"><div className="brand-mark">P</div><h1>Poliplast Sales Copilot</h1><p>{text}</p></section></div>; }

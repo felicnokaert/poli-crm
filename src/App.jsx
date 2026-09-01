@@ -769,6 +769,7 @@ function Conversations({ items, onOpen }) {
 
 function WhatsAppInbox({ items, onClassify, onDraft, onOpen, onArchive, onRestore, onDelete, onDeleteLegacy, onExclude, onRestoreCommercial }) {
   const [showArchived, setShowArchived] = useState(false);
+  const [showExcluded, setShowExcluded] = useState(false);
   const [query, setQuery] = useState('');
   const [channel, setChannel] = useState('all');
   const threads = groupWhatsAppThreads(items.filter((item) => !item.legacyCapture));
@@ -779,7 +780,8 @@ function WhatsAppInbox({ items, onClassify, onDraft, onOpen, onArchive, onRestor
     return matchesChannel && haystack.includes(query.trim().toLowerCase());
   });
   const archived = visible.filter((item) => item.classification_status === 'archived');
-  const active = visible.filter((item) => item.classification_status !== 'archived');
+  const excluded = visible.filter((item) => item.classification_status === 'excluded');
+  const active = visible.filter((item) => !['archived', 'excluded'].includes(item.classification_status));
   const pending = active.filter((item) => item.classification_status === 'pending');
   const processed = active.filter((item) => item.classification_status !== 'pending');
   const rowProps = { onClassify, onDraft, onOpen, onArchive, onRestore, onDelete, onExclude, onRestoreCommercial };
@@ -792,6 +794,7 @@ function WhatsAppInbox({ items, onClassify, onDraft, onOpen, onArchive, onRestor
       {pending.length ? pending.map((item) => <InboxRow item={item} {...rowProps} key={item.threadKey}/>) : <Empty text="No hay conversaciones esperando clasificación con este filtro." />}
     </section>
     {processed.length > 0 && <section className="panel"><div className="panel-head"><div><span className="eyebrow">Memoria por contacto</span><h2>Conversaciones procesadas</h2></div></div>{processed.slice(0, 30).map((item) => <InboxRow item={item} {...rowProps} key={item.threadKey}/>)}</section>}
+    {excluded.length > 0 && <section className="panel"><div className="panel-head"><div><span className="eyebrow">Ocultos de la operación diaria</span><h2>Contactos no comerciales</h2><p>Sus mensajes futuros se guardan fuera de la bandeja. Podés recuperarlos si cambian de rol o fueron clasificados por error.</p></div><button className="secondary" type="button" onClick={() => setShowExcluded(!showExcluded)}>{showExcluded ? 'Ocultar' : `Mostrar (${excluded.length})`}</button></div>{showExcluded && excluded.map((item) => <InboxRow item={item} {...rowProps} key={item.threadKey}/>)}</section>}
     {legacyThreads.length > 0 && <section className="panel quarantine-panel"><div className="panel-head"><div><span className="eyebrow">Visible pero aislado</span><h2>Capturas anteriores para revisar</h2><p>Pueden contener nombre de grupo o remitente mezclado. No alimentan clientes ni oportunidades.</p></div><span className="inbox-count warning">{legacyThreads.length}</span></div>{legacyThreads.map((item) => <LegacyInboxRow item={item} onDelete={onDeleteLegacy} key={item.threadKey}/>)}</section>}
     {archived.length > 0 && <section className="panel"><div className="panel-head"><div><span className="eyebrow">Fuera de la vista diaria</span><h2>Conversaciones archivadas</h2></div><button className="secondary" type="button" onClick={() => setShowArchived(!showArchived)}>{showArchived ? 'Ocultar' : `Mostrar (${archived.length})`}</button></div>{showArchived && archived.map((item) => <InboxRow item={item} {...rowProps} key={item.threadKey}/>)}</section>}
   </div>;

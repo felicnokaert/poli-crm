@@ -33,6 +33,7 @@ import Opportunities from './Opportunities';
 import { fetchCommercialMaster, mergeCommercialMaster } from './commercial-master';
 import { COMMERCIAL_PLAN } from './commercial-plan';
 import { groupWhatsAppThreads, whatsappContactKey } from './whatsapp-threads.mjs';
+import { groupConversationHistory } from './conversation-history.mjs';
 import { clientsToCsv, mergeClientsCsv } from './client-csv.mjs';
 
 const CHANNELS = {
@@ -419,7 +420,12 @@ export default function App() {
   function saveOpportunity(opportunity) {
     const stamp = new Date().toISOString();
     const client = data.clients.find((item) => item.id === opportunity.clientId);
-    const record = { ...opportunity, id: opportunity.id || crypto.randomUUID(), updatedAt: stamp, createdAt: opportunity.createdAt || stamp };
+    const previous = data.opportunities.find((item) => item.id === opportunity.id);
+    const stageChanged = previous && previous.stage !== opportunity.stage;
+    const stageHistory = stageChanged
+      ? [...(previous.stageHistory || []), { from: previous.stage, to: opportunity.stage, changedAt: stamp, changedBy: session?.user?.email || '' }]
+      : (opportunity.stageHistory || previous?.stageHistory || []);
+    const record = { ...opportunity, stageHistory, id: opportunity.id || crypto.randomUUID(), updatedAt: stamp, createdAt: opportunity.createdAt || stamp };
     const exists = data.opportunities.some((item) => item.id === record.id);
     const linkedTask = data.tasks.find((item) => !item.done && item.opportunityId === record.id);
     const taskRecord = record.nextAction && record.nextDate ? { id: linkedTask?.id || crypto.randomUUID(), opportunityId: record.id, clientId: record.clientId, company: client?.company || '', title: record.nextAction, dueDate: record.nextDate, priority: Number(record.probability) >= 70 ? 'Alta' : 'Media', cadence: 'Oportunidad', trigger: `${record.stage} · ${record.probability || 0}% de probabilidad`, done: false, createdAt: linkedTask?.createdAt || stamp, updatedAt: stamp } : null;
@@ -760,7 +766,7 @@ export default function App() {
         </section>}
 
         {view === 'dashboard' && <Dashboard metrics={metrics} tasks={data.tasks} interactions={data.interactions} onToggle={toggleTask} onOpenTask={setSelectedTaskId} onOpenInteraction={setSelectedInteractionId} />}
-        {view === 'conversations' && <Conversations items={data.interactions} onOpen={setSelectedInteractionId} />}
+        {view === 'conversations' && <Conversations items={data.interactions} onOpen={setSelectedInteractionId} onOpenClient={setSelectedClientId} />}
         {view === 'inbox' && <WhatsAppInbox items={data.inbox} clients={data.clients} onClassify={classifyInbox} onDraft={openInboxDraft} onOpen={openInboxContact} onArchive={archiveInbox} onRestore={restoreInbox} onDelete={deleteInbox} onDeleteLegacy={deleteLegacyInbox} onExclude={excludeInboxContact} onRestoreCommercial={restoreCommercialContact} onBatchClassify={batchClassifyInbox} onBatchArchive={batchArchiveInbox} onBatchExclude={batchExcludeInbox} onBatchDelete={batchDeleteInbox} />}
         {view === 'tasks' && <Tasks items={data.tasks} onToggle={toggleTask} onOpen={setSelectedTaskId} onNew={() => setShowTaskForm(true)} />}
         {view === 'pipeline' && <Pipeline clients={data.clients.filter((client) => client.pipelineActive !== false)} onOpenClient={setSelectedClientId} />}
@@ -826,10 +832,11 @@ function Dashboard({ metrics, tasks, interactions, onToggle, onOpenTask, onOpenI
   );
 }
 
-function Conversations({ items, onOpen }) {
+function Conversations({ items, onOpen, onOpenClient }) {
   const [query, setQuery] = useState('');
-  const filtered = items.filter((item) => `${item.company || ''} ${item.contact || ''} ${item.summary || ''} ${item.need || ''} ${item.family || ''}`.toLowerCase().includes(query.toLowerCase()));
-  return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Memoria comercial</span><h2>Historial de conversaciones</h2></div><label className="search"><Search size={17}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar conversación…"/></label></div>{filtered.length ? filtered.map((item) => <InteractionRow item={item} key={item.id} expanded onOpen={onOpen} />) : <Empty text={items.length ? 'No hay conversaciones que coincidan con la búsqueda.' : 'Registrá la primera conversación para comenzar la memoria comercial.'} />}</section>;
+  const conversations = groupConversationHistory(items);
+  const filtered = conversations.filter((item) => `${item.company || ''} ${item.contact || ''} ${item.summary || ''} ${item.need || ''} ${item.family || ''}`.toLowerCase().includes(query.toLowerCase()));
+  return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Una conversación por cliente</span><h2>Historial comercial</h2><p>Entrá a cada contacto para ver su línea de tiempo completa.</p></div><label className="search"><Search size={17}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar cliente o conversación…"/></label></div>{filtered.length ? <div className="conversation-list">{filtered.map((item) => <button className="conversation-thread" key={item.conversationKey} onClick={() => item.clientId ? onOpenClient(item.clientId) : onOpen(item.id)}><span className="channel-dot" style={{ background: CHANNELS[item.channel]?.color || '#7d8790' }}/><div><strong>{item.company || item.contact || 'Contacto sin identificar'}</strong><span>{item.contact || CHANNELS[item.channel]?.name || 'Sin contacto identificado'} · {item.messageCount} {item.messageCount === 1 ? 'registro' : 'registros'}</span><p>{item.summary || item.need || 'Sin resumen registrado'}</p></div><div className="conversation-tail"><time>{new Date(item.latestContactAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })}</time><span className={`temp ${(item.temperature || 'Tibio').toLowerCase()}`}>{item.temperature || 'Tibio'}</span><ChevronRight size={17}/></div></button>)}</div> : <Empty text={items.length ? 'No hay clientes que coincidan con la búsqueda.' : 'Registrá la primera conversación para comenzar la memoria comercial.'} />}</section>;
 }
 
 function WhatsAppInbox({ items, clients, onClassify, onDraft, onOpen, onArchive, onRestore, onDelete, onDeleteLegacy, onExclude, onRestoreCommercial, onBatchClassify, onBatchArchive, onBatchExclude, onBatchDelete }) {
@@ -857,8 +864,7 @@ function WhatsAppInbox({ items, clients, onClassify, onDraft, onOpen, onArchive,
   const excluded = visible.filter((item) => item.classification_status === 'excluded');
   const active = visible.filter((item) => !['archived', 'excluded'].includes(item.classification_status));
   const pending = active.filter((item) => item.classification_status === 'pending');
-  const processed = active.filter((item) => item.classification_status !== 'pending');
-  const selectable = [...pending, ...processed, ...(showExcluded ? excluded : []), ...(showArchived ? archived : [])];
+  const selectable = [...pending, ...(showExcluded ? excluded : []), ...(showArchived ? archived : [])];
   const visibleKeys = selectable.map((item) => item.threadKey);
   const selectedVisible = selected.filter((key) => visibleKeys.includes(key));
   const selectedIds = selectable.filter((item) => selectedVisible.includes(item.threadKey)).map((item) => item.event_id);
@@ -868,14 +874,12 @@ function WhatsAppInbox({ items, clients, onClassify, onDraft, onOpen, onArchive,
   const rowProps = { onClassify, onDraft, onOpen, onArchive, onRestore, onDelete, onExclude, onRestoreCommercial };
   return <div className="content-stack">
     <section className="panel">
-      <div className="panel-head"><div><span className="eyebrow">Bandeja comercial por contacto</span><h2>WhatsApp</h2></div><span className="inbox-count">{pending.length}</span></div>
+      <div className="panel-head"><div><span className="eyebrow">Solo entradas nuevas</span><h2>Por revisar</h2><p>Cuando decidís qué hacer, desaparece de acá y queda guardada donde corresponde.</p></div><span className="inbox-count">{pending.length}</span></div>
       <div className="channel-legend"><span className="legend-general">General</span><span className="legend-penosil">Penosil</span></div>
       <div className="list-toolbar inbox-filters"><label className="search"><Search size={17}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar contacto o mensaje…"/></label><select value={family} onChange={(event) => setFamily(event.target.value)}><option value="all">Todas las familias</option>{FAMILIES.map((item) => <option key={item}>{item}</option>)}</select><select value={priority} onChange={(event) => setPriority(event.target.value)}><option value="all">Todas las prioridades</option><option>Caliente</option><option>Tibio</option><option>Frío</option><option>A confirmar</option></select><div className="segmented"><button className={channel === 'all' ? 'selected' : ''} onClick={() => setChannel('all')}>Todos</button><button className={channel === 'general' ? 'selected' : ''} onClick={() => setChannel('general')}>General</button><button className={channel === 'penosil' ? 'selected' : ''} onClick={() => setChannel('penosil')}>Penosil</button></div></div>
       <div className="batch-toolbar"><label><input type="checkbox" checked={visibleKeys.length > 0 && visibleKeys.every((key) => selected.includes(key))} onChange={selectAllVisible}/> Seleccionar visibles</label><span>{selectedVisible.length ? `${selectedVisible.length} seleccionados` : 'Selección masiva por contacto'}</span>{selectedVisible.length > 0 && <div className="batch-actions"><button onClick={() => finishBatch(() => onBatchClassify(selectedIds, 'ignore'))}>No requiere acción</button><button onClick={() => finishBatch(() => onBatchClassify(selectedIds, 'memory'))}>Solo contexto</button><select defaultValue="" onChange={(event) => { const category = event.target.value; if (category) finishBatch(() => onBatchExclude(selectedIds, category)); event.target.value = ''; }}><option value="">Clasificar como…</option><option value="Equipo interno">Equipo interno</option><option value="Familiar / personal">Familiar / personal</option><option value="Proveedor / colaborador">Proveedor / colaborador</option><option value="Otro no comercial">Otro no comercial</option></select><button onClick={() => finishBatch(() => onBatchArchive(selectedIds))}>Archivar</button><button className="danger-link" onClick={() => finishBatch(() => onBatchDelete(selectedIds))}>Eliminar</button></div>}</div>
-      <div className="inbox-section-title"><strong>Por revisar</strong><span>{pending.length}</span></div>
       {pending.length ? pending.map((item) => <InboxRow item={item} {...rowProps} selected={selected.includes(item.threadKey)} onToggleSelected={toggleSelected} key={item.threadKey}/>) : <Empty text="No hay conversaciones esperando clasificación con este filtro." />}
     </section>
-    {processed.length > 0 && <section className="panel"><div className="panel-head"><div><span className="eyebrow">Memoria por contacto</span><h2>Conversaciones procesadas</h2></div></div>{processed.slice(0, 30).map((item) => <InboxRow item={item} {...rowProps} selected={selected.includes(item.threadKey)} onToggleSelected={toggleSelected} key={item.threadKey}/>)}</section>}
     {excluded.length > 0 && <section className="panel"><div className="panel-head"><div><span className="eyebrow">Ocultos de la operación diaria</span><h2>Contactos no comerciales</h2><p>Sus mensajes futuros se guardan fuera de la bandeja. Podés recuperarlos si cambian de rol o fueron clasificados por error.</p></div><button className="secondary" type="button" onClick={() => setShowExcluded(!showExcluded)}>{showExcluded ? 'Ocultar' : `Mostrar (${excluded.length})`}</button></div>{showExcluded && excluded.map((item) => <InboxRow item={item} {...rowProps} selected={selected.includes(item.threadKey)} onToggleSelected={toggleSelected} key={item.threadKey}/>)}</section>}
     {legacyThreads.length > 0 && <section className="panel quarantine-panel"><div className="panel-head"><div><span className="eyebrow">Visible pero aislado</span><h2>Capturas anteriores para revisar</h2><p>Pueden contener nombre de grupo o remitente mezclado. No alimentan clientes ni oportunidades.</p></div><span className="inbox-count warning">{legacyThreads.length}</span></div>{legacyThreads.map((item) => <LegacyInboxRow item={item} onDelete={onDeleteLegacy} key={item.threadKey}/>)}</section>}
     {archived.length > 0 && <section className="panel"><div className="panel-head"><div><span className="eyebrow">Fuera de la vista diaria</span><h2>Conversaciones archivadas</h2></div><button className="secondary" type="button" onClick={() => setShowArchived(!showArchived)}>{showArchived ? 'Ocultar' : `Mostrar (${archived.length})`}</button></div>{showArchived && archived.map((item) => <InboxRow item={item} {...rowProps} selected={selected.includes(item.threadKey)} onToggleSelected={toggleSelected} key={item.threadKey}/>)}</section>}

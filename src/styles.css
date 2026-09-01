@@ -118,3 +118,13 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .inbox-row.actions-open { padding-bottom: 10px; }
 .inbox-row.actions-open .decision-buttons, .inbox-row.actions-open .processed-actions { display: flex; }
 @media (max-width: 760px) { .brand { width: 180px; height: 48px; padding: 0; justify-content: flex-start; }.brand-logo { height: 38px; }.inbox-filters .segmented { margin-left: 0; }.inbox-row { padding-right: 62px; } }
+
+/* Historial comercial: densidad similar a una lista de chats */
+.conversation-list { display: grid; }
+.conversation-thread { width: 100%; display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 13px 10px; border: 0; border-bottom: 1px solid #e3e8e5; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.conversation-thread:hover { background: #f5f7f6; }
+.conversation-thread strong, .conversation-thread span, .conversation-thread p { display: block; }
+.conversation-thread span { color: #758781; font-size: 12px; margin-top: 3px; }
+.conversation-thread p { margin: 5px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #365047; }
+.conversation-tail { display: grid; justify-items: end; gap: 7px; min-width: 78px; }
+.conversation-tail time { color: #758781; font-size: 11px; }

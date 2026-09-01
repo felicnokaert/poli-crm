@@ -11,6 +11,43 @@ function stopCapture() {
   clearInterval(state.interval);
 }
 
+function safeStorageGet(keys) {
+  return new Promise((resolve) => {
+    if (!extensionAvailable()) return resolve(null);
+    try {
+      chrome.storage.local.get(keys, (result) => {
+        try {
+          if (chrome.runtime.lastError) return resolve(null);
+          return resolve(result || null);
+        } catch { return resolve(null); }
+      });
+    } catch { resolve(null); }
+  });
+}
+
+function safeStorageSet(values) {
+  if (!extensionAvailable()) return;
+  try {
+    chrome.storage.local.set(values, () => {
+      try { void chrome.runtime.lastError; } catch { /* contexto anterior */ }
+    });
+  } catch { /* contexto anterior */ }
+}
+
+function safeSendEvents(events) {
+  return new Promise((resolve) => {
+    if (!extensionAvailable()) return resolve(null);
+    try {
+      chrome.runtime.sendMessage({ type: 'POLIPLAST_BRIDGE_EVENTS', events }, (result) => {
+        try {
+          if (chrome.runtime.lastError) return resolve(null);
+          return resolve(result || null);
+        } catch { return resolve(null); }
+      });
+    } catch { resolve(null); }
+  });
+}
+
 if (location.hostname === 'poli-crm.vercel.app') {
   window.addEventListener('message', (event) => {
     if (event.source !== window || event.data?.type !== 'POLIPLAST_BRIDGE_CONFIG') return;
@@ -22,11 +59,14 @@ if (location.hostname === 'poli-crm.vercel.app') {
   startWhatsAppCapture();
 }
 
-async function configureBridge({ channel, endpoint, token }) {
+function configureBridge({ channel, endpoint, token }) {
   if (!extensionAvailable()) return;
   try {
-    await chrome.storage.local.set({ channel, endpoint, token, pairedAt: new Date().toISOString() });
-    if (extensionAvailable()) window.postMessage({ type: 'POLIPLAST_BRIDGE_PAIRED', channel }, location.origin);
+    chrome.storage.local.set({ channel, endpoint, token, pairedAt: new Date().toISOString() }, () => {
+      try {
+        if (!chrome.runtime.lastError && extensionAvailable()) window.postMessage({ type: 'POLIPLAST_BRIDGE_PAIRED', channel }, location.origin);
+      } catch { /* contexto anterior */ }
+    });
   } catch {
     // Una actualización de la extensión invalida el script anterior. La página
     // recargada instalará el contexto nuevo sin dejar un error persistente.
@@ -88,12 +128,8 @@ function messageIdentity(node, metadata, text, direction, index) {
 async function capture() {
   if (state.sending || state.stopped) return;
   if (!extensionAvailable()) return stopCapture();
-  let config;
-  try {
-    config = await chrome.storage.local.get(['channel', 'endpoint', 'token']);
-  } catch {
-    return stopCapture();
-  }
+  const config = await safeStorageGet(['channel', 'endpoint', 'token']);
+  if (!config) return stopCapture();
   if (!config.channel || !config.endpoint || !config.token) return;
   const events = [];
   const name = chatName();
@@ -111,12 +147,15 @@ async function capture() {
     }
   }
   if (!events.length) return;
+  safeStorageSet({
+    lastDetectedAt: new Date().toISOString(),
+    lastDetectedChat: name,
+    lastDetectedEvents: events.length,
+  });
   state.sending = true;
   try {
-    const result = await chrome.runtime.sendMessage({ type: 'POLIPLAST_BRIDGE_EVENTS', events });
+    const result = await safeSendEvents(events);
     if (result?.ok) events.forEach((event) => state.sent.add(event.event_id));
-  } catch {
-    if (!extensionAvailable()) stopCapture();
   } finally {
     state.sending = false;
   }

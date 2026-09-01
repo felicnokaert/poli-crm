@@ -216,7 +216,7 @@ export default function App() {
     }).catch(() => active && setSyncStatus('Error de sincronización'));
 
     const channel = supabase.channel('whatsapp-inbox').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'whatsapp_events' }, ({ new: event }) => {
-      if (event.direction === 'status') return;
+      if (event.direction !== 'inbound' || ['unread_preview', 'unread_notice'].includes(event.message_type)) return;
       setData((current) => {
         if (current.inbox.some((item) => item.event_id === event.event_id)) return current;
         const ignoredRule = (current.ignoredWhatsAppContacts || []).find((item) => item.key === whatsappThreadKey(event));

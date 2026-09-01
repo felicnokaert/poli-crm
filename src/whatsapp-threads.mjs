@@ -39,7 +39,10 @@ export function groupWhatsAppThreads(items = []) {
     groups.set(key, [...(groups.get(key) || []), item]);
   }
   return [...groups.entries()].map(([threadKey, rawEvents]) => {
-    const ordered = dedupeWhatsAppEvents(rawEvents).sort((a, b) => new Date(a.occurred_at) - new Date(b.occurred_at));
+    const deduped = dedupeWhatsAppEvents(rawEvents);
+    const previewTypes = new Set(['unread_notice', 'verified_unread_preview']);
+    const hasRealMessage = deduped.some((item) => !previewTypes.has(item.message_type));
+    const ordered = deduped.filter((item) => !hasRealMessage || !previewTypes.has(item.message_type)).sort((a, b) => new Date(a.occurred_at) - new Date(b.occurred_at));
     const latest = ordered.at(-1);
     const pendingCount = ordered.filter((item) => item.classification_status === 'pending').length;
     return {

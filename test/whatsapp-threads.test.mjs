@@ -27,3 +27,12 @@ test('collapses an identical bridge capture attributed to both channels', () => 
   assert.equal(threads[0].channel, 'general');
   assert.equal(threads[0].channelConflict, true);
 });
+
+test('replaces unread preview with real messages after opening the chat', () => {
+  const threads = groupWhatsAppThreads([
+    { event_id: 'preview', channel: 'penosil', customer_wa_id: 'cliente', message_type: 'verified_unread_preview', text_body: '2 mensajes no leídos', occurred_at: '2026-09-01T10:00:00Z', classification_status: 'pending' },
+    { event_id: 'real', channel: 'penosil', customer_wa_id: 'cliente', message_type: 'text', text_body: 'Quiero conocer el precio', occurred_at: '2026-09-01T10:01:00Z', classification_status: 'pending' },
+  ]);
+  assert.equal(threads[0].messageCount, 1);
+  assert.equal(threads[0].text_body, 'Quiero conocer el precio');
+});

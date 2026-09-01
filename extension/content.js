@@ -7,7 +7,7 @@ globalThis.addEventListener('unhandledrejection', (event) => {
   if (/Extension context invalidated/i.test(message)) event.preventDefault();
 });
 
-const state = { sent: new Set(), initializedChats: new Set(), sending: false, stopped: false, observer: null, timer: null, interval: null, lastDiagnosticKey: '' };
+const state = { sent: new Set(), initializedChats: new Set(), unreadCounts: new Map(), sending: false, stopped: false, observer: null, timer: null, interval: null, lastDiagnosticKey: '' };
 const RECOVERY_KEY = 'poliplast-extension-recovery';
 
 // Si esta carga proviene de una recuperación exitosa, habilitamos nuevamente
@@ -135,6 +135,7 @@ function unreadPreviews(channel) {
     const titled = [...row.querySelectorAll('span[title]')].map((item) => item.getAttribute('title')?.trim()).filter(Boolean);
     const name = titled[0] || row.querySelector('span[dir="auto"]')?.textContent?.trim() || '';
     if (!name || openChatIsSelf(name)) return [];
+    state.unreadCounts.set(chatKey(name), unreadCount);
     const candidates = [...row.querySelectorAll('span[dir="auto"]')]
       .map((item) => item.textContent?.trim())
       .filter((text) => text && text !== name && !/^\d{1,2}:\d{2}$/.test(text) && !/^\d+$/.test(text) && !/mensajes?\s+no\s+le[ií]dos?/i.test(text));
@@ -187,25 +188,35 @@ function capture() {
     }
     if (name && !group && !openChatIsSelf(name)) {
       const nodes = allNodes.slice(-80);
-      const firstVisit = !state.initializedChats.has(chatKey(name));
-      for (const [index, node] of nodes.entries()) {
+      const currentChatKey = chatKey(name);
+      const firstVisit = !state.initializedChats.has(currentChatKey);
+      const unreadCount = firstVisit ? (state.unreadCounts.get(currentChatKey) || 0) : 0;
+      const parsed = nodes.map((node, index) => {
         const text = messageText(node);
-        if (!text) continue;
+        if (!text) return null;
         const dataId = (node.closest('[data-id]') || node.querySelector('[data-id]'))?.getAttribute('data-id') || '';
         const direction = node.closest('.message-out') || node.classList.contains('message-out') || /^true[_-]/i.test(dataId) ? 'outbound' : 'inbound';
         const metadata = node.querySelector('[data-pre-plain-text]')?.getAttribute('data-pre-plain-text') || '';
         const identity = messageIdentity(node, metadata, text, direction, index);
         const eventKey = `${config.channel}|${name}|${identity}`;
+        return { text, direction, identity, eventKey };
+      }).filter(Boolean);
+      const unreadInboundKeys = new Set(parsed.filter((item) => item.direction === 'inbound').slice(-unreadCount).map((item) => item.eventKey));
+      for (const item of parsed) {
+        const { text, direction, identity, eventKey } = item;
         // La primera vez que vemos un chat establecemos una línea de base. No
-        // importamos su historial ni mensajes enviados por el equipo.
-        if (firstVisit || direction !== 'inbound') {
+        // importamos su historial ni mensajes enviados por el equipo. Si el chat
+        // tenía mensajes pendientes, rescatamos únicamente esos últimos mensajes
+        // entrantes cuando Felipe abre la conversación.
+        if ((firstVisit && !unreadInboundKeys.has(eventKey)) || direction !== 'inbound') {
           state.sent.add(eventKey);
           continue;
         }
         if (state.sent.has(eventKey)) continue;
         events.push({ event_key: eventKey, source_message_key: identity, channel: config.channel, direction, chat_id: chatKey(name), chat_name: name, text_body: text, occurred_at: new Date().toISOString() });
       }
-      state.initializedChats.add(chatKey(name));
+      state.initializedChats.add(currentChatKey);
+      if (unreadCount) state.unreadCounts.delete(currentChatKey);
     }
     if (!events.length) { state.sending = false; return; }
     safeStorageSet({ lastDetectedAt: new Date().toISOString(), lastDetectedChat: name, lastDetectedEvents: events.length });

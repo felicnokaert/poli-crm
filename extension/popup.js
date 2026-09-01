@@ -17,3 +17,5 @@ chrome.storage.local.get(['channel', 'lastChatName', 'lastSuccessAt', 'lastError
   status.textContent = data.lastError ? `${data.lastError}${queued ? ` · ${queued} en espera` : ''}` : (data.channel ? 'Listo' : 'Abrí el CRM y vinculá este perfil');
   status.className = `value ${data.lastError || !data.channel ? 'warn' : 'ok'}`;
 });
+
+document.querySelector('#settings').addEventListener('click', () => chrome.runtime.openOptionsPage());

@@ -1,5 +1,17 @@
 const MAX_QUEUE = 200;
 
+function updateBadge(channel) {
+  const text = channel === 'penosil' ? 'P' : channel === 'general' ? 'G' : '?';
+  const color = channel === 'penosil' ? '#d9792b' : channel === 'general' ? '#0d7764' : '#777777';
+  chrome.action.setBadgeText({ text });
+  chrome.action.setBadgeBackgroundColor({ color });
+}
+
+chrome.storage.local.get(['channel'], ({ channel }) => updateBadge(channel));
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.channel) updateBadge(changes.channel.newValue);
+});
+
 async function digest(value) {
   const bytes = new TextEncoder().encode(value);
   const hash = await crypto.subtle.digest('SHA-256', bytes);

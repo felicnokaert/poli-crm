@@ -53,31 +53,7 @@ function safeSendEvents(events, done) {
   } catch { done(null); }
 }
 
-if (location.hostname === 'poli-crm.vercel.app') {
-  window.addEventListener('message', (event) => {
-    if (event.source !== window || event.data?.type !== 'POLIPLAST_BRIDGE_CONFIG') return;
-    const { channel, endpoint, token } = event.data;
-    if (!['general', 'penosil'].includes(channel) || !endpoint || !token) return;
-    configureBridge({ channel, endpoint, token });
-  });
-} else {
-  startWhatsAppCapture();
-}
-
-function configureBridge({ channel, endpoint, token }) {
-  if (!extensionAvailable()) return;
-  try {
-    const operation = chrome.storage.local.set({ channel, endpoint, token, pairedAt: new Date().toISOString() }, () => {
-      try {
-        if (!chrome.runtime.lastError && extensionAvailable()) window.postMessage({ type: 'POLIPLAST_BRIDGE_PAIRED', channel }, location.origin);
-      } catch { /* contexto anterior */ }
-    });
-    swallowOperation(operation);
-  } catch {
-    // Una actualización de la extensión invalida el script anterior. La página
-    // recargada instalará el contexto nuevo sin dejar un error persistente.
-  }
-}
+startWhatsAppCapture();
 
 function queueCapture() {
   if (state.stopped) return;

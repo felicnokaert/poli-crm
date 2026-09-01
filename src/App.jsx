@@ -444,6 +444,31 @@ export default function App() {
     });
   }
 
+  function archiveInbox(eventId) {
+    const event = data.inbox.find((item) => item.event_id === eventId);
+    if (!event) return;
+    const stamp = new Date().toISOString();
+    setData({ ...data, inbox: data.inbox.map((item) => whatsappThreadKey(item) === whatsappThreadKey(event)
+      ? { ...item, classification_status: 'archived', archivedAt: stamp }
+      : item) });
+  }
+
+  function restoreInbox(eventId) {
+    const event = data.inbox.find((item) => item.event_id === eventId);
+    if (!event) return;
+    setData({ ...data, inbox: data.inbox.map((item) => whatsappThreadKey(item) === whatsappThreadKey(event)
+      ? { ...item, classification_status: 'memory', archivedAt: null }
+      : item) });
+  }
+
+  function deleteInbox(eventId) {
+    const event = data.inbox.find((item) => item.event_id === eventId);
+    if (!event) return;
+    const name = event.customer_name || event.customer_wa_id || 'este contacto';
+    if (!window.confirm(`¿Eliminar del CRM la memoria de ${name}? Esto no borra el chat original de WhatsApp.`)) return;
+    setData({ ...data, inbox: data.inbox.filter((item) => whatsappThreadKey(item) !== whatsappThreadKey(event)) });
+  }
+
   function openInboxDraft(eventId) {
     const event = data.inbox.find((item) => item.event_id === eventId);
     if (!event) return;
@@ -600,7 +625,7 @@ export default function App() {
 
         {view === 'dashboard' && <Dashboard metrics={metrics} tasks={data.tasks} interactions={data.interactions} onToggle={toggleTask} onOpenTask={setSelectedTaskId} onOpenInteraction={setSelectedInteractionId} />}
         {view === 'conversations' && <Conversations items={data.interactions} onOpen={setSelectedInteractionId} />}
-        {view === 'inbox' && <WhatsAppInbox items={data.inbox} onClassify={classifyInbox} onDraft={openInboxDraft} onOpen={openInboxContact} />}
+        {view === 'inbox' && <WhatsAppInbox items={data.inbox} onClassify={classifyInbox} onDraft={openInboxDraft} onOpen={openInboxContact} onArchive={archiveInbox} onRestore={restoreInbox} onDelete={deleteInbox} />}
         {view === 'tasks' && <Tasks items={data.tasks} onToggle={toggleTask} onOpen={setSelectedTaskId} onNew={() => setShowTaskForm(true)} />}
         {view === 'pipeline' && <Pipeline clients={data.clients} onOpenClient={setSelectedClientId} />}
         {view === 'clients' && <Clients clients={filteredClients} query={query} setQuery={setQuery} onOpenClient={setSelectedClientId} />}
@@ -660,18 +685,23 @@ function Conversations({ items, onOpen }) {
   return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Memoria comercial</span><h2>Historial de conversaciones</h2></div><label className="search"><Search size={17}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar conversación…"/></label></div>{filtered.length ? filtered.map((item) => <InteractionRow item={item} key={item.id} expanded onOpen={onOpen} />) : <Empty text={items.length ? 'No hay conversaciones que coincidan con la búsqueda.' : 'Registrá la primera conversación para comenzar la memoria comercial.'} />}</section>;
 }
 
-function WhatsAppInbox({ items, onClassify, onDraft, onOpen }) {
+function WhatsAppInbox({ items, onClassify, onDraft, onOpen, onArchive, onRestore, onDelete }) {
+  const [showArchived, setShowArchived] = useState(false);
   const threads = groupWhatsAppThreads(items);
-  const pending = threads.filter((item) => item.classification_status === 'pending');
-  const processed = threads.filter((item) => item.classification_status !== 'pending');
-  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Autorización humana</span><h2>Conversaciones pendientes</h2></div><span className="inbox-count">{pending.length}</span></div>{pending.length ? pending.map((item) => <InboxRow item={item} onClassify={onClassify} onDraft={onDraft} onOpen={onOpen} key={item.threadKey}/>) : <Empty text="No hay conversaciones esperando clasificación." />}</section>{processed.length > 0 && <section className="panel"><div className="panel-head"><div><span className="eyebrow">Trazabilidad por contacto</span><h2>Conversaciones procesadas</h2></div></div>{processed.slice(0, 20).map((item) => <InboxRow item={item} onOpen={onOpen} key={item.threadKey}/>)}</section>}</div>;
+  const archived = threads.filter((item) => item.classification_status === 'archived');
+  const active = threads.filter((item) => item.classification_status !== 'archived');
+  const pending = active.filter((item) => item.classification_status === 'pending');
+  const processed = active.filter((item) => item.classification_status !== 'pending');
+  const rowProps = { onClassify, onDraft, onOpen, onArchive, onRestore, onDelete };
+  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Autorización humana</span><h2>Conversaciones pendientes</h2></div><span className="inbox-count">{pending.length}</span></div>{pending.length ? pending.map((item) => <InboxRow item={item} {...rowProps} key={item.threadKey}/>) : <Empty text="No hay conversaciones esperando clasificación." />}</section>{processed.length > 0 && <section className="panel"><div className="panel-head"><div><span className="eyebrow">Trazabilidad por contacto</span><h2>Conversaciones procesadas</h2></div></div>{processed.slice(0, 20).map((item) => <InboxRow item={item} {...rowProps} key={item.threadKey}/>)}</section>}{archived.length > 0 && <section className="panel"><div className="panel-head"><div><span className="eyebrow">Fuera de la vista diaria</span><h2>Conversaciones archivadas</h2></div><button className="secondary" type="button" onClick={() => setShowArchived(!showArchived)}>{showArchived ? 'Ocultar' : `Mostrar (${archived.length})`}</button></div>{showArchived && archived.map((item) => <InboxRow item={item} {...rowProps} key={item.threadKey}/>)}</section>}</div>;
 }
 
-function InboxRow({ item, onClassify, onDraft, onOpen }) {
+function InboxRow({ item, onClassify, onDraft, onOpen, onArchive, onRestore, onDelete }) {
   const pending = item.classification_status === 'pending';
-  const labels = { ignored: 'No requiere acción', memory: 'Contexto guardado', followup: 'Tarea creada', training: 'Enviado al entrenador', confirmed: 'Borrador confirmado' };
+  const archived = item.classification_status === 'archived';
+  const labels = { ignored: 'No requiere acción', memory: 'Contexto guardado', followup: 'Tarea creada', training: 'Enviado al entrenador', confirmed: 'Borrador confirmado', archived: 'Archivada' };
   const name = item.customer_name || item.customer_wa_id || 'Contacto sin identificar';
-  return <article className="inbox-row"><button type="button" className="inbox-message inbox-open" aria-label={`Abrir ficha de ${name}`} onClick={() => onOpen?.(item.event_id)}><span className="channel-dot" style={{ background: CHANNELS[item.channel]?.color || '#7d8790' }}/><div><strong>{name}</strong><span>{CHANNELS[item.channel]?.name || 'WhatsApp'} · {new Date(item.occurred_at).toLocaleString('es-AR')} · {item.messageCount || 1} {(item.messageCount || 1) === 1 ? 'mensaje' : 'mensajes'}</span><p>{item.text_body || `[${item.message_type || 'mensaje sin texto'}]`}</p></div><ChevronRight size={18}/></button>{pending ? <div className="decision-buttons"><button onClick={() => onDraft(item.event_id)} className="recommended">Revisar conversación</button><button onClick={() => onClassify(item.event_id, 'ignore')}>No requiere acción</button><button onClick={() => onClassify(item.event_id, 'memory')}>Solo contexto</button><button onClick={() => onClassify(item.event_id, 'training')}>Entrenador</button></div> : <span className={`decision-tag ${item.classification_status}`}>{labels[item.classification_status] || item.classification_status}</span>}</article>;
+  return <article className="inbox-row"><button type="button" className="inbox-message inbox-open" aria-label={`Abrir ficha de ${name}`} onClick={() => onOpen?.(item.event_id)}><span className="channel-dot" style={{ background: CHANNELS[item.channel]?.color || '#7d8790' }}/><div><strong>{name}</strong><span>{CHANNELS[item.channel]?.name || 'WhatsApp'} · {new Date(item.occurred_at).toLocaleString('es-AR')} · {item.messageCount || 1} {(item.messageCount || 1) === 1 ? 'mensaje' : 'mensajes'}</span><p>{item.text_body || `[${item.message_type || 'mensaje sin texto'}]`}</p></div><ChevronRight size={18}/></button>{pending ? <div className="decision-buttons"><button onClick={() => onDraft(item.event_id)} className="recommended">Revisar conversación</button><button onClick={() => onClassify(item.event_id, 'ignore')}>No requiere acción</button><button onClick={() => onClassify(item.event_id, 'memory')}>Solo contexto</button><button onClick={() => onClassify(item.event_id, 'training')}>Entrenador</button><button onClick={() => onArchive(item.event_id)}>Archivar</button><button className="danger-link" onClick={() => onDelete(item.event_id)}>Eliminar del CRM</button></div> : <div className="processed-actions"><span className={`decision-tag ${item.classification_status}`}>{labels[item.classification_status] || item.classification_status}</span>{archived ? <button onClick={() => onRestore(item.event_id)}>Restaurar</button> : <button onClick={() => onArchive(item.event_id)}>Archivar</button>}<button className="danger-link" onClick={() => onDelete(item.event_id)}>Eliminar del CRM</button></div>}</article>;
 }
 
 function InboxDraftModal({ draft, setDraft, onClose, onConfirm }) {

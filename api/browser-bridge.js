@@ -26,7 +26,7 @@ export default async function handler(request, response) {
       text_body: String(item.text_body || '').slice(0, MAX_TEXT),
       occurred_at: item.occurred_at && !Number.isNaN(Date.parse(item.occurred_at)) ? item.occurred_at : new Date().toISOString(),
       classification_status: item.direction === 'inbound' ? 'pending' : 'system',
-      raw_payload: { source: 'authorized-whatsapp-web-chat' },
+      raw_payload: { source: 'authorized-whatsapp-web-chat', source_message_key: String(item.source_message_key || '').slice(0, 1000) },
     }];
   });
 

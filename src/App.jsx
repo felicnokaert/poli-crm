@@ -32,6 +32,7 @@ import { inferIntent } from './commercial-intelligence.mjs';
 import Opportunities from './Opportunities';
 import { fetchCommercialMaster, mergeCommercialMaster } from './commercial-master';
 import { COMMERCIAL_PLAN } from './commercial-plan';
+import { groupWhatsAppThreads, whatsappContactKey } from './whatsapp-threads.mjs';
 
 const CHANNELS = {
   general: {
@@ -105,21 +106,7 @@ function draftFromWhatsApp(event) {
 }
 
 function whatsappThreadKey(event) {
-  return `${event.channel || 'unknown'}:${event.customer_wa_id || event.customer_name || event.event_id}`.toLocaleLowerCase('es-AR');
-}
-
-function groupWhatsAppThreads(items) {
-  const groups = new Map();
-  for (const item of items) {
-    const key = whatsappThreadKey(item);
-    groups.set(key, [...(groups.get(key) || []), item]);
-  }
-  return [...groups.entries()].map(([threadKey, events]) => {
-    const ordered = [...events].sort((a, b) => new Date(a.occurred_at) - new Date(b.occurred_at));
-    const latest = ordered.at(-1);
-    const pendingCount = ordered.filter((item) => item.classification_status === 'pending').length;
-    return { ...latest, threadKey, events: ordered, messageCount: ordered.length, pendingCount, classification_status: pendingCount ? 'pending' : latest.classification_status };
-  }).sort((a, b) => new Date(b.occurred_at) - new Date(a.occurred_at));
+  return whatsappContactKey(event);
 }
 
 function loadState() {
@@ -793,7 +780,7 @@ function WhatsAppInbox({ items, onClassify, onDraft, onOpen, onArchive, onRestor
   const threads = groupWhatsAppThreads(items.filter((item) => !item.legacyCapture));
   const legacyThreads = groupWhatsAppThreads(items.filter((item) => item.legacyCapture));
   const visible = threads.filter((item) => {
-    const matchesChannel = channel === 'all' || item.channel === channel;
+    const matchesChannel = channel === 'all' || (item.channels || [item.channel]).includes(channel);
     const haystack = `${item.customer_name || ''} ${item.customer_wa_id || ''} ${item.text_body || ''}`.toLowerCase();
     return matchesChannel && haystack.includes(query.trim().toLowerCase());
   });
@@ -829,8 +816,9 @@ function InboxRow({ item, onClassify, onDraft, onOpen, onArchive, onRestore, onD
   const labels = { ignored: 'No requiere acción', memory: 'Contexto guardado', followup: 'Tarea creada', training: 'Enviado al entrenador', confirmed: 'Borrador confirmado', archived: 'Archivada', excluded: `No comercial${item.excludedCategory ? ` · ${item.excludedCategory}` : ''}` };
   const name = item.customer_name || item.customer_wa_id || 'Contacto sin identificar';
   const intent = inferIntent(item.text_body);
+  const channelNames = (item.channels || [item.channel]).map((key) => CHANNELS[key]?.name || 'WhatsApp').join(' + ');
   const excludeSelect = <select className="contact-exclusion" defaultValue="" aria-label={`Marcar ${name} como contacto no comercial`} onChange={(event) => { onExclude?.(item.event_id, event.target.value); event.target.value = ''; }}><option value="">No es cliente…</option><option value="Equipo interno">Equipo interno</option><option value="Familiar / personal">Familiar / personal</option><option value="Proveedor / colaborador">Proveedor / colaborador</option><option value="Otro no comercial">Otro no comercial</option></select>;
-  return <article className="inbox-row"><button type="button" className="inbox-message inbox-open" aria-label={`Abrir ficha de ${name}`} onClick={() => onOpen?.(item.event_id)}><span className="channel-dot" style={{ background: CHANNELS[item.channel]?.color || '#7d8790' }}/><div><div className="inbox-name"><strong>{name}</strong><span className={`intent-tag intent-${intent.toLowerCase().replaceAll(/[^a-záéíóúñ]+/g, '-')}`}>{intent}</span></div><span>{CHANNELS[item.channel]?.name || 'WhatsApp'} · {new Date(item.occurred_at).toLocaleString('es-AR')} · {item.messageCount || 1} {(item.messageCount || 1) === 1 ? 'mensaje' : 'mensajes'}</span><p>{item.text_body || `[${item.message_type || 'mensaje sin texto'}]`}</p></div><ChevronRight size={18}/></button>{pending ? <div className="decision-buttons"><button onClick={() => onDraft(item.event_id)} className="recommended">Revisar conversación</button><button onClick={() => onClassify(item.event_id, 'ignore')}>No requiere acción</button><button onClick={() => onClassify(item.event_id, 'memory')}>Solo contexto</button><button onClick={() => onClassify(item.event_id, 'training')}>Entrenador</button>{excludeSelect}<button onClick={() => onArchive(item.event_id)}>Archivar</button><button className="danger-link" onClick={() => onDelete(item.event_id)}>Eliminar del CRM</button></div> : <div className="processed-actions"><span className={`decision-tag ${item.classification_status}`}>{labels[item.classification_status] || item.classification_status}</span>{item.classification_status === 'excluded' ? <button onClick={() => onRestoreCommercial?.(item.event_id)}>Corregir: es cliente</button> : excludeSelect}{archived ? <button onClick={() => onRestore(item.event_id)}>Restaurar</button> : <button onClick={() => onArchive(item.event_id)}>Archivar</button>}<button className="danger-link" onClick={() => onDelete(item.event_id)}>Eliminar del CRM</button></div>}</article>;
+  return <article className="inbox-row"><button type="button" className="inbox-message inbox-open" aria-label={`Abrir ficha de ${name}`} onClick={() => onOpen?.(item.event_id)}><span className="channel-dot" style={{ background: CHANNELS[item.channel]?.color || '#7d8790' }}/><div><div className="inbox-name"><strong>{name}</strong><span className={`intent-tag intent-${intent.toLowerCase().replaceAll(/[^a-záéíóúñ]+/g, '-')}`}>{intent}</span>{item.channelConflict && <span className="channel-warning">Canal duplicado corregido</span>}</div><span>{channelNames} · {new Date(item.occurred_at).toLocaleString('es-AR')} · {item.messageCount || 1} {(item.messageCount || 1) === 1 ? 'mensaje' : 'mensajes'}</span><p>{item.text_body || `[${item.message_type || 'mensaje sin texto'}]`}</p></div><ChevronRight size={18}/></button>{pending ? <div className="decision-buttons"><button onClick={() => onDraft(item.event_id)} className="recommended">Revisar conversación</button><button onClick={() => onClassify(item.event_id, 'ignore')}>No requiere acción</button><button onClick={() => onClassify(item.event_id, 'memory')}>Solo contexto</button><button onClick={() => onClassify(item.event_id, 'training')}>Entrenador</button>{excludeSelect}<button onClick={() => onArchive(item.event_id)}>Archivar</button><button className="danger-link" onClick={() => onDelete(item.event_id)}>Eliminar del CRM</button></div> : <div className="processed-actions"><span className={`decision-tag ${item.classification_status}`}>{labels[item.classification_status] || item.classification_status}</span>{item.classification_status === 'excluded' ? <button onClick={() => onRestoreCommercial?.(item.event_id)}>Corregir: es cliente</button> : excludeSelect}{archived ? <button onClick={() => onRestore(item.event_id)}>Restaurar</button> : <button onClick={() => onArchive(item.event_id)}>Archivar</button>}<button className="danger-link" onClick={() => onDelete(item.event_id)}>Eliminar del CRM</button></div>}</article>;
 }
 
 function InboxDraftModal({ draft, setDraft, onClose, onConfirm }) {

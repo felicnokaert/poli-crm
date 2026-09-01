@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { filterDismissedEvents, isLegacyWhatsAppPreview } from './whatsapp-events.mjs';
+import { whatsappContactKey } from './whatsapp-threads.mjs';
 export { mergeWorkspaceState, workspaceStatesEqual } from './workspace.mjs';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
@@ -8,7 +9,7 @@ const WORKSPACE_KEY = 'grupo-poliplast';
 const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '' };
 
 function threadKey(event) {
-  return `${event.channel || 'unknown'}:${event.customer_wa_id || event.customer_name || event.event_id}`.toLocaleLowerCase('es-AR');
+  return whatsappContactKey(event);
 }
 
 export const onlineConfigured = Boolean(url && anonKey);

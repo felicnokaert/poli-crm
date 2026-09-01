@@ -153,7 +153,7 @@ function capture() {
         const identity = messageIdentity(node, metadata, text, direction, index);
         const eventKey = `${config.channel}|${name}|${identity}`;
         if (state.sent.has(eventKey)) continue;
-        events.push({ event_key: eventKey, channel: config.channel, direction, chat_id: chatKey(name), chat_name: name, text_body: text, occurred_at: new Date().toISOString() });
+        events.push({ event_key: eventKey, source_message_key: identity, channel: config.channel, direction, chat_id: chatKey(name), chat_name: name, text_body: text, occurred_at: new Date().toISOString() });
       }
     }
     if (!events.length) { state.sending = false; return; }

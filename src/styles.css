@@ -31,6 +31,24 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .intent-consulta-t-cnica { background: #e8f0fa; color: #315f91; }
 .intent-reclamo { background: #fdeaea; color: #a52b32; }
 .intent-postventa { background: #fff2d9; color: #855e15; }
+.opportunity-metrics { margin-bottom: 0; }
+.opportunity-list { display: grid; gap: 8px; margin-top: 14px; }
+.opportunity-row { width: 100%; display: grid; grid-template-columns: minmax(220px, 1fr) auto minmax(150px, auto); gap: 16px; align-items: center; text-align: left; border: 1px solid #e2e2e4; background: #fff; padding: 13px 14px; border-radius: 12px; }
+.opportunity-row:hover { border-color: #c9c9cc; box-shadow: 0 5px 18px #2222220d; }
+.opportunity-row strong, .opportunity-row span { display: block; }
+.opportunity-row span { color: #737378; font-size: 12px; margin-top: 3px; }
+.opportunity-row > div:last-child { text-align: right; }
+.opportunity-stage { padding: 5px 9px; border-radius: 999px; background: #efeff0; color: #555 !important; font-size: 10px !important; font-weight: 700; text-transform: uppercase; }
+.stage-ganada { background: #e6f5ec; color: #246a48 !important; }.stage-perdida { background: #fdeaea; color: #a52b32 !important; }.stage-cotización, .stage-negociación { background: #e8f0fa; color: #315f91 !important; }
+.empty-opportunities { display: grid; place-items: center; color: #858589; padding: 42px; }.empty-opportunities p { margin: 8px 0 0; }
+.opportunity-modal { width: min(1040px, calc(100vw - 34px)); }
+.opportunity-products { margin: 20px 0; border: 1px solid #e0e0e2; border-radius: 14px; padding: 16px; background: #fafafa; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; }.section-heading strong, .section-heading span { display: block; }.section-heading span { color: #777; font-size: 12px; margin-top: 3px; }
+.product-line { display: grid; grid-template-columns: minmax(280px, 2fr) 90px 100px 130px 110px 36px; gap: 8px; align-items: end; padding: 10px 0; border-top: 1px solid #e4e4e5; }.product-line label { font-size: 11px; }.product-line input, .product-line select { margin-top: 4px; }.product-line > strong { padding-bottom: 10px; text-align: right; font-size: 13px; }.product-line .icon-button { margin-bottom: 4px; }
+.product-warning { grid-column: 1 / -1; color: #855e15; background: #fff2d9; border-radius: 8px; padding: 6px 9px; font-size: 11px; }
+.product-empty { color: #777; text-align: center; padding: 18px; }
+.opportunity-total { display: flex; justify-content: flex-end; align-items: baseline; gap: 12px; border-top: 1px solid #ddd; padding-top: 12px; }.opportunity-total span { color: #777; }.opportunity-total strong { font: 800 20px 'Manrope'; }
+@media (max-width: 850px) { .opportunity-row { grid-template-columns: 1fr auto; }.opportunity-row > div:last-child { grid-column: 1 / -1; text-align: left; }.product-line { grid-template-columns: 1fr 1fr; }.product-line label:first-child, .product-warning { grid-column: 1 / -1; } }
 .decision-buttons, .processed-actions { padding-top: 6px; gap: 6px; }
 .channel-strip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 22px; }.channel-card { background: white; padding: 15px 18px; border: 1px solid #dfe5e1; border-radius: 14px; gap: 12px; }.channel-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }.channel-card strong, .channel-card span { display: block; }.channel-card div span { color: #72847f; font-size: 12px; margin-top: 3px; }.status { margin-left: auto; color: #347663; background: #e8f5ef; border-radius: 999px; padding: 5px 9px; font-size: 11px; font-weight: 700; white-space: nowrap; }.status.waiting { color: #8b671e; background: #fff3d9; }.status.offline { color: #8a5148; background: #f8e9e6; }
 .content-stack { display: grid; gap: 20px; }.metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }.metric-card, .panel { background: #fff; border: 1px solid #dfe5e1; border-radius: 16px; }.metric-card { padding: 18px; display: grid; grid-template-columns: 1fr auto; gap: 8px; }.metric-card svg { color: #b16f2e; }.metric-card span { grid-column: 1; font-size: 13px; color: #667a74; }.metric-card strong { grid-column: 1; font: 800 28px 'Manrope'; }.metric-card small { grid-column: 1 / -1; color: #82908c; }

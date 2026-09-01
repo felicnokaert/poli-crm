@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   ChevronRight,
   CircleAlert,
+  CircleDollarSign,
   ClipboardList,
   LayoutDashboard,
   MessageCircle,
@@ -28,6 +29,7 @@ import { connectWhatsApp } from './meta-onboarding';
 import { formatDate } from './utils.mjs';
 import { buildCommercialCohort, mergeCommercialCohort } from './commercial-cohort';
 import { inferIntent } from './commercial-intelligence.mjs';
+import Opportunities from './Opportunities';
 
 const CHANNELS = {
   general: {
@@ -55,7 +57,7 @@ const FAMILIES = ['Sin definir', 'Poliuretano', 'Poliurea', 'PURMAC', 'Penosil',
 const INTENTS = ['Información', 'Precio / cotización', 'Compra', 'Consulta técnica', 'Postventa', 'Reclamo', 'Recompra', 'No comercial', 'A confirmar'];
 const STORAGE_KEY = 'poliplast-sales-copilot-v1';
 
-const initialState = { clients: [], interactions: [], tasks: [], inbox: [] };
+const initialState = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [] };
 
 function addDays(days) {
   const date = new Date();
@@ -291,8 +293,8 @@ export default function App() {
       clients: data.clients.length,
       contacts: recent.length,
       effective: recent.filter((item) => item.need || item.contact).length,
-      proposals: data.clients.filter((item) => ['Propuesta', 'Negociación'].includes(item.stage)).length,
-      wins: data.clients.filter((item) => item.stage === 'Ganado').length,
+      proposals: (data.opportunities || []).filter((item) => ['Cotización', 'Negociación'].includes(item.stage)).length,
+      wins: (data.opportunities || []).filter((item) => item.stage === 'Ganada').length,
       overdue: data.tasks.filter((task) => !task.done && task.dueDate < now).length,
       dueToday: data.tasks.filter((task) => !task.done && task.dueDate === now).length,
     };
@@ -390,6 +392,22 @@ export default function App() {
   function toggleTask(id) {
     const stamp = new Date().toISOString();
     setData({ ...data, tasks: data.tasks.map((task) => (task.id === id ? { ...task, done: !task.done, updatedAt: stamp } : task)) });
+  }
+
+  function saveOpportunity(opportunity) {
+    const stamp = new Date().toISOString();
+    const client = data.clients.find((item) => item.id === opportunity.clientId);
+    const record = { ...opportunity, id: opportunity.id || crypto.randomUUID(), updatedAt: stamp, createdAt: opportunity.createdAt || stamp };
+    const exists = data.opportunities.some((item) => item.id === record.id);
+    const linkedTask = data.tasks.find((item) => !item.done && item.opportunityId === record.id);
+    const taskRecord = record.nextAction && record.nextDate ? { id: linkedTask?.id || crypto.randomUUID(), opportunityId: record.id, clientId: record.clientId, company: client?.company || '', title: record.nextAction, dueDate: record.nextDate, priority: Number(record.probability) >= 70 ? 'Alta' : 'Media', cadence: 'Oportunidad', trigger: `${record.stage} · ${record.probability || 0}% de probabilidad`, done: false, createdAt: linkedTask?.createdAt || stamp, updatedAt: stamp } : null;
+    const tasks = taskRecord ? (linkedTask ? data.tasks.map((item) => item.id === linkedTask.id ? taskRecord : item) : [...data.tasks, taskRecord]) : data.tasks;
+    setData({ ...data, opportunities: exists ? data.opportunities.map((item) => item.id === record.id ? record : item) : [...data.opportunities, record], tasks });
+  }
+
+  function deleteOpportunity(id) {
+    if (!window.confirm('¿Eliminar esta oportunidad del CRM?')) return;
+    setData({ ...data, opportunities: data.opportunities.filter((item) => item.id !== id), tasks: data.tasks.filter((item) => item.opportunityId !== id) });
   }
 
   function classifyInbox(eventId, decision) {
@@ -577,6 +595,7 @@ export default function App() {
     ['inbox', 'Bandeja WhatsApp', Inbox],
     ['tasks', 'Tareas', ClipboardList],
     ['pipeline', 'Pipeline', Target],
+    ['opportunities', 'Oportunidades', CircleDollarSign],
     ['clients', 'Clientes', Building2],
     ['replies', 'Respuestas', BookOpen],
     ['coach', 'Entrenador', GraduationCap],
@@ -640,6 +659,7 @@ export default function App() {
         {view === 'inbox' && <WhatsAppInbox items={data.inbox} onClassify={classifyInbox} onDraft={openInboxDraft} onOpen={openInboxContact} onArchive={archiveInbox} onRestore={restoreInbox} onDelete={deleteInbox} />}
         {view === 'tasks' && <Tasks items={data.tasks} onToggle={toggleTask} onOpen={setSelectedTaskId} onNew={() => setShowTaskForm(true)} />}
         {view === 'pipeline' && <Pipeline clients={data.clients} onOpenClient={setSelectedClientId} />}
+        {view === 'opportunities' && <Opportunities items={data.opportunities || []} clients={data.clients} onSave={saveOpportunity} onDelete={deleteOpportunity} />}
         {view === 'clients' && <Clients clients={filteredClients} query={query} setQuery={setQuery} onOpenClient={setSelectedClientId} />}
         {view === 'replies' && <QuickReplies />}
         {view === 'coach' && <Coach interactions={data.interactions} data={data} setData={setData} />}

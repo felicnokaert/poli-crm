@@ -15,18 +15,21 @@ test('merges concurrent workspace changes without dropping records', () => {
     interactions: [{ id: 'i1', createdAt: '2026-08-31T10:00:00Z' }],
     tasks: [{ id: 't1', done: true, updatedAt: '2026-08-31T11:00:00Z' }],
     inbox: [{ event_id: 'w1', classification_status: 'confirmed', classifiedAt: '2026-08-31T11:00:00Z' }],
+    opportunities: [{ id: 'o1', title: 'Cotización local', updatedAt: '2026-08-31T11:00:00Z' }],
   };
   const remote = {
     clients: [{ id: 'b', company: 'Remoto', updatedAt: '2026-08-31T10:30:00Z' }],
     interactions: [{ id: 'i2', createdAt: '2026-08-31T10:30:00Z' }],
     tasks: [{ id: 't1', done: false, updatedAt: '2026-08-31T10:30:00Z' }],
     inbox: [{ event_id: 'w1', classification_status: 'pending', occurred_at: '2026-08-31T09:00:00Z' }],
+    opportunities: [{ id: 'o2', title: 'Pedido remoto', updatedAt: '2026-08-31T10:30:00Z' }],
   };
   const merged = mergeWorkspaceState(local, remote);
   assert.deepEqual(merged.clients.map((item) => item.id).sort(), ['a', 'b']);
   assert.deepEqual(merged.interactions.map((item) => item.id).sort(), ['i1', 'i2']);
   assert.equal(merged.tasks[0].done, true);
   assert.equal(merged.inbox[0].classification_status, 'confirmed');
+  assert.deepEqual(merged.opportunities.map((item) => item.id).sort(), ['o1', 'o2']);
 });
 
 test('recognizes equivalent workspace states regardless of record order', () => {

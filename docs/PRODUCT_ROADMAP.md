@@ -16,20 +16,20 @@ El producto no debe ser un archivo de mensajes. Debe ser el sistema operativo co
 
 ## Ahora — operación confiable
 
-1. Excluir grupos de WhatsApp y conservar solo conversaciones individuales.
-2. Agrupar mensajes por contacto, buscar y filtrar por canal.
-3. Compactar la bandeja con densidad similar a WhatsApp y estados claros.
-4. Reconocer la consulta inicial típica de Penosil y proponer las cinco preguntas mínimas: aplicación, superficie, cantidad, ubicación y momento de compra.
-5. Aplicar identidad visual oficial de Poliplast y una navegación consistente.
-6. Mantener archivo, restauración y eliminación controlada del CRM sin borrar WhatsApp.
+1. **Completado:** excluir grupos y capturas laterales ambiguas; conservar conversaciones individuales confiables.
+2. **Completado:** agrupar mensajes por contacto, buscar y filtrar por canal.
+3. **Completado:** compactar la bandeja con densidad similar a WhatsApp y estados claros.
+4. **Completado inicial:** reconocer intención y la consulta típica de Penosil; proponer aplicación, superficie, cantidad, ubicación y momento de compra.
+5. **Completado inicial:** aplicar identidad visual oficial de Poliplast y navegación consistente.
+6. **Completado:** archivo, restauración y eliminación controlada del CRM sin borrar WhatsApp.
 
 ## Próximo — copiloto comercial
 
-1. Modelo de oportunidad: productos, cantidades, cotización, probabilidad, fecha estimada, resultado y motivo de pérdida.
-2. Línea de tiempo 360°: conversaciones, tareas, propuestas, compras y aprendizajes por cliente.
+1. **Completado inicial:** oportunidad con catálogo, cantidades, importe, probabilidad, cierre, resultado y motivo de pérdida.
+2. **En curso:** línea de tiempo 360° con conversaciones, tareas, oportunidades, compras y aprendizajes.
 3. Entrenamiento continuo: Felipe marca si la interpretación y el próximo paso fueron útiles; el sistema conserva las correcciones como reglas comerciales.
-4. Intenciones: información, precio, técnica, compra, postventa, reclamo, recompra y no comercial.
-5. Priorización diaria por urgencia, valor potencial, compromiso pendiente y riesgo de olvido.
+4. **Completado inicial:** intenciones de información, precio, técnica, compra, postventa, reclamo y recompra, siempre corregibles.
+5. **En curso:** priorización diaria por urgencia, valor potencial, compromiso pendiente y riesgo de olvido.
 6. Etiquetas y colores configurables por familia, temperatura, etapa y responsable.
 7. Asignación de responsable, permisos por usuario y registro de actividad del equipo.
 
@@ -41,6 +41,16 @@ El producto no debe ser un archivo de mensajes. Debe ser el sistema operativo co
 4. Extracción asistida de audios, imágenes, documentos y pedidos escritos informalmente.
 5. Catálogo, precios y stock validados como fuentes separadas y fechadas.
 6. Reportes de conversión por canal, familia, vendedor y motivo de pérdida.
+
+## Patrones adoptados de CRM líderes
+
+- **HubSpot:** contacto y oportunidad unidos a tareas y seguimiento.
+- **Pipedrive:** oportunidad visual, etapa, actividad siguiente y forecast.
+- **Salesforce:** cliente como fuente única de actividad, oportunidades y resultados.
+- **Zoho:** reglas y recomendaciones corregibles, no automatización opaca.
+- **Monday CRM:** flexibilidad visual y trabajo compartido sin perder contexto.
+
+No se copiará la complejidad administrativa de estos productos. Cada función nueva debe reducir trabajo manual o mejorar una decisión comercial concreta.
 
 ## Producto multiusuario
 

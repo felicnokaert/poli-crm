@@ -1,4 +1,4 @@
-const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [] };
+const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], dismissedInboxEventIds: [] };
 
 function recordStamp(record) {
   return record.updatedAt || record.classifiedAt || record.createdAt || record.occurred_at || '';
@@ -16,12 +16,15 @@ function mergeRecords(local = [], remote = [], key = 'id') {
 }
 
 export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
+  const dismissedInboxEventIds = [...new Set([...(remote.dismissedInboxEventIds || []), ...(local.dismissedInboxEventIds || [])])].sort();
+  const dismissed = new Set(dismissedInboxEventIds);
   return {
     clients: mergeRecords(local.clients, remote.clients),
     interactions: mergeRecords(local.interactions, remote.interactions).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')),
     tasks: mergeRecords(local.tasks, remote.tasks),
-    inbox: mergeRecords(local.inbox, remote.inbox, 'event_id').sort((a, b) => (b.occurred_at || '').localeCompare(a.occurred_at || '')),
+    inbox: mergeRecords(local.inbox, remote.inbox, 'event_id').filter((item) => !dismissed.has(item.event_id)).sort((a, b) => (b.occurred_at || '').localeCompare(a.occurred_at || '')),
     opportunities: mergeRecords(local.opportunities, remote.opportunities),
+    dismissedInboxEventIds,
   };
 }
 

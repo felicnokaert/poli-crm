@@ -1,12 +1,31 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mergeWorkspaceState, workspaceStatesEqual } from '../src/workspace.mjs';
-import { isTrustedWhatsAppEvent } from '../src/whatsapp-events.mjs';
+import { filterDismissedEvents, isLegacyWhatsAppPreview, isTrustedWhatsAppEvent } from '../src/whatsapp-events.mjs';
 
 test('hides legacy browser previews that could mix chat names and senders', () => {
   assert.equal(isTrustedWhatsAppEvent({ event_id: 'bridge.legacyhash' }), false);
   assert.equal(isTrustedWhatsAppEvent({ event_id: 'bridge.open.safehash' }), true);
   assert.equal(isTrustedWhatsAppEvent({ event_id: 'wamid.official' }), true);
+  assert.equal(isLegacyWhatsAppPreview({ event_id: 'bridge.legacyhash' }), true);
+  assert.equal(isLegacyWhatsAppPreview({ event_id: 'bridge.open.safehash' }), false);
+});
+
+test('keeps deleted CRM messages dismissed without hiding future messages from the same contact', () => {
+  const events = [
+    { event_id: 'old-1', customer_wa_id: '54911' },
+    { event_id: 'new-2', customer_wa_id: '54911' },
+  ];
+  assert.deepEqual(filterDismissedEvents(events, ['old-1']).map((item) => item.event_id), ['new-2']);
+});
+
+test('does not resurrect dismissed events during workspace synchronization', () => {
+  const merged = mergeWorkspaceState(
+    { inbox: [], dismissedInboxEventIds: ['deleted-1'] },
+    { inbox: [{ event_id: 'deleted-1' }, { event_id: 'future-2' }], dismissedInboxEventIds: [] },
+  );
+  assert.deepEqual(merged.inbox.map((item) => item.event_id), ['future-2']);
+  assert.deepEqual(merged.dismissedInboxEventIds, ['deleted-1']);
 });
 
 test('merges concurrent workspace changes without dropping records', () => {

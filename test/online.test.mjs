@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mergeWorkspaceState, workspaceStatesEqual } from '../src/workspace.mjs';
+import { isTrustedWhatsAppEvent } from '../src/whatsapp-events.mjs';
+
+test('hides legacy browser previews that could mix chat names and senders', () => {
+  assert.equal(isTrustedWhatsAppEvent({ event_id: 'bridge.legacyhash' }), false);
+  assert.equal(isTrustedWhatsAppEvent({ event_id: 'bridge.open.safehash' }), true);
+  assert.equal(isTrustedWhatsAppEvent({ event_id: 'wamid.official' }), true);
+});
 
 test('merges concurrent workspace changes without dropping records', () => {
   const local = {

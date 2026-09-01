@@ -27,8 +27,7 @@ async function digest(value) {
 }
 
 function messageNodes() {
-  return [...document.querySelectorAll('#main [data-id]')].filter((node) =>
-    node.querySelector('.selectable-text, [data-testid="selectable-text"]') || node.matches('.message-in, .message-out'));
+  return [...document.querySelectorAll('#main .message-in, #main .message-out')];
 }
 
 function openChatIsGroup() {
@@ -38,9 +37,13 @@ function openChatIsGroup() {
     || /información del grupo/i.test(header.innerText || '');
 }
 
-function listRowIsGroup(row) {
-  const lines = (row.innerText || '').split('\n').map((line) => line.trim()).filter(Boolean);
-  return lines.some((line) => line === ':' || line === ': ');
+function messageText(node) {
+  const copyable = node.querySelector('[data-pre-plain-text]') || node;
+  const candidates = [...copyable.querySelectorAll('.selectable-text, [data-testid="selectable-text"]')]
+    .filter((item) => !item.closest('[data-testid*="quoted"], [aria-label*="mensaje citado" i]'))
+    .map((item) => item.innerText?.trim() || item.textContent?.trim())
+    .filter(Boolean);
+  return candidates.at(-1) || '';
 }
 
 async function capture() {
@@ -51,27 +54,14 @@ async function capture() {
   const name = chatName();
   if (name && !openChatIsGroup()) {
     for (const node of messageNodes().slice(-80)) {
-      const text = [...node.querySelectorAll('.selectable-text, [data-testid="selectable-text"]')]
-        .map((item) => item.textContent).join('\n').trim();
+      const text = messageText(node);
       if (!text) continue;
       const direction = node.closest('.message-out') || node.classList.contains('message-out') ? 'outbound' : 'inbound';
       const metadata = node.querySelector('[data-pre-plain-text]')?.getAttribute('data-pre-plain-text') || '';
-      const eventId = `bridge.${await digest(`${config.channel}|${name}|${direction}|${metadata}|${text}`)}`;
+      const eventId = `bridge.open.${await digest(`${config.channel}|${name}|${direction}|${metadata}|${text}`)}`;
       if (state.sent.has(eventId)) continue;
       events.push({ event_id: eventId, channel: config.channel, direction, chat_id: chatKey(name), chat_name: name, text_body: text, occurred_at: new Date().toISOString() });
     }
-  }
-  const chatRows = [...document.querySelectorAll('[role="grid"] [role="row"]')].filter((row) =>
-    row.querySelector('[aria-label*="mensaje no leído"], [aria-label*="mensajes no leídos"]') && !listRowIsGroup(row));
-  for (const row of chatRows.slice(0, 30)) {
-    const parts = [...row.querySelectorAll('span[dir="auto"]')].map((item) => item.textContent?.trim()).filter(Boolean);
-    const rowName = parts[0] || row.querySelector('[title]')?.getAttribute('title') || '';
-    const preview = parts.at(-1) || '';
-    if (!rowName || !preview || rowName === preview) continue;
-    const direction = /(^|\s)Tú\s*:/i.test(row.innerText) ? 'outbound' : 'inbound';
-    const eventId = `bridge.${await digest(`${config.channel}|preview|${rowName}|${direction}|${preview}`)}`;
-    if (state.sent.has(eventId)) continue;
-    events.push({ event_id: eventId, channel: config.channel, direction, chat_id: chatKey(rowName), chat_name: rowName, text_body: preview, occurred_at: new Date().toISOString() });
   }
   if (!events.length) return;
   state.sending = true;

@@ -46,6 +46,15 @@ function messageText(node) {
   return candidates.at(-1) || '';
 }
 
+function messageIdentity(node, metadata, text, direction, index) {
+  // WhatsApp asigna un data-id distinto a cada mensaje, incluso cuando un cliente
+  // repite exactamente el mismo texto. Usarlo evita que una consulta recurrente
+  // quede confundida con otra que ya fue procesada o eliminada del CRM.
+  const container = node.closest('[data-id]') || node.querySelector('[data-id]');
+  const whatsappId = container?.getAttribute('data-id') || '';
+  return whatsappId || `${metadata}|${direction}|${index}|${text}`;
+}
+
 async function capture() {
   if (state.sending) return;
   const config = await chrome.storage.local.get(['channel', 'endpoint', 'token']);
@@ -53,12 +62,14 @@ async function capture() {
   const events = [];
   const name = chatName();
   if (name && !openChatIsGroup()) {
-    for (const node of messageNodes().slice(-80)) {
+    const nodes = messageNodes().slice(-80);
+    for (const [index, node] of nodes.entries()) {
       const text = messageText(node);
       if (!text) continue;
       const direction = node.closest('.message-out') || node.classList.contains('message-out') ? 'outbound' : 'inbound';
       const metadata = node.querySelector('[data-pre-plain-text]')?.getAttribute('data-pre-plain-text') || '';
-      const eventId = `bridge.open.${await digest(`${config.channel}|${name}|${direction}|${metadata}|${text}`)}`;
+      const identity = messageIdentity(node, metadata, text, direction, index);
+      const eventId = `bridge.open.${await digest(`${config.channel}|${name}|${identity}`)}`;
       if (state.sent.has(eventId)) continue;
       events.push({ event_id: eventId, channel: config.channel, direction, chat_id: chatKey(name), chat_name: name, text_body: text, occurred_at: new Date().toISOString() });
     }

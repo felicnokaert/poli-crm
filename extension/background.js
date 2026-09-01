@@ -7,7 +7,7 @@ function updateBadge(channel) {
   chrome.action.setBadgeBackgroundColor({ color });
 }
 
-chrome.storage.local.get(['channel'], ({ channel }) => updateBadge(channel));
+chrome.storage.local.get(['channel'], (stored) => updateBadge(stored?.channel));
 chrome.storage.onChanged.addListener((changes) => {
   if (changes.channel) updateBadge(changes.channel.newValue);
 });

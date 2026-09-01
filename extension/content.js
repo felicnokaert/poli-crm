@@ -7,7 +7,7 @@ globalThis.addEventListener('unhandledrejection', (event) => {
   if (/Extension context invalidated/i.test(message)) event.preventDefault();
 });
 
-const state = { sent: new Set(), initializedChats: new Set(), unreadCounts: new Map(), sending: false, stopped: false, observer: null, timer: null, interval: null, lastDiagnosticKey: '' };
+const state = { sent: new Set(), initializedChats: new Set(), unreadCounts: new Map(), pendingUnread: null, sending: false, stopped: false, observer: null, timer: null, interval: null, lastDiagnosticKey: '' };
 const RECOVERY_KEY = 'poliplast-extension-recovery';
 
 // Si esta carga proviene de una recuperación exitosa, habilitamos nuevamente
@@ -119,28 +119,40 @@ function openChatIsSelf(name) {
   return /(?:\(|\b)(tú|tu|you)\)?$/i.test(name || '');
 }
 
+function unreadRowDetails(row) {
+  const unread = [...row.querySelectorAll('[aria-label]')].find((item) => {
+    const label = item.getAttribute('aria-label') || '';
+    return /\d+\s+mensajes?\s+no\s+le[ií]dos?/i.test(label) || /\d+\s+unread\s+messages?/i.test(label);
+  });
+  if (!unread) return null;
+  const unreadLabel = unread.getAttribute('aria-label') || '';
+  const count = Number(unreadLabel.match(/\d+/)?.[0] || 1);
+  const titled = [...row.querySelectorAll('span[title]')].map((item) => item.getAttribute('title')?.trim()).filter(Boolean);
+  const name = titled[0] || row.querySelector('span[dir="auto"]')?.textContent?.trim() || '';
+  return !name || openChatIsSelf(name) ? null : { name, count };
+}
+
+function rememberUnreadClick(event) {
+  const row = event.target.closest?.('#pane-side [role="row"], #pane-side [role="listitem"]');
+  if (!row) return;
+  const details = unreadRowDetails(row);
+  if (!details) return;
+  state.unreadCounts.set(chatKey(details.name), details.count);
+  state.pendingUnread = { ...details, readyAt: Date.now() + 900 };
+  setTimeout(queueCapture, 950);
+}
+
 function unreadPreviews(channel) {
   const rows = [...document.querySelectorAll('#pane-side [role="row"], #pane-side [role="listitem"]')];
   return rows.flatMap((row) => {
     // WhatsApp también usa "No leído" en el estado de un mensaje SALIENTE.
     // Un chat con entradas pendientes expone un contador accesible que incluye
     // una cantidad (por ejemplo: "2 mensajes no leídos").
-    const unread = [...row.querySelectorAll('[aria-label]')].find((item) => {
-      const label = item.getAttribute('aria-label') || '';
-      return /\d+\s+mensajes?\s+no\s+le[ií]dos?/i.test(label) || /\d+\s+unread\s+messages?/i.test(label);
-    });
-    if (!unread) return [];
-    const unreadLabel = unread.getAttribute('aria-label') || '';
-    const unreadCount = Number(unreadLabel.match(/\d+/)?.[0] || 1);
-    const titled = [...row.querySelectorAll('span[title]')].map((item) => item.getAttribute('title')?.trim()).filter(Boolean);
-    const name = titled[0] || row.querySelector('span[dir="auto"]')?.textContent?.trim() || '';
-    if (!name || openChatIsSelf(name)) return [];
+    const details = unreadRowDetails(row);
+    if (!details) return [];
+    const { name, count: unreadCount } = details;
     state.unreadCounts.set(chatKey(name), unreadCount);
-    const candidates = [...row.querySelectorAll('span[dir="auto"]')]
-      .map((item) => item.textContent?.trim())
-      .filter((text) => text && text !== name && !/^\d{1,2}:\d{2}$/.test(text) && !/^\d+$/.test(text) && !/mensajes?\s+no\s+le[ií]dos?/i.test(text));
-    const visiblePreview = [...candidates].reverse().find((text) => !/^(tú|tu|you):/i.test(text));
-    const preview = visiblePreview || `${unreadCount} ${unreadCount === 1 ? 'mensaje no leído' : 'mensajes no leídos'} en WhatsApp`;
+    const preview = `${unreadCount} ${unreadCount === 1 ? 'mensaje no leído' : 'mensajes no leídos'} en WhatsApp`;
     const identity = `verified-unread|${chatKey(name)}|${unreadCount}|${preview}`;
     return [{ event_key: `${channel}|${identity}`, source_message_key: identity, verified_unread_preview: true, unread_count: unreadCount, channel, direction: 'inbound', chat_id: chatKey(name), chat_name: name, text_body: preview, occurred_at: new Date().toISOString() }];
   });
@@ -189,8 +201,12 @@ function capture() {
     if (name && !group && !openChatIsSelf(name)) {
       const nodes = allNodes.slice(-80);
       const currentChatKey = chatKey(name);
+      const pendingMatches = state.pendingUnread && chatKey(state.pendingUnread.name) === currentChatKey;
+      if (pendingMatches && Date.now() < state.pendingUnread.readyAt) {
+        setTimeout(queueCapture, state.pendingUnread.readyAt - Date.now() + 50);
+      } else {
       const firstVisit = !state.initializedChats.has(currentChatKey);
-      const unreadCount = firstVisit ? (state.unreadCounts.get(currentChatKey) || 0) : 0;
+      const unreadCount = firstVisit ? (pendingMatches ? state.pendingUnread.count : state.unreadCounts.get(currentChatKey) || 0) : 0;
       const parsed = nodes.map((node, index) => {
         const text = messageText(node);
         if (!text) return null;
@@ -217,6 +233,8 @@ function capture() {
       }
       state.initializedChats.add(currentChatKey);
       if (unreadCount) state.unreadCounts.delete(currentChatKey);
+      if (pendingMatches) state.pendingUnread = null;
+      }
     }
     if (!events.length) { state.sending = false; return; }
     safeStorageSet({ lastDetectedAt: new Date().toISOString(), lastDetectedChat: name, lastDetectedEvents: events.length });
@@ -238,6 +256,7 @@ function startWhatsAppCapture() {
   // cambio de pestaña o una actualización silenciosa de WhatsApp Web.
   state.interval = setInterval(queueCapture, 5000);
   window.addEventListener('focus', queueCapture);
+  document.addEventListener('click', rememberUnreadClick, true);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') queueCapture();
   });

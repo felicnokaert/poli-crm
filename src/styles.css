@@ -20,6 +20,7 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .topbar { justify-content: space-between; margin-bottom: 24px; }.topbar h1 { margin: 3px 0 0; font: 800 28px 'Manrope'; color: #12372f; }.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #69827b; }
 .top-actions { gap: 12px; }.profile-pill { width: 38px; height: 38px; border: 1px solid #d5ddd8; border-radius: 50%; display: grid; place-items: center; background: white; font-weight: 700; }.sync-pill { color: #6c7e78; background: #e7ece9; border-radius: 999px; padding: 6px 10px; font-size: 11px; font-weight: 700; }.sync-pill.ok { color: #347663; background: #e3f2eb; }
 .primary, .secondary { border: 0; border-radius: 10px; padding: 11px 16px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; }.primary { background: var(--brand-red); color: #fff; box-shadow: 0 5px 16px #ed1c2430; }.primary:hover { background: var(--brand-red-dark); }.secondary { color: #444; background: #ededee; }
+.calendar-link { text-decoration: none; }
 .inbox-section-title { display: flex; align-items: center; justify-content: space-between; padding: 12px 2px 7px; color: #626266; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
 .inbox-section-title span { min-width: 24px; text-align: center; border-radius: 999px; padding: 3px 7px; background: #f1f1f2; color: #555; }
 .inbox-row { padding: 8px 0; }

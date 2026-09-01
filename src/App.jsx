@@ -61,7 +61,6 @@ const FAMILIES = ['Sin definir', 'Poliuretano', 'Poliurea', 'PURMAC', 'Penosil',
 const INTENTS = ['Información', 'Precio / cotización', 'Compra', 'Consulta técnica', 'Postventa', 'Reclamo', 'Recompra', 'No comercial', 'A confirmar'];
 const STORAGE_KEY = 'poliplast-sales-copilot-v1';
 const PENOSIL_V016_CUTOFF = '2026-09-01T22:35:19.000Z';
-const PENOSIL_CLEANUP_KEY = 'poliplast-penosil-v016-cleanup';
 
 const initialState = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '' };
 
@@ -127,6 +126,15 @@ function today() {
 
 function longToday() {
   return new Intl.DateTimeFormat('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
+}
+
+function googleCalendarUrl(task) {
+  const start = String(task?.dueDate || today()).replaceAll('-', '');
+  const endDate = new Date(`${task?.dueDate || today()}T12:00:00`);
+  endDate.setDate(endDate.getDate() + 1);
+  const end = endDate.toISOString().slice(0, 10).replaceAll('-', '');
+  const parameters = new URLSearchParams({ action: 'TEMPLATE', text: task?.title || 'Seguimiento comercial', dates: `${start}/${end}`, details: [task?.company, task?.trigger].filter(Boolean).join(' · ') });
+  return `https://calendar.google.com/calendar/render?${parameters.toString()}`;
 }
 
 function useModalEscape(onClose) {
@@ -274,20 +282,16 @@ export default function App() {
   }, [data, remoteReady, session?.user?.id]);
 
   useEffect(() => {
-    if (!remoteReady || !session?.access_token || penosilCleanupRunning || localStorage.getItem(PENOSIL_CLEANUP_KEY)) return;
+    if (!remoteReady || !session?.access_token || penosilCleanupRunning) return;
     const obsoleteIds = data.inbox.filter((item) => item.channel === 'penosil'
       && item.phone_number_id === 'browser-bridge:penosil'
       && item.occurred_at < PENOSIL_V016_CUTOFF).map((item) => item.event_id);
-    if (!obsoleteIds.length) {
-      localStorage.setItem(PENOSIL_CLEANUP_KEY, 'clean');
-      return;
-    }
+    if (!obsoleteIds.length) return;
     setPenosilCleanupRunning(true);
     fetch('/api/inbox-delete', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ eventIds: obsoleteIds }) })
       .then((response) => {
         if (!response.ok) throw new Error('cleanup failed');
         setData((current) => ({ ...current, inbox: current.inbox.filter((item) => !obsoleteIds.includes(item.event_id)), dismissedInboxEventIds: [...new Set([...(current.dismissedInboxEventIds || []), ...obsoleteIds])] }));
-        localStorage.setItem(PENOSIL_CLEANUP_KEY, 'clean');
       }).catch(() => setPenosilCleanupRunning(false));
   }, [remoteReady, session?.access_token, data.inbox, penosilCleanupRunning]);
 
@@ -745,7 +749,7 @@ export default function App() {
           </div>
         </header>
 
-        <section className="channel-strip">
+        {view !== 'inbox' && <section className="channel-strip">
           {['general', 'penosil'].map((key) => (
             <div className="channel-card" key={key}>
               <span className="channel-dot" style={{ background: displayedChannel(key).color }} />
@@ -753,7 +757,7 @@ export default function App() {
               <span className={`status ${displayedChannel(key).statusTone}`}>{displayedChannel(key).status}</span>
             </div>
           ))}
-        </section>
+        </section>}
 
         {view === 'dashboard' && <Dashboard metrics={metrics} tasks={data.tasks} interactions={data.interactions} onToggle={toggleTask} onOpenTask={setSelectedTaskId} onOpenInteraction={setSelectedInteractionId} />}
         {view === 'conversations' && <Conversations items={data.interactions} onOpen={setSelectedInteractionId} />}
@@ -948,7 +952,7 @@ function TaskDetail({ task, client, onClose, onToggle, onSave, onOpenClient }) {
     onSave({ ...draft, title: draft.title.trim() });
     setEditing(false);
   }
-  return <div className="modal-backdrop"><section className="modal interaction-detail"><div className="modal-head"><div><span className="eyebrow">Tarea comercial</span><h2>{task.title}</h2><p>{task.company || 'Sin empresa vinculada'}</p></div><button type="button" className="icon-button" aria-label="Cerrar tarea" onClick={onClose}><X/></button></div>{editing ? <form onSubmit={submit}><div className="form-grid"><label className="span-2">Acción<input required value={draft.title || ''} onChange={(event) => setDraft({ ...draft, title: event.target.value })}/></label><label>Vencimiento<input required type="date" value={draft.dueDate || ''} onChange={(event) => setDraft({ ...draft, dueDate: event.target.value })}/></label><label>Prioridad<select value={draft.priority || 'Media'} onChange={(event) => setDraft({ ...draft, priority: event.target.value })}><option>Alta</option><option>Media</option><option>Baja</option></select></label><label className="span-2">Disparador / contexto<input value={draft.trigger || ''} onChange={(event) => setDraft({ ...draft, trigger: event.target.value })}/></label></div><div className="modal-actions"><button className="secondary" type="button" onClick={() => { setDraft(task); setEditing(false); }}>Cancelar</button><button className="primary" type="submit">Guardar cambios</button></div></form> : <><div className="conversation-detail-grid"><Fact label="Vencimiento" value={formatDate(task.dueDate)}/><Fact label="Prioridad" value={task.priority || 'Media'}/><Fact label="Cadencia" value={task.cadence || 'Seguimiento'}/><Fact label="Estado" value={task.done ? 'Completada' : 'Pendiente'}/></div>{task.trigger && <div className="detail-block"><span>Por qué aparece hoy</span><p>{task.trigger}</p></div>}<div className="modal-actions"><button className="secondary" type="button" onClick={onClose}>Cerrar</button>{client && <button className="secondary" type="button" onClick={() => onOpenClient(client.id)}>Ver cliente</button>}<button className="secondary" type="button" onClick={() => setEditing(true)}>Editar</button><button className="primary" type="button" onClick={() => onToggle(task.id)}>{task.done ? 'Marcar pendiente' : 'Completar tarea'}</button></div></>}</section></div>;
+  return <div className="modal-backdrop"><section className="modal interaction-detail"><div className="modal-head"><div><span className="eyebrow">Tarea comercial</span><h2>{task.title}</h2><p>{task.company || 'Sin empresa vinculada'}</p></div><button type="button" className="icon-button" aria-label="Cerrar tarea" onClick={onClose}><X/></button></div>{editing ? <form onSubmit={submit}><div className="form-grid"><label className="span-2">Acción<input required value={draft.title || ''} onChange={(event) => setDraft({ ...draft, title: event.target.value })}/></label><label>Vencimiento<input required type="date" value={draft.dueDate || ''} onChange={(event) => setDraft({ ...draft, dueDate: event.target.value })}/></label><label>Prioridad<select value={draft.priority || 'Media'} onChange={(event) => setDraft({ ...draft, priority: event.target.value })}><option>Alta</option><option>Media</option><option>Baja</option></select></label><label className="span-2">Disparador / contexto<input value={draft.trigger || ''} onChange={(event) => setDraft({ ...draft, trigger: event.target.value })}/></label></div><div className="modal-actions"><button className="secondary" type="button" onClick={() => { setDraft(task); setEditing(false); }}>Cancelar</button><button className="primary" type="submit">Guardar cambios</button></div></form> : <><div className="conversation-detail-grid"><Fact label="Vencimiento" value={formatDate(task.dueDate)}/><Fact label="Prioridad" value={task.priority || 'Media'}/><Fact label="Cadencia" value={task.cadence || 'Seguimiento'}/><Fact label="Estado" value={task.done ? 'Completada' : 'Pendiente'}/></div>{task.trigger && <div className="detail-block"><span>Por qué aparece hoy</span><p>{task.trigger}</p></div>}<div className="modal-actions"><button className="secondary" type="button" onClick={onClose}>Cerrar</button>{client && <button className="secondary" type="button" onClick={() => onOpenClient(client.id)}>Ver cliente</button>}<a className="secondary calendar-link" href={googleCalendarUrl(task)} target="_blank" rel="noreferrer">Abrir en Google Calendar</a><button className="secondary" type="button" onClick={() => setEditing(true)}>Editar</button><button className="primary" type="button" onClick={() => onToggle(task.id)}>{task.done ? 'Marcar pendiente' : 'Completar tarea'}</button></div></>}</section></div>;
 }
 
 function TaskForm({ form, setForm, clients, onClose, onSave }) {

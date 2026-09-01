@@ -28,6 +28,14 @@ test('does not resurrect dismissed events during workspace synchronization', () 
   assert.deepEqual(merged.dismissedInboxEventIds, ['deleted-1']);
 });
 
+test('removes obsolete unread counters while keeping real WhatsApp messages', () => {
+  const merged = mergeWorkspaceState(
+    { inbox: [{ event_id: 'counter', message_type: 'verified_unread_preview' }], dismissedInboxEventIds: [] },
+    { inbox: [{ event_id: 'real', message_type: 'text', text_body: 'Necesito precio' }], dismissedInboxEventIds: [] },
+  );
+  assert.deepEqual(merged.inbox.map((item) => item.event_id), ['real']);
+});
+
 test('keeps non-commercial WhatsApp contact rules across workspace synchronization', () => {
   const merged = mergeWorkspaceState(
     { ignoredWhatsAppContacts: [{ key: 'penosil:familia', category: 'Familiar / personal', updatedAt: '2026-09-01T10:00:00Z' }] },

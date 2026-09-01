@@ -1,4 +1,5 @@
 const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '' };
+const OBSOLETE_PREVIEW_TYPES = new Set(['unread_preview', 'unread_notice', 'verified_unread_preview']);
 
 function recordStamp(record) {
   return record.updatedAt || record.classifiedAt || record.createdAt || record.occurred_at || '';
@@ -22,7 +23,9 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
     clients: mergeRecords(local.clients, remote.clients),
     interactions: mergeRecords(local.interactions, remote.interactions).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')),
     tasks: mergeRecords(local.tasks, remote.tasks),
-    inbox: mergeRecords(local.inbox, remote.inbox, 'event_id').filter((item) => !dismissed.has(item.event_id)).sort((a, b) => (b.occurred_at || '').localeCompare(a.occurred_at || '')),
+    inbox: mergeRecords(local.inbox, remote.inbox, 'event_id')
+      .filter((item) => !dismissed.has(item.event_id) && !OBSOLETE_PREVIEW_TYPES.has(item.message_type))
+      .sort((a, b) => (b.occurred_at || '').localeCompare(a.occurred_at || '')),
     opportunities: mergeRecords(local.opportunities, remote.opportunities),
     dismissedInboxEventIds,
     ignoredWhatsAppContacts: mergeRecords(local.ignoredWhatsAppContacts, remote.ignoredWhatsAppContacts, 'key'),

@@ -60,7 +60,7 @@ const PIPELINE = ['Nuevo', 'Contactado', 'Conversación', 'Calificado', 'Propues
 const FAMILIES = ['Sin definir', 'Poliuretano', 'Poliurea', 'PURMAC', 'Penosil', 'Carrozados', 'Resinplast', 'Baldes', 'Pisos', 'EPP', 'Almohadas', 'PRFV', 'Imperpur', 'Foam Factory', 'Otra'];
 const INTENTS = ['Información', 'Precio / cotización', 'Compra', 'Consulta técnica', 'Postventa', 'Reclamo', 'Recompra', 'No comercial', 'A confirmar'];
 const STORAGE_KEY = 'poliplast-sales-copilot-v1';
-const PENOSIL_V016_CUTOFF = '2026-09-01T22:35:19.000Z';
+const PENOSIL_V017_CUTOFF = '2026-09-01T23:09:45.829Z';
 
 const initialState = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '' };
 
@@ -285,7 +285,7 @@ export default function App() {
     if (!remoteReady || !session?.access_token || penosilCleanupRunning) return;
     const obsoleteIds = data.inbox.filter((item) => item.channel === 'penosil'
       && item.phone_number_id === 'browser-bridge:penosil'
-      && item.occurred_at < PENOSIL_V016_CUTOFF).map((item) => item.event_id);
+      && item.occurred_at < PENOSIL_V017_CUTOFF).map((item) => item.event_id);
     if (!obsoleteIds.length) return;
     setPenosilCleanupRunning(true);
     fetch('/api/inbox-delete', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ eventIds: obsoleteIds }) })

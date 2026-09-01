@@ -40,7 +40,7 @@ export function groupWhatsAppThreads(items = []) {
   }
   return [...groups.entries()].map(([threadKey, rawEvents]) => {
     const deduped = dedupeWhatsAppEvents(rawEvents);
-    const previewTypes = new Set(['unread_notice', 'verified_unread_preview']);
+    const previewTypes = new Set(['unread_notice', 'verified_unread_preview', 'unread_chat_preview']);
     const hasRealMessage = deduped.some((item) => !previewTypes.has(item.message_type));
     const ordered = deduped.filter((item) => !hasRealMessage || !previewTypes.has(item.message_type)).sort((a, b) => new Date(a.occurred_at) - new Date(b.occurred_at));
     const latest = ordered.at(-1);

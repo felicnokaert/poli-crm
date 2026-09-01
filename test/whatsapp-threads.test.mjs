@@ -36,3 +36,12 @@ test('replaces unread preview with real messages after opening the chat', () => 
   assert.equal(threads[0].messageCount, 1);
   assert.equal(threads[0].text_body, 'Quiero conocer el precio');
 });
+
+test('replaces the unopened-chat text preview when the exact inbound message arrives', () => {
+  const threads = groupWhatsAppThreads([
+    { event_id: 'preview-text', channel: 'penosil', customer_wa_id: 'cliente', message_type: 'unread_chat_preview', text_body: 'Necesito precio', occurred_at: '2026-09-01T10:00:00Z', classification_status: 'pending' },
+    { event_id: 'real-text', channel: 'penosil', customer_wa_id: 'cliente', message_type: 'text', text_body: 'Necesito precio', occurred_at: '2026-09-01T10:01:00Z', classification_status: 'pending' },
+  ]);
+  assert.equal(threads[0].messageCount, 1);
+  assert.equal(threads[0].events[0].event_id, 'real-text');
+});

@@ -129,7 +129,13 @@ function unreadRowDetails(row) {
   const count = Number(unreadLabel.match(/\d+/)?.[0] || 1);
   const titled = [...row.querySelectorAll('span[title]')].map((item) => item.getAttribute('title')?.trim()).filter(Boolean);
   const name = titled[0] || row.querySelector('span[dir="auto"]')?.textContent?.trim() || '';
-  return !name || openChatIsSelf(name) ? null : { name, count };
+  const texts = [...row.querySelectorAll('span[dir="auto"]')].map((item) => item.textContent?.trim()).filter(Boolean);
+  const preview = [...texts].reverse().find((text) => text !== name
+    && !/^\d{1,2}:\d{2}$/.test(text)
+    && !/^\d+$/.test(text)
+    && !/mensajes?\s+no\s+le[ií]dos?/i.test(text)
+    && !/^(tú|tu|you):/i.test(text)) || '';
+  return !name || openChatIsSelf(name) ? null : { name, count, preview };
 }
 
 function rememberUnreadClick(event) {
@@ -150,12 +156,30 @@ function unreadPreviews(channel) {
     // una cantidad (por ejemplo: "2 mensajes no leídos").
     const details = unreadRowDetails(row);
     if (!details) return [];
-    const { name, count: unreadCount } = details;
+    const { name, count: unreadCount, preview } = details;
     state.unreadCounts.set(chatKey(name), unreadCount);
-    const preview = `${unreadCount} ${unreadCount === 1 ? 'mensaje no leído' : 'mensajes no leídos'} en WhatsApp`;
-    const identity = `verified-unread|${chatKey(name)}|${unreadCount}|${preview}`;
-    return [{ event_key: `${channel}|${identity}`, source_message_key: identity, verified_unread_preview: true, unread_count: unreadCount, channel, direction: 'inbound', chat_id: chatKey(name), chat_name: name, text_body: preview, occurred_at: new Date().toISOString() }];
+    if (!preview) return [];
+    const identity = `unread-chat|${chatKey(name)}|${unreadCount}|${preview}`;
+    return [{ event_key: `${channel}|${identity}`, source_message_key: identity, unread_chat_preview: true, unread_count: unreadCount, channel, direction: 'inbound', chat_id: chatKey(name), chat_name: name, text_body: preview, occurred_at: new Date().toISOString() }];
   });
+}
+
+function messageDirection(node, metadata = '') {
+  const container = node.closest('[data-id]') || node.querySelector('[data-id]');
+  const dataId = container?.getAttribute('data-id') || '';
+  const outgoingClass = node.matches?.('.message-out') || node.closest('.message-out') || node.querySelector?.('.message-out');
+  const incomingClass = node.matches?.('.message-in') || node.closest('.message-in') || node.querySelector?.('.message-in');
+  if (outgoingClass || /^(true|from_me)[_-]/i.test(dataId) || /\]\s*(tú|tu|you):/i.test(metadata)) return 'outbound';
+  if (incomingClass || /^(false|received)[_-]/i.test(dataId)) return 'inbound';
+  // No contaminar la memoria: si WhatsApp cambió su estructura y no hay una
+  // prueba explícita de recepción, el mensaje se omite hasta poder clasificarlo.
+  return 'unknown';
+}
+
+function senderFromMetadata(metadata = '') {
+  const match = metadata.match(/\]\s*([^:]{1,120}):\s*$/);
+  const sender = match?.[1]?.trim() || '';
+  return /^(tú|tu|you)$/i.test(sender) ? '' : sender;
 }
 
 function messageText(node) {
@@ -210,16 +234,16 @@ function capture() {
       const parsed = nodes.map((node, index) => {
         const text = messageText(node);
         if (!text) return null;
-        const dataId = (node.closest('[data-id]') || node.querySelector('[data-id]'))?.getAttribute('data-id') || '';
-        const direction = node.closest('.message-out') || node.classList.contains('message-out') || /^true[_-]/i.test(dataId) ? 'outbound' : 'inbound';
         const metadata = node.querySelector('[data-pre-plain-text]')?.getAttribute('data-pre-plain-text') || '';
+        const direction = messageDirection(node, metadata);
+        if (direction === 'unknown') return null;
         const identity = messageIdentity(node, metadata, text, direction, index);
         const eventKey = `${config.channel}|${name}|${identity}`;
-        return { text, direction, identity, eventKey };
+        return { text, direction, identity, eventKey, sender: senderFromMetadata(metadata) };
       }).filter(Boolean);
       const unreadInboundKeys = new Set(parsed.filter((item) => item.direction === 'inbound').slice(-unreadCount).map((item) => item.eventKey));
       for (const item of parsed) {
-        const { text, direction, identity, eventKey } = item;
+        const { text, direction, identity, eventKey, sender } = item;
         // La primera vez que vemos un chat establecemos una línea de base. No
         // importamos su historial ni mensajes enviados por el equipo. Si el chat
         // tenía mensajes pendientes, rescatamos únicamente esos últimos mensajes
@@ -229,7 +253,8 @@ function capture() {
           continue;
         }
         if (state.sent.has(eventKey)) continue;
-        events.push({ event_key: eventKey, source_message_key: identity, channel: config.channel, direction, chat_id: chatKey(name), chat_name: name, text_body: text, occurred_at: new Date().toISOString() });
+        const contactName = /^\+?[\d\s()-]+$/.test(name) && sender ? sender : name;
+        events.push({ event_key: eventKey, source_message_key: identity, bridge_version: '0.17.0', channel: config.channel, direction, chat_id: chatKey(name), chat_name: contactName, text_body: text, occurred_at: new Date().toISOString() });
       }
       state.initializedChats.add(currentChatKey);
       if (unreadCount) state.unreadCounts.delete(currentChatKey);

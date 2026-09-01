@@ -7,7 +7,7 @@ globalThis.addEventListener('unhandledrejection', (event) => {
   if (/Extension context invalidated/i.test(message)) event.preventDefault();
 });
 
-const state = { sent: new Set(), sending: false, stopped: false, observer: null, timer: null, interval: null };
+const state = { sent: new Set(), sending: false, stopped: false, observer: null, timer: null, interval: null, lastDiagnosticKey: '' };
 
 function extensionAvailable() {
   try { return Boolean(chrome?.runtime?.id); } catch { return false; }
@@ -70,14 +70,29 @@ function queueCapture() {
 }
 
 function chatName() {
-  return document.querySelector('#main header span[dir="auto"]')?.textContent?.trim()
-    || '';
+  const header = document.querySelector('#main header');
+  if (!header) return '';
+  const selectors = [
+    '[data-testid="conversation-info-header-chat-title"]',
+    '[data-testid="conversation-header"] span[dir="auto"]',
+    '[title][dir="auto"]',
+    'span[dir="auto"]',
+  ];
+  for (const selector of selectors) {
+    const value = header.querySelector(selector)?.textContent?.trim();
+    if (value) return value;
+  }
+  return '';
 }
 
 function chatKey(name) { return name.toLocaleLowerCase('es-AR'); }
 
 function messageNodes() {
-  return [...document.querySelectorAll('#main .message-in, #main .message-out')];
+  const direct = [...document.querySelectorAll('#main .message-in, #main .message-out')];
+  if (direct.length) return direct;
+  const containers = [...document.querySelectorAll('#main [data-pre-plain-text]')]
+    .map((item) => item.closest('.message-in, .message-out, [data-id]') || item);
+  return [...new Set(containers)];
 }
 
 function openChatIsGroup() {
@@ -89,7 +104,10 @@ function openChatIsGroup() {
 
 function messageText(node) {
   const copyable = node.querySelector('[data-pre-plain-text]') || node;
-  const candidates = [...copyable.querySelectorAll('.selectable-text, [data-testid="selectable-text"]')]
+  const candidates = [
+    ...(copyable.matches?.('.selectable-text, [data-testid="selectable-text"]') ? [copyable] : []),
+    ...copyable.querySelectorAll('.selectable-text, [data-testid="selectable-text"]'),
+  ]
     .filter((item) => !item.closest('[data-testid*="quoted"], [aria-label*="mensaje citado" i]'))
     .map((item) => item.innerText?.trim() || item.textContent?.trim())
     .filter(Boolean);
@@ -117,12 +135,20 @@ function capture() {
     if (!config.channel || !config.endpoint || !config.token) { state.sending = false; return; }
     const events = [];
     const name = chatName();
-    if (name && !openChatIsGroup()) {
-      const nodes = messageNodes().slice(-80);
+    const group = openChatIsGroup();
+    const allNodes = messageNodes();
+    const diagnosticKey = `${name}|${group}|${allNodes.length}`;
+    if (diagnosticKey !== state.lastDiagnosticKey) {
+      state.lastDiagnosticKey = diagnosticKey;
+      safeStorageSet({ lastScanAt: new Date().toISOString(), lastScanChat: name, lastScanNodes: allNodes.length, lastScanWasGroup: group });
+    }
+    if (name && !group) {
+      const nodes = allNodes.slice(-80);
       for (const [index, node] of nodes.entries()) {
         const text = messageText(node);
         if (!text) continue;
-        const direction = node.closest('.message-out') || node.classList.contains('message-out') ? 'outbound' : 'inbound';
+      const dataId = (node.closest('[data-id]') || node.querySelector('[data-id]'))?.getAttribute('data-id') || '';
+      const direction = node.closest('.message-out') || node.classList.contains('message-out') || /^true[_-]/i.test(dataId) ? 'outbound' : 'inbound';
         const metadata = node.querySelector('[data-pre-plain-text]')?.getAttribute('data-pre-plain-text') || '';
         const identity = messageIdentity(node, metadata, text, direction, index);
         const eventKey = `${config.channel}|${name}|${identity}`;

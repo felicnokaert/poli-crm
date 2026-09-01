@@ -1,15 +1,17 @@
 const channel = document.querySelector('#channel');
 const chat = document.querySelector('#chat');
 const detected = document.querySelector('#detected');
+const scanner = document.querySelector('#scanner');
 const attempt = document.querySelector('#attempt');
 const success = document.querySelector('#success');
 const queuedElement = document.querySelector('#queued');
 const status = document.querySelector('#status');
 
-chrome.storage.local.get(['channel', 'lastChatName', 'lastSuccessAt', 'lastError', 'pendingEvents', 'lastDetectedAt', 'lastDetectedChat', 'lastAttemptAt'], (data) => {
+chrome.storage.local.get(['channel', 'lastChatName', 'lastSuccessAt', 'lastError', 'pendingEvents', 'lastDetectedAt', 'lastDetectedChat', 'lastAttemptAt', 'lastScanAt', 'lastScanChat', 'lastScanNodes', 'lastScanWasGroup'], (data) => {
   channel.textContent = data.channel === 'penosil' ? 'Penosil' : data.channel === 'general' ? 'General' : 'Sin vincular';
   chat.textContent = data.lastChatName || 'Todavía ninguno';
   detected.textContent = data.lastDetectedAt ? `${data.lastDetectedChat || 'Chat'} · ${new Date(data.lastDetectedAt).toLocaleTimeString('es-AR')}` : 'Todavía ninguno';
+  scanner.textContent = data.lastScanAt ? `${data.lastScanChat || 'Sin chat'} · ${data.lastScanNodes || 0} mensajes${data.lastScanWasGroup ? ' · grupo omitido' : ''}` : 'Sin actividad';
   attempt.textContent = data.lastAttemptAt ? new Date(data.lastAttemptAt).toLocaleString('es-AR') : 'Todavía ninguno';
   success.textContent = data.lastSuccessAt ? new Date(data.lastSuccessAt).toLocaleString('es-AR') : 'Todavía ninguno';
   const queued = data.pendingEvents?.length || 0;

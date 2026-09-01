@@ -25,6 +25,12 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .inbox-row { padding: 8px 0; }
 .inbox-open { padding: 9px 10px; min-height: 64px; }
 .inbox-message p { margin: 4px 0 0; max-width: min(720px, 62vw); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.inbox-name { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
+.intent-tag { display: inline-flex; align-items: center; border-radius: 999px; padding: 2px 7px; background: #eeeeef; color: #57575b; font-size: 10px; font-weight: 700; }
+.intent-precio-cotizaci-n, .intent-compra, .intent-recompra { background: #e8f5ee; color: #246a48; }
+.intent-consulta-t-cnica { background: #e8f0fa; color: #315f91; }
+.intent-reclamo { background: #fdeaea; color: #a52b32; }
+.intent-postventa { background: #fff2d9; color: #855e15; }
 .decision-buttons, .processed-actions { padding-top: 6px; gap: 6px; }
 .channel-strip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 22px; }.channel-card { background: white; padding: 15px 18px; border: 1px solid #dfe5e1; border-radius: 14px; gap: 12px; }.channel-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }.channel-card strong, .channel-card span { display: block; }.channel-card div span { color: #72847f; font-size: 12px; margin-top: 3px; }.status { margin-left: auto; color: #347663; background: #e8f5ef; border-radius: 999px; padding: 5px 9px; font-size: 11px; font-weight: 700; white-space: nowrap; }.status.waiting { color: #8b671e; background: #fff3d9; }.status.offline { color: #8a5148; background: #f8e9e6; }
 .content-stack { display: grid; gap: 20px; }.metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }.metric-card, .panel { background: #fff; border: 1px solid #dfe5e1; border-radius: 16px; }.metric-card { padding: 18px; display: grid; grid-template-columns: 1fr auto; gap: 8px; }.metric-card svg { color: #b16f2e; }.metric-card span { grid-column: 1; font-size: 13px; color: #667a74; }.metric-card strong { grid-column: 1; font: 800 28px 'Manrope'; }.metric-card small { grid-column: 1 / -1; color: #82908c; }

@@ -8,16 +8,29 @@ globalThis.addEventListener('unhandledrejection', (event) => {
 });
 
 const state = { sent: new Set(), initializedChats: new Set(), sending: false, stopped: false, observer: null, timer: null, interval: null, lastDiagnosticKey: '' };
+const RECOVERY_KEY = 'poliplast-extension-recovery';
+
+// Si esta carga proviene de una recuperación exitosa, habilitamos nuevamente
+// una futura actualización de la extensión sin entrar en un bucle de recargas.
+try { sessionStorage.removeItem(RECOVERY_KEY); } catch { /* almacenamiento no disponible */ }
 
 function extensionAvailable() {
   try { return Boolean(chrome?.runtime?.id); } catch { return false; }
 }
 
-function stopCapture() {
+function stopCapture(recover = false) {
   state.stopped = true;
   state.observer?.disconnect();
   clearTimeout(state.timer);
   clearInterval(state.interval);
+  if (recover) {
+    try {
+      if (!sessionStorage.getItem(RECOVERY_KEY)) {
+        sessionStorage.setItem(RECOVERY_KEY, new Date().toISOString());
+        setTimeout(() => location.reload(), 700);
+      }
+    } catch { /* la actualización siguiente se recupera con recarga manual */ }
+  }
 }
 
 function swallowOperation(operation) {
@@ -66,7 +79,7 @@ startWhatsAppCapture();
 
 function queueCapture() {
   if (state.stopped) return;
-  try { capture(); } catch { if (!extensionAvailable()) stopCapture(); }
+  try { capture(); } catch { if (!extensionAvailable()) stopCapture(true); }
 }
 
 function chatName() {
@@ -147,10 +160,10 @@ function messageIdentity(node, metadata, text, direction, index) {
 
 function capture() {
   if (state.sending || state.stopped) return;
-  if (!extensionAvailable()) return stopCapture();
+  if (!extensionAvailable()) return stopCapture(true);
   state.sending = true;
   safeStorageGet(['channel', 'endpoint', 'token'], (config) => {
-    if (!config) { state.sending = false; return stopCapture(); }
+    if (!config) { state.sending = false; return stopCapture(!extensionAvailable()); }
     if (!config.channel || !config.endpoint || !config.token) { state.sending = false; return; }
     const events = unreadPreviews(config.channel).filter((event) => !state.sent.has(event.event_key));
     const name = chatName();

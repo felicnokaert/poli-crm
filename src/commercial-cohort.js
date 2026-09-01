@@ -47,7 +47,7 @@ export function buildCommercialCohort() {
     id: stableId('base', company), company, contact, family, temperature: priority === 'Alta' ? 'Caliente' : 'Tibio',
     stage: 'Nuevo', clientType: 'A confirmar', industry: 'Desconocida', fit: 'A confirmar', urgency: 'A confirmar',
     potential: priority === 'Alta' ? 'Hipótesis alta' : 'Hipótesis media', owner, productPotential: product,
-    source: SOURCE, lastContact: '', createdAt: stamp, updatedAt: stamp,
+    source: SOURCE, pipelineActive: true, lastContact: '', createdAt: stamp, updatedAt: stamp,
   }));
   const tasks = clients.map((client) => ({
     id: stableId('tarea-inicial', client.company), clientId: client.id, company: client.company,

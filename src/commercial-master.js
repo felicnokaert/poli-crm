@@ -1,4 +1,4 @@
-export const COMMERCIAL_MASTER_VERSION = '2026-09-01-v2';
+export const COMMERCIAL_MASTER_VERSION = '2026-09-01-v3';
 
 function normalize(value) {
   return String(value || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ')
@@ -24,7 +24,7 @@ export function mergeCommercialMaster(state, sourceClients = []) {
   for (const source of sourceClients) {
     const index = byCuit.get(normalize(source.cuit)) ?? byCompany.get(normalize(source.company));
     if (index === undefined) {
-      clients.push(source);
+      clients.push({ ...source, pipelineActive: source.pipelineActive ?? false });
       const nextIndex = clients.length - 1;
       byCompany.set(normalize(source.company), nextIndex);
       if (source.cuit) byCuit.set(normalize(source.cuit), nextIndex);
@@ -33,7 +33,7 @@ export function mergeCommercialMaster(state, sourceClients = []) {
     }
 
     const existing = clients[index];
-    const merged = { ...source, ...existing };
+    const merged = { pipelineActive: false, ...source, ...existing };
     for (const [key, value] of Object.entries(source)) {
       if (!meaningful(existing[key]) || ['Sin definir', 'A confirmar', 'Desconocido', 'Desconocida'].includes(existing[key])) merged[key] = value;
     }

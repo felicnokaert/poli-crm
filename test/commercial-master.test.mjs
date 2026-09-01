@@ -8,6 +8,7 @@ test('commercial master contains the reconciled editable universe', () => {
   assert.equal(result.state.clients.length, 982);
   assert.equal(COMMERCIAL_MASTER_CLIENTS.length, 984);
   assert.ok(result.state.clients.filter((item) => item.sourceType === 'Cliente histórico').length > 700);
+  assert.ok(result.state.clients.every((item) => item.pipelineActive === false));
 });
 
 test('master import is idempotent and preserves user edits', () => {

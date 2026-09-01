@@ -79,5 +79,13 @@ function startWhatsAppCapture() {
     state.timer = setTimeout(capture, 500);
   });
   state.observer.observe(document.documentElement, { childList: true, subtree: true });
+  // WhatsApp puede actualizar contadores o mensajes sin una mutación útil en #main.
+  // La revisión periódica hace que el puente se recupere solo después de suspensión,
+  // cambio de pestaña o una actualización silenciosa de WhatsApp Web.
+  setInterval(capture, 5000);
+  window.addEventListener('focus', capture);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') capture();
+  });
   capture();
 }

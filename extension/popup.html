@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { width: 290px; margin: 0; padding: 16px; font: 13px/1.45 system-ui; color: #18352f; background: #f7f8f6; }
+    h1 { margin: 0 0 12px; font-size: 16px; }
+    .card { padding: 12px; border: 1px solid #dce5e1; border-radius: 10px; background: #fff; }
+    .row { display: flex; justify-content: space-between; gap: 10px; margin: 6px 0; }
+    .value { font-weight: 700; text-align: right; }
+    .ok { color: #08765f; } .warn { color: #a45d16; }
+    p { margin: 12px 0 0; color: #63726d; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Memoria WhatsApp</h1>
+  <div class="card">
+    <div class="row"><span>Canal</span><span id="channel" class="value">—</span></div>
+    <div class="row"><span>Último chat</span><span id="chat" class="value">—</span></div>
+    <div class="row"><span>Último envío</span><span id="success" class="value">—</span></div>
+    <div class="row"><span>Estado</span><span id="status" class="value">—</span></div>
+  </div>
+  <p>El conector registra el chat individual abierto. No lee grupos ni responde mensajes.</p>
+  <script src="popup.js"></script>
+</body>
+</html>

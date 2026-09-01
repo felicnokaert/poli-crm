@@ -1,7 +1,7 @@
 param(
   [string]$HistoricalWorkbook = "C:\Users\felip\OneDrive\Desktop\Poliplast\PUR_Comercial_Mejorado.xlsx",
   [string]$ProspectWorkbook = "C:\Users\felip\OneDrive\Desktop\Poliplast\outputs\comercial_20260827\BASE_COMERCIAL_IA_GRUPO_POLIPLAST.xlsx",
-  [string]$OutputFile = "C:\Users\felip\OneDrive\Desktop\Poliplast\poliplast-sales-copilot\src\commercial-master-data.mjs"
+  [string]$OutputFile = "C:\Users\felip\OneDrive\Desktop\Poliplast\poliplast-sales-copilot\lib\commercial-master-data.mjs"
 )
 
 $ErrorActionPreference = 'Stop'

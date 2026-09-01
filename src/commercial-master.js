@@ -1,5 +1,3 @@
-import { COMMERCIAL_MASTER_CLIENTS } from './commercial-master-data.mjs';
-
 export const COMMERCIAL_MASTER_VERSION = '2026-09-01-v2';
 
 function normalize(value) {
@@ -12,7 +10,7 @@ function meaningful(value) {
   return value !== undefined && value !== null && String(value).trim() !== '';
 }
 
-export function mergeCommercialMaster(state) {
+export function mergeCommercialMaster(state, sourceClients = []) {
   if (state.commercialMasterVersion === COMMERCIAL_MASTER_VERSION) {
     return { state, addedClients: 0, enrichedClients: 0, skipped: true };
   }
@@ -23,7 +21,7 @@ export function mergeCommercialMaster(state) {
   let addedClients = 0;
   let enrichedClients = 0;
 
-  for (const source of COMMERCIAL_MASTER_CLIENTS) {
+  for (const source of sourceClients) {
     const index = byCuit.get(normalize(source.cuit)) ?? byCompany.get(normalize(source.company));
     if (index === undefined) {
       clients.push(source);
@@ -52,12 +50,10 @@ export function mergeCommercialMaster(state) {
   };
 }
 
-export function commercialMasterStats() {
-  const total = mergeCommercialMaster({ clients: [] }).state.clients.length;
-  return {
-    total,
-    sourceRows: COMMERCIAL_MASTER_CLIENTS.length,
-    historical: COMMERCIAL_MASTER_CLIENTS.filter((item) => item.sourceType === 'Cliente histórico').length,
-    active: COMMERCIAL_MASTER_CLIENTS.filter((item) => item.sourceType !== 'Cliente histórico').length,
-  };
+export async function fetchCommercialMaster(session) {
+  if (!session?.access_token) throw new Error('Acceso corporativo requerido para cargar la cartera.');
+  const response = await fetch('/api/commercial-master', { headers: { Authorization: `Bearer ${session.access_token}` } });
+  const payload = await response.json();
+  if (!response.ok || !Array.isArray(payload.clients)) throw new Error(payload.error || 'No se pudo cargar la cartera comercial.');
+  return payload.clients;
 }

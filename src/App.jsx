@@ -30,7 +30,7 @@ import { formatDate } from './utils.mjs';
 import { buildCommercialCohort, mergeCommercialCohort } from './commercial-cohort';
 import { inferIntent } from './commercial-intelligence.mjs';
 import Opportunities from './Opportunities';
-import { commercialMasterStats, mergeCommercialMaster } from './commercial-master';
+import { fetchCommercialMaster, mergeCommercialMaster } from './commercial-master';
 import { COMMERCIAL_PLAN } from './commercial-plan';
 
 const CHANNELS = {
@@ -284,8 +284,13 @@ export default function App() {
 
   useEffect(() => {
     if (!remoteReady) return;
-    setData((current) => mergeCommercialMaster(mergeCommercialCohort(current).state).state);
-  }, [remoteReady]);
+    let active = true;
+    setData((current) => mergeCommercialCohort(current).state);
+    fetchCommercialMaster(session).then((clients) => {
+      if (active) setData((current) => mergeCommercialMaster(current, clients).state);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [remoteReady, session?.access_token]);
 
   const metrics = useMemo(() => {
     const now = today();
@@ -1057,12 +1062,20 @@ function DataSettings({ data, setData, session, syncStatus }) {
     setMessage(`Cohorte comercial verificada: ${result.addedClients} clientes y ${result.addedTasks} tareas nuevas. ${cohort.clients.length - result.addedClients} cuentas existentes fueron preservadas sin cambios.`);
   }
 
-  function importCommercialMaster() {
-    const result = mergeCommercialMaster(data);
-    setData(result.state);
-    setMessage(result.skipped
-      ? 'La cartera maestra ya está incorporada. Tus ediciones quedan preservadas.'
-      : `Cartera consolidada: ${result.addedClients} fichas nuevas y ${result.enrichedClients} fichas enriquecidas, sin crear tareas masivas.`);
+  async function importCommercialMaster() {
+    setConnecting(true);
+    try {
+      const clients = await fetchCommercialMaster(session);
+      const result = mergeCommercialMaster(data, clients);
+      setData(result.state);
+      setMessage(result.skipped
+        ? 'La cartera maestra ya está incorporada. Tus ediciones quedan preservadas.'
+        : `Cartera consolidada: ${result.addedClients} fichas nuevas y ${result.enrichedClients} fichas enriquecidas, sin crear tareas masivas.`);
+    } catch (error) {
+      setMessage(error.message || 'No se pudo cargar la cartera protegida.');
+    } finally {
+      setConnecting(false);
+    }
   }
 
   function exportBackup() {
@@ -1110,8 +1123,7 @@ function DataSettings({ data, setData, session, syncStatus }) {
     }
   }
 
-  const masterStats = commercialMasterStats();
-  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Memoria automática</span><h2>Vincular esta computadora</h2></div><Link2 size={22}/></div><p>Instalá el conector una sola vez y elegí qué WhatsApp Business está abierto en este perfil. Después funciona solo al usar WhatsApp Web: el CRM agrupa la conversación por persona o empresa y nunca responde por vos.</p><div className="modal-actions"><button className="secondary" disabled={connecting} onClick={() => pairBrowser('general')}>Vincular a WhatsApp General</button><button className="primary" disabled={connecting} onClick={() => pairBrowser('penosil')}>{connecting ? 'Vinculando…' : 'Vincular a WhatsApp Penosil'}</button></div>{message && <div className="system-message">{message}</div>}<details><summary>Configuración avanzada de Meta</summary><p>El canal General también recibe eventos por la integración oficial. Usá estas opciones solo para mantenimiento técnico.</p><div className="modal-actions"><button className="secondary" disabled={connecting} onClick={activateOfficialChannels}>Activar recepción oficial</button><button className="secondary" disabled={connecting} onClick={startWhatsAppConnection}>Conectar otro número con Meta</button></div></details></section><section className="panel"><div className="panel-head"><div><span className="eyebrow">Base de trabajo</span><h2>Cartera comercial unificada</h2></div><Target size={22}/></div><p>{masterStats.total} fichas deduplicadas provenientes de clientes históricos, relevamientos y empresas objetivo. Se incorporan como datos editables, sin crear tareas ni oportunidades masivas.</p><div className="modal-actions"><button className="secondary" type="button" onClick={importCommercialMaster}>Verificar cartera maestra</button><button className="secondary" type="button" onClick={importCommercialCohort}>Verificar cohorte prioritaria</button></div></section><section className="panel"><div className="panel-head"><div><span className="eyebrow">Portabilidad</span><h2>Datos y respaldos</h2></div><Database size={22}/></div><div className="data-cards"><article><Download size={24}/><h3>Exportar respaldo</h3><p>Descarga clientes, conversaciones, tareas, evaluaciones y bandeja en un archivo JSON versionado.</p><button className="primary" onClick={exportBackup}>Descargar respaldo</button></article><article><Upload size={24}/><h3>Importar respaldo</h3><p>Restaura un respaldo del copiloto en este navegador. Reemplaza el estado actual.</p><label className="secondary upload-button">Elegir archivo<input type="file" accept="application/json,.json" onChange={importBackup}/></label></article><article><Inbox size={24}/><h3>Importar eventos WhatsApp</h3><p>Prueba la bandeja con eventos normalizados. Deduplica por ID y omite estados técnicos.</p><label className="secondary upload-button">Elegir eventos<input type="file" accept="application/json,.json" onChange={importWebhookEvents}/></label></article></div></section><section className="panel"><div className="panel-head"><div><span className="eyebrow">{onlineConfigured ? 'Estado online' : 'Estado local'}</span><h2>Contenido guardado</h2></div></div><div className="storage-summary"><div><strong>{data.clients.length}</strong><span>Clientes</span></div><div><strong>{data.interactions.length}</strong><span>Conversaciones</span></div><div><strong>{data.tasks.length}</strong><span>Tareas</span></div><div><strong>{data.inbox.filter((item) => item.classification_status === 'pending').length}</strong><span>Conversaciones WhatsApp pendientes</span></div></div><div className="quality-note"><CircleAlert size={19}/><p>{onlineConfigured ? `${syncStatus}. Usuario: ${session?.user?.email || 'sin identificar'}. Los cambios se guardan online y siguen teniendo respaldo local.` : 'Modo local de prueba. Exportá un respaldo al terminar cada jornada; al configurar la base, el mismo CRM activará acceso y sincronización online.'}</p></div>{onlineConfigured && <button className="secondary signout" onClick={() => supabase.auth.signOut()}>Cerrar sesión</button>}</section></div>;
+  return <div className="content-stack"><section className="panel"><div className="panel-head"><div><span className="eyebrow">Memoria automática</span><h2>Vincular esta computadora</h2></div><Link2 size={22}/></div><p>Instalá el conector una sola vez y elegí qué WhatsApp Business está abierto en este perfil. Después funciona solo al usar WhatsApp Web: el CRM agrupa la conversación por persona o empresa y nunca responde por vos.</p><div className="modal-actions"><button className="secondary" disabled={connecting} onClick={() => pairBrowser('general')}>Vincular a WhatsApp General</button><button className="primary" disabled={connecting} onClick={() => pairBrowser('penosil')}>{connecting ? 'Vinculando…' : 'Vincular a WhatsApp Penosil'}</button></div>{message && <div className="system-message">{message}</div>}<details><summary>Configuración avanzada de Meta</summary><p>El canal General también recibe eventos por la integración oficial. Usá estas opciones solo para mantenimiento técnico.</p><div className="modal-actions"><button className="secondary" disabled={connecting} onClick={activateOfficialChannels}>Activar recepción oficial</button><button className="secondary" disabled={connecting} onClick={startWhatsAppConnection}>Conectar otro número con Meta</button></div></details></section><section className="panel"><div className="panel-head"><div><span className="eyebrow">Base de trabajo protegida</span><h2>Cartera comercial unificada</h2></div><Target size={22}/></div><p>Clientes históricos, relevamientos y empresas objetivo deduplicados. La cartera solo se descarga después de validar un usuario corporativo y se incorpora como fichas editables, sin crear tareas masivas.</p><div className="modal-actions"><button className="secondary" disabled={connecting} type="button" onClick={importCommercialMaster}>Verificar cartera maestra</button><button className="secondary" type="button" onClick={importCommercialCohort}>Verificar cohorte prioritaria</button></div></section><section className="panel"><div className="panel-head"><div><span className="eyebrow">Portabilidad</span><h2>Datos y respaldos</h2></div><Database size={22}/></div><div className="data-cards"><article><Download size={24}/><h3>Exportar respaldo</h3><p>Descarga clientes, conversaciones, tareas, evaluaciones y bandeja en un archivo JSON versionado.</p><button className="primary" onClick={exportBackup}>Descargar respaldo</button></article><article><Upload size={24}/><h3>Importar respaldo</h3><p>Restaura un respaldo del copiloto en este navegador. Reemplaza el estado actual.</p><label className="secondary upload-button">Elegir archivo<input type="file" accept="application/json,.json" onChange={importBackup}/></label></article><article><Inbox size={24}/><h3>Importar eventos WhatsApp</h3><p>Prueba la bandeja con eventos normalizados. Deduplica por ID y omite estados técnicos.</p><label className="secondary upload-button">Elegir eventos<input type="file" accept="application/json,.json" onChange={importWebhookEvents}/></label></article></div></section><section className="panel"><div className="panel-head"><div><span className="eyebrow">{onlineConfigured ? 'Estado online' : 'Estado local'}</span><h2>Contenido guardado</h2></div></div><div className="storage-summary"><div><strong>{data.clients.length}</strong><span>Clientes</span></div><div><strong>{data.interactions.length}</strong><span>Conversaciones</span></div><div><strong>{data.tasks.length}</strong><span>Tareas</span></div><div><strong>{data.inbox.filter((item) => item.classification_status === 'pending').length}</strong><span>Conversaciones WhatsApp pendientes</span></div></div><div className="quality-note"><CircleAlert size={19}/><p>{onlineConfigured ? `${syncStatus}. Usuario: ${session?.user?.email || 'sin identificar'}. Los cambios se guardan online y siguen teniendo respaldo local.` : 'Modo local de prueba. Exportá un respaldo al terminar cada jornada; al configurar la base, el mismo CRM activará acceso y sincronización online.'}</p></div>{onlineConfigured && <button className="secondary signout" onClick={() => supabase.auth.signOut()}>Cerrar sesión</button>}</section></div>;
 }
 
 function LoginScreen() {

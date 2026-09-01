@@ -11,36 +11,45 @@ function stopCapture() {
   clearInterval(state.interval);
 }
 
+function swallowOperation(operation) {
+  try {
+    if (operation && typeof operation.catch === 'function') operation.catch(() => {});
+  } catch { /* contexto anterior */ }
+}
+
 function safeStorageGet(keys, done) {
   if (!extensionAvailable()) return done(null);
   try {
-    chrome.storage.local.get(keys, (result) => {
+    const operation = chrome.storage.local.get(keys, (result) => {
       try {
         if (chrome.runtime.lastError) return done(null);
         return done(result || null);
       } catch { return done(null); }
     });
+    swallowOperation(operation);
   } catch { done(null); }
 }
 
 function safeStorageSet(values) {
   if (!extensionAvailable()) return;
   try {
-    chrome.storage.local.set(values, () => {
+    const operation = chrome.storage.local.set(values, () => {
       try { void chrome.runtime.lastError; } catch { /* contexto anterior */ }
     });
+    swallowOperation(operation);
   } catch { /* contexto anterior */ }
 }
 
 function safeSendEvents(events, done) {
   if (!extensionAvailable()) return done(null);
   try {
-    chrome.runtime.sendMessage({ type: 'POLIPLAST_BRIDGE_EVENTS', events }, (result) => {
+    const operation = chrome.runtime.sendMessage({ type: 'POLIPLAST_BRIDGE_EVENTS', events }, (result) => {
       try {
         if (chrome.runtime.lastError) return done(null);
         return done(result || null);
       } catch { return done(null); }
     });
+    swallowOperation(operation);
   } catch { done(null); }
 }
 
@@ -58,11 +67,12 @@ if (location.hostname === 'poli-crm.vercel.app') {
 function configureBridge({ channel, endpoint, token }) {
   if (!extensionAvailable()) return;
   try {
-    chrome.storage.local.set({ channel, endpoint, token, pairedAt: new Date().toISOString() }, () => {
+    const operation = chrome.storage.local.set({ channel, endpoint, token, pairedAt: new Date().toISOString() }, () => {
       try {
         if (!chrome.runtime.lastError && extensionAvailable()) window.postMessage({ type: 'POLIPLAST_BRIDGE_PAIRED', channel }, location.origin);
       } catch { /* contexto anterior */ }
     });
+    swallowOperation(operation);
   } catch {
     // Una actualización de la extensión invalida el script anterior. La página
     // recargada instalará el contexto nuevo sin dejar un error persistente.

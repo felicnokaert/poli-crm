@@ -16,12 +16,28 @@ if (location.hostname === 'poli-crm.vercel.app') {
     if (event.source !== window || event.data?.type !== 'POLIPLAST_BRIDGE_CONFIG') return;
     const { channel, endpoint, token } = event.data;
     if (!['general', 'penosil'].includes(channel) || !endpoint || !token) return;
-    chrome.storage.local.set({ channel, endpoint, token, pairedAt: new Date().toISOString() }, () => {
-      window.postMessage({ type: 'POLIPLAST_BRIDGE_PAIRED', channel }, location.origin);
-    });
+    configureBridge({ channel, endpoint, token });
   });
 } else {
   startWhatsAppCapture();
+}
+
+async function configureBridge({ channel, endpoint, token }) {
+  if (!extensionAvailable()) return;
+  try {
+    await chrome.storage.local.set({ channel, endpoint, token, pairedAt: new Date().toISOString() });
+    if (extensionAvailable()) window.postMessage({ type: 'POLIPLAST_BRIDGE_PAIRED', channel }, location.origin);
+  } catch {
+    // Una actualización de la extensión invalida el script anterior. La página
+    // recargada instalará el contexto nuevo sin dejar un error persistente.
+  }
+}
+
+function queueCapture() {
+  if (state.stopped) return;
+  Promise.resolve().then(capture).catch(() => {
+    if (!extensionAvailable()) stopCapture();
+  });
 }
 
 function chatName() {
@@ -109,16 +125,16 @@ async function capture() {
 function startWhatsAppCapture() {
   state.observer = new MutationObserver(() => {
     clearTimeout(state.timer);
-    state.timer = setTimeout(capture, 500);
+    state.timer = setTimeout(queueCapture, 500);
   });
   state.observer.observe(document.documentElement, { childList: true, subtree: true });
   // WhatsApp puede actualizar contadores o mensajes sin una mutación útil en #main.
   // La revisión periódica hace que el puente se recupere solo después de suspensión,
   // cambio de pestaña o una actualización silenciosa de WhatsApp Web.
-  state.interval = setInterval(capture, 5000);
-  window.addEventListener('focus', capture);
+  state.interval = setInterval(queueCapture, 5000);
+  window.addEventListener('focus', queueCapture);
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') capture();
+    if (document.visibilityState === 'visible') queueCapture();
   });
-  capture();
+  queueCapture();
 }

@@ -7,7 +7,7 @@ globalThis.addEventListener('unhandledrejection', (event) => {
   if (/Extension context invalidated/i.test(message)) event.preventDefault();
 });
 
-const state = { sent: new Set(), sending: false, stopped: false, observer: null, timer: null, interval: null, lastDiagnosticKey: '' };
+const state = { sent: new Set(), initializedChats: new Set(), sending: false, stopped: false, observer: null, timer: null, interval: null, lastDiagnosticKey: '' };
 
 function extensionAvailable() {
   try { return Boolean(chrome?.runtime?.id); } catch { return false; }
@@ -102,6 +102,25 @@ function openChatIsGroup() {
     || /información del grupo/i.test(header.innerText || '');
 }
 
+function openChatIsSelf(name) {
+  return /(?:\(|\b)(tú|tu|you)\)?$/i.test(name || '');
+}
+
+function unreadPreviews(channel) {
+  const rows = [...document.querySelectorAll('#pane-side [role="row"], #pane-side [role="listitem"]')];
+  return rows.flatMap((row) => {
+    const unread = row.querySelector('[aria-label*="no leído" i], [aria-label*="no leídos" i], [aria-label*="unread" i]');
+    if (!unread) return [];
+    const titled = [...row.querySelectorAll('span[title]')].map((item) => item.getAttribute('title')?.trim()).filter(Boolean);
+    const name = titled[0] || row.querySelector('span[dir="auto"]')?.textContent?.trim() || '';
+    if (!name || openChatIsSelf(name)) return [];
+    const texts = [...row.querySelectorAll('span[dir="auto"]')].map((item) => item.textContent?.trim()).filter(Boolean);
+    const preview = [...texts].reverse().find((text) => text !== name && !/^\d{1,2}:\d{2}$/.test(text)) || '[mensaje no leído]';
+    const identity = `unread-preview|${chatKey(name)}|${preview}`;
+    return [{ event_key: `${channel}|${identity}`, source_message_key: identity, preview_only: true, channel, direction: 'inbound', chat_id: chatKey(name), chat_name: name, text_body: preview, occurred_at: new Date().toISOString() }];
+  });
+}
+
 function messageText(node) {
   const copyable = node.querySelector('[data-pre-plain-text]') || node;
   const candidates = [
@@ -133,7 +152,7 @@ function capture() {
   safeStorageGet(['channel', 'endpoint', 'token'], (config) => {
     if (!config) { state.sending = false; return stopCapture(); }
     if (!config.channel || !config.endpoint || !config.token) { state.sending = false; return; }
-    const events = [];
+    const events = unreadPreviews(config.channel).filter((event) => !state.sent.has(event.event_key));
     const name = chatName();
     const group = openChatIsGroup();
     const allNodes = messageNodes();
@@ -142,19 +161,27 @@ function capture() {
       state.lastDiagnosticKey = diagnosticKey;
       safeStorageSet({ lastScanAt: new Date().toISOString(), lastScanChat: name, lastScanNodes: allNodes.length, lastScanWasGroup: group });
     }
-    if (name && !group) {
+    if (name && !group && !openChatIsSelf(name)) {
       const nodes = allNodes.slice(-80);
+      const firstVisit = !state.initializedChats.has(chatKey(name));
       for (const [index, node] of nodes.entries()) {
         const text = messageText(node);
         if (!text) continue;
-      const dataId = (node.closest('[data-id]') || node.querySelector('[data-id]'))?.getAttribute('data-id') || '';
-      const direction = node.closest('.message-out') || node.classList.contains('message-out') || /^true[_-]/i.test(dataId) ? 'outbound' : 'inbound';
+        const dataId = (node.closest('[data-id]') || node.querySelector('[data-id]'))?.getAttribute('data-id') || '';
+        const direction = node.closest('.message-out') || node.classList.contains('message-out') || /^true[_-]/i.test(dataId) ? 'outbound' : 'inbound';
         const metadata = node.querySelector('[data-pre-plain-text]')?.getAttribute('data-pre-plain-text') || '';
         const identity = messageIdentity(node, metadata, text, direction, index);
         const eventKey = `${config.channel}|${name}|${identity}`;
+        // La primera vez que vemos un chat establecemos una línea de base. No
+        // importamos su historial ni mensajes enviados por el equipo.
+        if (firstVisit || direction !== 'inbound') {
+          state.sent.add(eventKey);
+          continue;
+        }
         if (state.sent.has(eventKey)) continue;
         events.push({ event_key: eventKey, source_message_key: identity, channel: config.channel, direction, chat_id: chatKey(name), chat_name: name, text_body: text, occurred_at: new Date().toISOString() });
       }
+      state.initializedChats.add(chatKey(name));
     }
     if (!events.length) { state.sending = false; return; }
     safeStorageSet({ lastDetectedAt: new Date().toISOString(), lastDetectedChat: name, lastDetectedEvents: events.length });

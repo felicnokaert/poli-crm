@@ -22,7 +22,9 @@ export const supabase = onlineConfigured
 export async function loadOnlineState() {
   const [{ data: stateRow, error: stateError }, { data: events, error: eventsError }] = await Promise.all([
     supabase.from('workspace_states').select('data,updated_at,updated_by_email').eq('workspace_key', WORKSPACE_KEY).maybeSingle(),
-    supabase.from('whatsapp_events').select('*').neq('direction', 'status').order('occurred_at', { ascending: false }).limit(500),
+    // La bandeja comercial nace de consultas entrantes. Los mensajes enviados
+    // por el equipo no crean alertas ni conversaciones por sí solos.
+    supabase.from('whatsapp_events').select('*').eq('direction', 'inbound').order('occurred_at', { ascending: false }).limit(500),
   ]);
   if (stateError) throw stateError;
   if (eventsError) throw eventsError;

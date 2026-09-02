@@ -250,7 +250,7 @@ function capture() {
         }
         if (state.sent.has(eventKey)) continue;
         const contactName = /^\+?[\d\s()-]+$/.test(name) && sender ? sender : name;
-        events.push({ event_key: eventKey, source_message_key: identity, bridge_version: '0.18.0', channel: config.channel, direction, chat_id: chatKey(name), chat_name: contactName, text_body: text, occurred_at: new Date().toISOString() });
+        events.push({ event_key: eventKey, source_message_key: identity, bridge_version: '0.18.1', channel: config.channel, direction, chat_id: chatKey(name), chat_name: contactName, text_body: text, occurred_at: new Date().toISOString() });
       }
       state.initializedChats.add(currentChatKey);
       if (unreadCount) state.unreadCounts.delete(currentChatKey);

@@ -19,3 +19,11 @@ test('does not treat an outgoing preview or unread counter as a customer message
     titles: ['Felipe Poliplast', 'Tú: seguimiento enviado'],
   }), '');
 });
+
+test('represents an unread Penosil voice note without inventing a transcription', () => {
+  assert.equal(previewFromValues({
+    name: '+54 9 3518 00-0669',
+    texts: ['+54 9 3518 00-0669', '0:17'],
+    titles: ['+54 9 3518 00-0669', '‪0:17‬'],
+  }), '[audio · 0:17]');
+});

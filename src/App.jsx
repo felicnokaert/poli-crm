@@ -776,7 +776,7 @@ export default function App() {
         {view === 'plan' && <CommercialPlan checks={data.planChecks || {}} onToggle={(id) => setData((current) => ({ ...current, planChecks: { ...(current.planChecks || {}), [id]: !current.planChecks?.[id] } }))} clients={data.clients} />}
         {view === 'replies' && <QuickReplies />}
         {view === 'coach' && <Coach interactions={data.interactions} data={data} setData={setData} />}
-        {view === 'settings' && <TestCleanupPanel data={data} setData={setData} />}
+        {view === 'settings' && <TestCleanupPanel data={data} setData={setData} session={session} />}
         {view === 'settings' && <DataSettings data={data} setData={setData} session={session} syncStatus={syncStatus} />}
       </main>
 
@@ -1063,15 +1063,21 @@ function Training() {
   return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Formación</span><h2>Role-play semanal</h2></div><GraduationCap size={22}/></div><div className="role-grid">{ROLE_PLAYS.map(([title, goal], index) => <article key={title}><span>Ejercicio {index + 1}</span><strong>{title}</strong><p>{goal}</p></article>)}</div><div className="cadence-grid"><Goal title="Diaria · 5 min" text="Revisar puntajes bajos y riesgos."/><Goal title="Semanal · 30 min" text="Un role-play y 2–3 conversaciones."/><Goal title="Mensual · 60 min" text="Tendencias, recompra y ajustes."/></div></section>;
 }
 
-function TestCleanupPanel({ data, setData }) {
+function TestCleanupPanel({ data, setData, session }) {
   const [message, setMessage] = useState('');
   const candidates = useMemo(() => testDataCandidates(data), [data]);
   const count = Object.values(candidates).reduce((total, items) => total + items.length, 0);
 
-  function clean() {
+  async function clean() {
     if (!count) return;
-    setData((current) => removeExplicitTestData(current));
-    setMessage(`Listo: se retiraron ${count} registros inequívocos de prueba. Todo dato real o dudoso fue conservado.`);
+    const cleaned = removeExplicitTestData(data);
+    try {
+      if (onlineConfigured && session?.user) await saveOnlineState(session.user.id, session.user.email, cleaned);
+      setData(cleaned);
+      setMessage(`Listo: se retiraron ${count} registros inequívocos de prueba. Todo dato real o dudoso fue conservado.`);
+    } catch {
+      setMessage('No se pudo confirmar la limpieza online. No se aplicó ningún borrado parcial.');
+    }
   }
 
   return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Higiene de datos</span><h2>Pruebas de desarrollo</h2></div><Database size={22}/></div><p>La detección es deliberadamente conservadora: solo incluye nombres y textos explícitos de prueba.</p><div className="modal-actions"><button className="secondary" type="button" disabled={!count} onClick={clean}>{count ? `Eliminar ${count} registros de prueba` : 'Sin pruebas pendientes'}</button></div>{message && <div className="system-message">{message}</div>}</section>;

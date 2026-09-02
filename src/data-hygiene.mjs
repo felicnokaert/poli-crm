@@ -7,15 +7,15 @@ const TEST_MARKERS = [
   /^(?:constructora\s+ficticia\s+srl|frigor[ií]fico\s+test\s+sa|carrocer[ií]a\s+demo|aislaciones\s+prueba|distribuidora\s+ejemplo|consulta\s+(?:general|penosil)\s+demo)$/i,
 ];
 
-function recordText(record = {}) {
-  return [record.company, record.contact, record.customer_name, record.title, record.summary, record.text_body, record.notes]
+function recordValues(record = {}) {
+  return [record.company, record.contact, record.customer_name, record.customerName, record.chat_name, record.title, record.summary, record.text_body, record.notes]
     .filter(Boolean)
-    .join(' ');
+    .map((value) => String(value).trim());
 }
 
 export function isExplicitTestRecord(record = {}) {
-  const text = recordText(record).trim();
-  return Boolean(text) && TEST_MARKERS.some((pattern) => pattern.test(text));
+  const values = recordValues(record);
+  return values.some((value) => TEST_MARKERS.some((pattern) => pattern.test(value)));
 }
 
 export function testDataCandidates(data = {}) {

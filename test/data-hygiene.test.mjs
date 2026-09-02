@@ -5,6 +5,7 @@ import { isExplicitTestRecord, removeExplicitTestData, testDataCandidates } from
 test('marks only explicit development fixtures as test data', () => {
   assert.equal(isExplicitTestRecord({ company: 'CLIENTE PRUEBA CLAUDE — ignorar' }), true);
   assert.equal(isExplicitTestRecord({ company: 'Test Number' }), true);
+  assert.equal(isExplicitTestRecord({ company: 'Test Number', contact: 'Test Number' }), true);
   assert.equal(isExplicitTestRecord({ summary: 'Prueba técnica firmada del webhook. No es un cliente real.' }), true);
   assert.equal(isExplicitTestRecord({ company: 'Constructora Ficticia SRL' }), true);
   assert.equal(isExplicitTestRecord({ company: 'Consulta Penosil Demo' }), true);

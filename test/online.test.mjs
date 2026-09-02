@@ -11,6 +11,15 @@ test('hides legacy browser previews that could mix chat names and senders', () =
   assert.equal(isLegacyWhatsAppPreview({ event_id: 'bridge.open.safehash' }), false);
 });
 
+test('quarantines Penosil captures made by bridge versions older than 0.17', () => {
+  const oldPenosil = { event_id: 'bridge.open.old', channel: 'penosil', phone_number_id: 'browser-bridge:penosil', raw_payload: { bridge_version: '0.16.0' } };
+  const currentPenosil = { ...oldPenosil, event_id: 'bridge.open.current', raw_payload: { bridge_version: '0.17.0' } };
+  const official = { event_id: 'wamid.official', channel: 'penosil', phone_number_id: 'real-phone-id' };
+  assert.equal(isLegacyWhatsAppPreview(oldPenosil), true);
+  assert.equal(isLegacyWhatsAppPreview(currentPenosil), false);
+  assert.equal(isLegacyWhatsAppPreview(official), false);
+});
+
 test('keeps deleted CRM messages dismissed without hiding future messages from the same contact', () => {
   const events = [
     { event_id: 'old-1', customer_wa_id: '54911' },

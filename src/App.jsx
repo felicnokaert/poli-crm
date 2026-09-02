@@ -704,15 +704,15 @@ export default function App() {
 
   const nav = [
     ['dashboard', 'Inicio', LayoutDashboard],
-    ['conversations', 'Conversaciones', MessageCircle],
-    ['inbox', 'Bandeja WhatsApp', Inbox],
+    ['inbox', 'Por revisar', Inbox],
+    ['conversations', 'Historial', MessageCircle],
     ['tasks', 'Tareas', ClipboardList],
-    ['pipeline', 'Pipeline', Target],
-    ['opportunities', 'Oportunidades', CircleDollarSign],
+    ['pipeline', 'Cuentas activas', Target],
+    ['opportunities', 'Negocios', CircleDollarSign],
     ['clients', 'Clientes', Building2],
     ['plan', 'Plan comercial', CalendarCheck],
-    ['replies', 'Respuestas', BookOpen],
-    ['coach', 'Entrenador', GraduationCap],
+    ['replies', 'Biblioteca', BookOpen],
+    ['coach', 'Entrenamiento', GraduationCap],
     ['settings', 'Datos', Database],
   ];
 

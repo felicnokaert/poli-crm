@@ -2,15 +2,10 @@ import { useMemo, useState } from 'react';
 import { CircleDollarSign, Plus, Trash2, X } from 'lucide-react';
 import { PRODUCT_CATALOG, PRODUCT_VALIDATION_LABELS } from './product-catalog.mjs';
 import { formatDate } from './utils.mjs';
+import { blankOpportunity, PRIORITY_CRITERIA, SALES_METHOD_STAGES } from './opportunities-model.mjs';
 
-export const SALES_METHOD_STAGES = ['Preparación', 'Apertura', 'Diagnóstico', 'Calificación', 'Recomendación', 'Objeción', 'Propuesta', 'Seguimiento', 'Negociación', 'Cierre', 'Posventa', 'Recompra'];
-export const PRIORITY_CRITERIA = ['A confirmar', 'Urgencia explícita', 'Alto potencial', 'Buen encaje', 'Recompra próxima', 'Valor estimado', 'Cuenta estratégica'];
 const OUTCOMES = ['Pendiente', 'Compró', 'Postergó', 'No respondió', 'Eligió competidor', 'Sin encaje', 'Otro'];
 const CLOSED_OUTCOMES = new Set(['Compró', 'Eligió competidor', 'Sin encaje']);
-
-export function blankOpportunity(clientId = '') {
-  return { clientId, title: '', stage: 'Preparación', probability: 20, expectedClose: '', nextAction: '', nextDate: '', outcome: 'Pendiente', objection: '', priorityCriterion: 'A confirmar', lossReason: '', notes: '', stageHistory: [], lines: [] };
-}
 
 function totalFor(item) { return (item.lines || []).reduce((sum, line) => sum + Number(line.quantity || 0) * Number(line.unitPrice || 0), 0); }
 function isActive(item) { return !CLOSED_OUTCOMES.has(item.outcome); }

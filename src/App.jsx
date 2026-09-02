@@ -35,6 +35,7 @@ import { COMMERCIAL_PLAN } from './commercial-plan';
 import { groupWhatsAppThreads, whatsappContactKey } from './whatsapp-threads.mjs';
 import { groupConversationHistory } from './conversation-history.mjs';
 import { clientsToCsv, mergeClientsCsv } from './client-csv.mjs';
+import { removeExplicitTestData, testDataCandidates } from './data-hygiene.mjs';
 
 const CHANNELS = {
   general: {
@@ -775,6 +776,7 @@ export default function App() {
         {view === 'plan' && <CommercialPlan checks={data.planChecks || {}} onToggle={(id) => setData((current) => ({ ...current, planChecks: { ...(current.planChecks || {}), [id]: !current.planChecks?.[id] } }))} clients={data.clients} />}
         {view === 'replies' && <QuickReplies />}
         {view === 'coach' && <Coach interactions={data.interactions} data={data} setData={setData} />}
+        {view === 'settings' && <TestCleanupPanel data={data} setData={setData} />}
         {view === 'settings' && <DataSettings data={data} setData={setData} session={session} syncStatus={syncStatus} />}
       </main>
 
@@ -1059,6 +1061,20 @@ function Coach({ interactions, data, setData }) {
 
 function Training() {
   return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Formación</span><h2>Role-play semanal</h2></div><GraduationCap size={22}/></div><div className="role-grid">{ROLE_PLAYS.map(([title, goal], index) => <article key={title}><span>Ejercicio {index + 1}</span><strong>{title}</strong><p>{goal}</p></article>)}</div><div className="cadence-grid"><Goal title="Diaria · 5 min" text="Revisar puntajes bajos y riesgos."/><Goal title="Semanal · 30 min" text="Un role-play y 2–3 conversaciones."/><Goal title="Mensual · 60 min" text="Tendencias, recompra y ajustes."/></div></section>;
+}
+
+function TestCleanupPanel({ data, setData }) {
+  const [message, setMessage] = useState('');
+  const candidates = useMemo(() => testDataCandidates(data), [data]);
+  const count = Object.values(candidates).reduce((total, items) => total + items.length, 0);
+
+  function clean() {
+    if (!count) return;
+    setData((current) => removeExplicitTestData(current));
+    setMessage(`Listo: se retiraron ${count} registros inequívocos de prueba. Todo dato real o dudoso fue conservado.`);
+  }
+
+  return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Higiene de datos</span><h2>Pruebas de desarrollo</h2></div><Database size={22}/></div><p>La detección es deliberadamente conservadora: solo incluye nombres y textos explícitos de prueba.</p><div className="modal-actions"><button className="secondary" type="button" disabled={!count} onClick={clean}>{count ? `Eliminar ${count} registros de prueba` : 'Sin pruebas pendientes'}</button></div>{message && <div className="system-message">{message}</div>}</section>;
 }
 
 function DataSettings({ data, setData, session, syncStatus }) {

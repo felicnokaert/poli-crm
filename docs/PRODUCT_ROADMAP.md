@@ -67,3 +67,32 @@ Para que otros comerciales lo usen bien hacen falta: alta administrada, roles, r
 ## Definición de “operativo”
 
 Operativo no significa terminado. Significa que ambos canales capturan sin duplicar, los grupos quedan afuera, la bandeja se entiende con volumen real, cada cliente conserva memoria, el vendedor puede convertir una conversación en oportunidad y tarea, y los datos se respaldan en la base compartida.
+
+## Camino a producto público
+
+El CRM privado de Poliplast es el laboratorio del producto, no la versión pública. La apertura a terceros se divide en tres puertas obligatorias:
+
+### Puerta 1 — Piloto Poliplast confiable
+
+- Captura estable de ambos WhatsApp y recuperación ante cambios de la interfaz web.
+- Empresas, múltiples contactos y conversaciones correctamente vinculados.
+- Importación con vista previa, exportación completa y limpieza reversible.
+- Cola diaria útil con volumen real y sin tareas artificiales.
+
+### Puerta 2 — Plataforma multiempresa
+
+- Organización o tenant en cada registro; ninguna consulta puede mezclar empresas.
+- Roles de administrador, supervisor y vendedor.
+- Responsables por cuenta, permisos por canal y registro de auditoría.
+- Invitaciones, baja de usuarios, recuperación y eliminación de datos por organización.
+- Migración desde el estado JSON compartido a tablas relacionales versionadas.
+
+### Puerta 3 — Producto público autoservicio
+
+- Onboarding guiado para crear empresa, invitar equipo y conectar canales.
+- Configuración de campos, familias, etapas y reglas por organización.
+- Límites, observabilidad, soporte, términos, privacidad y proceso de incidentes.
+- Plan gratuito sostenible y planes pagos solo si el costo operativo lo exige.
+- Extensión empaquetada y distribuida oficialmente; no instalación manual de carpetas.
+
+No se habilitarán registros públicos antes de completar la Puerta 2. El aislamiento de datos y los permisos son requisitos de lanzamiento, no mejoras posteriores.

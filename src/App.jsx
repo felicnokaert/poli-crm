@@ -3108,7 +3108,8 @@ function Clients({ clients, query, setQuery, onOpenClient }) {
           [
             "Relevamiento activo",
             "Prospecto de inteligencia comercial",
-          ].includes(client.sourceType))),
+          ].includes(client.sourceType)) ||
+        (review === "Descartados" && client.sourceType === "No corresponde")),
   );
   const pages = Math.max(1, Math.ceil(visible.length / pageSize));
   const safePage = Math.min(page, pages);
@@ -3141,6 +3142,7 @@ function Clients({ clients, query, setQuery, onOpenClient }) {
           <option>Por validar</option>
           <option>Clientes</option>
           <option>Prospectos</option>
+          <option>Descartados</option>
           <option>Todos</option>
         </select>
         <select
@@ -3344,6 +3346,22 @@ function ClientDetail({
             <X />
           </button>
         </div>
+        <div className="review-controls">
+          <span>
+            Clasificación: <strong>{client.sourceType || "A confirmar"}</strong>
+          </span>
+          <div>
+            <button type="button" className="secondary" onClick={() => onSave({ ...client, sourceType: "Cliente activo" })}>
+              Es cliente
+            </button>
+            <button type="button" className="secondary" onClick={() => onSave({ ...client, sourceType: "Prospecto de inteligencia comercial" })}>
+              Es prospecto
+            </button>
+            <button type="button" className="secondary" onClick={() => onSave({ ...client, sourceType: "No corresponde" })}>
+              No corresponde
+            </button>
+          </div>
+        </div>
         {editing ? (
           <form onSubmit={submit}>
             <div className="form-grid">
@@ -3399,6 +3417,7 @@ function ClientDetail({
                   <option>Prospecto de inteligencia comercial</option>
                   <option>Cliente activo</option>
                   <option>A confirmar</option>
+                  <option>No corresponde</option>
                 </select>
               </label>
               <label>

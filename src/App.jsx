@@ -36,6 +36,7 @@ import { groupWhatsAppThreads, whatsappContactKey } from './whatsapp-threads.mjs
 import { groupConversationHistory } from './conversation-history.mjs';
 import { clientsToCsv, mergeClientsCsv } from './client-csv.mjs';
 import { removeExplicitTestData, testDataCandidates } from './data-hygiene.mjs';
+import { attachWhatsAppContact, clientSearchText, findClientByWhatsApp } from './client-contacts.mjs';
 
 const CHANNELS = {
   general: {
@@ -234,7 +235,7 @@ export default function App() {
       setData((current) => {
         if (current.inbox.some((item) => item.event_id === event.event_id)) return current;
         const ignoredRule = (current.ignoredWhatsAppContacts || []).find((item) => item.key === whatsappThreadKey(event));
-        const client = current.clients.find((item) => item.whatsappId && item.whatsappId === event.customer_wa_id)
+        const client = findClientByWhatsApp(current.clients, event)
           || current.clients.find((item) => event.customer_name && item.company?.toLowerCase() === event.customer_name.toLowerCase());
         const taskTitle = 'Revisar nuevo mensaje de WhatsApp';
         const hasReminder = client && current.tasks.some((item) => item.clientId === client.id && !item.done && item.title === taskTitle);
@@ -326,9 +327,7 @@ export default function App() {
   if (!authReady) return <Splash text="Preparando acceso seguro…" />;
   if (onlineConfigured && !session) return <LoginScreen />;
 
-  const filteredClients = data.clients.filter((client) =>
-    `${client.company} ${client.contact} ${client.family} ${client.cuit || ''} ${client.phone || ''} ${client.email || ''} ${client.sourceType || ''}`.toLowerCase().includes(query.toLowerCase()),
-  );
+  const filteredClients = data.clients.filter((client) => clientSearchText(client).toLowerCase().includes(query.toLowerCase()));
 
   function saveInteraction(event) {
     event.preventDefault();
@@ -451,9 +450,9 @@ export default function App() {
     }
 
     const company = event.customer_name || event.customer_wa_id || 'Contacto de WhatsApp';
-    const existing = data.clients.find((client) => client.whatsappId === event.customer_wa_id);
+    const existing = findClientByWhatsApp(data.clients, event);
     const clientId = existing?.id || crypto.randomUUID();
-    const client = existing || {
+    const client = attachWhatsAppContact(existing || {
       id: clientId,
       company,
       contact: event.customer_name || '',
@@ -470,7 +469,7 @@ export default function App() {
       pipelineActive: true,
       lastContact: today(),
       updatedAt: stamp,
-    };
+    }, event);
     const interaction = {
       id: crypto.randomUUID(),
       clientId,
@@ -495,7 +494,7 @@ export default function App() {
     } : null;
     setData({
       ...data,
-      clients: existing ? data.clients.map((item) => item.id === clientId ? { ...item, lastContact: today(), updatedAt: stamp } : item) : [...data.clients, client],
+      clients: existing ? data.clients.map((item) => item.id === clientId ? { ...client, lastContact: today(), updatedAt: stamp } : item) : [...data.clients, client],
       interactions: [interaction, ...data.interactions],
       tasks: newTask ? [...data.tasks, newTask] : data.tasks,
       inbox: data.inbox.map((item) => whatsappThreadKey(item) === whatsappThreadKey(event) ? { ...item, classification_status: status, classifiedAt: stamp } : item),
@@ -621,7 +620,7 @@ export default function App() {
   function openInboxContact(eventId) {
     const event = data.inbox.find((item) => item.event_id === eventId);
     if (!event) return;
-    const client = data.clients.find((item) => item.whatsappId && item.whatsappId === event.customer_wa_id)
+    const client = findClientByWhatsApp(data.clients, event)
       || data.clients.find((item) => event.customer_name && item.company?.toLowerCase() === event.customer_name.toLowerCase());
     if (client) {
       setSelectedClientId(client.id);
@@ -636,11 +635,11 @@ export default function App() {
     const source = inboxDraft.event;
     const draft = inboxDraft.form;
     const stamp = new Date().toISOString();
-    const existing = data.clients.find((client) => client.whatsappId === source.customer_wa_id)
+    const existing = findClientByWhatsApp(data.clients, source)
       || data.clients.find((client) => draft.company && client.company.toLowerCase() === draft.company.trim().toLowerCase());
     const clientId = existing?.id || crypto.randomUUID();
     const company = draft.company.trim() || source.customer_name || source.customer_wa_id || 'Contacto de WhatsApp';
-    const client = {
+    const client = attachWhatsAppContact({
       ...(existing || {}), id: clientId, company, contact: draft.contact.trim(), whatsappId: source.customer_wa_id,
       family: draft.family, temperature: draft.temperature, stage: draft.stage,
       currentIntent: draft.intent,
@@ -651,7 +650,7 @@ export default function App() {
       relationship: draft.relationship, representsCompany: draft.representsCompany,
       sellerOpinion: draft.sellerOpinion.trim(), memoryNote: draft.memoryNote.trim(),
       updatedBy: session?.user?.email || '',
-    };
+    }, source);
     const interaction = {
       id: crypto.randomUUID(), clientId, sourceEventId: source.event_id, company, contact: draft.contact.trim(),
       channel: source.channel === 'penosil' ? 'penosil' : 'general', family: draft.family,
@@ -1220,7 +1219,8 @@ function DataSettings({ data, setData, session, syncStatus }) {
     try {
       const result = mergeClientsCsv(data.clients, await file.text());
       setData({ ...data, clients: result.clients });
-      setMessage(`CSV incorporado: ${result.added} fichas nuevas, ${result.updated} actualizadas y ${result.skipped} filas omitidas.`);
+      const duplicateNote = result.duplicatePhones?.length ? ` ${result.duplicatePhones.length} teléfonos aparecen en empresas distintas y quedaron señalados para revisión, sin fusionarse.` : '';
+      setMessage(`CSV incorporado: ${result.added} fichas nuevas, ${result.updated} actualizadas y ${result.skipped} filas omitidas.${duplicateNote}`);
     } catch (error) {
       setMessage(error.message || 'No se pudo importar el CSV.');
     } finally { event.target.value = ''; }

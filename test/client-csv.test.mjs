@@ -17,3 +17,18 @@ test('imports and deduplicates clients by CUIT before company', () => {
   assert.equal(result.clients.length, 2);
   assert.equal(result.clients.find((item) => item.id === 'old').company, 'Nombre actualizado');
 });
+
+test('imports several PUR Comercial contacts into one company without losing phone numbers', () => {
+  const csv = 'Nombre empresa,telefono,Contacto,Familia,Proveedor\r\nCarrocerias del Sur,1138169296,Cristian,CARROZADOS,PURCOM\r\nCarrocerias del Sur,1160000000,Ana,CARROZADOS,PURCOM';
+  const result = mergeClientsCsv([], csv);
+  assert.equal(result.clients.length, 1);
+  assert.equal(result.clients[0].contacts.length, 2);
+  assert.deepEqual(result.clients[0].contacts.map((item) => item.name), ['Cristian', 'Ana']);
+});
+
+test('reports a repeated phone across different PUR Comercial company names instead of silently merging', () => {
+  const csv = 'Nombre empresa,telefono\r\nZatti Sebastian,3435118264\r\nTecno Pur,3435118264';
+  const result = mergeClientsCsv([], csv);
+  assert.equal(result.clients.length, 2);
+  assert.equal(result.duplicatePhones.length, 1);
+});

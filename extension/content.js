@@ -130,11 +130,7 @@ function unreadRowDetails(row) {
   const titled = [...row.querySelectorAll('span[title]')].map((item) => item.getAttribute('title')?.trim()).filter(Boolean);
   const name = titled[0] || row.querySelector('span[dir="auto"]')?.textContent?.trim() || '';
   const texts = [...row.querySelectorAll('span[dir="auto"]')].map((item) => item.textContent?.trim()).filter(Boolean);
-  const preview = [...texts].reverse().find((text) => text !== name
-    && !/^\d{1,2}:\d{2}$/.test(text)
-    && !/^\d+$/.test(text)
-    && !/mensajes?\s+no\s+le[ií]dos?/i.test(text)
-    && !/^(tú|tu|you):/i.test(text)) || '';
+  const preview = globalThis.PoliplastUnreadParser.previewFromValues({ name, texts, titles: titled });
   return !name || openChatIsSelf(name) ? null : { name, count, preview };
 }
 
@@ -254,7 +250,7 @@ function capture() {
         }
         if (state.sent.has(eventKey)) continue;
         const contactName = /^\+?[\d\s()-]+$/.test(name) && sender ? sender : name;
-        events.push({ event_key: eventKey, source_message_key: identity, bridge_version: '0.17.0', channel: config.channel, direction, chat_id: chatKey(name), chat_name: contactName, text_body: text, occurred_at: new Date().toISOString() });
+        events.push({ event_key: eventKey, source_message_key: identity, bridge_version: '0.18.0', channel: config.channel, direction, chat_id: chatKey(name), chat_name: contactName, text_body: text, occurred_at: new Date().toISOString() });
       }
       state.initializedChats.add(currentChatKey);
       if (unreadCount) state.unreadCounts.delete(currentChatKey);

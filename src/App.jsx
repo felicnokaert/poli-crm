@@ -20,6 +20,7 @@ import {
   Database,
   Download,
   Upload,
+  Users,
   X,
   Link2,
 } from 'lucide-react';
@@ -36,7 +37,7 @@ import { groupWhatsAppThreads, whatsappContactKey } from './whatsapp-threads.mjs
 import { groupConversationHistory } from './conversation-history.mjs';
 import { clientsToCsv, mergeClientsCsv } from './client-csv.mjs';
 import { removeExplicitTestData, testDataCandidates } from './data-hygiene.mjs';
-import { attachWhatsAppContact, clientSearchText, findClientByWhatsApp } from './client-contacts.mjs';
+import { attachWhatsAppContact, clientContacts, clientSearchText, findClientByWhatsApp } from './client-contacts.mjs';
 
 const CHANNELS = {
   general: {
@@ -709,7 +710,8 @@ export default function App() {
     ['tasks', 'Tareas', ClipboardList],
     ['pipeline', 'Cuentas activas', Target],
     ['opportunities', 'Negocios', CircleDollarSign],
-    ['clients', 'Clientes', Building2],
+    ['clients', 'Empresas', Building2],
+    ['contacts', 'Contactos', Users],
     ['plan', 'Plan comercial', CalendarCheck],
     ['replies', 'Biblioteca', BookOpen],
     ['coach', 'Entrenamiento', GraduationCap],
@@ -772,6 +774,7 @@ export default function App() {
         {view === 'pipeline' && <Pipeline clients={data.clients.filter((client) => client.pipelineActive !== false)} onOpenClient={setSelectedClientId} />}
         {view === 'opportunities' && <Opportunities items={data.opportunities || []} clients={data.clients} onSave={saveOpportunity} onDelete={deleteOpportunity} />}
         {view === 'clients' && <Clients clients={filteredClients} query={query} setQuery={setQuery} onOpenClient={setSelectedClientId} />}
+        {view === 'contacts' && <Contacts clients={data.clients} query={query} setQuery={setQuery} onOpenClient={setSelectedClientId} />}
         {view === 'plan' && <CommercialPlan checks={data.planChecks || {}} onToggle={(id) => setData((current) => ({ ...current, planChecks: { ...(current.planChecks || {}), [id]: !current.planChecks?.[id] } }))} clients={data.clients} />}
         {view === 'replies' && <QuickReplies />}
         {view === 'coach' && <Coach interactions={data.interactions} data={data} setData={setData} />}
@@ -985,6 +988,13 @@ function Clients({ clients, query, setQuery, onOpenClient }) {
   const paged = visible.slice((safePage - 1) * pageSize, safePage * pageSize);
   useEffect(() => setPage(1), [query, family, portfolio, contact]);
   return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Cartera unificada · {visible.length} visibles</span><h2>Clientes y prospectos</h2></div><label className="search"><Search size={17}/><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Empresa, CUIT, contacto, teléfono…" /></label></div><div className="client-filters"><select value={portfolio} onChange={(e) => setPortfolio(e.target.value)}><option>Todos</option><option>Activos</option><option>En cartera</option></select><select value={family} onChange={(e) => setFamily(e.target.value)}>{families.map((item) => <option key={item}>{item}</option>)}</select><select value={contact} onChange={(e) => setContact(e.target.value)}><option>Todos</option><option>Con contacto</option><option>Falta contacto</option></select></div>{paged.length ? <><div className="client-table">{paged.map((client) => <button className="client-row" onClick={() => onOpenClient(client.id)} key={client.id}><div className="avatar">{client.company.slice(0, 2).toUpperCase()}</div><div><strong>{client.company}</strong><span>{client.contact || client.phone || client.email || 'Datos de contacto pendientes'}</span></div><span>{client.family}</span><span className={`temp ${(client.temperature || 'Tibio').toLowerCase()}`}>{client.temperature || 'Tibio'}</span><strong>{client.pipelineActive === false ? 'En cartera' : client.stage || 'Nuevo'}</strong></button>)}</div><div className="pagination"><button disabled={safePage === 1} onClick={() => setPage(safePage - 1)}>Anterior</button><span>Página {safePage} de {pages}</span><button disabled={safePage === pages} onClick={() => setPage(safePage + 1)}>Siguiente</button></div></> : <Empty text="No hay clientes que coincidan con estos filtros." />}</section>;
+}
+
+function Contacts({ clients, query, setQuery, onOpenClient }) {
+  const rows = clients.flatMap((client) => clientContacts(client).map((contact) => ({ ...contact, clientId: client.id, company: client.company, family: client.family || 'Sin definir' })));
+  const normalizedQuery = query.trim().toLocaleLowerCase('es-AR');
+  const visible = rows.filter((item) => !normalizedQuery || `${item.company} ${item.name} ${item.role} ${item.phone} ${item.email} ${item.family}`.toLocaleLowerCase('es-AR').includes(normalizedQuery));
+  return <section className="panel"><div className="panel-head"><div><span className="eyebrow">Directorio unificado · {visible.length} contactos</span><h2>Personas y números</h2><p>Una empresa puede tener varios contactos. Cada WhatsApp se vincula a su empresa sin duplicarla.</p></div><label className="search"><Search size={17}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Persona, empresa, teléfono o email…"/></label></div>{visible.length ? <div className="client-table">{visible.map((item) => <button className="client-row" onClick={() => onOpenClient(item.clientId)} key={`${item.clientId}-${item.id}`}><div className="avatar">{(item.name || item.company).slice(0, 2).toUpperCase()}</div><div><strong>{item.name || 'Contacto sin nombre'}</strong><span>{item.phone || item.email || 'Datos pendientes'}{item.role ? ` · ${item.role}` : ''}</span></div><span>{item.company}</span><span>{item.family}</span><strong>{item.primary ? 'Principal' : 'Adicional'}</strong></button>)}</div> : <Empty text="Todavía no hay contactos que coincidan con la búsqueda."/>}</section>;
 }
 
 function ClientDetail({ client, interactions, tasks, onClose, onOpenInteraction, onNewInteraction, onNewTask, onSave }) {

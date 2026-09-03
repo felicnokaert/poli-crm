@@ -95,8 +95,33 @@ export function groupWhatsAppThreads(items = []) {
       classification_status: pendingCount ? 'pending' : latest.classification_status,
     };
   });
-  // Los duplicados reales ya se eliminan por identidad de mensaje antes de
-  // agrupar. Nunca reconciliamos hilos completos por nombre o cercanía horaria:
-  // esa heurística mezclaba conversaciones legítimas de ambos números.
-  return threads.sort((a, b) => new Date(b.occurred_at) - new Date(a.occurred_at));
+  const reconciledThreads = [];
+  for (const thread of threads.sort((a, b) => new Date(a.occurred_at) - new Date(b.occurred_at))) {
+    const mirrorIndex = reconciledThreads.findIndex((current) => {
+      if (!current.channel || !thread.channel || current.channel === thread.channel) return false;
+      if (!equivalentContactNames(current.customer_name || current.customer_wa_id, thread.customer_name || thread.customer_wa_id)) return false;
+      const sameLatestContent = comparableText(current.text_body)
+        && comparableText(current.text_body) === comparableText(thread.text_body);
+      const distance = Math.abs(Date.parse(current.occurred_at || '') - Date.parse(thread.occurred_at || ''));
+      // Solo unimos el espejo cuando contenido y momento coinciden. El nombre
+      // por sí solo nunca alcanza: una persona puede escribir a ambos números.
+      return sameLatestContent && Number.isFinite(distance) && distance <= 120000;
+    });
+    if (mirrorIndex < 0) {
+      reconciledThreads.push(thread);
+      continue;
+    }
+    const current = reconciledThreads[mirrorIndex];
+    const combined = dedupeWhatsAppEvents([...current.events, ...thread.events]);
+    const preferred = current.channel === 'general' ? current : thread.channel === 'general' ? thread : current;
+    reconciledThreads[mirrorIndex] = {
+      ...preferred,
+      events: combined,
+      channels: [...new Set([...current.channels, ...thread.channels])],
+      channelConflict: true,
+      messageCount: combined.length,
+      pendingCount: combined.filter((item) => item.classification_status === 'pending').length,
+    };
+  }
+  return reconciledThreads.sort((a, b) => new Date(b.occurred_at) - new Date(a.occurred_at));
 }

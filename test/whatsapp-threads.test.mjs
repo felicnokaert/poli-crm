@@ -58,7 +58,7 @@ test('does not merge equal generic messages from different contacts', () => {
   assert.equal(threads.length, 2);
 });
 
-test('does not merge legacy threads merely because name and time are close', () => {
+test('merges legacy mirrored threads when latest content and time match', () => {
   const base = { direction: 'inbound', customer_wa_id: 'daniel alonso', customer_name: 'Daniel Alonso', classification_status: 'pending' };
   const threads = groupWhatsAppThreads([
     { ...base, event_id: 'general-a', channel: 'general', phone_number_id: 'browser-bridge:general', text_body: 'Necesito precio', occurred_at: '2026-09-03T10:15:01Z' },
@@ -66,7 +66,8 @@ test('does not merge legacy threads merely because name and time are close', () 
     { ...base, event_id: 'penosil-a', channel: 'penosil', phone_number_id: 'browser-bridge:penosil', text_body: 'Otra consulta', occurred_at: '2026-09-03T10:15:50Z' },
     { ...base, event_id: 'penosil-b', channel: 'penosil', phone_number_id: 'browser-bridge:penosil', text_body: '[audio · 0:13]', occurred_at: '2026-09-03T10:15:51Z' },
   ]);
-  assert.equal(threads.length, 2);
+  assert.equal(threads.length, 1);
+  assert.deepEqual(threads[0].channels.sort(), ['general', 'penosil']);
 });
 
 test('does not group the same visible name across different channel accounts', () => {

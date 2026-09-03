@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { groupWhatsAppThreads, whatsappContactKey } from '../src/whatsapp-threads.mjs';
+import { groupWhatsAppThreads, isIgnoredWhatsAppContact, whatsappContactKey } from '../src/whatsapp-threads.mjs';
 
 test('keeps one contact identity separate across General and Penosil', () => {
   assert.notEqual(whatsappContactKey({ channel: 'general', customer_wa_id: 'Juan' }), whatsappContactKey({ channel: 'penosil', customer_wa_id: 'juan' }));
@@ -128,6 +128,17 @@ test('does not merge two genuinely distinct official Meta conversations even wit
     { event_id: 'wamid.real-b', channel: 'penosil', phone_number_id: '9998887706304960', customer_wa_id: '5493500000002', customer_name: 'Cliente B', direction: 'inbound', text_body: 'Necesito precio de la lona', occurred_at: '2026-09-03T10:00:02Z', classification_status: 'pending' },
   ]);
   assert.equal(threads.length, 2);
+});
+
+test('a non-commercial rule created from the General identity (real phone) also excludes the same contact scraped from Penosil (name-only wa_id)', () => {
+  const rules = [{ contactIdentity: '5491152294957', customerWaId: '5491152294957', customerName: 'Ariana', category: 'Particular' }];
+  const penosilEvent = { channel: 'penosil', customer_wa_id: 'ariana diecinueve cuarenta y ocho', customer_name: 'Ariana Diecinueve Cuarenta Y Ocho' };
+  assert.equal(isIgnoredWhatsAppContact(rules, penosilEvent), true);
+});
+
+test('does not exclude an unrelated contact with a short, unrelated name', () => {
+  const rules = [{ contactIdentity: 'juan', customerWaId: '', customerName: 'Juan' }];
+  assert.equal(isIgnoredWhatsAppContact(rules, { customer_name: 'María López' }), false);
 });
 
 test('replaces unread preview with real messages after opening the chat', () => {

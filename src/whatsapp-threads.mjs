@@ -39,6 +39,23 @@ function isBridgeCapture(id) {
   return String(id || '').startsWith('browser-bridge:');
 }
 
+// General llega con customer_wa_id = teléfono real; Penosil (scrapeado) suele
+// llegar con customer_wa_id = el propio nombre visible. whatsappContactIdentity
+// por sí sola no alcanza para saber que son el mismo contacto en ese caso, así
+// que una regla de "no comercial" marcada en un canal no viajaba al otro.
+// Reutilizamos el mismo criterio de alias que ya usa la reconciliación de
+// hilos (equivalentContactNames) para que la exclusión sí cruce canales.
+export function isIgnoredWhatsAppContact(rules = [], event = {}) {
+  const identity = whatsappContactIdentity(event);
+  const eventName = event.customer_name || event.customer_wa_id || '';
+  return rules.some((rule) => {
+    const ruleIdentity = rule.contactIdentity || whatsappContactIdentity({ customer_wa_id: rule.customerWaId, customer_name: rule.customerName });
+    if (ruleIdentity === identity) return true;
+    const ruleName = rule.customerName || rule.customerWaId || '';
+    return equivalentContactNames(ruleName, eventName);
+  });
+}
+
 function isCrossChannelMirror(left = {}, right = {}) {
   if (!left.channel || !right.channel || left.channel === right.channel) return false;
   // El espejo real observado en producción es: Meta manda el mensaje oficial

@@ -54,6 +54,7 @@ import {
 import { COMMERCIAL_PLAN } from "./commercial-plan";
 import {
   groupWhatsAppThreads,
+  isIgnoredWhatsAppContact,
   whatsappContactIdentity,
   whatsappContactKey,
 } from "./whatsapp-threads.mjs";
@@ -384,9 +385,7 @@ export default function App() {
           setData((current) => {
             if (current.inbox.some((item) => item.event_id === event.event_id))
               return current;
-            const ignoredRule = (current.ignoredWhatsAppContacts || []).find(
-              (item) => (item.contactIdentity || whatsappContactIdentity({ customer_wa_id: item.customerWaId, customer_name: item.customerName })) === whatsappContactIdentity(event),
-            );
+            const ignoredRule = isIgnoredWhatsAppContact(current.ignoredWhatsAppContacts || [], event);
             const client =
               findClientByWhatsApp(current.clients, event) ||
               current.clients.find(
@@ -941,7 +940,7 @@ export default function App() {
     };
     const rules = [
       ...(data.ignoredWhatsAppContacts || []).filter(
-        (item) => (item.contactIdentity || whatsappContactIdentity({ customer_wa_id: item.customerWaId, customer_name: item.customerName })) !== contactIdentity,
+        (item) => !isIgnoredWhatsAppContact([rule], { customer_wa_id: item.customerWaId, customer_name: item.customerName }),
       ),
       rule,
     ];
@@ -949,7 +948,7 @@ export default function App() {
       ...data,
       ignoredWhatsAppContacts: rules,
       inbox: data.inbox.map((item) =>
-        whatsappContactIdentity(item) === contactIdentity
+        isIgnoredWhatsAppContact([rule], item)
           ? {
               ...item,
               classification_status: "excluded",
@@ -977,14 +976,14 @@ export default function App() {
     const event = data.inbox.find((item) => item.event_id === eventId);
     if (!event) return;
     const key = whatsappThreadKey(event);
-    const contactIdentity = whatsappContactIdentity(event);
+    const eventAsRule = { customerWaId: event.customer_wa_id, customerName: event.customer_name };
     setData({
       ...data,
       ignoredWhatsAppContacts: (data.ignoredWhatsAppContacts || []).filter(
-        (item) => (item.contactIdentity || whatsappContactIdentity({ customer_wa_id: item.customerWaId, customer_name: item.customerName })) !== contactIdentity,
+        (item) => !isIgnoredWhatsAppContact([eventAsRule], { customer_wa_id: item.customerWaId, customer_name: item.customerName }),
       ),
       inbox: data.inbox.map((item) =>
-        whatsappContactIdentity(item) === contactIdentity
+        isIgnoredWhatsAppContact([eventAsRule], item)
           ? {
               ...item,
               classification_status: "pending",
@@ -1085,7 +1084,6 @@ export default function App() {
       eventIds.includes(item.event_id),
     );
     const keys = new Set(selected.map(whatsappThreadKey));
-    const identities = new Set(selected.map(whatsappContactIdentity));
     if (!keys.size) return;
     const stamp = new Date().toISOString();
     const additions = selected.map((event) => ({
@@ -1101,12 +1099,12 @@ export default function App() {
       ...data,
       ignoredWhatsAppContacts: [
         ...(data.ignoredWhatsAppContacts || []).filter(
-          (item) => !identities.has(item.contactIdentity || whatsappContactIdentity({ customer_wa_id: item.customerWaId, customer_name: item.customerName })),
+          (item) => !isIgnoredWhatsAppContact(additions, { customer_wa_id: item.customerWaId, customer_name: item.customerName }),
         ),
         ...additions,
       ],
       inbox: data.inbox.map((item) =>
-        identities.has(whatsappContactIdentity(item))
+        isIgnoredWhatsAppContact(additions, item)
           ? {
               ...item,
               classification_status: "excluded",

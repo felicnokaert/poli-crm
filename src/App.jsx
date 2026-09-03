@@ -56,7 +56,7 @@ import {
   groupWhatsAppThreads,
   whatsappContactKey,
 } from "./whatsapp-threads.mjs";
-import { groupConversationHistory } from "./conversation-history.mjs";
+import { addInteractionOnce, groupConversationHistory } from "./conversation-history.mjs";
 import { clientsToCsv, mergeClientsCsv } from "./client-csv.mjs";
 import { removeExplicitTestData, testDataCandidates } from "./data-hygiene.mjs";
 import {
@@ -861,7 +861,7 @@ export default function App() {
               : item,
           )
         : [...data.clients, client],
-      interactions: [interaction, ...data.interactions],
+      interactions: addInteractionOnce(data.interactions, interaction),
       tasks: newTask ? [...data.tasks, newTask] : data.tasks,
       inbox: data.inbox.map((item) =>
         whatsappThreadKey(item) === whatsappThreadKey(event)
@@ -1264,7 +1264,7 @@ export default function App() {
       clients: existing
         ? data.clients.map((item) => (item.id === clientId ? client : item))
         : [...data.clients, client],
-      interactions: [interaction, ...data.interactions],
+      interactions: addInteractionOnce(data.interactions, interaction),
       tasks: task && !hasOpenFollowup ? [...data.tasks, task] : data.tasks,
       inbox: data.inbox.map((item) =>
         whatsappThreadKey(item) === whatsappThreadKey(source)
@@ -1806,13 +1806,14 @@ function Conversations({ items, clients, onOpen, onOpenClient }) {
       {filtered.length ? (
         <div className="conversation-list">
           {filtered.map((item) => {
-            const hasClient = item.clientId && clientIds.has(item.clientId);
+            const validClientIds = (item.clientIds || [item.clientId]).filter((id) => clientIds.has(id));
+            const hasClient = validClientIds.length === 1;
             return (
               <button
                 className="conversation-thread"
                 key={item.conversationKey}
                 onClick={() =>
-                  hasClient ? onOpenClient(item.clientId) : onOpen(item.id)
+                  hasClient ? onOpenClient(validClientIds[0]) : onOpen(item.id)
                 }
               >
                 <span

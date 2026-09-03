@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { groupConversationHistory } from '../src/conversation-history.mjs';
+import { addInteractionOnce, groupConversationHistory } from '../src/conversation-history.mjs';
 
 test('groups commercial history into one row per client', () => {
   const result = groupConversationHistory([
@@ -21,4 +21,23 @@ test('falls back to normalized company for legacy records without client id', ()
   ]);
   assert.equal(result.length, 1);
   assert.equal(result[0].messageCount, 2);
+});
+
+test('merges duplicate client ids when the company is the same', () => {
+  const result = groupConversationHistory([
+    { id: 'one', clientId: 'imported', company: 'Poliuretanos Alcar', contact: 'Flor Vallejos', createdAt: '2026-09-01T10:00:00Z' },
+    { id: 'two', clientId: 'whatsapp', company: '  POLIURETANOS ALCAR ', contact: 'Flor Vallejos', createdAt: '2026-09-01T11:00:00Z' },
+  ]);
+  assert.equal(result.length, 1);
+  assert.equal(result[0].messageCount, 2);
+  assert.deepEqual(result[0].clientIds.sort(), ['imported', 'whatsapp']);
+});
+
+test('does not create a second history record for the same WhatsApp event', () => {
+  const first = { id: 'first', sourceEventId: 'wa-1', summary: 'Hola' };
+  const repeated = { id: 'second', sourceEventId: 'wa-1', summary: 'Hola confirmado' };
+  const result = addInteractionOnce([first], repeated);
+  assert.equal(result.length, 1);
+  assert.equal(result[0].id, 'first');
+  assert.equal(result[0].summary, 'Hola confirmado');
 });

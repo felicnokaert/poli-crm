@@ -35,9 +35,18 @@ function equivalentContactNames(left = '', right = '') {
   return a === b || (Math.min(a.length, b.length) >= 4 && (a.startsWith(b) || b.startsWith(a)));
 }
 
+function isBridgeCapture(id) {
+  return String(id || '').startsWith('browser-bridge:');
+}
+
 function isCrossChannelMirror(left = {}, right = {}) {
   if (!left.channel || !right.channel || left.channel === right.channel) return false;
-  if (!String(left.phone_number_id || '').startsWith('browser-bridge:') || !String(right.phone_number_id || '').startsWith('browser-bridge:')) return false;
+  // El espejo real observado en producción es: Meta manda el mensaje oficial
+  // por webhook (phone_number_id real, no browser-bridge) y el navegador
+  // pareado a otro canal scrapea la misma conversación como preview. Exigir
+  // browser-bridge en los DOS lados dejaba pasar ese caso sin reconciliar.
+  // Alcanza con que al menos un lado sea una captura scrapeada.
+  if (!isBridgeCapture(left.phone_number_id) && !isBridgeCapture(right.phone_number_id)) return false;
   const leftText = comparableText(left.text_body);
   const rightText = comparableText(right.text_body);
   if (!leftText || leftText !== rightText) return false;
@@ -54,7 +63,7 @@ function isCrossChannelMirror(left = {}, right = {}) {
 
 function threadsShareMirrorEvidence(left = {}, right = {}) {
   if (!equivalentContactNames(left.customer_name || left.customer_wa_id, right.customer_name || right.customer_wa_id)) return false;
-  if (!String(left.phone_number_id || '').startsWith('browser-bridge:') || !String(right.phone_number_id || '').startsWith('browser-bridge:')) return false;
+  if (!isBridgeCapture(left.phone_number_id) && !isBridgeCapture(right.phone_number_id)) return false;
   const exactAlias = normalized(left.customer_name || left.customer_wa_id) === normalized(right.customer_name || right.customer_wa_id);
   const maximumDistance = exactAlias ? 86400000 : 300000;
   return (left.events || []).some((leftEvent) => (right.events || []).some((rightEvent) => {

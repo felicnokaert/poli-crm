@@ -108,6 +108,28 @@ test('reconciles a mirrored contact when aliases match but latest messages diffe
   assert.equal(threads[0].channelConflict, true);
 });
 
+test('reconciles the real production case: official Meta webhook on General vs scraped preview on Penosil', () => {
+  // General llega por webhook oficial de Meta (phone_number_id real, nunca
+  // browser-bridge). Penosil scrapea la misma conversación como preview.
+  // Antes de esta corrección el guard exigía browser-bridge en ambos lados
+  // y este caso -el que reportó Felipe con Ariana y Emanuel- nunca se unía.
+  const threads = groupWhatsAppThreads([
+    { event_id: 'wamid.real-1', channel: 'general', phone_number_id: '1168807706304960', customer_wa_id: '5491152294957', customer_name: 'Ariana', direction: 'inbound', message_type: 'text', text_body: 'Dale', occurred_at: '2026-09-03T16:08:14Z', classification_status: 'pending' },
+    { event_id: 'bridge.open.preview-1', channel: 'penosil', phone_number_id: 'browser-bridge:penosil', customer_wa_id: 'ariana diecinueve cuarenta y ocho', customer_name: 'Ariana Diecinueve Cuarenta Y Ocho', direction: 'inbound', message_type: 'unread_chat_preview', text_body: 'Dale', occurred_at: '2026-09-03T16:08:16.815Z', classification_status: 'pending' },
+  ]);
+  assert.equal(threads.length, 1);
+  assert.equal(threads[0].channelConflict, true);
+  assert.equal(threads[0].channel, 'general');
+});
+
+test('does not merge two genuinely distinct official Meta conversations even with matching text', () => {
+  const threads = groupWhatsAppThreads([
+    { event_id: 'wamid.real-a', channel: 'general', phone_number_id: '1168807706304960', customer_wa_id: '5491100000001', customer_name: 'Cliente A', direction: 'inbound', text_body: 'Necesito precio de la lona', occurred_at: '2026-09-03T10:00:00Z', classification_status: 'pending' },
+    { event_id: 'wamid.real-b', channel: 'penosil', phone_number_id: '9998887706304960', customer_wa_id: '5493500000002', customer_name: 'Cliente B', direction: 'inbound', text_body: 'Necesito precio de la lona', occurred_at: '2026-09-03T10:00:02Z', classification_status: 'pending' },
+  ]);
+  assert.equal(threads.length, 2);
+});
+
 test('replaces unread preview with real messages after opening the chat', () => {
   const threads = groupWhatsAppThreads([
     { event_id: 'preview', channel: 'penosil', customer_wa_id: 'cliente', message_type: 'verified_unread_preview', text_body: '2 mensajes no leídos', occurred_at: '2026-09-01T10:00:00Z', classification_status: 'pending' },

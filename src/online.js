@@ -1,12 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import { filterDismissedEvents, isLegacyWhatsAppPreview } from './whatsapp-events.mjs';
-import { whatsappContactKey } from './whatsapp-threads.mjs';
+import { whatsappContactIdentity, whatsappContactKey } from './whatsapp-threads.mjs';
 export { mergeWorkspaceState, workspaceStatesEqual } from './workspace.mjs';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const WORKSPACE_KEY = 'grupo-poliplast';
-const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '' };
+const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '' };
 
 function threadKey(event) {
   return whatsappContactKey(event);
@@ -30,9 +30,9 @@ export async function loadOnlineState() {
   if (eventsError) throw eventsError;
   const state = stateRow?.data || null;
   const savedEvents = new Map((state?.inbox || []).map((item) => [item.event_id, item]));
-  const ignored = new Map((state?.ignoredWhatsAppContacts || []).map((item) => [item.key, item]));
+  const ignored = new Map((state?.ignoredWhatsAppContacts || []).map((item) => [item.contactIdentity || whatsappContactIdentity({ customer_wa_id: item.customerWaId, customer_name: item.customerName }), item]));
   const inbox = filterDismissedEvents(events || [], state?.dismissedInboxEventIds || []).map((event) => {
-    const rule = ignored.get(threadKey(event));
+    const rule = ignored.get(whatsappContactIdentity(event));
     return {
       ...event,
       ...(savedEvents.get(event.event_id) || {}),

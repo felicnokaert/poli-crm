@@ -9,6 +9,10 @@ export function whatsappContactKey(event = {}) {
   return `${normalized(event.channel || 'unknown')}:${contact}`;
 }
 
+export function whatsappContactIdentity(event = {}) {
+  return normalized(event.customer_wa_id || event.customer_name || 'unknown');
+}
+
 function messageFingerprint(event = {}) {
   const sourceKey = event.raw_payload?.source_message_key;
   if (sourceKey) return normalized(sourceKey);

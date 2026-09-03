@@ -37,6 +37,15 @@ test('does not resurrect dismissed events during workspace synchronization', () 
   assert.deepEqual(merged.dismissedInboxEventIds, ['deleted-1']);
 });
 
+test('does not resurrect commercial history after an authorized reset', () => {
+  const merged = mergeWorkspaceState(
+    { interactions: [], historyResetVersion: '2026-09-03T16:00:00.000Z' },
+    { interactions: [{ id: 'old-history', createdAt: '2026-09-01T10:00:00Z' }] },
+  );
+  assert.deepEqual(merged.interactions, []);
+  assert.equal(merged.historyResetVersion, '2026-09-03T16:00:00.000Z');
+});
+
 test('removes obsolete unread counters while keeping real WhatsApp messages', () => {
   const merged = mergeWorkspaceState(
     { inbox: [{ event_id: 'counter', message_type: 'verified_unread_preview' }], dismissedInboxEventIds: [] },

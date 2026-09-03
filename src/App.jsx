@@ -56,6 +56,7 @@ import {
 import { COMMERCIAL_PLAN } from "./commercial-plan";
 import {
   groupWhatsAppThreads,
+  whatsappContactIdentity,
   whatsappContactKey,
 } from "./whatsapp-threads.mjs";
 import { addInteractionOnce, groupConversationHistory } from "./conversation-history.mjs";
@@ -130,6 +131,7 @@ const INTENTS = [
 ];
 const STORAGE_KEY = "poliplast-sales-copilot-v1";
 const PENOSIL_V017_CUTOFF = "2026-09-01T23:09:45.829Z";
+const HISTORY_RESET_VERSION = "2026-09-03T16:00:00.000Z";
 
 const initialState = {
   clients: [],
@@ -142,6 +144,7 @@ const initialState = {
   ignoredWhatsAppContacts: [],
   planChecks: {},
   commercialMasterVersion: "",
+  historyResetVersion: "",
 };
 
 function addDays(days) {
@@ -357,7 +360,13 @@ export default function App() {
     loadOnlineState()
       .then(({ state }) => {
         if (!active) return;
-        setData({ ...initialState, ...state, inbox: state.inbox || [] });
+        const nextState = { ...initialState, ...state, inbox: state.inbox || [] };
+        if (nextState.historyResetVersion !== HISTORY_RESET_VERSION) {
+          nextState.interactions = [];
+          nextState.historyResetVersion = HISTORY_RESET_VERSION;
+          saveOnlineState(session.user.id, session.user.email, nextState).catch(() => {});
+        }
+        setData(nextState);
         setRemoteReady(true);
         setSyncStatus("Sincronizado");
       })
@@ -378,7 +387,7 @@ export default function App() {
             if (current.inbox.some((item) => item.event_id === event.event_id))
               return current;
             const ignoredRule = (current.ignoredWhatsAppContacts || []).find(
-              (item) => item.key === whatsappThreadKey(event),
+              (item) => (item.contactIdentity || whatsappContactIdentity({ customer_wa_id: item.customerWaId, customer_name: item.customerName })) === whatsappContactIdentity(event),
             );
             const client =
               findClientByWhatsApp(current.clients, event) ||
@@ -917,8 +926,10 @@ export default function App() {
     const event = data.inbox.find((item) => item.event_id === eventId);
     if (!event) return;
     const key = whatsappThreadKey(event);
+    const contactIdentity = whatsappContactIdentity(event);
     const rule = {
       key,
+      contactIdentity,
       channel: event.channel,
       customerWaId: event.customer_wa_id || "",
       customerName: event.customer_name || "",
@@ -927,7 +938,7 @@ export default function App() {
     };
     const rules = [
       ...(data.ignoredWhatsAppContacts || []).filter(
-        (item) => item.key !== key,
+        (item) => (item.contactIdentity || whatsappContactIdentity({ customer_wa_id: item.customerWaId, customer_name: item.customerName })) !== contactIdentity,
       ),
       rule,
     ];
@@ -935,7 +946,7 @@ export default function App() {
       ...data,
       ignoredWhatsAppContacts: rules,
       inbox: data.inbox.map((item) =>
-        whatsappThreadKey(item) === key
+        whatsappContactIdentity(item) === contactIdentity
           ? {
               ...item,
               classification_status: "excluded",
@@ -963,13 +974,14 @@ export default function App() {
     const event = data.inbox.find((item) => item.event_id === eventId);
     if (!event) return;
     const key = whatsappThreadKey(event);
+    const contactIdentity = whatsappContactIdentity(event);
     setData({
       ...data,
       ignoredWhatsAppContacts: (data.ignoredWhatsAppContacts || []).filter(
-        (item) => item.key !== key,
+        (item) => (item.contactIdentity || whatsappContactIdentity({ customer_wa_id: item.customerWaId, customer_name: item.customerName })) !== contactIdentity,
       ),
       inbox: data.inbox.map((item) =>
-        whatsappThreadKey(item) === key
+        whatsappContactIdentity(item) === contactIdentity
           ? {
               ...item,
               classification_status: "pending",
@@ -1070,10 +1082,12 @@ export default function App() {
       eventIds.includes(item.event_id),
     );
     const keys = new Set(selected.map(whatsappThreadKey));
+    const identities = new Set(selected.map(whatsappContactIdentity));
     if (!keys.size) return;
     const stamp = new Date().toISOString();
     const additions = selected.map((event) => ({
       key: whatsappThreadKey(event),
+      contactIdentity: whatsappContactIdentity(event),
       channel: event.channel,
       customerWaId: event.customer_wa_id || "",
       customerName: event.customer_name || "",
@@ -1084,12 +1098,12 @@ export default function App() {
       ...data,
       ignoredWhatsAppContacts: [
         ...(data.ignoredWhatsAppContacts || []).filter(
-          (item) => !keys.has(item.key),
+          (item) => !identities.has(item.contactIdentity || whatsappContactIdentity({ customer_wa_id: item.customerWaId, customer_name: item.customerName })),
         ),
         ...additions,
       ],
       inbox: data.inbox.map((item) =>
-        keys.has(whatsappThreadKey(item))
+        identities.has(whatsappContactIdentity(item))
           ? {
               ...item,
               classification_status: "excluded",

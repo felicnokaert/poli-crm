@@ -1,4 +1,4 @@
-const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '' };
+const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '' };
 const OBSOLETE_PREVIEW_TYPES = new Set(['unread_preview', 'unread_notice', 'verified_unread_preview']);
 
 function recordStamp(record) {
@@ -19,9 +19,16 @@ function mergeRecords(local = [], remote = [], key = 'id') {
 export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
   const dismissedInboxEventIds = [...new Set([...(remote.dismissedInboxEventIds || []), ...(local.dismissedInboxEventIds || [])])].sort();
   const dismissed = new Set(dismissedInboxEventIds);
+  const localHistoryReset = local.historyResetVersion || '';
+  const remoteHistoryReset = remote.historyResetVersion || '';
   return {
     clients: mergeRecords(local.clients, remote.clients),
-    interactions: mergeRecords(local.interactions, remote.interactions).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')),
+    interactions: localHistoryReset || remoteHistoryReset
+      ? mergeRecords(
+          localHistoryReset >= remoteHistoryReset ? local.interactions : [],
+          remoteHistoryReset >= localHistoryReset ? remote.interactions : [],
+        ).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+      : mergeRecords(local.interactions, remote.interactions).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')),
     tasks: mergeRecords(local.tasks, remote.tasks),
     inbox: mergeRecords(local.inbox, remote.inbox, 'event_id')
       .filter((item) => !dismissed.has(item.event_id) && !OBSOLETE_PREVIEW_TYPES.has(item.message_type))
@@ -32,6 +39,7 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
     ignoredWhatsAppContacts: mergeRecords(local.ignoredWhatsAppContacts, remote.ignoredWhatsAppContacts, 'key'),
     planChecks: { ...(remote.planChecks || {}), ...(local.planChecks || {}) },
     commercialMasterVersion: local.commercialMasterVersion || remote.commercialMasterVersion || '',
+    historyResetVersion: [localHistoryReset, remoteHistoryReset].sort().at(-1) || '',
   };
 }
 

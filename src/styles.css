@@ -8,12 +8,12 @@ button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
 button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid var(--brand-red); outline-offset: 2px; }
 .app-shell { display: grid; grid-template-columns: 238px 1fr; min-height: 100vh; }
-.sidebar { background: #242424; color: #fff; padding: 26px 18px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
-.brand { display: flex; gap: 12px; align-items: center; padding: 0 8px 28px; }
-.brand-logo { width: 78px; height: 42px; object-fit: contain; border-radius: 8px; background: #fff; padding: 4px; }
+.sidebar { background: #242424; color: #fff; padding: 14px 12px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+.brand { display: flex; gap: 8px; align-items: center; padding: 0 6px 12px; }
+.brand-logo { width: 70px; height: 36px; object-fit: contain; border-radius: 7px; background: #fff; padding: 3px; }
 .brand strong, .brand span { display: block; }.brand strong { font: 700 15px 'Manrope'; }.brand span { color: #aac8bd; font-size: 12px; margin-top: 2px; }
-nav { display: grid; gap: 6px; } nav button { border: 0; color: #c7c7c9; background: transparent; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; text-align: left; } nav button:hover, nav button.active { background: #3a3a3b; color: #fff; } nav button.active { box-shadow: inset 3px 0 0 var(--brand-red); }
-.sidebar-note { margin-top: auto; border-top: 1px solid #2b5a50; padding: 20px 10px 0; }.sidebar-note p { color: #aac8bd; font-size: 12px; line-height: 1.5; margin-bottom: 0; }
+nav { display: grid; gap: 2px; } nav button { border: 0; color: #c7c7c9; background: transparent; display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 8px; text-align: left; font-size: 12px; line-height: 1.15; } nav button svg { width: 16px; height: 16px; flex: 0 0 16px; } nav button:hover, nav button.active { background: #3a3a3b; color: #fff; } nav button.active { box-shadow: inset 3px 0 0 var(--brand-red); }
+.sidebar-note { margin-top: auto; border-top: 1px solid #2b5a50; padding: 10px 8px 0; }.sidebar-note p { color: #aac8bd; font-size: 10px; line-height: 1.35; margin-bottom: 0; }
 .legal-links, .login-legal { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 12px; }.legal-links a { color: #aac8bd; font-size: 11px; }.login-legal { justify-content: center; margin-top: 18px; }.login-legal a { color: #56736b; font-size: 11px; }
 main { padding: 30px 36px 56px; min-width: 0; }
 .topbar, .top-actions, .panel-head, .channel-card, .interaction-row, .task-row, .client-row { display: flex; align-items: center; }

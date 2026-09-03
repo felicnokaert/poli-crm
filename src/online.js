@@ -20,7 +20,7 @@ export const supabase = onlineConfigured
   : null;
 
 export async function loadOnlineState() {
-  const [{ data: stateRow, error: stateError }, { data: events, error: eventsError }] = await Promise.all([
+  const [{ data: stateRow, error: stateError }, { data: events, error: eventsError }, { data: statusEvents, error: statusError }] = await Promise.all([
     supabase.from('workspace_states').select('data,updated_at,updated_by_email').eq('workspace_key', WORKSPACE_KEY).maybeSingle(),
     // La bandeja comercial nace de consultas entrantes. Los mensajes enviados
     // por el equipo no crean alertas ni conversaciones por sí solos.
@@ -28,9 +28,15 @@ export async function loadOnlineState() {
     // Felipe: son consumidores finales, no vale la pena el ruido cruzado con
     // General). No se borra nada de whatsapp_events, solo se deja de traer.
     supabase.from('whatsapp_events').select('*').eq('direction', 'inbound').neq('channel', 'penosil').neq('message_type', 'unread_preview').neq('message_type', 'unread_notice').neq('message_type', 'verified_unread_preview').order('occurred_at', { ascending: false }).limit(500),
+    // Cuando alguien contesta desde el teléfono (no desde el CRM), Meta no
+    // manda el mensaje saliente, pero sí manda confirmaciones de status
+    // (sent/delivered/read/played) para lo que se le mandó al cliente. Eso
+    // alcanza para detectar "esto ya se respondió afuera" sin inventar nada.
+    supabase.from('whatsapp_events').select('customer_wa_id,occurred_at').eq('direction', 'status').eq('channel', 'general').gte('occurred_at', new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString()).limit(2000),
   ]);
   if (stateError) throw stateError;
   if (eventsError) throw eventsError;
+  if (statusError) throw statusError;
   const state = stateRow?.data || null;
   const savedEvents = new Map((state?.inbox || []).map((item) => [item.event_id, item]));
   const ignored = new Map((state?.ignoredWhatsAppContacts || []).map((item) => [item.contactIdentity || whatsappContactIdentity({ customer_wa_id: item.customerWaId, customer_name: item.customerName }), item]));
@@ -47,6 +53,7 @@ export async function loadOnlineState() {
     state: state ? { ...EMPTY_STATE, ...state, inbox } : { ...EMPTY_STATE, inbox },
     updatedAt: stateRow?.updated_at,
     updatedBy: stateRow?.updated_by_email,
+    statusEvents: statusEvents || [],
   };
 }
 

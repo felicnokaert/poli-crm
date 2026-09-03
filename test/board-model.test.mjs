@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { moveCard } from '../src/board-model.mjs';
+import { moveCard, reorderList } from '../src/board-model.mjs';
 
 test('moves a card to the end of another list', () => {
   const cards = [
@@ -47,4 +47,22 @@ test('renumbers orders without gaps after a move', () => {
 test('does nothing when the card does not exist', () => {
   const cards = [{ id: 'a', listId: 'list1', order: 0 }];
   assert.deepEqual(moveCard(cards, 'missing', 'list1', null), cards);
+});
+
+test('reorders a list one position to the right', () => {
+  const lists = [{ id: 'a', order: 0 }, { id: 'b', order: 1 }, { id: 'c', order: 2 }];
+  const result = reorderList(lists, 'a', 1);
+  assert.deepEqual(result.sort((x, y) => x.order - y.order).map((item) => item.id), ['b', 'a', 'c']);
+});
+
+test('reorders a list one position to the left', () => {
+  const lists = [{ id: 'a', order: 0 }, { id: 'b', order: 1 }, { id: 'c', order: 2 }];
+  const result = reorderList(lists, 'c', -1);
+  assert.deepEqual(result.sort((x, y) => x.order - y.order).map((item) => item.id), ['a', 'c', 'b']);
+});
+
+test('does not move a list past the edges of the board', () => {
+  const lists = [{ id: 'a', order: 0 }, { id: 'b', order: 1 }];
+  assert.deepEqual(reorderList(lists, 'a', -1), lists);
+  assert.deepEqual(reorderList(lists, 'b', 1), lists);
 });

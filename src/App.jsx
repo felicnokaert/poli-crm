@@ -50,7 +50,8 @@ import { inferIntent } from "./commercial-intelligence.mjs";
 import Sales from "./Sales";
 import Board from "./Board";
 import PriceMemory from "./PriceMemory";
-import { moveCard } from "./board-model.mjs";
+import { moveCard, reorderList } from "./board-model.mjs";
+import { wasAnsweredOutside } from "./answered-outside.mjs";
 import {
   fetchCommercialMaster,
   mergeCommercialMaster,
@@ -350,6 +351,7 @@ export default function App() {
   const [selectedClientId, setSelectedClientId] = useState(null);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [penosilCleanupRunning, setPenosilCleanupRunning] = useState(false);
+  const [outboundStatusEvents, setOutboundStatusEvents] = useState([]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -378,7 +380,7 @@ export default function App() {
     let active = true;
     setSyncStatus("Sincronizando…");
     loadOnlineState()
-      .then(({ state }) => {
+      .then(({ state, statusEvents }) => {
         if (!active) return;
         const nextState = { ...initialState, ...state, inbox: state.inbox || [] };
         if (nextState.historyResetVersion !== HISTORY_RESET_VERSION) {
@@ -387,6 +389,7 @@ export default function App() {
           saveOnlineState(session.user.id, session.user.email, nextState).catch(() => {});
         }
         setData(nextState);
+        setOutboundStatusEvents(statusEvents || []);
         setRemoteReady(true);
         setSyncStatus("Sincronizado");
       })
@@ -822,6 +825,13 @@ export default function App() {
       ...current,
       boardLists: (current.boardLists || []).filter((item) => item.id !== id),
       boardCards: (current.boardCards || []).filter((item) => item.listId !== id),
+    }));
+  }
+
+  function reorderBoardList(listId, direction) {
+    setData((current) => ({
+      ...current,
+      boardLists: reorderList(current.boardLists || [], listId, direction),
     }));
   }
 
@@ -1635,6 +1645,7 @@ export default function App() {
         {view === "inbox" && (
           <WhatsAppInbox
             items={data.inbox}
+            statusEvents={outboundStatusEvents}
             clients={data.clients}
             onClassify={classifyInbox}
             onDraft={openInboxDraft}
@@ -1681,6 +1692,7 @@ export default function App() {
             cards={data.boardCards || []}
             onSaveList={saveBoardList}
             onDeleteList={deleteBoardList}
+            onReorderList={reorderBoardList}
             onSaveCard={saveBoardCard}
             onDeleteCard={deleteBoardCard}
             onMoveCard={moveBoardCard}
@@ -2046,6 +2058,7 @@ function Conversations({ items, clients, onOpen, onOpenClient }) {
 
 function WhatsAppInbox({
   items,
+  statusEvents,
   clients,
   onClassify,
   onDraft,
@@ -2065,6 +2078,7 @@ function WhatsAppInbox({
   const [showArchived, setShowArchived] = useState(false);
   const [showExcluded, setShowExcluded] = useState(false);
   const [showStale, setShowStale] = useState(false);
+  const [showAnswered, setShowAnswered] = useState(false);
   const [query, setQuery] = useState("");
   const [channel, setChannel] = useState("all");
   const [family, setFamily] = useState("all");
@@ -2133,8 +2147,19 @@ function WhatsAppInbox({
   const stalePending = allPending.filter(
     (item) => new Date(item.occurred_at || 0).getTime() < staleCutoff,
   );
+  // Si Felipe ya le contestó al cliente desde el teléfono (no desde el CRM),
+  // Meta manda igual una confirmación de status para ese contacto después
+  // del mensaje entrante. Esa es la única señal disponible de "ya atendido"
+  // sin inventar nada ni tocar la configuración de WhatsApp.
+  const answeredOutside = pending.filter((item) =>
+    wasAnsweredOutside(item.occurred_at, item.customer_wa_id, statusEvents || []),
+  );
+  const reallyPending = pending.filter(
+    (item) => !answeredOutside.includes(item),
+  );
   const selectable = [
-    ...pending,
+    ...reallyPending,
+    ...(showAnswered ? answeredOutside : []),
     ...(showStale ? stalePending : []),
     ...(showExcluded ? excluded : []),
     ...(showArchived ? archived : []),
@@ -2182,7 +2207,7 @@ function WhatsAppInbox({
               corresponde.
             </p>
           </div>
-          <span className="inbox-count">{pending.length}</span>
+          <span className="inbox-count">{reallyPending.length}</span>
         </div>
         <div className="list-toolbar inbox-filters">
           <label className="search">
@@ -2277,8 +2302,8 @@ function WhatsAppInbox({
             </div>
           )}
         </div>
-        {pending.length ? (
-          pending.map((item) => (
+        {reallyPending.length ? (
+          reallyPending.map((item) => (
             <InboxRow
               item={item}
               {...rowProps}
@@ -2291,6 +2316,38 @@ function WhatsAppInbox({
           <Empty text="No hay conversaciones esperando clasificación con este filtro." />
         )}
       </section>
+      {answeredOutside.length > 0 && (
+        <section className="panel quarantine-panel">
+          <div className="panel-head">
+            <div>
+              <span className="eyebrow">Detectado por WhatsApp</span>
+              <h2>Ya respondiste</h2>
+              <p>
+                Le mandaste algo a este contacto desde el teléfono después de
+                su último mensaje. Si te equivocaste, podés reabrirlo desde
+                acá igual que los demás.
+              </p>
+            </div>
+            <button
+              className="secondary"
+              type="button"
+              onClick={() => setShowAnswered(!showAnswered)}
+            >
+              {showAnswered ? "Ocultar" : `Mostrar (${answeredOutside.length})`}
+            </button>
+          </div>
+          {showAnswered &&
+            answeredOutside.map((item) => (
+              <InboxRow
+                item={item}
+                {...rowProps}
+                selected={selected.includes(item.threadKey)}
+                onToggleSelected={toggleSelected}
+                key={item.threadKey}
+              />
+            ))}
+        </section>
+      )}
       {stalePending.length > 0 && (
         <section className="panel quarantine-panel">
           <div className="panel-head">

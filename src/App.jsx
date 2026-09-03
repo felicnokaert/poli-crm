@@ -816,7 +816,12 @@ export default function App() {
     if (!event) return;
     const stamp = new Date().toISOString();
     const status = decision === "ignore" ? "ignored" : decision;
-    if (decision === "ignore") {
+    // "Solo contexto" y "Entrenador" solo marcan el estado del mensaje, igual
+    // que la clasificación masiva (batchClassifyInbox). No deben crear una
+    // entrada de Historial comercial con el texto crudo de WhatsApp: el
+    // Historial se alimenta únicamente por el flujo manual "Revisar
+    // conversación" (borrador con resumen escrito por la persona vendedora).
+    if (decision === "ignore" || decision === "memory" || decision === "training") {
       const threadKey = whatsappThreadKey(event);
       setData({
         ...data,
@@ -1156,12 +1161,33 @@ export default function App() {
       )
     )
       return;
+    // Las filas de "Canal por confirmar" no tienen legacyCapture (ese flag
+    // es exclusivo del panel de capturas viejas); el criterio correcto para
+    // borrar la fila es el hilo, no ese flag. Filtrar por legacyCapture acá
+    // hacía que "Quitar captura" no borrara nada en ese panel.
     const deletedIds = data.inbox
-      .filter(
-        (item) =>
-          item.legacyCapture &&
-          whatsappThreadKey(item) === whatsappThreadKey(event),
+      .filter((item) => whatsappThreadKey(item) === whatsappThreadKey(event))
+      .map((item) => item.event_id);
+    setData({
+      ...data,
+      inbox: data.inbox.filter((item) => !deletedIds.includes(item.event_id)),
+      dismissedInboxEventIds: [
+        ...new Set([...(data.dismissedInboxEventIds || []), ...deletedIds]),
+      ],
+    });
+  }
+
+  function deleteAllLegacyInbox(items) {
+    if (!items.length) return;
+    if (
+      !window.confirm(
+        `¿Quitar del CRM las ${items.length} capturas en cuarentena? Los chats originales de WhatsApp no se modifican.`,
       )
+    )
+      return;
+    const keys = new Set(items.map(whatsappThreadKey));
+    const deletedIds = data.inbox
+      .filter((item) => keys.has(whatsappThreadKey(item)))
       .map((item) => item.event_id);
     setData({
       ...data,
@@ -1521,6 +1547,7 @@ export default function App() {
             onRestore={restoreInbox}
             onDelete={deleteInbox}
             onDeleteLegacy={deleteLegacyInbox}
+            onDeleteAllLegacy={deleteAllLegacyInbox}
             onExclude={excludeInboxContact}
             onRestoreCommercial={restoreCommercialContact}
             onBatchClassify={batchClassifyInbox}
@@ -1917,6 +1944,7 @@ function WhatsAppInbox({
   onRestore,
   onDelete,
   onDeleteLegacy,
+  onDeleteAllLegacy,
   onExclude,
   onRestoreCommercial,
   onBatchClassify,
@@ -2178,6 +2206,12 @@ function WhatsAppInbox({
             </div>
             <span className="inbox-count warning">{channelConflicts.length}</span>
           </div>
+          <button
+            className="danger-link"
+            onClick={() => onDeleteAllLegacy(channelConflicts)}
+          >
+            Limpiar todo ({channelConflicts.length})
+          </button>
           {channelConflicts.map((item) => (
             <LegacyInboxRow
               item={item}
@@ -2231,6 +2265,12 @@ function WhatsAppInbox({
             </div>
             <span className="inbox-count warning">{legacyThreads.length}</span>
           </div>
+          <button
+            className="danger-link"
+            onClick={() => onDeleteAllLegacy(legacyThreads)}
+          >
+            Limpiar todo ({legacyThreads.length})
+          </button>
           {legacyThreads.map((item) => (
             <LegacyInboxRow
               item={item}

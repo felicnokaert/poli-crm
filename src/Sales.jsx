@@ -1,9 +1,19 @@
 import { useMemo, useState } from 'react';
-import { Plus, ReceiptText, Trash2, X } from 'lucide-react';
-import { blankSale, normalizedSale, saleCommission, SALES_UNITS } from './sales-model.mjs';
+import { Download, Plus, ReceiptText, Trash2, X } from 'lucide-react';
+import { blankSale, normalizedSale, saleCommission, salesToCsv, SALES_UNITS } from './sales-model.mjs';
 
 const money = (value) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(value || 0);
 const monthKey = (date) => String(date || '').slice(0, 7);
+
+function exportSalesCsv(sales, month, unit) {
+  const blob = new Blob([salesToCsv(sales)], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `ventas-${unit === 'Todas' ? 'todas' : unit.toLowerCase()}-${month || 'todos'}.csv`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function Sales({ items, onSave, onDelete }) {
   const currentMonth = new Date().toISOString().slice(0, 7);
@@ -24,7 +34,7 @@ export default function Sales({ items, onSave, onDelete }) {
     </section>
     <section className="panel">
       <div className="panel-head"><div><span className="eyebrow">Resultado comercial</span><h2>Ventas realizadas</h2><p>Registro manual de Facturas y COT. La comisión se calcula sobre el importe neto sin IVA.</p></div><button className="primary" onClick={() => setEditing(blankSale())}><Plus size={17}/> Registrar venta</button></div>
-      <div className="list-toolbar"><input type="month" value={month} onChange={(event) => setMonth(event.target.value)}/><select value={unit} onChange={(event) => setUnit(event.target.value)}><option>Todas</option><option>Poliplast</option><option>Poliocho</option></select></div>
+      <div className="list-toolbar"><input type="month" value={month} onChange={(event) => setMonth(event.target.value)}/><select value={unit} onChange={(event) => setUnit(event.target.value)}><option>Todas</option><option>Poliplast</option><option>Poliocho</option></select><button type="button" className="secondary" onClick={() => exportSalesCsv(filtered, month, unit)} disabled={!filtered.length}><Download size={15}/> Exportar CSV</button></div>
       <div className="opportunity-list">{filtered.map((item) => <button className="opportunity-row" key={item.id} onClick={() => setEditing(item)}><div><strong>{item.customer}</strong><span>{item.unit} · {item.documentType}{item.pointOfSale ? ` ${item.pointOfSale}-${item.documentNumber}` : ` ${item.documentNumber}`}</span></div><span className="opportunity-stage">{item.date}</span><div><strong>{money(item.netAmount)}</strong><span>Comisión {money(saleCommission(item))}</span></div></button>)}{!filtered.length && <div className="empty-opportunities"><ReceiptText/><p>No hay ventas registradas en este período.</p></div>}</div>
     </section>
     {editing && <SaleModal value={editing} onClose={() => setEditing(null)} onSave={(value) => { onSave(normalizedSale(value)); setEditing(null); }} onDelete={editing.id ? () => { onDelete(editing.id); setEditing(null); } : null}/>} 

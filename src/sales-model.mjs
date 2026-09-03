@@ -22,6 +22,25 @@ export function blankSale() {
   };
 }
 
+function escapeCsvCell(value) {
+  const text = String(value ?? '');
+  return /[;"\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+export function salesToCsv(sales = []) {
+  const columns = [
+    ['Fecha', 'date'], ['Unidad', 'unit'], ['Comprobante', 'documentType'],
+    ['Punto de venta', 'pointOfSale'], ['Número', 'documentNumber'], ['Cliente', 'customer'],
+    ['Importe neto sin IVA', 'netAmount'], ['Comisión', 'commission'], ['Notas', 'notes'],
+  ];
+  const lines = [columns.map(([label]) => escapeCsvCell(label)).join(';')];
+  for (const sale of sales) {
+    const row = { ...sale, commission: saleCommission(sale) };
+    lines.push(columns.map(([, key]) => escapeCsvCell(row[key])).join(';'));
+  }
+  return `﻿${lines.join('\r\n')}`;
+}
+
 export function normalizedSale(sale) {
   const pointOfSale = sale.documentType === 'Factura'
     ? String(sale.pointOfSale || '').padStart(4, '0')

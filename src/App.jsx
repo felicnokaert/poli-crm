@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   ChevronRight,
   CircleAlert,
-  CircleDollarSign,
   ReceiptText,
   ClipboardList,
   LayoutDashboard,
@@ -47,7 +46,6 @@ import {
   mergeCommercialCohort,
 } from "./commercial-cohort";
 import { inferIntent } from "./commercial-intelligence.mjs";
-import Opportunities from "./Opportunities";
 import Sales from "./Sales";
 import {
   fetchCommercialMaster,
@@ -1377,7 +1375,6 @@ export default function App() {
     ["conversations", "Historial", MessageCircle],
     ["tasks", "Tareas", ClipboardList],
     ["pipeline", "Cuentas activas", Target],
-    ["opportunities", "Oportunidades", CircleDollarSign],
     ["sales", "Ventas", ReceiptText],
     ["clients", "Empresas", Building2],
     ["contacts", "Contactos", Users],
@@ -1546,14 +1543,6 @@ export default function App() {
               (client) => client.pipelineActive !== false,
             )}
             onOpenClient={setSelectedClientId}
-          />
-        )}
-        {view === "opportunities" && (
-          <Opportunities
-            items={data.opportunities || []}
-            clients={data.clients}
-            onSave={saveOpportunity}
-            onDelete={deleteOpportunity}
           />
         )}
         {view === "sales" && (

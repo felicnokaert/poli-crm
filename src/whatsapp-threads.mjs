@@ -55,10 +55,12 @@ function isCrossChannelMirror(left = {}, right = {}) {
 function threadsShareMirrorEvidence(left = {}, right = {}) {
   if (!equivalentContactNames(left.customer_name || left.customer_wa_id, right.customer_name || right.customer_wa_id)) return false;
   if (!String(left.phone_number_id || '').startsWith('browser-bridge:') || !String(right.phone_number_id || '').startsWith('browser-bridge:')) return false;
+  const exactAlias = normalized(left.customer_name || left.customer_wa_id) === normalized(right.customer_name || right.customer_wa_id);
+  const maximumDistance = exactAlias ? 86400000 : 300000;
   return (left.events || []).some((leftEvent) => (right.events || []).some((rightEvent) => {
     const leftText = comparableText(leftEvent.text_body);
     const distance = Math.abs(Date.parse(leftEvent.occurred_at || '') - Date.parse(rightEvent.occurred_at || ''));
-    return leftText && leftText === comparableText(rightEvent.text_body) && Number.isFinite(distance) && distance <= 300000;
+    return leftText && leftText === comparableText(rightEvent.text_body) && Number.isFinite(distance) && distance <= maximumDistance;
   }));
 }
 

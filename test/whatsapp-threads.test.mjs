@@ -71,6 +71,15 @@ test('renders one row for legacy mirrored threads captured within the same minut
   assert.deepEqual(threads[0].channels.sort(), ['general', 'penosil']);
 });
 
+test('groups the same sufficiently specific contact name across both channels in one day', () => {
+  const threads = groupWhatsAppThreads([
+    { event_id: 'general', channel: 'general', customer_wa_id: 'alias-general', customer_name: 'Daniel Alonso', text_body: 'Consulta técnica', occurred_at: '2026-09-03T09:00:00Z', classification_status: 'pending' },
+    { event_id: 'penosil', channel: 'penosil', customer_wa_id: 'alias-penosil', customer_name: 'Daniel Alonso', text_body: '[audio]', occurred_at: '2026-09-03T10:00:00Z', classification_status: 'pending' },
+  ]);
+  assert.equal(threads.length, 1);
+  assert.deepEqual(threads[0].channels.sort(), ['general', 'penosil']);
+});
+
 test('replaces unread preview with real messages after opening the chat', () => {
   const threads = groupWhatsAppThreads([
     { event_id: 'preview', channel: 'penosil', customer_wa_id: 'cliente', message_type: 'verified_unread_preview', text_body: '2 mensajes no leídos', occurred_at: '2026-09-01T10:00:00Z', classification_status: 'pending' },

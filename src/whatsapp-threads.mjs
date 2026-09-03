@@ -99,7 +99,10 @@ export function groupWhatsAppThreads(items = []) {
       const namesMatch = equivalentContactNames(current.customer_name || current.customer_wa_id, thread.customer_name || thread.customer_wa_id);
       const textMatches = comparableText(current.text_body) && comparableText(current.text_body) === comparableText(thread.text_body);
       const distance = Math.abs(Date.parse(current.occurred_at || '') - Date.parse(thread.occurred_at || ''));
-      return channelsDiffer && namesMatch && textMatches && Number.isFinite(distance) && distance <= 120000;
+      const exactVisibleName = normalized(current.customer_name) === normalized(thread.customer_name)
+        && normalized(current.customer_name).length >= 7;
+      return channelsDiffer && namesMatch && Number.isFinite(distance)
+        && ((textMatches && distance <= 120000) || (exactVisibleName && distance <= 86400000));
     });
     if (mirrorIndex < 0) {
       reconciledThreads.push(thread);

@@ -149,3 +149,9 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .board-card-date { display: block; margin-top: 5px; font-size: 11px; color: #7d8e88; }
 .board-add-card { margin-top: 10px; width: 100%; background: transparent; border: 1px dashed #c7d2cd; border-radius: 9px; padding: 8px; color: #5a7a70; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px; }
 .board-add-card:hover { background: #eaf1ee; }
+.price-memory-result { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 14px; padding: 14px; background: #f3f6f4; border-radius: 11px; flex-wrap: wrap; }
+.price-memory-result strong, .price-memory-result span { display: block; }
+.price-memory-result span { color: #7d8e88; font-size: 12px; margin-top: 3px; }
+.price-memory-result > div:nth-child(2) { text-align: right; }
+.price-memory-result > div:nth-child(2) strong { font: 800 20px 'Manrope'; margin-top: 2px; }
+.price-memory-more { color: #7d8e88; font-size: 12px; margin-top: 10px; }

@@ -27,6 +27,11 @@ function draftFromParsedInvoice(parsed) {
     currency: parsed.currency,
     exchangeRate: parsed.currency === 'USD' ? (parsed.exchangeRate || '') : '',
     notes: parsed.internalTaxExcluded ? `Impuesto interno excluido de la comisión: ${money(parsed.internalTaxExcluded)}.` : '',
+    // Se guardan los ítems para poder recordar precios por producto más
+    // adelante (memoria de precios en Entrenamiento).
+    items: (parsed.items || [])
+      .filter((item) => !/impuesto\s+interno/i.test(item.description || ''))
+      .map((item) => ({ description: item.description, code: item.code, unitPrice: item.unitPrice })),
   });
 }
 

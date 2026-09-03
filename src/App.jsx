@@ -49,6 +49,7 @@ import {
 import { inferIntent } from "./commercial-intelligence.mjs";
 import Sales from "./Sales";
 import Board from "./Board";
+import PriceMemory from "./PriceMemory";
 import { moveCard } from "./board-model.mjs";
 import {
   fetchCommercialMaster,
@@ -1718,11 +1719,14 @@ export default function App() {
         )}
         {view === "replies" && <QuickReplies />}
         {view === "coach" && (
-          <Coach
-            interactions={data.interactions}
-            data={data}
-            setData={setData}
-          />
+          <div className="content-stack">
+            <PriceMemory sales={data.sales || []} />
+            <Coach
+              interactions={data.interactions}
+              data={data}
+              setData={setData}
+            />
+          </div>
         )}
         {view === "settings" && (
           <TestCleanupPanel data={data} setData={setData} session={session} />

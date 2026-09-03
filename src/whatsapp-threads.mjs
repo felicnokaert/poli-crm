@@ -38,10 +38,18 @@ function equivalentContactNames(left = '', right = '') {
 function isCrossChannelMirror(left = {}, right = {}) {
   if (!left.channel || !right.channel || left.channel === right.channel) return false;
   if (!String(left.phone_number_id || '').startsWith('browser-bridge:') || !String(right.phone_number_id || '').startsWith('browser-bridge:')) return false;
-  if (!equivalentContactNames(left.customer_name || left.customer_wa_id, right.customer_name || right.customer_wa_id)) return false;
-  if (!comparableText(left.text_body) || comparableText(left.text_body) !== comparableText(right.text_body)) return false;
+  const leftText = comparableText(left.text_body);
+  const rightText = comparableText(right.text_body);
+  if (!leftText || leftText !== rightText) return false;
   const distance = Math.abs(Date.parse(left.occurred_at || '') - Date.parse(right.occurred_at || ''));
-  return Number.isFinite(distance) && distance <= 15000;
+  const namesMatch = equivalentContactNames(left.customer_name || left.customer_wa_id, right.customer_name || right.customer_wa_id);
+  if (namesMatch) return Number.isFinite(distance) && distance <= 15000;
+  // Los dos perfiles del puente pueden exponer alias distintos para el mismo
+  // contacto. Un texto suficientemente específico capturado en el mismo
+  // instante es evidencia fuerte de espejo; estados genéricos y multimedia
+  // quedan fuera para no unir clientes reales por accidente.
+  const generic = /^\[(audio|image|sticker|video|document)(?:\s*·[^\]]+)?\]$|^(hola|gracias|ok|sí|si|dale|escribiendo\.\.\.)$/i.test(leftText);
+  return !generic && leftText.length >= 12 && Number.isFinite(distance) && distance <= 2000;
 }
 
 export function dedupeWhatsAppEvents(events = []) {

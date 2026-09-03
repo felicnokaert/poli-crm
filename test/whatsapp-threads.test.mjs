@@ -87,6 +87,15 @@ test('reconciles a delayed legacy mirror only when its content also matches', ()
   assert.equal(threads.length, 1);
 });
 
+test('quarantines simultaneous cross-channel mirrors even when browser aliases differ', () => {
+  const grouped = groupWhatsAppThreads([
+    event({ event_id: 'bridge.open.general-a', channel: 'general', customer_name: 'Marcelo Ceratto', text_body: 'Hola dame un poco de tiempo, me interesa', occurred_at: '2026-09-03T12:19:00Z', phone_number_id: 'browser-bridge:general' }),
+    event({ event_id: 'bridge.open.penosil-a', channel: 'penosil', customer_name: '+54 9 2302 48-4069', text_body: 'Hola dame un poco de tiempo, me interesa', occurred_at: '2026-09-03T12:19:01Z', phone_number_id: 'browser-bridge:penosil' }),
+  ]);
+  assert.equal(grouped.length, 1);
+  assert.equal(grouped[0].channelConflict, true);
+});
+
 test('replaces unread preview with real messages after opening the chat', () => {
   const threads = groupWhatsAppThreads([
     { event_id: 'preview', channel: 'penosil', customer_wa_id: 'cliente', message_type: 'verified_unread_preview', text_body: '2 mensajes no leídos', occurred_at: '2026-09-01T10:00:00Z', classification_status: 'pending' },

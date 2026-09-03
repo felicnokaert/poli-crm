@@ -3,8 +3,19 @@ export const SALES_UNITS = {
   Poliocho: { rate: 0.01, invoicePoints: ['0003'] },
 };
 
+// Felipe cobra en pesos. Si la factura vino en dólares, la comisión se
+// calcula sobre el equivalente en pesos usando el tipo de cambio de la
+// propia factura, no sobre el importe en dólares directamente.
+export function netAmountInArs(sale) {
+  const netAmount = Number(sale?.netAmount || 0);
+  if (sale?.currency === 'USD' && Number(sale?.exchangeRate) > 0) {
+    return netAmount * Number(sale.exchangeRate);
+  }
+  return netAmount;
+}
+
 export function saleCommission(sale) {
-  return Number(sale?.netAmount || 0) * (SALES_UNITS[sale?.unit]?.rate || 0);
+  return netAmountInArs(sale) * (SALES_UNITS[sale?.unit]?.rate || 0);
 }
 
 export function blankSale() {
@@ -18,6 +29,8 @@ export function blankSale() {
     documentNumber: '',
     customer: '',
     netAmount: '',
+    currency: 'ARS',
+    exchangeRate: '',
     notes: '',
     collected: false,
   };
@@ -42,11 +55,19 @@ export function salesToCsv(sales = []) {
   const columns = [
     ['Fecha', 'date'], ['Unidad', 'unit'], ['Comprobante', 'documentType'],
     ['Punto de venta', 'pointOfSale'], ['Número', 'documentNumber'], ['Cliente', 'customer'],
-    ['Importe neto sin IVA', 'netAmount'], ['Comisión', 'commission'], ['¿Se cobró?', 'collectedLabel'], ['Notas', 'notes'],
+    ['Importe neto sin IVA', 'netAmount'], ['Moneda', 'currency'], ['Tipo de cambio', 'exchangeRateLabel'],
+    ['Importe neto en pesos', 'netAmountArs'], ['Comisión', 'commission'], ['¿Se cobró?', 'collectedLabel'], ['Notas', 'notes'],
   ];
   const lines = [columns.map(([label]) => escapeCsvCell(label)).join(';')];
   for (const sale of sales) {
-    const row = { ...sale, commission: saleCommission(sale), collectedLabel: sale.collected ? 'Sí' : 'No' };
+    const row = {
+      ...sale,
+      currency: sale.currency || 'ARS',
+      exchangeRateLabel: sale.currency === 'USD' ? sale.exchangeRate || '' : '',
+      netAmountArs: netAmountInArs(sale),
+      commission: saleCommission(sale),
+      collectedLabel: sale.collected ? 'Sí' : 'No',
+    };
     lines.push(columns.map(([, key]) => escapeCsvCell(row[key])).join(';'));
   }
   return `﻿${lines.join('\r\n')}`;
@@ -61,6 +82,8 @@ export function normalizedSale(sale) {
     pointOfSale,
     documentNumber: String(sale.documentNumber || '').padStart(5, '0'),
     netAmount: Number(sale.netAmount || 0),
+    currency: sale.currency === 'USD' ? 'USD' : 'ARS',
+    exchangeRate: sale.currency === 'USD' ? Number(sale.exchangeRate || 0) : 0,
     commission: saleCommission(sale),
     collected: Boolean(sale.collected),
   };

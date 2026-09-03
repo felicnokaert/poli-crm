@@ -31,6 +31,10 @@ Condición de venta: Cuenta corriente Condición de IVA: Responsable Inscripto
 Importe Neto Gravado: U$S2.385,00
 IVA 21%: U$S500,85
 Importe Total: U$S2.885,85
+Son Dolares DOS MIL OCHOCIENTOS OCHENTA Y CINCO con OCHENTA Y CINCO.
+FACTURA POR CUENTA Y ORDEN DE MAS-TIN SA CUIT 30-54921610-9.- La presente factura equivale
+a $ 4.415.350,50 , de ser cancelada en pesos argentinos deberá hacerse al tipo de cambio
+oficial del día anterior a la acreditación del pago. Cotización del Dolar $ 1.530,00.
 `;
 
 test('parses a real Poliplast (point of sale 0006) invoice', () => {
@@ -42,6 +46,7 @@ test('parses a real Poliplast (point of sale 0006) invoice', () => {
   assert.equal(result.customer, 'LACUS LATINA S.A.');
   assert.equal(result.netAmount, 525);
   assert.equal(result.recognized, true);
+  assert.equal(result.currency, 'USD');
 });
 
 test('parses a real Poliocho (point of sale 0003) invoice', () => {
@@ -50,6 +55,21 @@ test('parses a real Poliocho (point of sale 0003) invoice', () => {
   assert.equal(result.pointOfSale, '0003');
   assert.equal(result.documentNumber, '01643');
   assert.equal(result.netAmount, 2385);
+  assert.equal(result.currency, 'USD');
+  assert.equal(result.exchangeRate, 1530);
+});
+
+test('detects an ARS invoice without an exchange rate', () => {
+  const arsInvoice = `
+Nº: 0006-00055555
+Fecha: 05/09/2026
+Razón social: CLIENTE EN PESOS
+5 740T POLI-PLUS 740 IR 100,00 21,00 % 0,00 % 500,00
+Importe Neto Gravado: $500,00
+`;
+  const result = parseInvoiceText(arsInvoice);
+  assert.equal(result.currency, 'ARS');
+  assert.equal(result.exchangeRate, null);
 });
 
 test('excludes "Impuesto Interno" line items from the commission base', () => {

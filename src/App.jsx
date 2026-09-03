@@ -1443,21 +1443,32 @@ export default function App() {
     setShowTaskForm(false);
   }
 
-  const nav = [
-    ["dashboard", "Inicio", LayoutDashboard],
-    ["inbox", "Por revisar", Inbox],
-    ["conversations", "Historial", MessageCircle],
-    ["tasks", "Tareas", ClipboardList],
-    ["pipeline", "Cuentas activas", Target],
-    ["sales", "Ventas", ReceiptText],
-    ["board", "Tablero", LayoutGrid],
-    ["clients", "Empresas", Building2],
-    ["contacts", "Contactos", Users],
-    ["plan", "Plan comercial", CalendarCheck],
-    ["replies", "Biblioteca", BookOpen],
-    ["coach", "Entrenamiento", GraduationCap],
-    ["settings", "Datos", Database],
+  const navGroups = [
+    ["Ventas", [
+      ["dashboard", "Inicio", LayoutDashboard],
+      ["inbox", "Por revisar", Inbox],
+      ["conversations", "Historial", MessageCircle],
+      ["tasks", "Tareas", ClipboardList],
+      ["pipeline", "Cuentas activas", Target],
+      ["sales", "Ventas", ReceiptText],
+    ]],
+    ["Organización", [
+      ["board", "Tablero", LayoutGrid],
+    ]],
+    ["Cartera", [
+      ["clients", "Empresas", Building2],
+      ["contacts", "Contactos", Users],
+    ]],
+    ["Recursos", [
+      ["plan", "Plan comercial", CalendarCheck],
+      ["replies", "Biblioteca", BookOpen],
+      ["coach", "Entrenamiento", GraduationCap],
+    ]],
+    ["Sistema", [
+      ["settings", "Datos", Database],
+    ]],
   ];
+  const nav = navGroups.flatMap(([, items]) => items);
 
   function displayedChannel(key) {
     const status = readiness?.channels?.[key];
@@ -1492,14 +1503,19 @@ export default function App() {
           />
         </div>
         <nav>
-          {nav.map(([id, label, Icon]) => (
-            <button
-              key={id}
-              className={view === id ? "active" : ""}
-              onClick={() => setView(id)}
-            >
-              <Icon size={19} /> {label}
-            </button>
+          {navGroups.map(([group, items]) => (
+            <div className="nav-group" key={group}>
+              <span className="nav-group-title">{group}</span>
+              {items.map(([id, label, Icon]) => (
+                <button
+                  key={id}
+                  className={view === id ? "active" : ""}
+                  onClick={() => setView(id)}
+                >
+                  <Icon size={19} /> {label}
+                </button>
+              ))}
+            </div>
           ))}
         </nav>
         <div className="sidebar-note">

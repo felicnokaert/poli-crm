@@ -29,7 +29,9 @@ export function parseInvoiceText(text = '') {
   const numberMatch = clean.match(/N[°ºo]?:?\s*(\d{4})-(\d+)/i);
   const dateMatch = clean.match(/Fecha:\s*(\d{2}\/\d{2}\/\d{4})/i);
   const customerMatch = clean.match(/Raz[oó]n social:\s*([^\n]+)/i);
-  const netGravadoMatch = clean.match(/Importe Neto Gravado:\s*(?:U\$S|\$)\s*([\d.,]+)/i);
+  const netGravadoMatch = clean.match(/Importe Neto Gravado:\s*(U\$S|\$)\s*([\d.,]+)/i);
+  const exchangeRateMatch = clean.match(/Cotizaci[oó]n del D[oó]lar\s*\$\s*([\d.,]+)/i);
+  const currency = netGravadoMatch && netGravadoMatch[1].toUpperCase() === 'U$S' ? 'USD' : 'ARS';
 
   const pointOfSale = numberMatch ? numberMatch[1] : '';
   const documentNumber = numberMatch ? numberMatch[2].slice(-5).padStart(5, '0') : '';
@@ -62,8 +64,10 @@ export function parseInvoiceText(text = '') {
     date: dateMatch ? isoFromArgDate(dateMatch[1]) : '',
     customer: customerMatch ? customerMatch[1].trim() : '',
     netAmount: Math.round(netAmount * 100) / 100,
-    netGravadoTotal: netGravadoMatch ? toNumber(netGravadoMatch[1]) : null,
+    netGravadoTotal: netGravadoMatch ? toNumber(netGravadoMatch[2]) : null,
     internalTaxExcluded: Math.round(internalTaxAmount * 100) / 100,
+    currency,
+    exchangeRate: exchangeRateMatch ? toNumber(exchangeRateMatch[1]) : null,
     items,
     recognized: Boolean(pointOfSale && documentNumber && unit),
   };

@@ -105,7 +105,7 @@ export function groupWhatsAppThreads(items = []) {
       const distance = Math.abs(Date.parse(current.occurred_at || '') - Date.parse(thread.occurred_at || ''));
       // Solo unimos el espejo cuando contenido y momento coinciden. El nombre
       // por sí solo nunca alcanza: una persona puede escribir a ambos números.
-      return sameLatestContent && Number.isFinite(distance) && distance <= 120000;
+      return sameLatestContent && Number.isFinite(distance) && distance <= 86400000;
     });
     if (mirrorIndex < 0) {
       reconciledThreads.push(thread);

@@ -78,6 +78,15 @@ test('does not group the same visible name across different channel accounts', (
   assert.equal(threads.length, 2);
 });
 
+test('reconciles a delayed legacy mirror only when its content also matches', () => {
+  const base = { customer_wa_id: 'polymach', customer_name: 'polymach', classification_status: 'pending', text_body: '[audio]' };
+  const threads = groupWhatsAppThreads([
+    { ...base, event_id: 'general', channel: 'general', phone_number_id: 'browser-bridge:general', occurred_at: '2026-09-03T09:00:00Z' },
+    { ...base, event_id: 'penosil', channel: 'penosil', phone_number_id: 'browser-bridge:penosil', text_body: '[audio · 0:08]', occurred_at: '2026-09-03T10:24:00Z' },
+  ]);
+  assert.equal(threads.length, 1);
+});
+
 test('replaces unread preview with real messages after opening the chat', () => {
   const threads = groupWhatsAppThreads([
     { event_id: 'preview', channel: 'penosil', customer_wa_id: 'cliente', message_type: 'verified_unread_preview', text_body: '2 mensajes no leídos', occurred_at: '2026-09-01T10:00:00Z', classification_status: 'pending' },

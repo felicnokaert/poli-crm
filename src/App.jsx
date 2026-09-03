@@ -136,6 +136,7 @@ const INTENTS = [
   "A confirmar",
 ];
 const STORAGE_KEY = "poliplast-sales-copilot-v1";
+const NAV_COLLAPSE_KEY = "poliplast-sales-copilot-nav-collapsed";
 const PENOSIL_V017_CUTOFF = "2026-09-01T23:09:45.829Z";
 const HISTORY_RESET_VERSION = "2026-09-03T16:00:00.000Z";
 
@@ -327,6 +328,16 @@ export default function App() {
   );
   const [readiness, setReadiness] = useState(null);
   const [view, setView] = useState("dashboard");
+  const [collapsedNavGroups, setCollapsedNavGroups] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(NAV_COLLAPSE_KEY) || "[]");
+    } catch {
+      return [];
+    }
+  });
+  useEffect(() => {
+    localStorage.setItem(NAV_COLLAPSE_KEY, JSON.stringify(collapsedNavGroups));
+  }, [collapsedNavGroups]);
   const [showForm, setShowForm] = useState(false);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [taskForm, setTaskForm] = useState(blankTask);
@@ -1454,13 +1465,13 @@ export default function App() {
     ]],
     ["Organización", [
       ["board", "Tablero", LayoutGrid],
+      ["plan", "Plan comercial", CalendarCheck],
     ]],
     ["Cartera", [
       ["clients", "Empresas", Building2],
       ["contacts", "Contactos", Users],
     ]],
     ["Recursos", [
-      ["plan", "Plan comercial", CalendarCheck],
       ["replies", "Biblioteca", BookOpen],
       ["coach", "Entrenamiento", GraduationCap],
     ]],
@@ -1503,20 +1514,37 @@ export default function App() {
           />
         </div>
         <nav>
-          {navGroups.map(([group, items]) => (
-            <div className="nav-group" key={group}>
-              <span className="nav-group-title">{group}</span>
-              {items.map(([id, label, Icon]) => (
+          {navGroups.map(([group, items]) => {
+            const collapsed = collapsedNavGroups.includes(group);
+            return (
+              <div className={`nav-group ${collapsed ? "collapsed" : ""}`} key={group}>
                 <button
-                  key={id}
-                  className={view === id ? "active" : ""}
-                  onClick={() => setView(id)}
+                  type="button"
+                  className="nav-group-title"
+                  onClick={() =>
+                    setCollapsedNavGroups((current) =>
+                      current.includes(group)
+                        ? current.filter((item) => item !== group)
+                        : [...current, group],
+                    )
+                  }
                 >
-                  <Icon size={19} /> {label}
+                  <ChevronRight size={12} className="nav-group-caret" />
+                  {group}
                 </button>
-              ))}
-            </div>
-          ))}
+                {!collapsed &&
+                  items.map(([id, label, Icon]) => (
+                    <button
+                      key={id}
+                      className={view === id ? "active" : ""}
+                      onClick={() => setView(id)}
+                    >
+                      <Icon size={19} /> {label}
+                    </button>
+                  ))}
+              </div>
+            );
+          })}
         </nav>
         <div className="sidebar-note">
           <span className="eyebrow">
@@ -2032,6 +2060,7 @@ function WhatsAppInbox({
 }) {
   const [showArchived, setShowArchived] = useState(false);
   const [showExcluded, setShowExcluded] = useState(false);
+  const [showStale, setShowStale] = useState(false);
   const [query, setQuery] = useState("");
   const [channel, setChannel] = useState("all");
   const [family, setFamily] = useState("all");
@@ -2087,11 +2116,22 @@ function WhatsAppInbox({
   const active = operationalVisible.filter(
     (item) => !["archived", "excluded"].includes(item.classification_status),
   );
-  const pending = active.filter(
+  const allPending = active.filter(
     (item) => item.classification_status === "pending",
+  );
+  // Los mensajes de más de 7 días sin clasificar no cuentan como pendientes
+  // del día a día: se guardan aparte para que "Por revisar" arranque
+  // limpio con lo reciente. Nada se borra ni se pierde.
+  const staleCutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const pending = allPending.filter(
+    (item) => new Date(item.occurred_at || 0).getTime() >= staleCutoff,
+  );
+  const stalePending = allPending.filter(
+    (item) => new Date(item.occurred_at || 0).getTime() < staleCutoff,
   );
   const selectable = [
     ...pending,
+    ...(showStale ? stalePending : []),
     ...(showExcluded ? excluded : []),
     ...(showArchived ? archived : []),
   ];
@@ -2247,6 +2287,37 @@ function WhatsAppInbox({
           <Empty text="No hay conversaciones esperando clasificación con este filtro." />
         )}
       </section>
+      {stalePending.length > 0 && (
+        <section className="panel quarantine-panel">
+          <div className="panel-head">
+            <div>
+              <span className="eyebrow">Más de 7 días sin clasificar</span>
+              <h2>Antiguos</h2>
+              <p>
+                No cuentan como pendientes del día a día. Podés revisarlos y
+                clasificarlos igual que los recientes.
+              </p>
+            </div>
+            <button
+              className="secondary"
+              type="button"
+              onClick={() => setShowStale(!showStale)}
+            >
+              {showStale ? "Ocultar" : `Mostrar (${stalePending.length})`}
+            </button>
+          </div>
+          {showStale &&
+            stalePending.map((item) => (
+              <InboxRow
+                item={item}
+                {...rowProps}
+                selected={selected.includes(item.threadKey)}
+                onToggleSelected={toggleSelected}
+                key={item.threadKey}
+              />
+            ))}
+        </section>
+      )}
       {channelConflicts.length > 0 && (
         <section className="panel quarantine-panel">
           <div className="panel-head">

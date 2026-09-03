@@ -127,6 +127,12 @@ function unreadRowDetails(row) {
   if (!unread) return null;
   const unreadLabel = unread.getAttribute('aria-label') || '';
   const count = Number(unreadLabel.match(/\d+/)?.[0] || 1);
+  const secondary = row.querySelector('[data-testid="cell-frame-secondary"]');
+  // En un grupo WhatsApp antepone el remitente dentro de un contenedor propio
+  // ("David: mensaje"). En un chat individual el preview no tiene ese bloque.
+  // Filtrarlo en la lista lateral evita importar grupos aun sin abrirlos.
+  const hasGroupSender = Boolean(secondary?.querySelector('[data-testid="last-msg-status"] > div span[dir="auto"]'));
+  if (hasGroupSender) return null;
   const titled = [...row.querySelectorAll('span[title]')].map((item) => item.getAttribute('title')?.trim()).filter(Boolean);
   const name = titled[0] || row.querySelector('span[dir="auto"]')?.textContent?.trim() || '';
   const texts = [...row.querySelectorAll('span[dir="auto"]')].map((item) => item.textContent?.trim()).filter(Boolean);
@@ -253,7 +259,7 @@ function capture() {
         }
         if (state.sent.has(eventKey)) continue;
         const contactName = /^\+?[\d\s()-]+$/.test(name) && sender ? sender : name;
-        events.push({ event_key: eventKey, source_message_key: identity, bridge_version: '0.18.1', channel: config.channel, direction, chat_id: chatKey(name), chat_name: contactName, text_body: text, occurred_at: new Date().toISOString() });
+        events.push({ event_key: eventKey, source_message_key: identity, bridge_version: '0.18.3', channel: config.channel, direction, chat_id: chatKey(name), chat_name: contactName, text_body: text, occurred_at: new Date().toISOString() });
       }
       state.initializedChats.add(currentChatKey);
       if (unreadCount) state.unreadCounts.delete(currentChatKey);

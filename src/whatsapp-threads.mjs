@@ -3,7 +3,10 @@ function normalized(value = '') {
 }
 
 export function whatsappContactKey(event = {}) {
-  return normalized(event.customer_wa_id || event.customer_name || event.event_id || 'unknown');
+  const contact = normalized(event.customer_wa_id || event.customer_name || event.event_id || 'unknown');
+  // General y Penosil son bandejas diferentes. Un nombre coincidente no
+  // demuestra que sea la misma conversación (ni siquiera el mismo teléfono).
+  return `${normalized(event.channel || 'unknown')}:${contact}`;
 }
 
 function messageFingerprint(event = {}) {
@@ -92,33 +95,8 @@ export function groupWhatsAppThreads(items = []) {
       classification_status: pendingCount ? 'pending' : latest.classification_status,
     };
   });
-  const reconciledThreads = [];
-  for (const thread of threads.sort((a, b) => new Date(a.occurred_at) - new Date(b.occurred_at))) {
-    const mirrorIndex = reconciledThreads.findIndex((current) => {
-      const channelsDiffer = current.channel && thread.channel && current.channel !== thread.channel;
-      const namesMatch = equivalentContactNames(current.customer_name || current.customer_wa_id, thread.customer_name || thread.customer_wa_id);
-      const textMatches = comparableText(current.text_body) && comparableText(current.text_body) === comparableText(thread.text_body);
-      const distance = Math.abs(Date.parse(current.occurred_at || '') - Date.parse(thread.occurred_at || ''));
-      const exactVisibleName = normalized(current.customer_name) === normalized(thread.customer_name)
-        && normalized(current.customer_name).length >= 7;
-      return channelsDiffer && namesMatch && Number.isFinite(distance)
-        && ((textMatches && distance <= 120000) || (exactVisibleName && distance <= 86400000));
-    });
-    if (mirrorIndex < 0) {
-      reconciledThreads.push(thread);
-      continue;
-    }
-    const current = reconciledThreads[mirrorIndex];
-    const combined = dedupeWhatsAppEvents([...current.events, ...thread.events]);
-    const preferred = current.channel === 'general' ? current : thread.channel === 'general' ? thread : current;
-    reconciledThreads[mirrorIndex] = {
-      ...preferred,
-      events: combined,
-      channels: [...new Set([...current.channels, ...thread.channels])],
-      channelConflict: true,
-      messageCount: combined.length,
-      pendingCount: combined.filter((item) => item.classification_status === 'pending').length,
-    };
-  }
-  return reconciledThreads.sort((a, b) => new Date(b.occurred_at) - new Date(a.occurred_at));
+  // Los duplicados reales ya se eliminan por identidad de mensaje antes de
+  // agrupar. Nunca reconciliamos hilos completos por nombre o cercanía horaria:
+  // esa heurística mezclaba conversaciones legítimas de ambos números.
+  return threads.sort((a, b) => new Date(b.occurred_at) - new Date(a.occurred_at));
 }

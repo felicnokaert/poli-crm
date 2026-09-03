@@ -23,6 +23,7 @@ import {
   Users,
   X,
   Link2,
+  NotebookPen,
 } from "lucide-react";
 import {
   CLASSIFICATIONS,
@@ -47,6 +48,7 @@ import {
 } from "./commercial-cohort";
 import { inferIntent } from "./commercial-intelligence.mjs";
 import Sales from "./Sales";
+import Notepad from "./Notepad";
 import {
   fetchCommercialMaster,
   mergeCommercialMaster,
@@ -88,6 +90,10 @@ const CHANNELS = {
   call: { name: "Llamada", number: "", profile: "", color: "#3b6d9b" },
   email: { name: "Email", number: "", profile: "", color: "#6b5aa6" },
 };
+
+// "Registrar conversación" solo tiene sentido donde se sigue a un cliente
+// puntual, no en todos los módulos.
+const LOG_CONVERSATION_VIEWS = ["dashboard", "conversations", "pipeline", "clients", "contacts"];
 
 const PIPELINE = [
   "Nuevo",
@@ -141,6 +147,7 @@ const initialState = {
   sales: [],
   dismissedInboxEventIds: [],
   ignoredWhatsAppContacts: [],
+  notes: [],
   planChecks: {},
   commercialMasterVersion: "",
   historyResetVersion: "",
@@ -379,6 +386,7 @@ export default function App() {
         ({ new: event }) => {
           if (
             event.direction !== "inbound" ||
+            event.channel === "penosil" ||
             ["unread_preview", "unread_notice"].includes(event.message_type)
           )
             return;
@@ -784,6 +792,22 @@ export default function App() {
       opportunities: data.opportunities.filter((item) => item.id !== id),
       tasks: data.tasks.filter((item) => item.opportunityId !== id),
     });
+  }
+
+  function saveNote(note) {
+    setData((current) => ({
+      ...current,
+      notes: (current.notes || []).some((item) => item.id === note.id)
+        ? current.notes.map((item) => item.id === note.id ? note : item)
+        : [...(current.notes || []), note],
+    }));
+  }
+
+  function deleteNote(id) {
+    setData((current) => ({
+      ...current,
+      notes: (current.notes || []).filter((item) => item.id !== id),
+    }));
   }
 
   function saveSale(sale) {
@@ -1400,6 +1424,7 @@ export default function App() {
     ["tasks", "Tareas", ClipboardList],
     ["pipeline", "Cuentas activas", Target],
     ["sales", "Ventas", ReceiptText],
+    ["notepad", "Agenda", NotebookPen],
     ["clients", "Empresas", Building2],
     ["contacts", "Contactos", Users],
     ["plan", "Plan comercial", CalendarCheck],
@@ -1487,15 +1512,17 @@ export default function App() {
               {syncStatus}
             </span>
             <div className="profile-pill">FC</div>
-            <button className="primary" onClick={() => setShowForm(true)}>
-              <Plus size={18} /> Registrar conversación
-            </button>
+            {LOG_CONVERSATION_VIEWS.includes(view) && (
+              <button className="primary" onClick={() => setShowForm(true)}>
+                <Plus size={18} /> Registrar conversación
+              </button>
+            )}
           </div>
         </header>
 
         {view !== "inbox" && (
           <section className="channel-strip">
-            {["general", "penosil"].map((key) => (
+            {["general"].map((key) => (
               <div className="channel-card" key={key}>
                 <span
                   className="channel-dot"
@@ -1575,6 +1602,13 @@ export default function App() {
             items={data.sales || []}
             onSave={saveSale}
             onDelete={deleteSale}
+          />
+        )}
+        {view === "notepad" && (
+          <Notepad
+            items={data.notes || []}
+            onSave={saveNote}
+            onDelete={deleteNote}
           />
         )}
         {view === "clients" && (
@@ -2060,10 +2094,6 @@ function WhatsAppInbox({
           </div>
           <span className="inbox-count">{pending.length}</span>
         </div>
-        <div className="channel-legend">
-          <span className="legend-general">General</span>
-          <span className="legend-penosil">Penosil</span>
-        </div>
         <div className="list-toolbar inbox-filters">
           <label className="search">
             <Search size={17} />
@@ -2092,26 +2122,6 @@ function WhatsAppInbox({
             <option>Frío</option>
             <option>A confirmar</option>
           </select>
-          <div className="segmented">
-            <button
-              className={channel === "all" ? "selected" : ""}
-              onClick={() => setChannel("all")}
-            >
-              Todos
-            </button>
-            <button
-              className={channel === "general" ? "selected" : ""}
-              onClick={() => setChannel("general")}
-            >
-              General
-            </button>
-            <button
-              className={channel === "penosil" ? "selected" : ""}
-              onClick={() => setChannel("penosil")}
-            >
-              Penosil
-            </button>
-          </div>
         </div>
         <div className="batch-toolbar">
           <label>
@@ -4445,18 +4455,11 @@ function DataSettings({ data, setData, session, syncStatus }) {
         </p>
         <div className="modal-actions">
           <button
-            className="secondary"
+            className="primary"
             disabled={connecting}
             onClick={() => pairBrowser("general")}
           >
-            Vincular a WhatsApp General
-          </button>
-          <button
-            className="primary"
-            disabled={connecting}
-            onClick={() => pairBrowser("penosil")}
-          >
-            {connecting ? "Vinculando…" : "Vincular a WhatsApp Penosil"}
+            {connecting ? "Vinculando…" : "Vincular a WhatsApp General"}
           </button>
         </div>
         {message && <div className="system-message">{message}</div>}

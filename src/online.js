@@ -6,7 +6,7 @@ export { mergeWorkspaceState, workspaceStatesEqual } from './workspace.mjs';
 const url = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const WORKSPACE_KEY = 'grupo-poliplast';
-const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '' };
+const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], notes: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '' };
 
 function threadKey(event) {
   return whatsappContactKey(event);
@@ -24,7 +24,10 @@ export async function loadOnlineState() {
     supabase.from('workspace_states').select('data,updated_at,updated_by_email').eq('workspace_key', WORKSPACE_KEY).maybeSingle(),
     // La bandeja comercial nace de consultas entrantes. Los mensajes enviados
     // por el equipo no crean alertas ni conversaciones por sí solos.
-    supabase.from('whatsapp_events').select('*').eq('direction', 'inbound').neq('message_type', 'unread_preview').neq('message_type', 'unread_notice').neq('message_type', 'verified_unread_preview').order('occurred_at', { ascending: false }).limit(500),
+    // Penosil se dejó de operar como chat en vivo en el CRM (decisión de
+    // Felipe: son consumidores finales, no vale la pena el ruido cruzado con
+    // General). No se borra nada de whatsapp_events, solo se deja de traer.
+    supabase.from('whatsapp_events').select('*').eq('direction', 'inbound').neq('channel', 'penosil').neq('message_type', 'unread_preview').neq('message_type', 'unread_notice').neq('message_type', 'verified_unread_preview').order('occurred_at', { ascending: false }).limit(500),
   ]);
   if (stateError) throw stateError;
   if (eventsError) throw eventsError;

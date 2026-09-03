@@ -89,8 +89,8 @@ test('reconciles a delayed legacy mirror only when its content also matches', ()
 
 test('quarantines simultaneous cross-channel mirrors even when browser aliases differ', () => {
   const grouped = groupWhatsAppThreads([
-    event({ event_id: 'bridge.open.general-a', channel: 'general', customer_name: 'Marcelo Ceratto', text_body: 'Hola dame un poco de tiempo, me interesa', occurred_at: '2026-09-03T12:19:00Z', phone_number_id: 'browser-bridge:general' }),
-    event({ event_id: 'bridge.open.penosil-a', channel: 'penosil', customer_name: '+54 9 2302 48-4069', text_body: 'Hola dame un poco de tiempo, me interesa', occurred_at: '2026-09-03T12:19:01Z', phone_number_id: 'browser-bridge:penosil' }),
+    { event_id: 'bridge.open.general-a', channel: 'general', direction: 'inbound', customer_name: 'Marcelo Ceratto', text_body: 'Hola dame un poco de tiempo, me interesa', occurred_at: '2026-09-03T12:19:00Z', phone_number_id: 'browser-bridge:general', classification_status: 'pending' },
+    { event_id: 'bridge.open.penosil-a', channel: 'penosil', direction: 'inbound', customer_name: '+54 9 2302 48-4069', text_body: 'Hola dame un poco de tiempo, me interesa', occurred_at: '2026-09-03T12:19:01Z', phone_number_id: 'browser-bridge:penosil', classification_status: 'pending' },
   ]);
   assert.equal(grouped.length, 1);
   assert.equal(grouped[0].channelConflict, true);

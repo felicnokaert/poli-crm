@@ -8,6 +8,7 @@ import {
   ChevronRight,
   CircleAlert,
   CircleDollarSign,
+  ReceiptText,
   ClipboardList,
   LayoutDashboard,
   MessageCircle,
@@ -47,6 +48,7 @@ import {
 } from "./commercial-cohort";
 import { inferIntent } from "./commercial-intelligence.mjs";
 import Opportunities from "./Opportunities";
+import Sales from "./Sales";
 import {
   fetchCommercialMaster,
   mergeCommercialMaster,
@@ -135,6 +137,7 @@ const initialState = {
   tasks: [],
   inbox: [],
   opportunities: [],
+  sales: [],
   dismissedInboxEventIds: [],
   ignoredWhatsAppContacts: [],
   planChecks: {},
@@ -777,6 +780,30 @@ export default function App() {
     });
   }
 
+  function saveSale(sale) {
+    const stamp = new Date().toISOString();
+    const record = {
+      ...sale,
+      id: sale.id || crypto.randomUUID(),
+      createdAt: sale.createdAt || stamp,
+      updatedAt: stamp,
+    };
+    setData((current) => ({
+      ...current,
+      sales: (current.sales || []).some((item) => item.id === record.id)
+        ? current.sales.map((item) => item.id === record.id ? record : item)
+        : [...(current.sales || []), record],
+    }));
+  }
+
+  function deleteSale(id) {
+    if (!window.confirm("¿Eliminar esta venta del registro?")) return;
+    setData((current) => ({
+      ...current,
+      sales: (current.sales || []).filter((item) => item.id !== id),
+    }));
+  }
+
   function classifyInbox(eventId, decision) {
     const event = data.inbox.find((item) => item.event_id === eventId);
     if (!event) return;
@@ -1336,7 +1363,8 @@ export default function App() {
     ["conversations", "Historial", MessageCircle],
     ["tasks", "Tareas", ClipboardList],
     ["pipeline", "Cuentas activas", Target],
-    ["opportunities", "Negocios", CircleDollarSign],
+    ["opportunities", "Oportunidades", CircleDollarSign],
+    ["sales", "Ventas", ReceiptText],
     ["clients", "Empresas", Building2],
     ["contacts", "Contactos", Users],
     ["plan", "Plan comercial", CalendarCheck],
@@ -1512,6 +1540,13 @@ export default function App() {
             clients={data.clients}
             onSave={saveOpportunity}
             onDelete={deleteOpportunity}
+          />
+        )}
+        {view === "sales" && (
+          <Sales
+            items={data.sales || []}
+            onSave={saveSale}
+            onDelete={deleteSale}
           />
         )}
         {view === "clients" && (
@@ -1929,13 +1964,18 @@ function WhatsAppInbox({
       haystack.includes(query.trim().toLowerCase())
     );
   });
-  const archived = visible.filter(
+  // Si una captura histórica aparece en ambos canales, no adivinamos cuál es
+  // el correcto ni la mezclamos con la operación diaria. Queda aislada para
+  // revisión sin alterar los mensajes nuevos cuyo canal sí está probado.
+  const channelConflicts = visible.filter((item) => item.channelConflict);
+  const operationalVisible = visible.filter((item) => !item.channelConflict);
+  const archived = operationalVisible.filter(
     (item) => item.classification_status === "archived",
   );
-  const excluded = visible.filter(
+  const excluded = operationalVisible.filter(
     (item) => item.classification_status === "excluded",
   );
-  const active = visible.filter(
+  const active = operationalVisible.filter(
     (item) => !["archived", "excluded"].includes(item.classification_status),
   );
   const pending = active.filter(
@@ -2122,6 +2162,28 @@ function WhatsAppInbox({
           <Empty text="No hay conversaciones esperando clasificación con este filtro." />
         )}
       </section>
+      {channelConflicts.length > 0 && (
+        <section className="panel quarantine-panel">
+          <div className="panel-head">
+            <div>
+              <span className="eyebrow">Fuera de la bandeja operativa</span>
+              <h2>Canal por confirmar</h2>
+              <p>
+                Son capturas anteriores que aparecieron en General y Penosil.
+                No cuentan como pendientes hasta que se confirme su origen.
+              </p>
+            </div>
+            <span className="inbox-count warning">{channelConflicts.length}</span>
+          </div>
+          {channelConflicts.map((item) => (
+            <LegacyInboxRow
+              item={item}
+              onDelete={onDeleteLegacy}
+              key={`conflict-${item.threadKey}`}
+            />
+          ))}
+        </section>
+      )}
       {excluded.length > 0 && (
         <section className="panel">
           <div className="panel-head">

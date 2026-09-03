@@ -34,12 +34,15 @@ export function dedupeWhatsAppEvents(events = []) {
 
 export function groupWhatsAppThreads(items = []) {
   const groups = new Map();
-  for (const item of items) {
+  // Deducir antes de agrupar es esencial: dos navegadores pueden exponer el
+  // mismo chat con títulos diferentes (nombre completo, alias o teléfono).
+  // Si agrupamos primero, esas dos capturas nunca llegan a compararse.
+  for (const item of dedupeWhatsAppEvents(items)) {
     const key = whatsappContactKey(item);
     groups.set(key, [...(groups.get(key) || []), item]);
   }
   return [...groups.entries()].map(([threadKey, rawEvents]) => {
-    const deduped = dedupeWhatsAppEvents(rawEvents);
+    const deduped = rawEvents;
     const previewTypes = new Set(['unread_notice', 'verified_unread_preview', 'unread_chat_preview']);
     const hasRealMessage = deduped.some((item) => !previewTypes.has(item.message_type));
     const ordered = deduped.filter((item) => !hasRealMessage || !previewTypes.has(item.message_type)).sort((a, b) => new Date(a.occurred_at) - new Date(b.occurred_at));

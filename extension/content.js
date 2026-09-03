@@ -198,8 +198,11 @@ function messageIdentity(node, metadata, text, direction, index) {
   const whatsappId = container?.getAttribute('data-id') || '';
   // Conserva el ID histórico cuando WhatsApp expone fecha/remitente, para no
   // reimportar conversaciones antiguas después de actualizar la extensión.
+  // data-id es la identidad canónica del mensaje y no cambia aunque dos
+  // agendas muestren nombres distintos para el mismo contacto.
+  if (whatsappId) return `wa:${whatsappId}`;
   if (metadata) return `${direction}|${metadata}|${text}`;
-  return whatsappId ? `wa:${whatsappId}` : `${direction}|${index}|${text}`;
+  return `${direction}|${index}|${text}`;
 }
 
 function capture() {

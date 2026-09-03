@@ -28,6 +28,17 @@ test('collapses an identical bridge capture attributed to both channels', () => 
   assert.equal(threads[0].channelConflict, true);
 });
 
+test('deduplicates across channels before grouping when browser contact titles differ', () => {
+  const source = 'wa:message-123';
+  const threads = groupWhatsAppThreads([
+    { event_id: 'bridge.open.general', channel: 'general', customer_wa_id: 'techo pu', customer_name: 'Techo PU', text_body: 'Necesito precio', occurred_at: '2026-09-03T10:00:00Z', classification_status: 'pending', raw_payload: { source_message_key: source } },
+    { event_id: 'bridge.open.penosil', channel: 'penosil', customer_wa_id: 'techos poliuretano expandido', customer_name: 'Techos Poliuretano Expandido', text_body: 'Necesito precio', occurred_at: '2026-09-03T10:00:00Z', classification_status: 'pending', raw_payload: { source_message_key: source } },
+  ]);
+  assert.equal(threads.length, 1);
+  assert.equal(threads[0].messageCount, 1);
+  assert.equal(threads[0].channelConflict, true);
+});
+
 test('replaces unread preview with real messages after opening the chat', () => {
   const threads = groupWhatsAppThreads([
     { event_id: 'preview', channel: 'penosil', customer_wa_id: 'cliente', message_type: 'verified_unread_preview', text_body: '2 mensajes no leídos', occurred_at: '2026-09-01T10:00:00Z', classification_status: 'pending' },

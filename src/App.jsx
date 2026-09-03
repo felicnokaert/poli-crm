@@ -23,7 +23,7 @@ import {
   Users,
   X,
   Link2,
-  NotebookPen,
+  LayoutGrid,
 } from "lucide-react";
 import {
   CLASSIFICATIONS,
@@ -48,7 +48,8 @@ import {
 } from "./commercial-cohort";
 import { inferIntent } from "./commercial-intelligence.mjs";
 import Sales from "./Sales";
-import Notepad from "./Notepad";
+import Board from "./Board";
+import { moveCard } from "./board-model.mjs";
 import {
   fetchCommercialMaster,
   mergeCommercialMaster,
@@ -147,7 +148,8 @@ const initialState = {
   sales: [],
   dismissedInboxEventIds: [],
   ignoredWhatsAppContacts: [],
-  notes: [],
+  boardLists: [],
+  boardCards: [],
   planChecks: {},
   commercialMasterVersion: "",
   historyResetVersion: "",
@@ -794,19 +796,43 @@ export default function App() {
     });
   }
 
-  function saveNote(note) {
+  function saveBoardList(list) {
     setData((current) => ({
       ...current,
-      notes: (current.notes || []).some((item) => item.id === note.id)
-        ? current.notes.map((item) => item.id === note.id ? note : item)
-        : [...(current.notes || []), note],
+      boardLists: (current.boardLists || []).some((item) => item.id === list.id)
+        ? current.boardLists.map((item) => item.id === list.id ? list : item)
+        : [...(current.boardLists || []), list],
     }));
   }
 
-  function deleteNote(id) {
+  function deleteBoardList(id) {
     setData((current) => ({
       ...current,
-      notes: (current.notes || []).filter((item) => item.id !== id),
+      boardLists: (current.boardLists || []).filter((item) => item.id !== id),
+      boardCards: (current.boardCards || []).filter((item) => item.listId !== id),
+    }));
+  }
+
+  function saveBoardCard(card) {
+    setData((current) => ({
+      ...current,
+      boardCards: (current.boardCards || []).some((item) => item.id === card.id)
+        ? current.boardCards.map((item) => item.id === card.id ? card : item)
+        : [...(current.boardCards || []), card],
+    }));
+  }
+
+  function deleteBoardCard(id) {
+    setData((current) => ({
+      ...current,
+      boardCards: (current.boardCards || []).filter((item) => item.id !== id),
+    }));
+  }
+
+  function moveBoardCard(cardId, toListId, beforeCardId) {
+    setData((current) => ({
+      ...current,
+      boardCards: moveCard(current.boardCards || [], cardId, toListId, beforeCardId),
     }));
   }
 
@@ -1424,7 +1450,7 @@ export default function App() {
     ["tasks", "Tareas", ClipboardList],
     ["pipeline", "Cuentas activas", Target],
     ["sales", "Ventas", ReceiptText],
-    ["notepad", "Agenda", NotebookPen],
+    ["board", "Tablero", LayoutGrid],
     ["clients", "Empresas", Building2],
     ["contacts", "Contactos", Users],
     ["plan", "Plan comercial", CalendarCheck],
@@ -1604,11 +1630,15 @@ export default function App() {
             onDelete={deleteSale}
           />
         )}
-        {view === "notepad" && (
-          <Notepad
-            items={data.notes || []}
-            onSave={saveNote}
-            onDelete={deleteNote}
+        {view === "board" && (
+          <Board
+            lists={data.boardLists || []}
+            cards={data.boardCards || []}
+            onSaveList={saveBoardList}
+            onDeleteList={deleteBoardList}
+            onSaveCard={saveBoardCard}
+            onDeleteCard={deleteBoardCard}
+            onMoveCard={moveBoardCard}
           />
         )}
         {view === "clients" && (

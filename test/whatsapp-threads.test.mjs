@@ -59,6 +59,18 @@ test('does not merge equal generic messages from different contacts', () => {
   assert.equal(threads.length, 2);
 });
 
+test('renders one row for legacy mirrored threads captured within the same minute', () => {
+  const base = { direction: 'inbound', customer_wa_id: 'daniel alonso', customer_name: 'Daniel Alonso', classification_status: 'pending' };
+  const threads = groupWhatsAppThreads([
+    { ...base, event_id: 'general-a', channel: 'general', phone_number_id: 'browser-bridge:general', text_body: 'Necesito precio', occurred_at: '2026-09-03T10:15:01Z' },
+    { ...base, event_id: 'general-b', channel: 'general', phone_number_id: 'browser-bridge:general', text_body: '[audio]', occurred_at: '2026-09-03T10:15:02Z' },
+    { ...base, event_id: 'penosil-a', channel: 'penosil', phone_number_id: 'browser-bridge:penosil', text_body: 'Otra consulta', occurred_at: '2026-09-03T10:15:50Z' },
+    { ...base, event_id: 'penosil-b', channel: 'penosil', phone_number_id: 'browser-bridge:penosil', text_body: '[audio · 0:13]', occurred_at: '2026-09-03T10:15:51Z' },
+  ]);
+  assert.equal(threads.length, 1);
+  assert.deepEqual(threads[0].channels.sort(), ['general', 'penosil']);
+});
+
 test('replaces unread preview with real messages after opening the chat', () => {
   const threads = groupWhatsAppThreads([
     { event_id: 'preview', channel: 'penosil', customer_wa_id: 'cliente', message_type: 'verified_unread_preview', text_body: '2 mensajes no leídos', occurred_at: '2026-09-01T10:00:00Z', classification_status: 'pending' },

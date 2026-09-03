@@ -74,7 +74,7 @@ export function groupWhatsAppThreads(items = []) {
     const key = whatsappContactKey(item);
     groups.set(key, [...(groups.get(key) || []), item]);
   }
-  return [...groups.entries()].map(([threadKey, rawEvents]) => {
+  const threads = [...groups.entries()].map(([threadKey, rawEvents]) => {
     const deduped = rawEvents;
     const previewTypes = new Set(['unread_notice', 'verified_unread_preview', 'unread_chat_preview']);
     const hasRealMessage = deduped.some((item) => !previewTypes.has(item.message_type));
@@ -91,5 +91,31 @@ export function groupWhatsAppThreads(items = []) {
       pendingCount,
       classification_status: pendingCount ? 'pending' : latest.classification_status,
     };
-  }).sort((a, b) => new Date(b.occurred_at) - new Date(a.occurred_at));
+  });
+  const reconciledThreads = [];
+  for (const thread of threads.sort((a, b) => new Date(a.occurred_at) - new Date(b.occurred_at))) {
+    const mirrorIndex = reconciledThreads.findIndex((current) => {
+      const channelsDiffer = current.channel && thread.channel && current.channel !== thread.channel;
+      const namesMatch = equivalentContactNames(current.customer_name || current.customer_wa_id, thread.customer_name || thread.customer_wa_id);
+      const textMatches = comparableText(current.text_body) && comparableText(current.text_body) === comparableText(thread.text_body);
+      const distance = Math.abs(Date.parse(current.occurred_at || '') - Date.parse(thread.occurred_at || ''));
+      return channelsDiffer && namesMatch && textMatches && Number.isFinite(distance) && distance <= 120000;
+    });
+    if (mirrorIndex < 0) {
+      reconciledThreads.push(thread);
+      continue;
+    }
+    const current = reconciledThreads[mirrorIndex];
+    const combined = dedupeWhatsAppEvents([...current.events, ...thread.events]);
+    const preferred = current.channel === 'general' ? current : thread.channel === 'general' ? thread : current;
+    reconciledThreads[mirrorIndex] = {
+      ...preferred,
+      events: combined,
+      channels: [...new Set([...current.channels, ...thread.channels])],
+      channelConflict: true,
+      messageCount: combined.length,
+      pendingCount: combined.filter((item) => item.classification_status === 'pending').length,
+    };
+  }
+  return reconciledThreads.sort((a, b) => new Date(b.occurred_at) - new Date(a.occurred_at));
 }

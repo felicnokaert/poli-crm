@@ -52,6 +52,16 @@ function isCrossChannelMirror(left = {}, right = {}) {
   return !generic && leftText.length >= 12 && Number.isFinite(distance) && distance <= 2000;
 }
 
+function threadsShareMirrorEvidence(left = {}, right = {}) {
+  if (!equivalentContactNames(left.customer_name || left.customer_wa_id, right.customer_name || right.customer_wa_id)) return false;
+  if (!String(left.phone_number_id || '').startsWith('browser-bridge:') || !String(right.phone_number_id || '').startsWith('browser-bridge:')) return false;
+  return (left.events || []).some((leftEvent) => (right.events || []).some((rightEvent) => {
+    const leftText = comparableText(leftEvent.text_body);
+    const distance = Math.abs(Date.parse(leftEvent.occurred_at || '') - Date.parse(rightEvent.occurred_at || ''));
+    return leftText && leftText === comparableText(rightEvent.text_body) && Number.isFinite(distance) && distance <= 300000;
+  }));
+}
+
 export function dedupeWhatsAppEvents(events = []) {
   const exact = new Map();
   for (const event of events) {
@@ -112,12 +122,10 @@ export function groupWhatsAppThreads(items = []) {
     const mirrorIndex = reconciledThreads.findIndex((current) => {
       if (!current.channel || !thread.channel || current.channel === thread.channel) return false;
       if (!equivalentContactNames(current.customer_name || current.customer_wa_id, thread.customer_name || thread.customer_wa_id)) return false;
-      const sameLatestContent = comparableText(current.text_body)
-        && comparableText(current.text_body) === comparableText(thread.text_body);
-      const distance = Math.abs(Date.parse(current.occurred_at || '') - Date.parse(thread.occurred_at || ''));
-      // Solo unimos el espejo cuando contenido y momento coinciden. El nombre
-      // por sí solo nunca alcanza: una persona puede escribir a ambos números.
-      return sameLatestContent && Number.isFinite(distance) && distance <= 86400000;
+      // El último mensaje puede diferir porque un perfil se actualiza antes que
+      // el otro. Buscamos evidencia compartida dentro del historial del hilo.
+      // El nombre por sí solo nunca alcanza.
+      return threadsShareMirrorEvidence(current, thread);
     });
     if (mirrorIndex < 0) {
       reconciledThreads.push(thread);

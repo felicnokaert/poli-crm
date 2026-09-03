@@ -96,6 +96,18 @@ test('quarantines simultaneous cross-channel mirrors even when browser aliases d
   assert.equal(grouped[0].channelConflict, true);
 });
 
+test('reconciles a mirrored contact when aliases match but latest messages differ', () => {
+  const base = { direction: 'inbound', classification_status: 'pending' };
+  const threads = groupWhatsAppThreads([
+    { ...base, event_id: 'g1', channel: 'general', phone_number_id: 'browser-bridge:general', customer_name: 'Ariana', text_body: '[audio]', occurred_at: '2026-09-03T13:06:00Z' },
+    { ...base, event_id: 'g2', channel: 'general', phone_number_id: 'browser-bridge:general', customer_name: 'Ariana', text_body: 'Mensaje posterior', occurred_at: '2026-09-03T13:12:00Z' },
+    { ...base, event_id: 'p1', channel: 'penosil', phone_number_id: 'browser-bridge:penosil', customer_name: 'Ariana Diecinueve Cuarenta Y Ocho', text_body: '[audio · 0:04]', occurred_at: '2026-09-03T13:06:30Z' },
+    { ...base, event_id: 'p2', channel: 'penosil', phone_number_id: 'browser-bridge:penosil', customer_name: 'Ariana Diecinueve Cuarenta Y Ocho', text_body: 'Dale', occurred_at: '2026-09-03T13:08:00Z' },
+  ]);
+  assert.equal(threads.length, 1);
+  assert.equal(threads[0].channelConflict, true);
+});
+
 test('replaces unread preview with real messages after opening the chat', () => {
   const threads = groupWhatsAppThreads([
     { event_id: 'preview', channel: 'penosil', customer_wa_id: 'cliente', message_type: 'verified_unread_preview', text_body: '2 mensajes no leídos', occurred_at: '2026-09-01T10:00:00Z', classification_status: 'pending' },

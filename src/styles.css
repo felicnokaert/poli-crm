@@ -130,3 +130,7 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .conversation-thread p { margin: 5px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #365047; }
 .conversation-tail { display: grid; justify-items: end; gap: 7px; min-width: 78px; }
 .conversation-tail time { color: #758781; font-size: 11px; }
+.panel-head-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.form-warning { display: flex; align-items: center; gap: 8px; background: #fff3df; color: #9a651c; border-radius: 9px; padding: 10px 14px; font-size: 12.5px; margin: 0 0 14px; }
+.checkbox-field { display: flex; align-items: center; gap: 8px; font-size: 13px; align-self: end; }
+.checkbox-field input { width: 16px; height: 16px; }

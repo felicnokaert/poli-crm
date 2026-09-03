@@ -19,7 +19,18 @@ export function blankSale() {
     customer: '',
     netAmount: '',
     notes: '',
+    collected: false,
   };
+}
+
+export function duplicateSale(sales = [], sale = {}) {
+  return sales.find((item) =>
+    item.id !== sale.id &&
+    item.unit === sale.unit &&
+    item.documentType === sale.documentType &&
+    String(item.pointOfSale || '') === String(sale.pointOfSale || '') &&
+    String(item.documentNumber || '') === String(sale.documentNumber || ''),
+  );
 }
 
 function escapeCsvCell(value) {
@@ -31,11 +42,11 @@ export function salesToCsv(sales = []) {
   const columns = [
     ['Fecha', 'date'], ['Unidad', 'unit'], ['Comprobante', 'documentType'],
     ['Punto de venta', 'pointOfSale'], ['Número', 'documentNumber'], ['Cliente', 'customer'],
-    ['Importe neto sin IVA', 'netAmount'], ['Comisión', 'commission'], ['Notas', 'notes'],
+    ['Importe neto sin IVA', 'netAmount'], ['Comisión', 'commission'], ['¿Se cobró?', 'collectedLabel'], ['Notas', 'notes'],
   ];
   const lines = [columns.map(([label]) => escapeCsvCell(label)).join(';')];
   for (const sale of sales) {
-    const row = { ...sale, commission: saleCommission(sale) };
+    const row = { ...sale, commission: saleCommission(sale), collectedLabel: sale.collected ? 'Sí' : 'No' };
     lines.push(columns.map(([, key]) => escapeCsvCell(row[key])).join(';'));
   }
   return `﻿${lines.join('\r\n')}`;
@@ -51,5 +62,6 @@ export function normalizedSale(sale) {
     documentNumber: String(sale.documentNumber || '').padStart(5, '0'),
     netAmount: Number(sale.netAmount || 0),
     commission: saleCommission(sale),
+    collected: Boolean(sale.collected),
   };
 }

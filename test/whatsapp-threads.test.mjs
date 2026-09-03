@@ -39,6 +39,26 @@ test('deduplicates across channels before grouping when browser contact titles d
   assert.equal(threads[0].channelConflict, true);
 });
 
+test('reconciles legacy mirrored browser captures conservatively', () => {
+  const base = { direction: 'inbound', phone_number_id: 'browser-bridge:general', customer_wa_id: 'polymach', customer_name: 'polymach', occurred_at: '2026-09-03T10:24:00Z', classification_status: 'pending' };
+  const threads = groupWhatsAppThreads([
+    { ...base, event_id: 'old-general', channel: 'general', text_body: '[audio]' },
+    { ...base, event_id: 'old-penosil', channel: 'penosil', phone_number_id: 'browser-bridge:penosil', text_body: '[audio · 0:08]', occurred_at: '2026-09-03T10:24:05Z' },
+  ]);
+  assert.equal(threads.length, 1);
+  assert.equal(threads[0].messageCount, 1);
+  assert.equal(threads[0].channel, 'general');
+});
+
+test('does not merge equal generic messages from different contacts', () => {
+  const base = { direction: 'inbound', text_body: 'Hola', occurred_at: '2026-09-03T10:24:00Z', classification_status: 'pending' };
+  const threads = groupWhatsAppThreads([
+    { ...base, event_id: 'one', channel: 'general', phone_number_id: 'browser-bridge:general', customer_wa_id: 'ana', customer_name: 'Ana' },
+    { ...base, event_id: 'two', channel: 'penosil', phone_number_id: 'browser-bridge:penosil', customer_wa_id: 'juan', customer_name: 'Juan' },
+  ]);
+  assert.equal(threads.length, 2);
+});
+
 test('replaces unread preview with real messages after opening the chat', () => {
   const threads = groupWhatsAppThreads([
     { event_id: 'preview', channel: 'penosil', customer_wa_id: 'cliente', message_type: 'verified_unread_preview', text_body: '2 mensajes no leídos', occurred_at: '2026-09-01T10:00:00Z', classification_status: 'pending' },

@@ -15,6 +15,28 @@ function messageFingerprint(event = {}) {
   return normalized(`${event.direction}|${event.customer_name}|${event.text_body}|${twoMinuteWindow}`);
 }
 
+function comparableText(value = '') {
+  return normalized(value)
+    .replace(/\[audio(?:\s*·\s*[^\]]+)?\]/g, '[audio]')
+    .replace(/\s+/g, ' ');
+}
+
+function equivalentContactNames(left = '', right = '') {
+  const a = normalized(left);
+  const b = normalized(right);
+  if (!a || !b) return false;
+  return a === b || (Math.min(a.length, b.length) >= 4 && (a.startsWith(b) || b.startsWith(a)));
+}
+
+function isCrossChannelMirror(left = {}, right = {}) {
+  if (!left.channel || !right.channel || left.channel === right.channel) return false;
+  if (!String(left.phone_number_id || '').startsWith('browser-bridge:') || !String(right.phone_number_id || '').startsWith('browser-bridge:')) return false;
+  if (!equivalentContactNames(left.customer_name || left.customer_wa_id, right.customer_name || right.customer_wa_id)) return false;
+  if (!comparableText(left.text_body) || comparableText(left.text_body) !== comparableText(right.text_body)) return false;
+  const distance = Math.abs(Date.parse(left.occurred_at || '') - Date.parse(right.occurred_at || ''));
+  return Number.isFinite(distance) && distance <= 15000;
+}
+
 export function dedupeWhatsAppEvents(events = []) {
   const exact = new Map();
   for (const event of events) {
@@ -29,7 +51,18 @@ export function dedupeWhatsAppEvents(events = []) {
       exact.set(key, { ...preferred, channelConflict: true, conflictingChannels: [...new Set([current.channel, event.channel])].filter(Boolean) });
     }
   }
-  return [...exact.values()];
+  const reconciled = [];
+  for (const event of [...exact.values()].sort((a, b) => new Date(a.occurred_at) - new Date(b.occurred_at))) {
+    const mirrorIndex = reconciled.findIndex((item) => isCrossChannelMirror(item, event));
+    if (mirrorIndex < 0) {
+      reconciled.push(event);
+      continue;
+    }
+    const current = reconciled[mirrorIndex];
+    const preferred = current.channel === 'general' ? current : event.channel === 'general' ? event : current;
+    reconciled[mirrorIndex] = { ...preferred, channelConflict: true, conflictingChannels: [...new Set([current.channel, event.channel])].filter(Boolean) };
+  }
+  return reconciled;
 }
 
 export function groupWhatsAppThreads(items = []) {

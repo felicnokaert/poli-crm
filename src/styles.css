@@ -158,6 +158,15 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .goal-bar-head input { width: 60px; padding: 3px 6px; margin: 0 4px; text-align: center; }
 .goal-bar-track { height: 10px; border-radius: 999px; background: #eef2ef; overflow: hidden; }
 .goal-bar-fill { height: 100%; background: linear-gradient(90deg, #4b8d79, #226b58); border-radius: 999px; transition: width .3s ease; }
+.radar-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 2px; border-bottom: 1px solid #edf1ef; }
+.radar-row:last-child { border-bottom: 0; }
+.radar-row strong, .radar-row span { display: block; }
+.radar-row span { color: #84918d; font-size: 12px; margin-top: 3px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.radar-row > div:last-child { text-align: right; flex: 0 0 auto; }
+.radar-row small { display: block; color: #9aa6a2; font-size: 10.5px; margin-top: 3px; }
+.radar-badge { display: inline-block; border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 800; }
+.radar-badge.overdue { background: #fbe7e3; color: #ad5140; }
+.radar-badge.cold { background: #e9f2f7; color: #3b6d9b; }
 .checkbox-field { display: flex; align-items: center; gap: 8px; font-size: 13px; align-self: end; }
 .checkbox-field input { width: 16px; height: 16px; }
 .board-add-list { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }

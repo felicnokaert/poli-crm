@@ -24,6 +24,8 @@ import {
   X,
   Link2,
   LayoutGrid,
+  RefreshCw,
+  Snowflake,
 } from "lucide-react";
 import {
   CLASSIFICATIONS,
@@ -47,6 +49,8 @@ import {
   mergeCommercialCohort,
 } from "./commercial-cohort";
 import { inferIntent } from "./commercial-intelligence.mjs";
+import { buildRepurchaseRadar } from "./repurchase-radar.mjs";
+import { findColdQuotes } from "./cold-quotes.mjs";
 import Sales from "./Sales";
 import Board from "./Board";
 import PriceMemory from "./PriceMemory";
@@ -1635,6 +1639,8 @@ export default function App() {
             metrics={metrics}
             tasks={data.tasks}
             interactions={data.interactions}
+            sales={data.sales || []}
+            inbox={data.inbox || []}
             onToggle={toggleTask}
             onOpenTask={setSelectedTaskId}
             onOpenInteraction={setSelectedInteractionId}
@@ -1839,10 +1845,14 @@ function Dashboard({
   metrics,
   tasks,
   interactions,
+  sales,
+  inbox,
   onToggle,
   onOpenTask,
   onOpenInteraction,
 }) {
+  const repurchaseRadar = buildRepurchaseRadar(sales).slice(0, 6);
+  const coldQuotes = findColdQuotes(inbox, sales).slice(0, 6);
   const latestByContact = [];
   const seenContacts = new Set();
   for (const interaction of interactions) {
@@ -1920,6 +1930,57 @@ function Dashboard({
               ))
           ) : (
             <Empty text="Todavía no hay conversaciones registradas. La primera que cargues inicia la memoria comercial." />
+          )}
+        </article>
+      </section>
+      <section className="two-columns">
+        <article className="panel">
+          <div className="panel-head">
+            <div>
+              <span className="eyebrow">Se calcula solo, sin IA</span>
+              <h2>Para reponer</h2>
+            </div>
+            <RefreshCw size={22} />
+          </div>
+          {repurchaseRadar.length ? (
+            repurchaseRadar.map((item) => (
+              <article className="radar-row" key={`${item.customer}-${item.product}`}>
+                <div>
+                  <strong>{item.customer}</strong>
+                  <span>{item.product}</span>
+                </div>
+                <div>
+                  <span className="radar-badge overdue">+{item.overdueDays}d</span>
+                  <small>cada {item.avgIntervalDays}d, último hace {item.daysSinceLast}d</small>
+                </div>
+              </article>
+            ))
+          ) : (
+            <Empty text="Todavía no hay suficientes ventas repetidas por cliente y producto para estimar ciclos de reposición." />
+          )}
+        </article>
+        <article className="panel">
+          <div className="panel-head">
+            <div>
+              <span className="eyebrow">Cotizaron y no volvieron</span>
+              <h2>Cotizaciones frías</h2>
+            </div>
+            <Snowflake size={22} />
+          </div>
+          {coldQuotes.length ? (
+            coldQuotes.map((item) => (
+              <article className="radar-row" key={item.eventId}>
+                <div>
+                  <strong>{item.customer}</strong>
+                  <span>{item.text}</span>
+                </div>
+                <div>
+                  <span className="radar-badge cold">{item.daysSince}d</span>
+                </div>
+              </article>
+            ))
+          ) : (
+            <Empty text="No hay cotizaciones sin seguimiento por ahora." />
           )}
         </article>
       </section>

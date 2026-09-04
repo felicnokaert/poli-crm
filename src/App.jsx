@@ -4717,9 +4717,9 @@ function DataSettings({ data, setData, session, syncStatus }) {
   async function activateOfficialChannels() {
     if (!session?.access_token) return;
     setConnecting(true);
-    setMessage("Activando la recepción oficial de ambos canales…");
+    setMessage(myChannels.length > 1 ? "Sincronizando tus canales…" : "Sincronizando tu WhatsApp…");
     try {
-      const results = await Promise.all(
+      await Promise.all(
         myChannels.map(async (channel) => {
           const response = await fetch("/api/meta-subscribe", {
             method: "POST",
@@ -4735,12 +4735,10 @@ function DataSettings({ data, setData, session, syncStatus }) {
           return payload.channel;
         }),
       );
-      setMessage(
-        `Recepción técnica activada para ${results.join(" y ")}. Falta confirmar que cada teléfono esté conectado mediante coexistencia.`,
-      );
+      setMessage("Listo. Si igual no te llegan mensajes, revisá en el Business Manager de Meta que el número tenga activada la coexistencia.");
     } catch (error) {
       setMessage(
-        error.message || "No se pudieron activar los canales oficiales.",
+        error.message || "No se pudo sincronizar. Probá de nuevo en un momento.",
       );
     } finally {
       setConnecting(false);
@@ -4919,56 +4917,36 @@ function DataSettings({ data, setData, session, syncStatus }) {
             <span className="eyebrow">Tu perfil</span>
             <h2>Tu WhatsApp</h2>
           </div>
+          <Link2 size={20} />
         </div>
         {myChannels.length > 1 ? (
-          <>
-            <p>
-              Tu cuenta tiene más de un número asignado. Elegí cuál mostrar
-              arriba de la pantalla — solo entre los tuyos.
-            </p>
-            <label>
-              <select
-                value={myChannels.includes(data.primaryChannel) ? data.primaryChannel : myChannels[0]}
-                onChange={(event) => setData({ ...data, primaryChannel: event.target.value })}
-              >
-                {myChannels.map((key) => (
-                  <option value={key} key={key}>{CHANNELS[key]?.name || key}</option>
-                ))}
-              </select>
-            </label>
-          </>
+          <label className="whatsapp-number-row">
+            <select
+              value={myChannels.includes(data.primaryChannel) ? data.primaryChannel : myChannels[0]}
+              onChange={(event) => setData({ ...data, primaryChannel: event.target.value })}
+            >
+              {myChannels.map((key) => (
+                <option value={key} key={key}>{CHANNELS[key]?.name || key}</option>
+              ))}
+            </select>
+            <button className="secondary" disabled={connecting} onClick={activateOfficialChannels}>
+              Sincronizar
+            </button>
+          </label>
         ) : (
-          <p>
-            Tu número es <strong>{CHANNELS[myChannels[0]]?.name}</strong>
-            {CHANNELS[myChannels[0]]?.number ? ` (${CHANNELS[myChannels[0]].number})` : ""} — no hay otro para elegir.
+          <p className="whatsapp-number-row">
+            <strong>{CHANNELS[myChannels[0]]?.number || CHANNELS[myChannels[0]]?.name}</strong>
+            <button className="secondary" disabled={connecting} onClick={activateOfficialChannels}>
+              Sincronizar
+            </button>
           </p>
         )}
-      </section>
-      <section className="panel">
-        <div className="panel-head">
-          <div>
-            <span className="eyebrow">Meta</span>
-            <h2>Mantenimiento técnico</h2>
-          </div>
-          <Link2 size={22} />
-        </div>
         {message && <div className="system-message">{message}</div>}
-        <div className="modal-actions">
-          <button
-            className="secondary"
-            disabled={connecting}
-            onClick={activateOfficialChannels}
-          >
-            Activar recepción oficial
+        {myChannels.length > 1 && (
+          <button type="button" className="link-button" disabled={connecting} onClick={startWhatsAppConnection}>
+            + Conectar un número nuevo
           </button>
-          <button
-            className="secondary"
-            disabled={connecting}
-            onClick={startWhatsAppConnection}
-          >
-            Conectar otro número con Meta
-          </button>
-        </div>
+        )}
       </section>
       <section className="panel">
         <div className="panel-head">
@@ -5167,7 +5145,7 @@ function DataSettings({ data, setData, session, syncStatus }) {
 const SIGNUP_DOMAIN = "@grupopoliplast.com.ar";
 
 function LoginScreen() {
-  const [mode, setMode] = useState("signin"); // 'signin' | 'signup' | 'magic'
+  const [mode, setMode] = useState("signin"); // 'signin' | 'signup' | 'magic' | 'reset'
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -5205,6 +5183,19 @@ function LoginScreen() {
     );
   }
 
+  async function submitReset(event) {
+    event.preventDefault();
+    setMessage("Enviando enlace…");
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: window.location.origin,
+    });
+    setMessage(
+      error
+        ? error.message
+        : "Si ese correo tiene una cuenta, te llegó un enlace para elegir una contraseña nueva.",
+    );
+  }
+
   async function submitMagicLink(event) {
     event.preventDefault();
     setMessage("Enviando acceso…");
@@ -5234,9 +5225,27 @@ function LoginScreen() {
             ? `Creá tu cuenta con un correo ${SIGNUP_DOMAIN} — cada usuario tiene su propio espacio de trabajo.`
             : mode === "magic"
               ? "Ingresá con el correo habilitado. No necesitás recordar una contraseña."
-              : "Ingresá con tu correo y contraseña."}
+              : mode === "reset"
+                ? "Ingresá tu correo y te mandamos un enlace para elegir una contraseña nueva."
+                : "Ingresá con tu correo y contraseña."}
         </p>
-        {mode === "magic" ? (
+        {mode === "reset" ? (
+          <form onSubmit={submitReset}>
+            <label>
+              Correo
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="nombre@grupopoliplast.com.ar"
+              />
+            </label>
+            <button className="primary" type="submit">
+              Enviar enlace
+            </button>
+          </form>
+        ) : mode === "magic" ? (
           <form onSubmit={submitMagicLink}>
             <label>
               Correo
@@ -5290,6 +5299,11 @@ function LoginScreen() {
           {mode !== "signup" && (
             <button type="button" className="link-button" onClick={() => { setMode("signup"); setMessage(""); }}>
               Crear cuenta nueva
+            </button>
+          )}
+          {mode === "signin" && (
+            <button type="button" className="link-button" onClick={() => { setMode("reset"); setMessage(""); }}>
+              Olvidé mi contraseña
             </button>
           )}
           {mode !== "magic" && (

@@ -46,6 +46,10 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .channel-pill.online { color: #347663; background: #e3f2eb; }
 .channel-pill.waiting { color: #8b671e; background: #fff3d9; }
 .channel-pill.offline { color: #8a5148; background: #f8e9e6; }
+.whatsapp-number-row { display: flex; align-items: center; gap: 10px; margin: 0; }
+.whatsapp-number-row strong { font-size: 13px; }
+.whatsapp-number-row select { flex: 1; }
+.whatsapp-number-row .secondary { padding: 7px 12px; font-size: 12px; flex-shrink: 0; }
 .primary, .secondary { border: 0; border-radius: 10px; padding: 11px 16px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; }.primary { background: var(--brand-red); color: #fff; box-shadow: 0 5px 16px #ed1c2430; }.primary:hover { background: var(--brand-red-dark); }.secondary { color: #444; background: #ededee; }
 .calendar-link { text-decoration: none; }
 .inbox-section-title { display: flex; align-items: center; justify-content: space-between; padding: 12px 2px 7px; color: #626266; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
@@ -90,7 +94,7 @@ main { padding: 30px 36px 56px; min-width: 0; }
 @media (max-width: 850px) { .opportunity-row { grid-template-columns: 1fr auto; }.opportunity-row > div:last-child { grid-column: 1 / -1; text-align: left; }.product-line { grid-template-columns: 1fr 1fr; }.product-line label:first-child, .product-warning { grid-column: 1 / -1; } }
 .decision-buttons, .processed-actions { padding-top: 6px; gap: 6px; }
 .channel-strip { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin-bottom: 22px; }.channel-card { background: white; padding: 15px 18px; border: 1px solid #dfe5e1; border-radius: 14px; gap: 12px; }.channel-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }.channel-card strong, .channel-card span { display: block; }.channel-card div span { color: #72847f; font-size: 12px; margin-top: 3px; }.status { margin-left: auto; color: #347663; background: #e8f5ef; border-radius: 999px; padding: 5px 9px; font-size: 11px; font-weight: 700; white-space: nowrap; }.status.waiting { color: #8b671e; background: #fff3d9; }.status.offline { color: #8a5148; background: #f8e9e6; }
-.content-stack { display: grid; gap: 20px; }.metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }.sales-metric-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.content-stack { display: grid; gap: 14px; }.metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }.sales-metric-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 @media (max-width: 1100px) { .sales-metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .metric-grid, .sales-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }.metric-card, .panel { background: #fff; border: 1px solid #dfe5e1; border-radius: 16px; }.metric-card { padding: 18px; display: grid; grid-template-columns: 1fr auto; gap: 8px; }.metric-card svg { color: #b16f2e; }.metric-card span { grid-column: 1; font-size: 13px; color: #667a74; }.metric-card strong { grid-column: 1; font: 800 28px 'Manrope'; }.metric-card small { grid-column: 1 / -1; color: #82908c; }
 .two-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }.panel { padding: 16px 18px; }.panel-head { justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid #e9eeeb; }.panel-head h2 { margin: 2px 0 0; font: 700 16px 'Manrope'; }.panel-head p { margin: 4px 0 0; font-size: 12.5px; color: #6f827c; line-height: 1.45; max-width: 62ch; }.panel-head > svg { color: #7f928c; }

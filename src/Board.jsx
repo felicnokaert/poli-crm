@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
-import { AlertTriangle, CalendarCheck, ChevronLeft, ChevronRight, FileUp, LayoutGrid, List, Plus, Sparkles, Trash2, X } from 'lucide-react';
-import { KANBAN_TEMPLATE } from './board-model.mjs';
+import { AlertTriangle, CalendarCheck, ChevronLeft, ChevronRight, FileUp, LayoutGrid, List, Plus, Trash2, X } from 'lucide-react';
 import { COMMERCIAL_PLAN } from './commercial-plan';
 import { parseBoardCsv } from './board-csv.mjs';
 import { readFileSmart } from './text-decode.mjs';
@@ -80,13 +79,6 @@ export default function Board({ lists, cards, onSaveList, onDeleteList, onReorde
     setAddingListTitle('');
   }
 
-  function applyTemplate() {
-    const existingTitles = new Set(lists.map((list) => list.title));
-    KANBAN_TEMPLATE.filter((title) => !existingTitles.has(title)).forEach((title, index) => {
-      onSaveList({ id: crypto.randomUUID(), title, order: nextOrder(lists) + index, wipLimit: 0 });
-    });
-  }
-
   const planAlreadyImported = cards.some((card) => card.id.startsWith('plan-'));
   function importCommercialPlan() {
     if (planAlreadyImported) return;
@@ -152,7 +144,6 @@ export default function Board({ lists, cards, onSaveList, onDeleteList, onReorde
         <form className="board-add-list" onSubmit={addList}>
           <input value={addingListTitle} onChange={(e) => setAddingListTitle(e.target.value)} placeholder="Nombre de la lista (ej: Penosil, Shopify)"/>
           <button type="submit" className="primary"><Plus size={16}/> Agregar lista</button>
-          <button type="button" className="secondary" onClick={applyTemplate}><Sparkles size={16}/> Usar plantilla kanban</button>
           {!planAlreadyImported && <button type="button" className="secondary" onClick={importCommercialPlan}><CalendarCheck size={16}/> Importar plan comercial</button>}
           <input ref={csvInputRef} type="file" accept=".csv,text/csv" hidden onChange={handleCsvSelected}/>
           <button type="button" className="secondary" onClick={() => csvInputRef.current?.click()}><FileUp size={16}/> Importar CSV</button>

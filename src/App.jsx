@@ -28,6 +28,7 @@ import {
   RefreshCw,
   Snowflake,
   ListChecks,
+  UserCog,
 } from "lucide-react";
 import {
   CLASSIFICATIONS,
@@ -112,9 +113,9 @@ const CHANNELS = {
 // puntual, no en todos los módulos.
 const LOG_CONVERSATION_VIEWS = ["dashboard", "conversations", "pipeline", "clients", "contacts"];
 
-function profileInitials(email = "") {
-  const local = String(email).split("@")[0] || "";
-  const parts = local.split(/[._-]+/).filter(Boolean);
+function profileInitials(nameOrEmail = "") {
+  const local = String(nameOrEmail).split("@")[0] || "";
+  const parts = local.split(/[\s._-]+/).filter(Boolean);
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
   return local.slice(0, 2).toUpperCase() || "?";
 }
@@ -1561,6 +1562,7 @@ export default function App() {
       ["coach", "Entrenamiento", GraduationCap],
     ]],
     ["Sistema", [
+      ["profile", "Perfil", UserCog],
       ["settings", "Datos", Database],
     ]],
   ];
@@ -1666,8 +1668,11 @@ export default function App() {
             >
               {syncStatus}
             </span>
-            <div className="profile-pill" title={session?.user?.email || ""}>
-              {profileInitials(session?.user?.email)}
+            <div
+              className="profile-pill"
+              title={data.profileName || session?.user?.email || ""}
+            >
+              {profileInitials(data.profileName || session?.user?.email)}
             </div>
             {LOG_CONVERSATION_VIEWS.includes(view) && (
               <button className="primary" onClick={() => setShowForm(true)}>
@@ -1810,6 +1815,9 @@ export default function App() {
               setData={setData}
             />
           </div>
+        )}
+        {view === "profile" && (
+          <Profile data={data} setData={setData} session={session} />
         )}
         {view === "settings" && (
           <TestCleanupPanel data={data} setData={setData} session={session} />
@@ -4552,6 +4560,110 @@ function TestCleanupPanel({ data, setData, session }) {
       </div>
       {message && <div className="system-message">{message}</div>}
     </section>
+  );
+}
+
+function Profile({ data, setData, session }) {
+  const [name, setName] = useState(data.profileName || "");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  function saveName(event) {
+    event.preventDefault();
+    setData({ ...data, profileName: name.trim() });
+    setMessage("Nombre guardado.");
+  }
+
+  async function changePassword(event) {
+    event.preventDefault();
+    if (password.length < 6) {
+      setMessage("La contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
+    if (password !== passwordConfirm) {
+      setMessage("Las contraseñas no coinciden.");
+      return;
+    }
+    setSaving(true);
+    setMessage("Actualizando contraseña…");
+    const { error } = await supabase.auth.updateUser({ password });
+    setSaving(false);
+    if (error) {
+      setMessage(error.message || "No se pudo actualizar la contraseña.");
+      return;
+    }
+    setPassword("");
+    setPasswordConfirm("");
+    setMessage("Contraseña actualizada.");
+  }
+
+  return (
+    <div className="content-stack">
+      <section className="panel">
+        <div className="panel-head">
+          <div>
+            <span className="eyebrow">Tu cuenta</span>
+            <h2>Perfil</h2>
+          </div>
+          <UserCog size={22} />
+        </div>
+        <form className="form-grid" onSubmit={saveName}>
+          <label>
+            Nombre y apellido
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Ej: Felipe Cnokaert"
+            />
+          </label>
+          <label>
+            Correo
+            <input value={session?.user?.email || ""} disabled />
+          </label>
+          <div className="modal-actions span-2">
+            <button className="primary" type="submit">Guardar nombre</button>
+          </div>
+        </form>
+      </section>
+      <section className="panel">
+        <div className="panel-head">
+          <div>
+            <span className="eyebrow">Seguridad</span>
+            <h2>Cambiar contraseña</h2>
+          </div>
+        </div>
+        <form className="form-grid" onSubmit={changePassword}>
+          <label>
+            Contraseña nueva
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="••••••••"
+              minLength={6}
+            />
+          </label>
+          <label>
+            Repetir contraseña
+            <input
+              type="password"
+              value={passwordConfirm}
+              onChange={(event) => setPasswordConfirm(event.target.value)}
+              placeholder="••••••••"
+              minLength={6}
+            />
+          </label>
+          <div className="modal-actions span-2">
+            <button className="primary" type="submit" disabled={saving}>
+              {saving ? "Guardando…" : "Actualizar contraseña"}
+            </button>
+          </div>
+        </form>
+        {message && <div className="system-message">{message}</div>}
+      </section>
+    </div>
   );
 }
 

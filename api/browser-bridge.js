@@ -3,7 +3,15 @@ import { persistEvents } from '../lib/storage.mjs';
 const MAX_EVENTS = 100;
 const MAX_TEXT = 12000;
 
+// Puente deshabilitado (04/09/2026): la extensión de Chrome que lo alimentaba
+// seguía instalada y activa en algún equipo, capturando lo que tuviera abierto
+// en WhatsApp Web (General) y reportándolo bajo el canal con el que había
+// quedado emparejada (Penosil) - mezclaba conversaciones de un canal en el
+// otro. Los canales oficiales via WhatsApp Business Cloud API (webhook) no
+// dependen de este puente y siguen funcionando normal.
 export default async function handler(request, response) {
+  return response.status(410).json({ error: 'El puente de WhatsApp Web fue dado de baja. Desinstalá la extensión de Chrome asociada.' });
+  // eslint-disable-next-line no-unreachable
   if (request.method !== 'POST') return response.status(405).json({ error: 'Método no permitido.' });
   const authorization = request.headers.authorization || '';
   if (!process.env.WHATSAPP_BRIDGE_TOKEN || authorization !== `Bearer ${process.env.WHATSAPP_BRIDGE_TOKEN}`) {

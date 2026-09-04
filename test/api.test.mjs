@@ -56,14 +56,10 @@ test('operational readiness requires a corporate session', async () => {
   assert.equal(response.payload.error, 'Acceso corporativo requerido.');
 });
 
-test('browser bridge rejects requests without its private token', async () => {
-  const previous = process.env.WHATSAPP_BRIDGE_TOKEN;
-  process.env.WHATSAPP_BRIDGE_TOKEN = 'bridge-test-token';
+test('browser bridge is permanently disabled', async () => {
   const response = responseRecorder();
   await browserBridge({ method: 'POST', headers: {}, body: { events: [] } }, response);
-  assert.equal(response.statusCode, 401);
-  assert.equal(response.payload.error, 'Puente no autorizado.');
-  process.env.WHATSAPP_BRIDGE_TOKEN = previous;
+  assert.equal(response.statusCode, 410);
 });
 
 test('browser pairing requires a corporate session', async () => {

@@ -79,6 +79,8 @@ import {
   clientSearchText,
   findClientByWhatsApp,
 } from "./client-contacts.mjs";
+import { FAMILIES } from "./families.mjs";
+import { defaultBusinessUnits } from "./sales-model.mjs";
 
 const CHANNELS = {
   general: {
@@ -130,23 +132,6 @@ const PIPELINE = [
   "Ganado",
   "Pausado",
   "Perdido",
-];
-const FAMILIES = [
-  "Sin definir",
-  "Poliuretano",
-  "Poliurea",
-  "PURMAC",
-  "Penosil",
-  "Carrozados",
-  "Resinplast",
-  "Baldes",
-  "Pisos",
-  "EPP",
-  "Almohadas",
-  "PRFV",
-  "Imperpur",
-  "Foam Factory",
-  "Otra",
 ];
 const INTENTS = [
   "Información",
@@ -945,6 +930,29 @@ export default function App() {
       ...current,
       salesGoals: (Array.isArray(current.salesGoals) ? current.salesGoals : []).filter((goal) => goal.id !== id),
     }));
+  }
+
+  function saveBusinessUnit(unit) {
+    setData((current) => {
+      const existing = Array.isArray(current.businessUnits) && current.businessUnits.length
+        ? current.businessUnits
+        : defaultBusinessUnits();
+      const index = existing.findIndex((item) => item.id === unit.id);
+      const businessUnits = index === -1
+        ? [...existing, unit]
+        : existing.map((item) => (item.id === unit.id ? unit : item));
+      return { ...current, businessUnits };
+    });
+  }
+
+  function deleteBusinessUnit(id) {
+    if (!window.confirm("¿Eliminar esta unidad de negocio? Las ventas ya cargadas con esta unidad no se modifican.")) return;
+    setData((current) => {
+      const existing = Array.isArray(current.businessUnits) && current.businessUnits.length
+        ? current.businessUnits
+        : defaultBusinessUnits();
+      return { ...current, businessUnits: existing.filter((item) => item.id !== id) };
+    });
   }
 
   function classifyInbox(eventId, decision) {
@@ -1769,8 +1777,11 @@ export default function App() {
           <Sales
             items={data.sales || []}
             goals={data.salesGoals || []}
+            businessUnits={data.businessUnits}
             onSaveGoal={saveSalesGoal}
             onDeleteGoal={deleteSalesGoal}
+            onSaveBusinessUnit={saveBusinessUnit}
+            onDeleteBusinessUnit={deleteBusinessUnit}
             onSave={saveSale}
             onSaveMany={saveSales}
             onDelete={deleteSale}
@@ -2222,6 +2233,7 @@ function Conversations({ items, clients, onOpen, onOpenClient }) {
   const [query, setQuery] = useState("");
   const conversations = groupConversationHistory(items);
   const clientIds = new Set(clients.map((client) => client.id));
+  const clientsById = new Map(clients.map((client) => [client.id, client]));
   const filtered = conversations.filter((item) =>
     `${item.company || ""} ${item.contact || ""} ${item.summary || ""} ${item.need || ""} ${item.family || ""}`
       .toLowerCase()
@@ -2252,6 +2264,13 @@ function Conversations({ items, clients, onOpen, onOpenClient }) {
           {filtered.map((item) => {
             const validClientIds = (item.clientIds || [item.clientId]).filter((id) => clientIds.has(id));
             const hasClient = validClientIds.length === 1;
+            // La temperatura mostrada acá es la actual de la ficha del
+            // cliente, no la que se guardó al registrar la conversación —
+            // si el cliente se recalifica, el historial tiene que reflejarlo,
+            // no quedar con una foto vieja.
+            const liveTemperature = hasClient
+              ? clientsById.get(validClientIds[0])?.temperature
+              : null;
             return (
               <button
                 className="conversation-thread"
@@ -2290,9 +2309,9 @@ function Conversations({ items, clients, onOpen, onOpenClient }) {
                     )}
                   </time>
                   <span
-                    className={`temp ${(item.temperature || "Tibio").toLowerCase()}`}
+                    className={`temp ${(liveTemperature || item.temperature || "Tibio").toLowerCase()}`}
                   >
-                    {item.temperature || "Tibio"}
+                    {liveTemperature || item.temperature || "Tibio"}
                   </span>
                   <ChevronRight size={17} />
                 </div>
@@ -3114,7 +3133,11 @@ function InboxDraftModal({ draft, setDraft, onClose, onConfirm }) {
   );
 }
 
-function InteractionRow({ item, expanded = false, onOpen }) {
+function InteractionRow({ item, expanded = false, onOpen, liveTemperature }) {
+  // liveTemperature (la temperatura actual de la ficha del cliente, si se
+  // conoce en este contexto) pisa la que se guardó al registrar la
+  // conversación — el historial no debería quedar con una foto vieja.
+  const temperature = liveTemperature || item.temperature || "Tibio";
   const content = (
     <>
       <span
@@ -3132,8 +3155,8 @@ function InteractionRow({ item, expanded = false, onOpen }) {
         {expanded && <p>{item.summary || item.need || "Sin resumen"}</p>}
       </div>
       <div className="row-tail">
-        <span className={`temp ${(item.temperature || "Tibio").toLowerCase()}`}>
-          {item.temperature || "Tibio"}
+        <span className={`temp ${temperature.toLowerCase()}`}>
+          {temperature}
         </span>
         <ChevronRight size={17} />
       </div>
@@ -3186,7 +3209,7 @@ function InteractionDetail({
         <div className="conversation-detail-grid">
           <Fact label="Canal" value={CHANNELS[interaction.channel]?.name} />
           <Fact label="Familia" value={interaction.family} />
-          <Fact label="Temperatura" value={interaction.temperature} />
+          <Fact label="Temperatura" value={client?.temperature || interaction.temperature} />
           <Fact label="Etapa" value={interaction.stage} />
         </div>
         <div className="detail-block">
@@ -4219,6 +4242,7 @@ function ClientDetail({
                     item={item}
                     expanded
                     key={item.id}
+                    liveTemperature={client.temperature}
                     onOpen={(id) => {
                       onClose();
                       onOpenInteraction(id);

@@ -3,6 +3,38 @@ export const SALES_UNITS = {
   Poliocho: { rate: 0.01, invoicePoints: ['0003'] },
 };
 
+// Unidades por defecto para un workspace nuevo (editables por el usuario en
+// Ventas > Objetivos - CUIT, razón social, nombre fantasía, comisión y
+// puntos de venta). El formulario guarda la comisión como porcentaje
+// (ej: 3), acá se guarda como fracción para no repetir la cuenta en cada
+// cálculo.
+export function defaultBusinessUnits() {
+  return Object.entries(SALES_UNITS).map(([name, unit]) => ({
+    id: name,
+    name,
+    legalName: '',
+    cuit: '',
+    ratePct: unit.rate * 100,
+    invoicePoints: [...unit.invoicePoints],
+  }));
+}
+
+// Convierte la lista editable de unidades a la forma {nombre: {rate, invoicePoints}}
+// que usan saleCommission/normalizedSale. Sin unidades configuradas todavía,
+// cae a las 2 unidades históricas para no romper datos existentes.
+export function unitsMapFrom(businessUnits) {
+  if (!Array.isArray(businessUnits) || !businessUnits.length) return SALES_UNITS;
+  const map = {};
+  for (const unit of businessUnits) {
+    if (!unit?.name) continue;
+    map[unit.name] = {
+      rate: (Number(unit.ratePct) || 0) / 100,
+      invoicePoints: unit.invoicePoints?.length ? unit.invoicePoints : [''],
+    };
+  }
+  return map;
+}
+
 // Felipe cobra en pesos. Si la factura vino en dólares, la comisión se
 // calcula sobre el equivalente en pesos usando el tipo de cambio de la
 // propia factura, no sobre el importe en dólares directamente.
@@ -14,8 +46,8 @@ export function netAmountInArs(sale) {
   return netAmount;
 }
 
-export function saleCommission(sale) {
-  return netAmountInArs(sale) * (SALES_UNITS[sale?.unit]?.rate || 0);
+export function saleCommission(sale, units = SALES_UNITS) {
+  return netAmountInArs(sale) * (units[sale?.unit]?.rate || 0);
 }
 
 // Casi todo se vende en dólares; una venta en pesos no trae su propio tipo
@@ -29,16 +61,17 @@ export function netAmountInUsd(sale, fallbackRate) {
   return 0;
 }
 
-export function blankSale() {
+export function blankSale(defaultUnit = 'Poliplast', defaultPointOfSale = '0006') {
   const now = new Date();
   return {
     id: '',
     date: now.toISOString().slice(0, 10),
-    unit: 'Poliplast',
+    unit: defaultUnit,
     documentType: 'Factura',
-    pointOfSale: '0006',
+    pointOfSale: defaultPointOfSale,
     documentNumber: '',
     customer: '',
+    family: '',
     netAmount: '',
     currency: 'ARS',
     exchangeRate: '',
@@ -72,15 +105,16 @@ function monthKeyOf(date = '') {
   return String(date || '').slice(0, 7);
 }
 
-export function computeGoalProgress(sales = [], goal) {
+export function computeGoalProgress(sales = [], goal, units = SALES_UNITS) {
   const matching = sales.filter((sale) =>
     goalPeriodValue(goal, sale) === goal.period &&
     (goal.unit === 'Todas' || !goal.unit || sale.unit === goal.unit) &&
-    (goal.pointOfSale === 'Todas' || !goal.pointOfSale || sale.pointOfSale === goal.pointOfSale),
+    (goal.pointOfSale === 'Todas' || !goal.pointOfSale || sale.pointOfSale === goal.pointOfSale) &&
+    (goal.family === 'Todas' || !goal.family || sale.family === goal.family),
   );
   if (goal.metric === 'netArs') return matching.reduce((sum, sale) => sum + netAmountInArs(sale), 0);
   if (goal.metric === 'netUsd') return matching.reduce((sum, sale) => sum + netAmountInUsd(sale, goal.fallbackRate), 0);
-  if (goal.metric === 'commission') return matching.reduce((sum, sale) => sum + saleCommission(sale), 0);
+  if (goal.metric === 'commission') return matching.reduce((sum, sale) => sum + saleCommission(sale, units), 0);
   return matching.length;
 }
 
@@ -121,7 +155,7 @@ export function salesToCsv(sales = []) {
   return `﻿${lines.join('\r\n')}`;
 }
 
-export function normalizedSale(sale) {
+export function normalizedSale(sale, units = SALES_UNITS) {
   const pointOfSale = sale.documentType === 'Factura'
     ? String(sale.pointOfSale || '').padStart(4, '0')
     : '';
@@ -132,7 +166,7 @@ export function normalizedSale(sale) {
     netAmount: Number(sale.netAmount || 0),
     currency: sale.currency === 'USD' ? 'USD' : 'ARS',
     exchangeRate: sale.currency === 'USD' ? Number(sale.exchangeRate || 0) : 0,
-    commission: saleCommission(sale),
+    commission: saleCommission(sale, units),
     collected: Boolean(sale.collected),
   };
 }

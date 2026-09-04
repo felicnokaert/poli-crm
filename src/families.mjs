@@ -1,0 +1,17 @@
+export const FAMILIES = [
+  "Sin definir",
+  "Poliuretano",
+  "Poliurea",
+  "PURMAC",
+  "Penosil",
+  "Carrozados",
+  "Resinplast",
+  "Baldes",
+  "Pisos",
+  "EPP",
+  "Almohadas",
+  "PRFV",
+  "Imperpur",
+  "Foam Factory",
+  "Otra",
+];

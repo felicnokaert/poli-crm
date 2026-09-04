@@ -1714,6 +1714,7 @@ export default function App() {
             interactions={data.interactions}
             sales={data.sales || []}
             inbox={data.inbox || []}
+            myChannels={myChannels}
             onToggle={toggleTask}
             onOpenTask={setSelectedTaskId}
             onOpenInteraction={setSelectedInteractionId}
@@ -1953,7 +1954,22 @@ function useDayPlan() {
 // pendientes reales (tareas vencidas, cotizaciones frías, recompra, RRSS) y
 // el usuario decide cuáles suma como "esto lo hago hoy", más lo que quiera
 // escribir a mano. De ahí en más solo tilda lo que va resolviendo.
-function DayMode({ overdueTasks, dueTodayTasks, coldQuotes, repurchaseRadar, onNavigate }) {
+// Tareas fijas sugeridas cada día, distintas según el canal de la cuenta -
+// lo que Felipe hace en General no es lo que hace quien opera Penosil.
+const PINNED_TASKS_BY_CHANNEL = {
+  general: [
+    { id: "rrss", label: "Mensajes RRSS — leer y contestar todas las cuentas del grupo" },
+  ],
+  penosil: [
+    { id: "penosil-catalogo", label: "Subir productos al catálogo" },
+    { id: "penosil-whatsapp", label: "Contestar todos los WhatsApp" },
+    { id: "penosil-prospectar", label: "Prospectar y buscar (público objetivo de Penosil)" },
+    { id: "penosil-estado", label: "Subir estado" },
+    { id: "penosil-contenido", label: "Subir contenido al canal" },
+  ],
+};
+
+function DayMode({ overdueTasks, dueTodayTasks, coldQuotes, repurchaseRadar, myChannels, onNavigate }) {
   const [plan, setPlan] = useDayPlan();
   const [customText, setCustomText] = useState("");
   const planIds = new Set(plan.map((item) => item.id));
@@ -1982,7 +1998,7 @@ function DayMode({ overdueTasks, dueTodayTasks, coldQuotes, repurchaseRadar, onN
     })),
     ...coldQuotes.map((item) => ({ id: `cold:${item.eventId}`, label: `Retomar cotización fría — ${item.customer}` })),
     ...repurchaseRadar.map((item) => ({ id: `repurchase:${item.customer}-${item.product}`, label: `Ofrecer recompra — ${item.customer} (${item.product})` })),
-    { id: "rrss", label: "Mensajes RRSS — leer y contestar todas las cuentas del grupo" },
+    ...(myChannels || []).flatMap((channel) => PINNED_TASKS_BY_CHANNEL[channel] || []),
   ].filter((item) => !planIds.has(item.id));
 
   const doneCount = plan.filter((item) => item.done).length;
@@ -2046,6 +2062,7 @@ function Dashboard({
   interactions,
   sales,
   inbox,
+  myChannels,
   onToggle,
   onOpenTask,
   onOpenInteraction,
@@ -2089,6 +2106,7 @@ function Dashboard({
         dueTodayTasks={dueTodayTasks}
         coldQuotes={coldQuotes}
         repurchaseRadar={repurchaseRadar}
+        myChannels={myChannels}
         onNavigate={onNavigate}
       />
       <section className="metric-grid">

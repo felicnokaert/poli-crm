@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { AlertTriangle, CalendarCheck, ChevronLeft, ChevronRight, FileUp, LayoutGrid, Plus, Sparkles, Trash2, X } from 'lucide-react';
+import { AlertTriangle, CalendarCheck, ChevronLeft, ChevronRight, FileUp, LayoutGrid, List, Plus, Sparkles, Trash2, X } from 'lucide-react';
 import { KANBAN_TEMPLATE } from './board-model.mjs';
 import { COMMERCIAL_PLAN } from './commercial-plan';
 import { parseBoardCsv } from './board-csv.mjs';
@@ -25,6 +25,13 @@ function nextOrder(cards) {
 
 export default function Board({ lists, cards, onSaveList, onDeleteList, onReorderList, onSaveCard, onDeleteCard, onMoveCard }) {
   const [addingListTitle, setAddingListTitle] = useState('');
+  const [viewMode, setViewMode] = useState(() => {
+    try { return localStorage.getItem('poliplast-board-view') || 'board'; } catch { return 'board'; }
+  });
+  function changeViewMode(mode) {
+    setViewMode(mode);
+    try { localStorage.setItem('poliplast-board-view', mode); } catch { /* localStorage puede fallar en modo privado */ }
+  }
   const [editingCard, setEditingCard] = useState(null);
   const [draggingCardId, setDraggingCardId] = useState(null);
   const [csvError, setCsvError] = useState('');
@@ -133,7 +140,14 @@ export default function Board({ lists, cards, onSaveList, onDeleteList, onReorde
             <h2>Tablero</h2>
             <p>Todo lo que no es venta directa: Penosil, Marketplace, catálogo, Mercado Libre, Shopify, lo que necesites. Creá tus propias listas y arrastrá las tarjetas para moverlas.</p>
           </div>
-          <LayoutGrid size={22} />
+          <div className="view-toggle">
+            <button type="button" className={viewMode === 'board' ? 'selected' : ''} onClick={() => changeViewMode('board')} aria-label="Ver como tablero" title="Tablero">
+              <LayoutGrid size={15}/>
+            </button>
+            <button type="button" className={viewMode === 'list' ? 'selected' : ''} onClick={() => changeViewMode('list')} aria-label="Ver como lista" title="Lista">
+              <List size={15}/>
+            </button>
+          </div>
         </div>
         <form className="board-add-list" onSubmit={addList}>
           <input value={addingListTitle} onChange={(e) => setAddingListTitle(e.target.value)} placeholder="Nombre de la lista (ej: Penosil, Shopify)"/>
@@ -146,7 +160,7 @@ export default function Board({ lists, cards, onSaveList, onDeleteList, onReorde
         {csvError && <p className="form-warning"><AlertTriangle size={15}/> {csvError}</p>}
         {csvNotice && <p className="form-notice">{csvNotice}</p>}
       </section>
-      <div className="board-lists">
+      <div className={`board-lists board-lists-${viewMode}`}>
         {orderedLists.map((list, index) => {
           const listCards = cardsFor(list.id);
           return (

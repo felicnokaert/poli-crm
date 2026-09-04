@@ -1501,6 +1501,23 @@ export default function App() {
     }));
   }
 
+  function addPipelineClient(company, stage) {
+    const stamp = new Date().toISOString();
+    const client = {
+      id: crypto.randomUUID(),
+      company: company.trim(),
+      family: "Sin definir",
+      temperature: "Tibio",
+      stage,
+      pipelineActive: true,
+      sourceType: "Prospecto de inteligencia comercial",
+      source: "Cuentas activas",
+      createdAt: stamp,
+      updatedAt: stamp,
+    };
+    setData((current) => ({ ...current, clients: [...current.clients, client] }));
+  }
+
   function updateClient(updatedClient) {
     const stamp = new Date().toISOString();
     setData((current) => ({
@@ -1763,6 +1780,7 @@ export default function App() {
             onOpenClient={setSelectedClientId}
             onChangeStage={(id, stage) => updateClient({ id, stage })}
             onDelete={deleteClient}
+            onAdd={addPipelineClient}
           />
         )}
         {view === "sales" && (
@@ -3565,8 +3583,17 @@ function TaskForm({ form, setForm, clients, onClose, onSave }) {
   );
 }
 
-function Pipeline({ clients, onOpenClient, onChangeStage, onDelete }) {
+function Pipeline({ clients, onOpenClient, onChangeStage, onDelete, onAdd }) {
   const [draggingId, setDraggingId] = useState(null);
+  const [addingStage, setAddingStage] = useState(null);
+  const [addingValue, setAddingValue] = useState("");
+  function submitAdd(event, stage) {
+    event.preventDefault();
+    if (!addingValue.trim()) { setAddingStage(null); return; }
+    onAdd(addingValue, stage);
+    setAddingValue("");
+    setAddingStage(null);
+  }
   return (
     <div className="content-stack">
       <section className="panel pipeline-summary">
@@ -3624,7 +3651,26 @@ function Pipeline({ clients, onOpenClient, onChangeStage, onDelete }) {
                   </button>
                 </article>
               ))}
-              {!list.length && <div className="empty-slot">Sin cuentas</div>}
+              {!list.length && !addingStage && <div className="empty-slot">Sin cuentas</div>}
+              {addingStage === stage ? (
+                <form className="board-add-card-form" onSubmit={(e) => submitAdd(e, stage)}>
+                  <input
+                    autoFocus
+                    value={addingValue}
+                    onChange={(e) => setAddingValue(e.target.value)}
+                    onBlur={() => { if (!addingValue.trim()) setAddingStage(null); }}
+                    placeholder="Nombre de la empresa"
+                  />
+                  <div>
+                    <button type="submit" className="primary">Agregar</button>
+                    <button type="button" className="icon-button" onClick={() => { setAddingStage(null); setAddingValue(""); }} aria-label="Cancelar"><X size={13} /></button>
+                  </div>
+                </form>
+              ) : (
+                <button type="button" className="board-add-card" onClick={() => setAddingStage(stage)}>
+                  <Plus size={14} /> Cuenta
+                </button>
+              )}
             </section>
           );
         })}

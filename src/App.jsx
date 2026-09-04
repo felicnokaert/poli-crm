@@ -1896,83 +1896,114 @@ export default function App() {
   );
 }
 
-const RRSS_CHECK_PREFIX = "poliplast-rrss-checked-";
+const DAY_PLAN_PREFIX = "poliplast-day-plan-";
 
-function DayMode({ overdueCount, dueTodayCount, coldQuotesCount, repurchaseCount, onNavigate }) {
-  const todayKey = RRSS_CHECK_PREFIX + today();
-  const [rrssDone, setRrssDone] = useState(() => {
+function useDayPlan() {
+  const key = DAY_PLAN_PREFIX + today();
+  const [plan, setPlan] = useState(() => {
     try {
-      return localStorage.getItem(todayKey) === "1";
+      return JSON.parse(localStorage.getItem(key) || "[]");
     } catch {
-      return false;
+      return [];
     }
   });
-  function toggleRrss() {
-    const next = !rrssDone;
-    setRrssDone(next);
+  useEffect(() => {
     try {
-      if (next) localStorage.setItem(todayKey, "1");
-      else localStorage.removeItem(todayKey);
+      localStorage.setItem(key, JSON.stringify(plan));
     } catch {
-      // localStorage puede fallar en modo privado; el check simplemente no persiste.
+      // localStorage puede fallar en modo privado; el plan simplemente no persiste.
     }
+  }, [plan, key]);
+  return [plan, setPlan];
+}
+
+// El plan de hoy no se autocompleta: a primera hora se sugieren los
+// pendientes reales (tareas vencidas, cotizaciones frías, recompra, RRSS) y
+// el usuario decide cuáles suma como "esto lo hago hoy", más lo que quiera
+// escribir a mano. De ahí en más solo tilda lo que va resolviendo.
+function DayMode({ overdueTasks, dueTodayTasks, coldQuotes, repurchaseRadar, onNavigate }) {
+  const [plan, setPlan] = useDayPlan();
+  const [customText, setCustomText] = useState("");
+  const planIds = new Set(plan.map((item) => item.id));
+
+  function addToPlan(id, label) {
+    if (planIds.has(id)) return;
+    setPlan((current) => [...current, { id, label, done: false }]);
   }
-  const items = [
-    {
-      key: "overdue",
-      Icon: CircleAlert,
-      label: overdueCount > 0 ? `${overdueCount} seguimiento${overdueCount === 1 ? "" : "s"} vencido${overdueCount === 1 ? "" : "s"}` : "Sin seguimientos vencidos",
-      note: dueTodayCount ? `${dueTodayCount} más vencen hoy` : "",
-      tone: overdueCount > 0 ? "danger" : "ok",
-      onClick: () => onNavigate("tasks"),
-    },
-    {
-      key: "cold",
-      Icon: Snowflake,
-      label: coldQuotesCount > 0 ? `${coldQuotesCount} cotización${coldQuotesCount === 1 ? "" : "es"} fría${coldQuotesCount === 1 ? "" : "s"}` : "Sin cotizaciones frías",
-      tone: coldQuotesCount > 0 ? "warning" : "ok",
-      onClick: null,
-    },
-    {
-      key: "repurchase",
-      Icon: RefreshCw,
-      label: repurchaseCount > 0 ? `${repurchaseCount} cliente${repurchaseCount === 1 ? "" : "s"} para reponer` : "Nadie está en ventana de recompra",
-      tone: repurchaseCount > 0 ? "warning" : "ok",
-      onClick: null,
-    },
-    {
-      key: "rrss",
-      Icon: rrssDone ? CheckCircle2 : MessageCircle,
-      label: "Mensajes RRSS — leer y contestar todas las cuentas del grupo",
-      tone: rrssDone ? "ok" : "warning",
-      onClick: toggleRrss,
-      done: rrssDone,
-    },
-  ];
+  function toggleDone(id) {
+    setPlan((current) => current.map((item) => (item.id === id ? { ...item, done: !item.done } : item)));
+  }
+  function removeFromPlan(id) {
+    setPlan((current) => current.filter((item) => item.id !== id));
+  }
+  function addCustom(event) {
+    event.preventDefault();
+    if (!customText.trim()) return;
+    setPlan((current) => [...current, { id: `custom:${crypto.randomUUID()}`, label: customText.trim(), done: false }]);
+    setCustomText("");
+  }
+
+  const candidates = [
+    ...[...overdueTasks, ...dueTodayTasks].map((task) => ({
+      id: `task:${task.id}`,
+      label: `${task.title}${task.company ? ` — ${task.company}` : ""}`,
+    })),
+    ...coldQuotes.map((item) => ({ id: `cold:${item.eventId}`, label: `Retomar cotización fría — ${item.customer}` })),
+    ...repurchaseRadar.map((item) => ({ id: `repurchase:${item.customer}-${item.product}`, label: `Ofrecer recompra — ${item.customer} (${item.product})` })),
+    { id: "rrss", label: "Mensajes RRSS — leer y contestar todas las cuentas del grupo" },
+  ].filter((item) => !planIds.has(item.id));
+
+  const doneCount = plan.filter((item) => item.done).length;
+
   return (
     <section className="panel day-mode">
       <div className="panel-head">
         <div>
-          <span className="eyebrow">Antes de arrancar</span>
-          <h2>Modo día</h2>
+          <span className="eyebrow">Primera hora</span>
+          <h2>Plan de hoy</h2>
+          <p>¿Qué pensás hacer hoy? Sumá lo que te sirva de lo pendiente y marcá lo que vayas resolviendo.</p>
         </div>
         <ListChecks size={22} />
       </div>
-      <div className="day-mode-list">
-        {items.map(({ key, Icon, label, note, tone, onClick, done }) => (
-          <button
-            type="button"
-            key={key}
-            className={`day-mode-item tone-${tone}${done ? " is-done" : ""}${onClick ? "" : " no-action"}`}
-            onClick={onClick || undefined}
-            disabled={!onClick}
-          >
-            <Icon size={17} />
-            <span>{label}</span>
-            {note && <small>{note}</small>}
-          </button>
-        ))}
-      </div>
+      {plan.length > 0 && (
+        <div className="day-mode-list">
+          {plan.map((item) => (
+            <label className={`day-mode-item${item.done ? " is-done" : ""}`} key={item.id}>
+              <input type="checkbox" checked={item.done} onChange={() => toggleDone(item.id)} />
+              <span>{item.label}</span>
+              <button type="button" className="icon-button" onClick={() => removeFromPlan(item.id)} aria-label="Quitar del plan">
+                <X size={13} />
+              </button>
+            </label>
+          ))}
+          <small className="day-mode-progress">{doneCount} de {plan.length} hechas</small>
+        </div>
+      )}
+      {candidates.length > 0 && (
+        <div className="day-mode-candidates">
+          <span className="day-mode-subhead">Pendiente — ¿lo hacés hoy?</span>
+          {candidates.map((item) => (
+            <button type="button" className="day-mode-candidate" key={item.id} onClick={() => addToPlan(item.id, item.label)}>
+              <Plus size={13} /> {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <form className="day-mode-add" onSubmit={addCustom}>
+        <input
+          value={customText}
+          onChange={(event) => setCustomText(event.target.value)}
+          placeholder="¿Algo pendiente que quieras agregar?"
+        />
+        <button type="submit" className="secondary">
+          <Plus size={15} /> Agregar
+        </button>
+      </form>
+      {overdueTasks.length > 0 && (
+        <button type="button" className="link-button day-mode-link" onClick={() => onNavigate("tasks")}>
+          Ver todas las tareas vencidas en Tareas
+        </button>
+      )}
     </section>
   );
 }
@@ -1990,6 +2021,9 @@ function Dashboard({
 }) {
   const repurchaseRadar = buildRepurchaseRadar(sales).slice(0, 6);
   const coldQuotes = findColdQuotes(inbox, sales).slice(0, 6);
+  const now = today();
+  const overdueTasks = tasks.filter((task) => !task.done && task.dueDate && task.dueDate < now);
+  const dueTodayTasks = tasks.filter((task) => !task.done && task.dueDate === now);
   const latestByContact = [];
   const seenContacts = new Set();
   for (const interaction of interactions) {
@@ -2019,10 +2053,10 @@ function Dashboard({
   return (
     <div className="content-stack">
       <DayMode
-        overdueCount={metrics.overdue}
-        dueTodayCount={metrics.dueToday}
-        coldQuotesCount={coldQuotes.length}
-        repurchaseCount={repurchaseRadar.length}
+        overdueTasks={overdueTasks}
+        dueTodayTasks={dueTodayTasks}
+        coldQuotes={coldQuotes}
+        repurchaseRadar={repurchaseRadar}
         onNavigate={onNavigate}
       />
       <section className="metric-grid">

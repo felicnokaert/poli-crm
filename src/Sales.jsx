@@ -48,7 +48,7 @@ function withTimeout(promise, ms) {
 }
 
 function blankGoalDraft(currentMonth, currentQuarter) {
-  return { periodType: 'month', period: currentMonth, currentMonth, currentQuarter, metric: 'count', unit: 'Todas', pointOfSale: 'Todas', target: '' };
+  return { periodType: 'month', period: currentMonth, currentMonth, currentQuarter, metric: 'count', unit: 'Todas', pointOfSale: 'Todas', target: '', fallbackRate: '' };
 }
 
 function GoalRow({ goal, current, onDelete }) {
@@ -113,6 +113,9 @@ function GoalsPanel({ goals, sales, currentMonth, currentQuarter, onSaveGoal, on
             {SALES_UNITS[draft.unit].invoicePoints.map((point) => <option key={point} value={point}>{point}</option>)}
           </select>
         )}
+        {draft.metric === 'netUsd' && (
+          <input type="number" min="0" step="0.01" placeholder="T. cambio para ventas en $" value={draft.fallbackRate} onChange={(e) => updateDraft('fallbackRate', e.target.value)} title="Tipo de cambio para convertir a USD las ventas que se facturaron en pesos"/>
+        )}
         <input type="number" min="1" step="1" placeholder="meta" value={draft.target} onChange={(e) => updateDraft('target', e.target.value)}/>
         <button type="submit" className="secondary"><Plus size={15}/> Agregar objetivo</button>
       </form>
@@ -120,10 +123,15 @@ function GoalsPanel({ goals, sales, currentMonth, currentQuarter, onSaveGoal, on
   );
 }
 
-export default function Sales({ items, goals, onSaveGoal, onDeleteGoal, onSave, onDelete }) {
+export default function Sales({ items, goals, onSaveGoal, onDeleteGoal, onSave, onSaveMany, onDelete, onDeleteMany }) {
   const currentMonth = new Date().toISOString().slice(0, 7);
   const [month, setMonth] = useState(currentMonth);
   const [unit, setUnit] = useState('Todas');
+  const [periodMode, setPeriodMode] = useState('month');
+  const currentQuarter = quarterKey(currentMonth + '-01');
+  const [quarter, setQuarter] = useState(currentQuarter);
+  const [search, setSearch] = useState('');
+  const [selectedIds, setSelectedIds] = useState([]);
   const [editing, setEditing] = useState(null);
   const [bulkDrafts, setBulkDrafts] = useState([]);
   const [bulkFailed, setBulkFailed] = useState([]);
@@ -131,13 +139,23 @@ export default function Sales({ items, goals, onSaveGoal, onDeleteGoal, onSave, 
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(null);
   const fileInputRef = useRef(null);
-  const filtered = useMemo(() => items.filter((item) =>
-    (!month || monthKey(item.date) === month) && (unit === 'Todas' || item.unit === unit)
-  ).sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))), [items, month, unit]);
+  const quarterOptions = useMemo(() => {
+    const set = new Set(items.map((item) => quarterKey(item.date)).filter(Boolean));
+    set.add(currentQuarter);
+    return [...set].sort().reverse();
+  }, [items, currentQuarter]);
+  const toggleSelectedId = (id) => setSelectedIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  const filtered = useMemo(() => {
+    const normalizedSearch = search.trim().toLocaleLowerCase('es-AR');
+    return items.filter((item) =>
+      (periodMode === 'all' || (periodMode === 'month' ? (!month || monthKey(item.date) === month) : quarterKey(item.date) === quarter)) &&
+      (unit === 'Todas' || item.unit === unit) &&
+      (!normalizedSearch || (item.customer || '').toLocaleLowerCase('es-AR').includes(normalizedSearch))
+    ).sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+  }, [items, month, unit, periodMode, quarter, search]);
   const net = filtered.reduce((sum, item) => sum + netAmountInArs(item), 0);
   const commission = filtered.reduce((sum, item) => sum + saleCommission(item), 0);
   const collectedCommission = filtered.filter((item) => item.collected).reduce((sum, item) => sum + saleCommission(item), 0);
-  const currentQuarter = quarterKey(currentMonth + '-01');
 
   async function handlePdfSelected(event) {
     const files = [...(event.target.files || [])];
@@ -216,10 +234,8 @@ export default function Sales({ items, goals, onSaveGoal, onDeleteGoal, onSave, 
   }
 
   function saveBulkSelected() {
-    for (const row of bulkDrafts) {
-      if (!bulkSelected.includes(row.rowId)) continue;
-      onSave(normalizedSale(row));
-    }
+    const toSave = bulkDrafts.filter((row) => bulkSelected.includes(row.rowId)).map((row) => normalizedSale(row));
+    if (toSave.length) onSaveMany(toSave);
     const remaining = bulkDrafts.filter((row) => !bulkSelected.includes(row.rowId));
     setBulkDrafts(remaining);
     setBulkSelected([]);
@@ -270,8 +286,40 @@ export default function Sales({ items, goals, onSaveGoal, onDeleteGoal, onSave, 
           onSaveSelected={saveBulkSelected}
         />
       )}
-      <div className="list-toolbar"><input type="month" value={month} onChange={(event) => setMonth(event.target.value)}/><select value={unit} onChange={(event) => setUnit(event.target.value)}><option>Todas</option><option>Poliplast</option><option>Poliocho</option></select><button type="button" className="secondary" onClick={() => exportSalesCsv(filtered, month, unit)} disabled={!filtered.length}><Download size={15}/> Exportar CSV</button></div>
-      <div className="opportunity-list">{filtered.map((item) => <button className="opportunity-row" key={item.id} onClick={() => setEditing(item)}><div><strong>{item.customer}</strong><span>{item.unit} · {item.documentType}{item.pointOfSale ? ` ${item.pointOfSale}-${item.documentNumber}` : ` ${item.documentNumber}`}</span></div><span className="opportunity-stage">{item.date}</span><div><strong>{item.currency === 'USD' ? `USD ${item.netAmount}` : money(item.netAmount)}</strong><span>Comisión {money(saleCommission(item))}{item.collected ? ' · Cobrada' : ''}</span></div></button>)}{!filtered.length && <div className="empty-opportunities"><ReceiptText/><p>No hay ventas registradas en este período.</p></div>}</div>
+      <div className="list-toolbar">
+        <select value={periodMode} onChange={(event) => setPeriodMode(event.target.value)}>
+          <option value="month">Por mes</option>
+          <option value="quarter">Por trimestre</option>
+          <option value="all">Todo el histórico</option>
+        </select>
+        {periodMode === 'month' && <input type="month" value={month} onChange={(event) => setMonth(event.target.value)}/>}
+        {periodMode === 'quarter' && (
+          <select value={quarter} onChange={(event) => setQuarter(event.target.value)}>
+            {quarterOptions.map((q) => <option key={q} value={q}>{q}</option>)}
+          </select>
+        )}
+        <select value={unit} onChange={(event) => setUnit(event.target.value)}><option>Todas</option><option>Poliplast</option><option>Poliocho</option></select>
+        <input type="search" placeholder="Buscar cliente…" value={search} onChange={(event) => setSearch(event.target.value)}/>
+        <button type="button" className="secondary" onClick={() => exportSalesCsv(filtered, month, unit)} disabled={!filtered.length}><Download size={15}/> Exportar CSV</button>
+      </div>
+      {selectedIds.length > 0 && (
+        <div className="bulk-import-head">
+          <span>{selectedIds.length} venta{selectedIds.length === 1 ? '' : 's'} seleccionada{selectedIds.length === 1 ? '' : 's'}</span>
+          <button type="button" className="danger-link" onClick={() => { onDeleteMany(selectedIds); setSelectedIds([]); }}><Trash2 size={15}/> Eliminar seleccionadas</button>
+        </div>
+      )}
+      <div className="opportunity-list">{filtered.map((item) => (
+        <div className={`opportunity-row sale-row${selectedIds.includes(item.id) ? ' is-selected' : ''}`} key={item.id}>
+          <label className="sale-row-check" onClick={(e) => e.stopPropagation()}>
+            <input type="checkbox" checked={selectedIds.includes(item.id)} onChange={() => toggleSelectedId(item.id)}/>
+          </label>
+          <button type="button" className="sale-row-main" onClick={() => setEditing(item)}>
+            <div><strong>{item.customer}</strong><span>{item.unit} · {item.documentType}{item.pointOfSale ? ` ${item.pointOfSale}-${item.documentNumber}` : ` ${item.documentNumber}`}</span></div>
+            <span className="opportunity-stage">{item.date}</span>
+            <div><strong>{item.currency === 'USD' ? `USD ${item.netAmount}` : money(item.netAmount)}</strong><span>Comisión {money(saleCommission(item))}{item.collected ? ' · Cobrada' : ''}</span></div>
+          </button>
+        </div>
+      ))}{!filtered.length && <div className="empty-opportunities"><ReceiptText/><p>No hay ventas registradas en este período.</p></div>}</div>
     </section>
     {editing && (
       <SaleModal
@@ -312,7 +360,16 @@ function BulkReviewTable({ rows, selected, existingSales, onToggle, onToggleAll,
           </thead>
           <tbody>
             {rows.map((row) => {
-              const duplicate = duplicateSale(existingSales, row);
+              // Los borradores todavía no tienen id propio (comparten '' hasta
+              // guardarse), así que duplicateSale() no sirve para compararlos
+              // entre sí: comparamos por rowId en su lugar.
+              const duplicate = duplicateSale(existingSales, row) || rows.find((item) =>
+                item.rowId !== row.rowId &&
+                item.unit === row.unit &&
+                item.documentType === row.documentType &&
+                String(item.pointOfSale || '') === String(row.pointOfSale || '') &&
+                String(item.documentNumber || '') === String(row.documentNumber || ''),
+              );
               const missingRate = row.currency === 'USD' && !(Number(row.exchangeRate) > 0);
               return (
                 <tr key={row.rowId} className={duplicate ? 'duplicate' : ''}>
@@ -350,7 +407,12 @@ function SaleModal({ value, sales, onClose, onSave, onDelete }) {
   const update = (name, value) => setForm((current) => ({ ...current, [name]: value }));
   const changeUnit = (unit) => setForm((current) => ({ ...current, unit, pointOfSale: current.documentType === 'Factura' ? SALES_UNITS[unit].invoicePoints[0] : '' }));
   const duplicate = duplicateSale(sales, form);
-  return <div className="modal-backdrop"><form className="modal" onSubmit={(event) => { event.preventDefault(); onSave(form); }}>
+  function submit(event) {
+    event.preventDefault();
+    if (duplicate && !window.confirm(`Ya existe una venta con este mismo comprobante para ${duplicate.customer} (${money(duplicate.netAmount)}). ¿Guardar de todas formas?`)) return;
+    onSave(form);
+  }
+  return <div className="modal-backdrop"><form className="modal" onSubmit={submit}>
     <div className="modal-head"><div><span className="eyebrow">Venta concretada</span><h2>{form.id ? 'Editar venta' : 'Registrar venta'}</h2><p>Ingresá el importe neto, sin IVA.</p></div><button type="button" className="icon-button" onClick={onClose} aria-label="Cerrar"><X/></button></div>
     {duplicate && <p className="form-warning"><AlertTriangle size={15}/> Ya existe una venta con este mismo comprobante ({duplicate.customer}, {money(duplicate.netAmount)}). Revisá antes de guardar para no duplicarla.</p>}
     <div className="form-grid">

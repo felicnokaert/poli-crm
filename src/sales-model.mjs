@@ -18,6 +18,17 @@ export function saleCommission(sale) {
   return netAmountInArs(sale) * (SALES_UNITS[sale?.unit]?.rate || 0);
 }
 
+// Casi todo se vende en dólares; una venta en pesos no trae su propio tipo
+// de cambio (no es una factura en USD), así que para sumarla a un objetivo
+// en dólares hace falta un tipo de cambio de referencia que el usuario
+// define en el objetivo mismo (fallbackRate).
+export function netAmountInUsd(sale, fallbackRate) {
+  const netAmount = Number(sale?.netAmount || 0);
+  if (sale?.currency === 'USD') return netAmount;
+  if (Number(fallbackRate) > 0) return netAmount / Number(fallbackRate);
+  return 0;
+}
+
 export function blankSale() {
   const now = new Date();
   return {
@@ -46,6 +57,7 @@ export function quarterKey(dateStr = '') {
 export const GOAL_METRICS = {
   count: { label: 'Cantidad de ventas', format: (value) => String(Math.round(value)) },
   netArs: { label: 'Neto en pesos', format: (value) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(value || 0) },
+  netUsd: { label: 'Neto en dólares', format: (value) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value || 0) },
   commission: { label: 'Comisión (en pesos)', format: (value) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(value || 0) },
 };
 
@@ -67,6 +79,7 @@ export function computeGoalProgress(sales = [], goal) {
     (goal.pointOfSale === 'Todas' || !goal.pointOfSale || sale.pointOfSale === goal.pointOfSale),
   );
   if (goal.metric === 'netArs') return matching.reduce((sum, sale) => sum + netAmountInArs(sale), 0);
+  if (goal.metric === 'netUsd') return matching.reduce((sum, sale) => sum + netAmountInUsd(sale, goal.fallbackRate), 0);
   if (goal.metric === 'commission') return matching.reduce((sum, sale) => sum + saleCommission(sale), 0);
   return matching.length;
 }

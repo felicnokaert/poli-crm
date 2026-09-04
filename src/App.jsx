@@ -880,11 +880,39 @@ export default function App() {
     }));
   }
 
+  function saveSales(rows) {
+    const stamp = new Date().toISOString();
+    setData((current) => {
+      const sales = [...(current.sales || [])];
+      for (const sale of rows) {
+        const record = {
+          ...sale,
+          id: sale.id || crypto.randomUUID(),
+          createdAt: sale.createdAt || stamp,
+          updatedAt: stamp,
+        };
+        const index = sales.findIndex((item) => item.id === record.id);
+        if (index === -1) sales.push(record);
+        else sales[index] = record;
+      }
+      return { ...current, sales };
+    });
+  }
+
   function deleteSale(id) {
     if (!window.confirm("¿Eliminar esta venta del registro?")) return;
     setData((current) => ({
       ...current,
       sales: (current.sales || []).filter((item) => item.id !== id),
+    }));
+  }
+
+  function deleteSales(ids) {
+    if (!ids.length) return;
+    if (!window.confirm(`¿Eliminar ${ids.length} venta${ids.length === 1 ? "" : "s"} del registro?`)) return;
+    setData((current) => ({
+      ...current,
+      sales: (current.sales || []).filter((item) => !ids.includes(item.id)),
     }));
   }
 
@@ -1720,7 +1748,9 @@ export default function App() {
             onSaveGoal={saveSalesGoal}
             onDeleteGoal={deleteSalesGoal}
             onSave={saveSale}
+            onSaveMany={saveSales}
             onDelete={deleteSale}
+            onDeleteMany={deleteSales}
           />
         )}
         {view === "board" && (
@@ -3397,6 +3427,7 @@ function TaskForm({ form, setForm, clients, onClose, onSave }) {
 }
 
 function Pipeline({ clients, onOpenClient, onChangeStage, onDelete }) {
+  const [draggingId, setDraggingId] = useState(null);
   return (
     <div className="content-stack">
       <section className="panel pipeline-summary">
@@ -3405,7 +3436,8 @@ function Pipeline({ clients, onOpenClient, onChangeStage, onDelete }) {
           <h2>{clients.length} cuentas en seguimiento</h2>
           <p>
             La cartera maestra permanece disponible en Clientes. Acá aparecen
-            únicamente las cuentas que decidiste trabajar.
+            únicamente las cuentas que decidiste trabajar. Arrastrá una
+            tarjeta a otra columna para cambiarla de etapa.
           </p>
         </div>
       </section>
@@ -3416,13 +3448,25 @@ function Pipeline({ clients, onOpenClient, onChangeStage, onDelete }) {
             <section
               className={`kanban-column ${["Pausado", "Perdido"].includes(stage) ? "inactive" : ""}`}
               key={stage}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (draggingId) onChangeStage(draggingId, stage);
+                setDraggingId(null);
+              }}
             >
               <header>
                 <strong>{stage}</strong>
                 <span>{list.length}</span>
               </header>
               {list.map((client) => (
-                <article className="deal-card" key={client.id}>
+                <article
+                  className="deal-card"
+                  key={client.id}
+                  draggable
+                  onDragStart={() => setDraggingId(client.id)}
+                  onDragEnd={() => setDraggingId(null)}
+                >
                   <button type="button" onClick={() => onOpenClient(client.id)}>
                     <strong>{client.company}</strong>
                     <span>{client.family}</span>

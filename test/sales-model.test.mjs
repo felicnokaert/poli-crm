@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeGoalProgress, duplicateSale, netAmountInArs, normalizedSale, quarterKey, saleCommission, salesToCsv } from '../src/sales-model.mjs';
+import { computeGoalProgress, duplicateSale, netAmountInArs, netAmountInUsd, normalizedSale, quarterKey, saleCommission, salesToCsv } from '../src/sales-model.mjs';
 
 test('calcula 3% para Poliplast y 1% para Poliocho', () => {
   assert.equal(saleCommission({ unit: 'Poliplast', netAmount: 100000 }), 3000);
@@ -67,6 +67,21 @@ test('computes count/net/commission progress filtered by unit and point of sale'
   assert.equal(netPoliplast, 3000);
   const commissionPos = computeGoalProgress(sales, { periodType: 'month', period: '2026-09', metric: 'commission', unit: 'Poliplast', pointOfSale: '0006' });
   assert.equal(commissionPos, 30); // 1000 * 3%
+});
+
+test('converts ARS sales to USD using the goal fallback rate, but not USD sales', () => {
+  assert.equal(netAmountInUsd({ netAmount: 1500, currency: 'ARS' }, 1500), 1);
+  assert.equal(netAmountInUsd({ netAmount: 1000, currency: 'USD', exchangeRate: 1500 }, 1500), 1000);
+  assert.equal(netAmountInUsd({ netAmount: 1500, currency: 'ARS' }, 0), 0);
+});
+
+test('goal progress in USD sums USD sales directly and converts ARS ones with the fallback rate', () => {
+  const sales = [
+    { date: '2026-09-01', unit: 'Poliplast', netAmount: 1000, currency: 'USD', exchangeRate: 1500 },
+    { date: '2026-09-05', unit: 'Poliplast', netAmount: 1500, currency: 'ARS' },
+  ];
+  const usdProgress = computeGoalProgress(sales, { periodType: 'month', period: '2026-09', metric: 'netUsd', unit: 'Todas', pointOfSale: 'Todas', fallbackRate: 1500 });
+  assert.equal(usdProgress, 1001);
 });
 
 test('goal progress respects the quarter period type', () => {

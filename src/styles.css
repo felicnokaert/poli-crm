@@ -64,6 +64,12 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .opportunity-row span { color: #737378; font-size: 12px; margin-top: 3px; }
 .opportunity-row > div:last-child { text-align: right; }
 .opportunity-stage { padding: 5px 9px; border-radius: 999px; background: #efeff0; color: #555 !important; font-size: 10px !important; font-weight: 700; text-transform: uppercase; }
+.sale-row { grid-template-columns: auto 1fr; }
+.sale-row-check { display: flex; align-items: center; padding-right: 2px; }
+.sale-row-main { all: unset; box-sizing: border-box; display: grid; grid-template-columns: minmax(220px, 1fr) auto minmax(150px, auto); gap: 16px; align-items: center; text-align: left; width: 100%; cursor: pointer; }
+.sale-row-main > div:last-child { text-align: right; }
+.sale-row.is-selected { border-color: #315f91; box-shadow: 0 0 0 2px #315f9133; }
+@media (max-width: 850px) { .sale-row-main { grid-template-columns: 1fr auto; } .sale-row-main > div:last-child { grid-column: 1 / -1; text-align: left; } }
 .stage-ganada { background: #e6f5ec; color: #246a48 !important; }.stage-perdida { background: #fdeaea; color: #a52b32 !important; }.stage-cotización, .stage-negociación { background: #e8f0fa; color: #315f91 !important; }
 .empty-opportunities { display: grid; place-items: center; color: #858589; padding: 42px; }.empty-opportunities p { margin: 8px 0 0; }
 .opportunity-modal { width: min(1040px, calc(100vw - 34px)); }

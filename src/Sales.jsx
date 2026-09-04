@@ -4,6 +4,7 @@ import { blankSale, duplicateSale, netAmountInArs, normalizedSale, quarterKey, s
 
 const money = (value) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(value || 0);
 const monthKey = (date) => String(date || '').slice(0, 7);
+const PDF_TIMEOUT_MS = 20000;
 
 function exportSalesCsv(sales, month, unit) {
   const blob = new Blob([salesToCsv(sales)], { type: 'text/csv;charset=utf-8' });
@@ -15,24 +16,35 @@ function exportSalesCsv(sales, month, unit) {
   URL.revokeObjectURL(url);
 }
 
-function draftFromParsedInvoice(parsed) {
-  return normalizedSale({
-    ...blankSale(),
-    unit: parsed.unit,
-    date: parsed.date || blankSale().date,
-    pointOfSale: parsed.pointOfSale,
-    documentNumber: parsed.documentNumber,
-    customer: parsed.customer,
-    netAmount: parsed.netAmount,
-    currency: parsed.currency,
-    exchangeRate: parsed.currency === 'USD' ? (parsed.exchangeRate || '') : '',
-    notes: parsed.internalTaxExcluded ? `Impuesto interno excluido de la comisión: ${money(parsed.internalTaxExcluded)}.` : '',
-    // Se guardan los ítems para poder recordar precios por producto más
-    // adelante (memoria de precios en Entrenamiento).
-    items: (parsed.items || [])
-      .filter((item) => !/impuesto\s+interno/i.test(item.description || ''))
-      .map((item) => ({ description: item.description, code: item.code, unitPrice: item.unitPrice })),
-  });
+function draftFromParsedInvoice(parsed, fileName) {
+  return {
+    ...normalizedSale({
+      ...blankSale(),
+      unit: parsed.unit,
+      date: parsed.date || blankSale().date,
+      pointOfSale: parsed.pointOfSale,
+      documentNumber: parsed.documentNumber,
+      customer: parsed.customer,
+      netAmount: parsed.netAmount,
+      currency: parsed.currency,
+      exchangeRate: parsed.currency === 'USD' ? (parsed.exchangeRate || '') : '',
+      notes: parsed.internalTaxExcluded ? `Impuesto interno excluido de la comisión: ${money(parsed.internalTaxExcluded)}.` : '',
+      // Se guardan los ítems para poder recordar precios por producto más
+      // adelante (memoria de precios en Entrenamiento).
+      items: (parsed.items || [])
+        .filter((item) => !/impuesto\s+interno/i.test(item.description || ''))
+        .map((item) => ({ description: item.description, code: item.code, unitPrice: item.unitPrice })),
+    }),
+    rowId: crypto.randomUUID(),
+    sourceFile: fileName,
+  };
+}
+
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+  ]);
 }
 
 function GoalBar({ label, period, current, goal, onSaveGoal }) {
@@ -60,10 +72,11 @@ export default function Sales({ items, goals, onSaveGoal, onSave, onDelete }) {
   const [month, setMonth] = useState(currentMonth);
   const [unit, setUnit] = useState('Todas');
   const [editing, setEditing] = useState(null);
-  const [importQueue, setImportQueue] = useState([]);
-  const [importError, setImportError] = useState('');
-  const [importNotice, setImportNotice] = useState('');
+  const [bulkDrafts, setBulkDrafts] = useState([]);
+  const [bulkFailed, setBulkFailed] = useState([]);
+  const [bulkSelected, setBulkSelected] = useState([]);
   const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(null);
   const fileInputRef = useRef(null);
   const filtered = useMemo(() => items.filter((item) =>
     (!month || monthKey(item.date) === month) && (unit === 'Todas' || item.unit === unit)
@@ -75,57 +88,68 @@ export default function Sales({ items, goals, onSaveGoal, onSave, onDelete }) {
   const monthCount = items.filter((item) => monthKey(item.date) === currentMonth).length;
   const quarterCount = items.filter((item) => quarterKey(item.date) === currentQuarter).length;
 
-  function openNextImport(queue) {
-    if (!queue.length) {
-      setImportQueue([]);
-      return;
-    }
-    setImportQueue(queue.slice(1));
-    setEditing(queue[0]);
-  }
-
   async function handlePdfSelected(event) {
     const files = [...(event.target.files || [])];
     event.target.value = '';
     if (!files.length) return;
-    setImportError('');
-    setImportNotice('');
+    setBulkDrafts([]);
+    setBulkFailed([]);
     setImporting(true);
-    try {
-      const { extractPdfText } = await import('./pdf-text.js');
-      const { parseInvoiceText } = await import('./invoice-parser.mjs');
-      const drafts = [];
-      const failed = [];
-      for (const file of files) {
-        try {
-          const text = await extractPdfText(file);
-          const parsed = parseInvoiceText(text);
-          if (parsed.recognized) drafts.push(draftFromParsedInvoice(parsed));
-          else failed.push(file.name);
-        } catch {
-          failed.push(file.name);
+    const { extractPdfText } = await import('./pdf-text.js');
+    const { parseInvoiceText } = await import('./invoice-parser.mjs');
+    const drafts = [];
+    const failed = [];
+    for (let index = 0; index < files.length; index += 1) {
+      const file = files[index];
+      setImportProgress({ done: index, total: files.length, name: file.name });
+      try {
+        // Un PDF corrupto o inválido puede colgar la extracción sin nunca
+        // resolver ni rechazar la promesa; sin este límite, un solo archivo
+        // roto trababa todo el lote y ninguno de los demás se procesaba.
+        const text = await withTimeout(extractPdfText(file), PDF_TIMEOUT_MS);
+        const parsed = parseInvoiceText(text);
+        if (parsed.recognized) {
+          drafts.push(draftFromParsedInvoice(parsed, file.name));
+        } else if (parsed.documentTypeRejected) {
+          failed.push({ name: file.name, reason: `es un ${parsed.documentTypeRejected}, no una Factura` });
+        } else {
+          failed.push({ name: file.name, reason: 'no pude leer los datos (punto de venta, número o ítems)' });
         }
+      } catch (error) {
+        failed.push({ name: file.name, reason: error?.message === 'timeout' ? 'tardó demasiado en leerse (¿archivo dañado?)' : 'no se pudo abrir como PDF' });
       }
-      if (failed.length) {
-        setImportError(
-          files.length === 1
-            ? 'No pude leer los datos de esta factura (punto de venta, número o ítems). Cargala manualmente.'
-            : `Seleccionaste ${files.length} PDF. Leí ${drafts.length} correctamente y no pude leer ${failed.length} (${failed.join(', ')}). Los que sí se leyeron quedaron en cola para revisar uno por uno.`,
-        );
-      } else if (files.length > 1) {
-        setImportNotice(`Seleccionaste ${files.length} PDF y los leí todos. Te los voy mostrando uno por uno para que confirmes cada uno.`);
-      }
-      openNextImport(drafts);
-    } catch {
-      setImportError('No pude leer estos PDF. Verificá que sean facturas de Contabilium.');
-    } finally {
-      setImporting(false);
     }
+    setImportProgress(null);
+    setImporting(false);
+    setBulkDrafts(drafts);
+    setBulkFailed(failed);
+    // No preseleccionamos las que quedaron en USD sin tipo de cambio: mejor
+    // forzar a completarlo a mano que dejar guardar una comisión mal
+    // calculada por descuido.
+    setBulkSelected(drafts.filter((draft) => !(draft.currency === 'USD' && !(Number(draft.exchangeRate) > 0))).map((draft) => draft.rowId));
   }
 
-  function closeEditing() {
-    setEditing(null);
-    if (importQueue.length) openNextImport(importQueue);
+  function updateBulkDraft(rowId, field, value) {
+    setBulkDrafts((current) => current.map((row) => (row.rowId === rowId ? { ...row, [field]: value } : row)));
+  }
+
+  function toggleBulkSelected(rowId) {
+    setBulkSelected((current) => current.includes(rowId) ? current.filter((id) => id !== rowId) : [...current, rowId]);
+  }
+
+  function saveBulkSelected() {
+    for (const row of bulkDrafts) {
+      if (!bulkSelected.includes(row.rowId)) continue;
+      onSave(normalizedSale(row));
+    }
+    const remaining = bulkDrafts.filter((row) => !bulkSelected.includes(row.rowId));
+    setBulkDrafts(remaining);
+    setBulkSelected([]);
+  }
+
+  function discardBulkDraft(rowId) {
+    setBulkDrafts((current) => current.filter((row) => row.rowId !== rowId));
+    setBulkSelected((current) => current.filter((id) => id !== rowId));
   }
 
   return <div className="content-stack">
@@ -146,21 +170,104 @@ export default function Sales({ items, goals, onSaveGoal, onSave, onDelete }) {
     </section>
     <section className="panel">
       <div className="panel-head">
-        <div><span className="eyebrow">Resultado comercial</span><h2>Ventas realizadas</h2><p>Registro manual de Facturas y COT, o subí uno o varios PDF y los completamos por vos. La comisión se calcula sobre el importe neto sin IVA (sin impuesto interno) convertido a pesos si la factura vino en dólares.</p></div>
+        <div><span className="eyebrow">Resultado comercial</span><h2>Ventas realizadas</h2><p>Registro manual de Facturas y COT, o subí uno o varios PDF: los vas a poder revisar y editar todos juntos en una tabla antes de guardar. La comisión se calcula sobre el importe neto sin IVA (sin impuesto interno) convertido a pesos si la factura vino en dólares.</p></div>
         <div className="panel-head-actions">
           <input ref={fileInputRef} type="file" accept="application/pdf" multiple hidden onChange={handlePdfSelected}/>
           <button type="button" className="secondary" onClick={() => fileInputRef.current?.click()} disabled={importing}><FileUp size={17}/> {importing ? 'Leyendo PDF…' : 'Subir facturas (PDF)'}</button>
           <button className="primary" onClick={() => setEditing(blankSale())}><Plus size={17}/> Registrar venta</button>
         </div>
       </div>
-      {importError && <p className="form-warning"><AlertTriangle size={15}/> {importError}</p>}
-      {importNotice && <p className="form-notice"><CheckCircle2 size={15}/> {importNotice}</p>}
-      {importQueue.length > 0 && <p className="form-warning">Quedan {importQueue.length} factura{importQueue.length === 1 ? '' : 's'} más por revisar después de esta.</p>}
+      {importProgress && <p className="form-notice">Leyendo {importProgress.done + 1} de {importProgress.total}: {importProgress.name}</p>}
+      {bulkFailed.length > 0 && (
+        <p className="form-warning">
+          <AlertTriangle size={15}/> No pude importar {bulkFailed.length}: {bulkFailed.map((item) => `${item.name} (${item.reason})`).join('; ')}.
+        </p>
+      )}
+      {bulkDrafts.length > 0 && (
+        <BulkReviewTable
+          rows={bulkDrafts}
+          selected={bulkSelected}
+          existingSales={items}
+          onToggle={toggleBulkSelected}
+          onToggleAll={() => setBulkSelected(bulkSelected.length === bulkDrafts.length ? [] : bulkDrafts.map((row) => row.rowId))}
+          onChange={updateBulkDraft}
+          onDiscard={discardBulkDraft}
+          onSaveSelected={saveBulkSelected}
+        />
+      )}
       <div className="list-toolbar"><input type="month" value={month} onChange={(event) => setMonth(event.target.value)}/><select value={unit} onChange={(event) => setUnit(event.target.value)}><option>Todas</option><option>Poliplast</option><option>Poliocho</option></select><button type="button" className="secondary" onClick={() => exportSalesCsv(filtered, month, unit)} disabled={!filtered.length}><Download size={15}/> Exportar CSV</button></div>
       <div className="opportunity-list">{filtered.map((item) => <button className="opportunity-row" key={item.id} onClick={() => setEditing(item)}><div><strong>{item.customer}</strong><span>{item.unit} · {item.documentType}{item.pointOfSale ? ` ${item.pointOfSale}-${item.documentNumber}` : ` ${item.documentNumber}`}</span></div><span className="opportunity-stage">{item.date}</span><div><strong>{item.currency === 'USD' ? `USD ${item.netAmount}` : money(item.netAmount)}</strong><span>Comisión {money(saleCommission(item))}{item.collected ? ' · Cobrada' : ''}</span></div></button>)}{!filtered.length && <div className="empty-opportunities"><ReceiptText/><p>No hay ventas registradas en este período.</p></div>}</div>
     </section>
-    {editing && <SaleModal value={editing} sales={items} onClose={closeEditing} onSave={(value) => { onSave(normalizedSale(value)); closeEditing(); }} onDelete={editing.id ? () => { onDelete(editing.id); closeEditing(); } : null}/>}
+    {editing && (
+      <SaleModal
+        key={editing.id || 'new'}
+        value={editing}
+        sales={items}
+        onClose={() => setEditing(null)}
+        onSave={(value) => { onSave(normalizedSale(value)); setEditing(null); }}
+        onDelete={editing.id ? () => { onDelete(editing.id); setEditing(null); } : null}
+      />
+    )}
   </div>;
+}
+
+function BulkReviewTable({ rows, selected, existingSales, onToggle, onToggleAll, onChange, onDiscard, onSaveSelected }) {
+  return (
+    <div className="bulk-import">
+      <div className="bulk-import-head">
+        <label className="checkbox-field"><input type="checkbox" checked={selected.length === rows.length && rows.length > 0} onChange={onToggleAll}/> {selected.length} de {rows.length} seleccionadas</label>
+        <button type="button" className="primary" disabled={!selected.length} onClick={onSaveSelected}><CheckCircle2 size={15}/> Guardar seleccionadas</button>
+      </div>
+      <div className="bulk-import-scroll">
+        <table className="bulk-import-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Archivo</th>
+              <th>Fecha</th>
+              <th>Unidad</th>
+              <th>Cliente</th>
+              <th>Comprobante</th>
+              <th>Neto</th>
+              <th>Moneda</th>
+              <th>T. cambio</th>
+              <th>Comisión</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const duplicate = duplicateSale(existingSales, row);
+              const missingRate = row.currency === 'USD' && !(Number(row.exchangeRate) > 0);
+              return (
+                <tr key={row.rowId} className={duplicate ? 'duplicate' : ''}>
+                  <td><input type="checkbox" checked={selected.includes(row.rowId)} onChange={() => onToggle(row.rowId)}/></td>
+                  <td className="bulk-file-cell" title={row.sourceFile}>{row.sourceFile}{duplicate && <span className="bulk-duplicate-tag" title={`Ya existe: ${duplicate.customer}`}>duplicada</span>}</td>
+                  <td><input type="date" value={row.date} onChange={(e) => onChange(row.rowId, 'date', e.target.value)}/></td>
+                  <td>
+                    <select value={row.unit} onChange={(e) => onChange(row.rowId, 'unit', e.target.value)}>
+                      <option>Poliplast</option><option>Poliocho</option>
+                    </select>
+                  </td>
+                  <td><input value={row.customer} onChange={(e) => onChange(row.rowId, 'customer', e.target.value)}/></td>
+                  <td>{row.pointOfSale}-{row.documentNumber}</td>
+                  <td><input type="number" min="0" step="0.01" value={row.netAmount} onChange={(e) => onChange(row.rowId, 'netAmount', Number(e.target.value) || 0)}/></td>
+                  <td>
+                    <select value={row.currency} onChange={(e) => onChange(row.rowId, 'currency', e.target.value)}>
+                      <option value="ARS">ARS</option><option value="USD">USD</option>
+                    </select>
+                  </td>
+                  <td>{row.currency === 'USD' ? <input className={missingRate ? 'bulk-missing' : ''} type="number" min="0" step="0.01" value={row.exchangeRate || ''} placeholder="falta" onChange={(e) => onChange(row.rowId, 'exchangeRate', Number(e.target.value) || 0)}/> : '—'}</td>
+                  <td>{missingRate ? <span className="bulk-missing-label" title="La factura no traía el tipo de cambio. Completalo o la comisión va a salir mal.">falta t. cambio</span> : money(saleCommission(row))}</td>
+                  <td><button type="button" className="icon-button" onClick={() => onDiscard(row.rowId)} aria-label="Descartar"><X size={14}/></button></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
 
 function SaleModal({ value, sales, onClose, onSave, onDelete }) {

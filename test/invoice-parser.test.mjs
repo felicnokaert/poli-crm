@@ -145,3 +145,34 @@ Importe Total: $60.272,71
   assert.equal(result.netAmount, 54545.44);
   assert.equal(result.internalTaxExcluded, 5727.27);
 });
+
+test('rejects a Remito (delivery note) instead of importing it as a $0 sale', () => {
+  const remito = `
+R
+Remito
+Nº: 0013-00005802
+Fecha: 03/09/2026
+Razón social: ESTEBAN JOSE SARTORI
+Condición de venta: Cuenta corriente Condición de IVA: Responsable Inscripto
+2 PMRAC-V-521 PMRAC-V 521
+1 IMP INTERNO IMPUESTO INTERNO
+Cantidad total: 3
+VPS: $ 60.272,71. Transporte:
+`;
+  const result = parseInvoiceText(remito);
+  assert.equal(result.recognized, false);
+  assert.equal(result.documentTypeRejected, 'Remito');
+  assert.equal(result.netAmount, 0);
+});
+
+test('rejects a document with a valid number but no parsable item lines', () => {
+  const noItems = `
+Nº: 0006-00099999
+Fecha: 05/09/2026
+Razón social: SIN ITEMS
+Algún texto sin renglones de productos.
+`;
+  const result = parseInvoiceText(noItems);
+  assert.equal(result.recognized, false);
+  assert.equal(result.documentTypeRejected, '');
+});

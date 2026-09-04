@@ -27,8 +27,20 @@ function isoFromArgDate(value) {
 // se guardaba con importe $0 sin avisar.
 const ITEM_LINE = /^\s*(\d+(?:[.,]\d+)?)\s+(\S+)\s+(.+?)\s+([\d.,]+)\s+([\d.,]+)\s*%\s+(?:([\d.,]+)\s*%\s+)?([\d.,]+)\s*$/gm;
 
+// Contabilium usa el mismo "Nº: XXXX-XXXXX" para Facturas, Remitos, Notas de
+// crédito, etc. Un Remito trae la misma numeración pero sin precio por
+// renglón (Cantidad/Código/Descripción nomás) - antes se colaba como
+// "reconocida" y se guardaba una venta con importe $0 sin avisar.
+const NON_INVOICE_TYPES = [
+  ['Remito', /\bRemito\b/i],
+  ['Nota de crédito', /Nota de Cr[ée]dito/i],
+  ['Nota de débito', /Nota de D[ée]bito/i],
+  ['Recibo', /\bRecibo\b/i],
+];
+
 export function parseInvoiceText(text = '') {
   const clean = String(text).replace(/\r/g, '');
+  const detectedNonInvoiceType = NON_INVOICE_TYPES.find(([, pattern]) => pattern.test(clean));
   const numberMatch = clean.match(/N[°ºo]?:?\s*(\d{4})-(\d+)/i);
   const dateMatch = clean.match(/Fecha:\s*(\d{2}\/\d{2}\/\d{4})/i);
   const customerMatch = clean.match(/Raz[oó]n social:\s*([^\n]+)/i);
@@ -83,6 +95,10 @@ export function parseInvoiceText(text = '') {
     currency,
     exchangeRate: exchangeRateMatch ? toNumber(exchangeRateMatch[1]) : null,
     items,
-    recognized: Boolean(pointOfSale && documentNumber && unit),
+    documentTypeRejected: detectedNonInvoiceType ? detectedNonInvoiceType[0] : '',
+    // Ni siquiera un documento con número y punto de venta válidos cuenta
+    // como reconocido si es un Remito/Nota de crédito/Recibo, o si no se
+    // pudo leer ningún ítem con importe (mejor avisar que guardar $0).
+    recognized: Boolean(pointOfSale && documentNumber && unit && items.length && !detectedNonInvoiceType),
   };
 }

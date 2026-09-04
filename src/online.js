@@ -33,8 +33,13 @@ export async function loadOnlineState(userId, allowedChannels = ['general']) {
   const [{ data: stateRow, error: stateError }, { data: events, error: eventsError }, { data: statusEvents, error: statusError }] = await Promise.all([
     supabase.from('workspace_states').select('data,updated_at,updated_by_email').eq('workspace_key', userId).maybeSingle(),
     // La bandeja comercial nace de consultas entrantes. Los mensajes enviados
-    // por el equipo no crean alertas ni conversaciones por sí solos.
-    supabase.from('whatsapp_events').select('*').eq('direction', 'inbound').in('channel', allowedChannels).neq('message_type', 'unread_preview').neq('message_type', 'unread_notice').neq('message_type', 'verified_unread_preview').order('occurred_at', { ascending: false }).limit(500),
+    // por el equipo no crean alertas ni conversaciones por sí solos. Los
+    // "preview" del puente de WhatsApp Web (canales sin API oficial, como
+    // Penosil hoy) también son consultas reales y quedan adentro; lo único
+    // que se pone en cuarentena de verdad es isLegacyWhatsAppPreview
+    // (capturas de versiones viejas del puente, que sí podían confundir
+    // canales/nombres).
+    supabase.from('whatsapp_events').select('*').eq('direction', 'inbound').in('channel', allowedChannels).order('occurred_at', { ascending: false }).limit(500),
     // Cuando alguien contesta desde el teléfono (no desde el CRM), Meta no
     // manda el mensaje saliente, pero sí manda confirmaciones de status
     // (sent/delivered/read/played) para lo que se le mandó al cliente. Eso

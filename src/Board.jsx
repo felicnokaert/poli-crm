@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { AlertTriangle, CalendarCheck, ChevronLeft, ChevronRight, GripVertical, LayoutGrid, Plus, Sparkles, Trash2, X } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { AlertTriangle, CalendarCheck, ChevronLeft, ChevronRight, FileUp, GripVertical, LayoutGrid, Plus, Sparkles, Trash2, X } from 'lucide-react';
 import { KANBAN_TEMPLATE } from './board-model.mjs';
 import { COMMERCIAL_PLAN } from './commercial-plan';
+import { parseBoardCsv } from './board-csv.mjs';
 
 const TAG_COLORS = {
   '': '#8ba099',
@@ -25,7 +26,44 @@ export default function Board({ lists, cards, onSaveList, onDeleteList, onReorde
   const [addingListTitle, setAddingListTitle] = useState('');
   const [editingCard, setEditingCard] = useState(null);
   const [draggingCardId, setDraggingCardId] = useState(null);
+  const [csvError, setCsvError] = useState('');
+  const [csvNotice, setCsvNotice] = useState('');
+  const csvInputRef = useRef(null);
   const orderedLists = [...lists].sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  async function handleCsvSelected(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setCsvError('');
+    setCsvNotice('');
+    try {
+      const text = await file.text();
+      const { cards: parsedCards } = parseBoardCsv(text);
+      if (!parsedCards.length) {
+        setCsvError('No encontré filas con título en ese CSV. Revisá que tenga una columna de nombre/título.');
+        return;
+      }
+      const listTitle = file.name.replace(/\.csv$/i, '').slice(0, 60) || 'Importado';
+      const listId = crypto.randomUUID();
+      onSaveList({ id: listId, title: listTitle, order: nextOrder(lists), wipLimit: 0 });
+      parsedCards.forEach((card, index) => {
+        onSaveCard({
+          id: crypto.randomUUID(),
+          listId,
+          order: index,
+          title: card.title,
+          tag: card.tag,
+          description: card.description,
+          dueDate: card.dueDate,
+          createdAt: new Date().toISOString(),
+        });
+      });
+      setCsvNotice(`Importé ${parsedCards.length} tarjetas en la lista "${listTitle}".`);
+    } catch {
+      setCsvError('No pude leer ese archivo. Verificá que sea un CSV (Archivo → Descargar → CSV en Google Sheets).');
+    }
+  }
 
   function addList(event) {
     event.preventDefault();
@@ -98,7 +136,11 @@ export default function Board({ lists, cards, onSaveList, onDeleteList, onReorde
           <button type="submit" className="primary"><Plus size={16}/> Agregar lista</button>
           {!lists.length && <button type="button" className="secondary" onClick={applyTemplate}><Sparkles size={16}/> Usar plantilla kanban</button>}
           {!planAlreadyImported && <button type="button" className="secondary" onClick={importCommercialPlan}><CalendarCheck size={16}/> Importar plan comercial</button>}
+          <input ref={csvInputRef} type="file" accept=".csv,text/csv" hidden onChange={handleCsvSelected}/>
+          <button type="button" className="secondary" onClick={() => csvInputRef.current?.click()}><FileUp size={16}/> Importar CSV</button>
         </form>
+        {csvError && <p className="form-warning"><AlertTriangle size={15}/> {csvError}</p>}
+        {csvNotice && <p className="form-notice">{csvNotice}</p>}
       </section>
       <div className="board-lists">
         {orderedLists.map((list, index) => {

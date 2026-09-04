@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CalendarCheck, CheckCircle2, Download, FileUp, Plus, ReceiptText, Target, Trash2, X } from 'lucide-react';
-import { blankSale, computeGoalProgress, defaultBusinessUnits, duplicateSale, GOAL_METRICS, netAmountInArs, normalizedSale, quarterKey, saleCommission, salesToCsv, unitsMapFrom } from './sales-model.mjs';
+import { blankSale, computeGoalProgress, duplicateSale, GOAL_METRICS, netAmountInArs, normalizedSale, quarterKey, saleCommission, salesToCsv, unitsMapFrom } from './sales-model.mjs';
 import { FAMILIES } from './families.mjs';
 
 const money = (value) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(value || 0);
@@ -456,7 +456,7 @@ function blankBusinessUnit() {
 }
 
 function BusinessUnitsPanel({ businessUnits, onSave, onDelete }) {
-  const units = Array.isArray(businessUnits) && businessUnits.length ? businessUnits : defaultBusinessUnits();
+  const units = Array.isArray(businessUnits) ? businessUnits : [];
   const [editing, setEditing] = useState(null);
   const [pointDraft, setPointDraft] = useState('');
 

@@ -1,3 +1,5 @@
+import { channelsForEmail } from '../src/user-channels.mjs';
+
 const ALLOWED_BACKUP = 'felipecnokaert@gmail.com';
 
 function allowedEmail(email = '') {
@@ -22,7 +24,7 @@ export default async function handler(request, response) {
   if (!user) return response.status(401).json({ error: 'Acceso corporativo requerido.' });
   if (!process.env.WHATSAPP_BRIDGE_TOKEN) return response.status(503).json({ error: 'El puente todavía no está configurado.' });
   const channel = request.body?.channel;
-  if (!['general', 'penosil'].includes(channel)) return response.status(400).json({ error: 'Canal no válido.' });
+  if (!channelsForEmail(user.email).includes(channel)) return response.status(400).json({ error: 'Canal no válido.' });
   return response.status(200).json({
     ok: true,
     channel,

@@ -20,10 +20,13 @@ export function defaultBusinessUnits() {
 }
 
 // Convierte la lista editable de unidades a la forma {nombre: {rate, invoicePoints}}
-// que usan saleCommission/normalizedSale. Sin unidades configuradas todavía,
-// cae a las 2 unidades históricas para no romper datos existentes.
+// que usan saleCommission/normalizedSale. Si el usuario borró todas sus
+// unidades, el resultado es un mapa vacío a propósito - cada cuenta nueva ya
+// nace con sus propias unidades reales (ver defaultBusinessUnits en
+// online.js), así que un mapa vacío significa "las borró adrede", no "no se
+// configuraron todavía".
 export function unitsMapFrom(businessUnits) {
-  if (!Array.isArray(businessUnits) || !businessUnits.length) return SALES_UNITS;
+  if (!Array.isArray(businessUnits)) return {};
   const map = {};
   for (const unit of businessUnits) {
     if (!unit?.name) continue;

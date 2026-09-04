@@ -2,6 +2,9 @@ const ALLOWED_BACKUP = 'felipecnokaert@gmail.com';
 const WABAS = {
   general: '1620643669067135',
   penosil: '2497921480672168',
+  // Número de Juan: vive en una cuenta de WhatsApp Business (WABA) propia,
+  // distinta de la de General/Penosil.
+  juan: '203972567633203',
 };
 
 function allowedEmail(email = '') {

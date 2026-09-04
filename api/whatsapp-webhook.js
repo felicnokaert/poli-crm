@@ -27,6 +27,7 @@ export default async function handler(request, response) {
   const phoneMap = {
     [process.env.WHATSAPP_GENERAL_PHONE_ID]: 'general',
     [process.env.WHATSAPP_PENOSIL_PHONE_ID]: 'penosil',
+    [process.env.WHATSAPP_JUAN_PHONE_ID]: 'juan',
   };
   const events = normalizeWebhook(payload, phoneMap);
   const result = await persistEvents(events);

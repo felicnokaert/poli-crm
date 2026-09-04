@@ -96,6 +96,14 @@ const CHANNELS = {
     status: "Meta aprobado · conexión pendiente",
     statusTone: "offline",
   },
+  juan: {
+    name: "WhatsApp Juan",
+    number: "+54 9 11 2189-7610",
+    profile: "GRUPO POLIPLAST",
+    color: "#5a3ea6",
+    status: "Meta aprobado · app conectada",
+    statusTone: "online",
+  },
   call: { name: "Llamada", number: "", profile: "", color: "#3b6d9b" },
   email: { name: "Email", number: "", profile: "", color: "#6b5aa6" },
 };
@@ -4628,7 +4636,7 @@ function DataSettings({ data, setData, session, syncStatus }) {
     setMessage("Activando la recepción oficial de ambos canales…");
     try {
       const results = await Promise.all(
-        ["general", "penosil"].map(async (channel) => {
+        ["general", "penosil", "juan"].map(async (channel) => {
           const response = await fetch("/api/meta-subscribe", {
             method: "POST",
             headers: {

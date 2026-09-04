@@ -27,6 +27,7 @@ import {
   LayoutGrid,
   RefreshCw,
   Snowflake,
+  ListChecks,
 } from "lucide-react";
 import {
   CLASSIFICATIONS,
@@ -1692,6 +1693,7 @@ export default function App() {
             onToggle={toggleTask}
             onOpenTask={setSelectedTaskId}
             onOpenInteraction={setSelectedInteractionId}
+            onNavigate={setView}
           />
         )}
         {view === "conversations" && (
@@ -1894,6 +1896,87 @@ export default function App() {
   );
 }
 
+const RRSS_CHECK_PREFIX = "poliplast-rrss-checked-";
+
+function DayMode({ overdueCount, dueTodayCount, coldQuotesCount, repurchaseCount, onNavigate }) {
+  const todayKey = RRSS_CHECK_PREFIX + today();
+  const [rrssDone, setRrssDone] = useState(() => {
+    try {
+      return localStorage.getItem(todayKey) === "1";
+    } catch {
+      return false;
+    }
+  });
+  function toggleRrss() {
+    const next = !rrssDone;
+    setRrssDone(next);
+    try {
+      if (next) localStorage.setItem(todayKey, "1");
+      else localStorage.removeItem(todayKey);
+    } catch {
+      // localStorage puede fallar en modo privado; el check simplemente no persiste.
+    }
+  }
+  const items = [
+    {
+      key: "overdue",
+      Icon: CircleAlert,
+      label: overdueCount > 0 ? `${overdueCount} seguimiento${overdueCount === 1 ? "" : "s"} vencido${overdueCount === 1 ? "" : "s"}` : "Sin seguimientos vencidos",
+      note: dueTodayCount ? `${dueTodayCount} más vencen hoy` : "",
+      tone: overdueCount > 0 ? "danger" : "ok",
+      onClick: () => onNavigate("tasks"),
+    },
+    {
+      key: "cold",
+      Icon: Snowflake,
+      label: coldQuotesCount > 0 ? `${coldQuotesCount} cotización${coldQuotesCount === 1 ? "" : "es"} fría${coldQuotesCount === 1 ? "" : "s"}` : "Sin cotizaciones frías",
+      tone: coldQuotesCount > 0 ? "warning" : "ok",
+      onClick: null,
+    },
+    {
+      key: "repurchase",
+      Icon: RefreshCw,
+      label: repurchaseCount > 0 ? `${repurchaseCount} cliente${repurchaseCount === 1 ? "" : "s"} para reponer` : "Nadie está en ventana de recompra",
+      tone: repurchaseCount > 0 ? "warning" : "ok",
+      onClick: null,
+    },
+    {
+      key: "rrss",
+      Icon: rrssDone ? CheckCircle2 : MessageCircle,
+      label: "Mensajes RRSS — leer y contestar todas las cuentas del grupo",
+      tone: rrssDone ? "ok" : "warning",
+      onClick: toggleRrss,
+      done: rrssDone,
+    },
+  ];
+  return (
+    <section className="panel day-mode">
+      <div className="panel-head">
+        <div>
+          <span className="eyebrow">Antes de arrancar</span>
+          <h2>Modo día</h2>
+        </div>
+        <ListChecks size={22} />
+      </div>
+      <div className="day-mode-list">
+        {items.map(({ key, Icon, label, note, tone, onClick, done }) => (
+          <button
+            type="button"
+            key={key}
+            className={`day-mode-item tone-${tone}${done ? " is-done" : ""}${onClick ? "" : " no-action"}`}
+            onClick={onClick || undefined}
+            disabled={!onClick}
+          >
+            <Icon size={17} />
+            <span>{label}</span>
+            {note && <small>{note}</small>}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function Dashboard({
   metrics,
   tasks,
@@ -1903,6 +1986,7 @@ function Dashboard({
   onToggle,
   onOpenTask,
   onOpenInteraction,
+  onNavigate,
 }) {
   const repurchaseRadar = buildRepurchaseRadar(sales).slice(0, 6);
   const coldQuotes = findColdQuotes(inbox, sales).slice(0, 6);
@@ -1934,6 +2018,13 @@ function Dashboard({
   ];
   return (
     <div className="content-stack">
+      <DayMode
+        overdueCount={metrics.overdue}
+        dueTodayCount={metrics.dueToday}
+        coldQuotesCount={coldQuotes.length}
+        repurchaseCount={repurchaseRadar.length}
+        onNavigate={onNavigate}
+      />
       <section className="metric-grid">
         {cards.map(([label, value, note, Icon]) => (
           <article className="metric-card" key={label}>

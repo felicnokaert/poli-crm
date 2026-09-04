@@ -227,4 +227,15 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .price-memory-result span { color: #7d8e88; font-size: 12px; margin-top: 3px; }
 .price-memory-result > div:nth-child(2) { text-align: right; }
 .price-memory-result > div:nth-child(2) strong { font: 800 20px 'Manrope'; margin-top: 2px; }
+.day-mode-list { display: grid; gap: 8px; margin-top: 6px; }
+.day-mode-item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 1px solid #e2e2e4; border-radius: 11px; padding: 11px 14px; background: #fff; font-size: 13px; font-weight: 600; color: #282828; }
+.day-mode-item:not(.no-action):hover { border-color: #c9c9cc; box-shadow: 0 5px 18px #2222220d; }
+.day-mode-item.no-action { cursor: default; }
+.day-mode-item small { margin-left: auto; font-weight: 500; color: #858589; font-size: 11px; }
+.day-mode-item svg { flex-shrink: 0; }
+.day-mode-item.tone-danger svg { color: #a52b32; }
+.day-mode-item.tone-warning svg { color: #a3720f; }
+.day-mode-item.tone-ok svg { color: #246a48; }
+.day-mode-item.is-done { color: #7d8e88; text-decoration: line-through; }
+.day-mode-item.is-done small { text-decoration: none; }
 .price-memory-more { color: #7d8e88; font-size: 12px; margin-top: 10px; }

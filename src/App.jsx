@@ -114,7 +114,7 @@ const CHANNELS = {
 
 // "Registrar conversación" solo tiene sentido donde se sigue a un cliente
 // puntual, no en todos los módulos.
-const LOG_CONVERSATION_VIEWS = ["dashboard", "conversations", "pipeline", "clients", "contacts"];
+const LOG_CONVERSATION_VIEWS = ["conversations"];
 
 function profileInitials(nameOrEmail = "") {
   const local = String(nameOrEmail).split("@")[0] || "";
@@ -1673,6 +1673,19 @@ export default function App() {
             <h1>{nav.find(([id]) => id === view)?.[1]}</h1>
           </div>
           <div className="top-actions">
+            {(() => {
+              const activeChannel = myChannels.includes(data.primaryChannel) ? data.primaryChannel : myChannels[0];
+              const channelInfo = displayedChannel(activeChannel);
+              return (
+                <span
+                  className={`channel-pill ${channelInfo.statusTone}`}
+                  title={`${channelInfo.name} · ${channelInfo.number} · ${channelInfo.status}`}
+                >
+                  <span className="channel-dot" style={{ background: channelInfo.color }} />
+                  {channelInfo.statusTone === "online" ? "Conectado" : channelInfo.statusTone === "waiting" ? "Configurado" : "No conectado"}
+                </span>
+              );
+            })()}
             <span
               className={`sync-pill ${syncStatus === "Sincronizado" ? "ok" : ""}`}
             >
@@ -1691,29 +1704,6 @@ export default function App() {
             )}
           </div>
         </header>
-
-        {view !== "inbox" && (
-          <section className="channel-strip">
-            {[myChannels.includes(data.primaryChannel) ? data.primaryChannel : myChannels[0]].map((key) => (
-              <div className="channel-card" key={key}>
-                <span
-                  className="channel-dot"
-                  style={{ background: displayedChannel(key).color }}
-                />
-                <div>
-                  <strong>{displayedChannel(key).name}</strong>
-                  <span>
-                    {displayedChannel(key).profile} ·{" "}
-                    {displayedChannel(key).number}
-                  </span>
-                </div>
-                <span className={`status ${displayedChannel(key).statusTone}`}>
-                  {displayedChannel(key).status}
-                </span>
-              </div>
-            ))}
-          </section>
-        )}
 
         {view === "dashboard" && (
           <Dashboard
@@ -1818,7 +1808,7 @@ export default function App() {
             onOpenClient={setSelectedClientId}
           />
         )}
-        {view === "replies" && <QuickReplies />}
+        {view === "replies" && <QuickReplies myChannels={myChannels} />}
         {view === "coach" && (
           <div className="content-stack">
             <PriceMemory sales={data.sales || []} />
@@ -1849,6 +1839,7 @@ export default function App() {
         <InteractionForm
           form={form}
           setForm={setForm}
+          myChannels={myChannels}
           editing={Boolean(editingInteractionId)}
           onClose={closeInteractionForm}
           onSave={saveInteraction}
@@ -2199,33 +2190,6 @@ function Dashboard({
             <Empty text="No hay cotizaciones sin seguimiento por ahora." />
           )}
         </article>
-      </section>
-      <section className="panel goals">
-        <div className="panel-head">
-          <div>
-            <span className="eyebrow">Plan comercial</span>
-            <h2>Cadencia de resultados</h2>
-          </div>
-          <Target size={22} />
-        </div>
-        <div className="goal-grid">
-          <Goal
-            title="Diario"
-            text="Conversar, registrar y definir el próximo paso."
-          />
-          <Goal
-            title="Semanal"
-            text="15 nuevos · 8–10 efectivos · 2–3 propuestas."
-          />
-          <Goal
-            title="Mensual"
-            text="Clientes nuevos, conversión, recompra y cross-selling."
-          />
-          <Goal
-            title="Trimestral"
-            text="10–15 clientes nuevos e incremento outbound."
-          />
-        </div>
       </section>
     </div>
   );
@@ -3642,6 +3606,14 @@ function Pipeline({ clients, onOpenClient, onChangeStage, onDelete }) {
                   onDragStart={() => setDraggingId(client.id)}
                   onDragEnd={() => setDraggingId(null)}
                 >
+                  <button
+                    type="button"
+                    className="icon-button deal-card-delete"
+                    aria-label="Eliminar cuenta"
+                    onClick={(e) => { e.stopPropagation(); onDelete(client.id); }}
+                  >
+                    <Trash2 size={12} />
+                  </button>
                   <button type="button" onClick={() => onOpenClient(client.id)}>
                     <strong>{client.company}</strong>
                     <span>{client.family}</span>
@@ -3650,25 +3622,6 @@ function Pipeline({ clients, onOpenClient, onChangeStage, onDelete }) {
                       <small className="loss-reason">{client.lossReason}</small>
                     )}
                   </button>
-                  <div className="deal-card-actions">
-                    <select
-                      value={stage}
-                      onChange={(e) => onChangeStage(client.id, e.target.value)}
-                      aria-label="Mover a otra etapa"
-                    >
-                      {PIPELINE.map((option) => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      className="icon-button"
-                      aria-label="Eliminar cuenta"
-                      onClick={() => onDelete(client.id)}
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
                 </article>
               ))}
               {!list.length && <div className="empty-slot">Sin cuentas</div>}
@@ -4271,8 +4224,9 @@ function Fact({ label, value }) {
   );
 }
 
-function QuickReplies() {
-  const [channel, setChannel] = useState("general");
+function QuickReplies({ myChannels }) {
+  const replyChannels = myChannels.filter((key) => QUICK_REPLIES[key]);
+  const [channel, setChannel] = useState(replyChannels[0] || "general");
   const [copied, setCopied] = useState("");
   async function copyReply(title, guidance) {
     try {
@@ -4291,23 +4245,22 @@ function QuickReplies() {
             <span className="eyebrow">Sugerencias editables</span>
             <h2>Biblioteca de respuestas rápidas</h2>
           </div>
-          <div className="segmented">
-            <button
-              className={channel === "general" ? "selected" : ""}
-              onClick={() => setChannel("general")}
-            >
-              General
-            </button>
-            <button
-              className={channel === "penosil" ? "selected" : ""}
-              onClick={() => setChannel("penosil")}
-            >
-              Penosil
-            </button>
-          </div>
+          {replyChannels.length > 1 && (
+            <div className="segmented">
+              {replyChannels.map((key) => (
+                <button
+                  key={key}
+                  className={channel === key ? "selected" : ""}
+                  onClick={() => setChannel(key)}
+                >
+                  {key === "general" ? "General" : key === "penosil" ? "Penosil" : key}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <div className="reply-grid">
-          {QUICK_REPLIES[channel].map(([title, guidance], index) => (
+          {(QUICK_REPLIES[channel] || []).map(([title, guidance], index) => (
             <article className="reply-card" key={title}>
               <span>{String(index + 1).padStart(2, "0")}</span>
               <h3>{title}</h3>
@@ -4700,69 +4653,6 @@ function DataSettings({ data, setData, session, syncStatus }) {
   const [exportFamily, setExportFamily] = useState("Todas");
   const [pendingClientImport, setPendingClientImport] = useState(null);
 
-  async function pairBrowser(channel) {
-    if (!session?.access_token) {
-      setMessage("Volvé a ingresar al CRM para vincular esta computadora.");
-      return;
-    }
-    setConnecting(true);
-    setMessage(
-      `Vinculando esta computadora a ${CHANNELS[channel]?.name || channel}…`,
-    );
-    try {
-      const response = await fetch("/api/bridge-pair", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ channel }),
-      });
-      const payload = await response.json();
-      if (!response.ok)
-        throw new Error(payload.error || "No se pudo preparar la vinculación.");
-      const paired = new Promise((resolve) => {
-        const listener = (event) => {
-          if (
-            event.source === window &&
-            event.data?.type === "POLIPLAST_BRIDGE_PAIRED" &&
-            event.data.channel === channel
-          ) {
-            window.removeEventListener("message", listener);
-            resolve(true);
-          }
-        };
-        window.addEventListener("message", listener);
-        setTimeout(() => {
-          window.removeEventListener("message", listener);
-          resolve(false);
-        }, 3500);
-      });
-      window.postMessage(
-        {
-          type: "POLIPLAST_BRIDGE_CONFIG",
-          channel: payload.channel,
-          endpoint: payload.endpoint,
-          token: payload.token,
-        },
-        window.location.origin,
-      );
-      if (await paired) {
-        setMessage(
-          `Listo. Esta computadora quedó vinculada a ${CHANNELS[channel]?.name || channel}. La memoria se actualiza al usar WhatsApp Web; no tenés que activarla cada día.`,
-        );
-      } else {
-        setMessage(
-          "No encontré el conector en este navegador. Instalalo una sola vez, recargá el CRM y volvé a vincular.",
-        );
-      }
-    } catch (error) {
-      setMessage(error.message || "No se pudo vincular esta computadora.");
-    } finally {
-      setConnecting(false);
-    }
-  }
-
   async function startWhatsAppConnection() {
     setConnecting(true);
     setMessage("Abriendo conexión segura con Meta…");
@@ -5011,53 +4901,28 @@ function DataSettings({ data, setData, session, syncStatus }) {
       <section className="panel">
         <div className="panel-head">
           <div>
-            <span className="eyebrow">Memoria automática</span>
-            <h2>Vincular esta computadora</h2>
+            <span className="eyebrow">Meta</span>
+            <h2>Mantenimiento técnico</h2>
           </div>
           <Link2 size={22} />
         </div>
-        <p>
-          Instalá el conector una sola vez y elegí qué WhatsApp Business está
-          abierto en este perfil. Después funciona solo al usar WhatsApp Web: el
-          CRM agrupa la conversación por persona o empresa y nunca responde por
-          vos.
-        </p>
-        <div className="modal-actions">
-          {myChannels.map((channel) => (
-            <button
-              key={channel}
-              className="primary"
-              disabled={connecting}
-              onClick={() => pairBrowser(channel)}
-            >
-              {connecting ? "Vinculando…" : `Vincular a ${CHANNELS[channel]?.name || channel}`}
-            </button>
-          ))}
-        </div>
         {message && <div className="system-message">{message}</div>}
-        <details>
-          <summary>Configuración avanzada de Meta</summary>
-          <p>
-            Tu{myChannels.length > 1 ? "s canales también reciben" : " canal también recibe"} eventos
-            por la integración oficial. Usá estas opciones solo para mantenimiento técnico.
-          </p>
-          <div className="modal-actions">
-            <button
-              className="secondary"
-              disabled={connecting}
-              onClick={activateOfficialChannels}
-            >
-              Activar recepción oficial
-            </button>
-            <button
-              className="secondary"
-              disabled={connecting}
-              onClick={startWhatsAppConnection}
-            >
-              Conectar otro número con Meta
-            </button>
-          </div>
-        </details>
+        <div className="modal-actions">
+          <button
+            className="secondary"
+            disabled={connecting}
+            onClick={activateOfficialChannels}
+          >
+            Activar recepción oficial
+          </button>
+          <button
+            className="secondary"
+            disabled={connecting}
+            onClick={startWhatsAppConnection}
+          >
+            Conectar otro número con Meta
+          </button>
+        </div>
       </section>
       <section className="panel">
         <div className="panel-head">
@@ -5409,7 +5274,8 @@ function Splash({ text }) {
   );
 }
 
-function InteractionForm({ form, setForm, editing = false, onClose, onSave }) {
+function InteractionForm({ form, setForm, myChannels = [], editing = false, onClose, onSave }) {
+  const formChannels = Object.entries(CHANNELS).filter(([key]) => myChannels.includes(key) || ["call", "email"].includes(key));
   useModalEscape(onClose);
   const field = (name) => ({
     value: form[name],
@@ -5455,7 +5321,7 @@ function InteractionForm({ form, setForm, editing = false, onClose, onSave }) {
           <label>
             Canal
             <select {...field("channel")}>
-              {Object.entries(CHANNELS).map(([key, item]) => (
+              {formChannels.map(([key, item]) => (
                 <option value={key} key={key}>
                   {item.name}
                 </option>

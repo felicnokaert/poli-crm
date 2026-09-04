@@ -4,9 +4,14 @@
 // propio y no debería ver ni poder elegir los de nadie más. A medida que se
 // sumen más comerciales con su propio número, se agregan acá.
 const USER_CHANNELS = {
-  'felipe@grupopoliplast.com.ar': ['general', 'penosil'],
-  'felipecnokaert@gmail.com': ['general', 'penosil'],
+  // Penosil se sacó de la cuenta de Felipe a propósito (04/09/2026): va a
+  // vivir en su propia cuenta (info@grupopoliplast.com.ar) para no mezclar
+  // info con General. Los datos de whatsapp_events no se tocan, solo se deja
+  // de mostrar acá.
+  'felipe@grupopoliplast.com.ar': ['general'],
+  'felipecnokaert@gmail.com': ['general'],
   'juan@grupopoliplast.com.ar': ['juan'],
+  'info@grupopoliplast.com.ar': ['penosil'],
 };
 
 export function channelsForEmail(email) {

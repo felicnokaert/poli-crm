@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { AlertTriangle, CalendarCheck, ChevronLeft, ChevronRight, FileUp, GripVertical, LayoutGrid, Plus, Sparkles, Trash2, X } from 'lucide-react';
+import { AlertTriangle, CalendarCheck, ChevronLeft, ChevronRight, FileUp, LayoutGrid, Plus, Sparkles, Trash2, X } from 'lucide-react';
 import { KANBAN_TEMPLATE } from './board-model.mjs';
 import { COMMERCIAL_PLAN } from './commercial-plan';
 import { parseBoardCsv } from './board-csv.mjs';
@@ -74,8 +74,9 @@ export default function Board({ lists, cards, onSaveList, onDeleteList, onReorde
   }
 
   function applyTemplate() {
-    KANBAN_TEMPLATE.forEach((title, index) => {
-      onSaveList({ id: crypto.randomUUID(), title, order: nextOrder(lists) + index, wipLimit: title === 'En Proceso' ? 3 : 0 });
+    const existingTitles = new Set(lists.map((list) => list.title));
+    KANBAN_TEMPLATE.filter((title) => !existingTitles.has(title)).forEach((title, index) => {
+      onSaveList({ id: crypto.randomUUID(), title, order: nextOrder(lists) + index, wipLimit: 0 });
     });
   }
 
@@ -130,14 +131,14 @@ export default function Board({ lists, cards, onSaveList, onDeleteList, onReorde
           <div>
             <span className="eyebrow">Organización</span>
             <h2>Tablero</h2>
-            <p>Todo lo que no es venta directa: Penosil, Marketplace, catálogo, Mercado Libre, Shopify, lo que necesites. Creá tus propias listas y arrastrá las tarjetas, o usá tarjeta por tarjeta el selector "Mover a" si preferís no arrastrar.</p>
+            <p>Todo lo que no es venta directa: Penosil, Marketplace, catálogo, Mercado Libre, Shopify, lo que necesites. Creá tus propias listas y arrastrá las tarjetas para moverlas.</p>
           </div>
           <LayoutGrid size={22} />
         </div>
         <form className="board-add-list" onSubmit={addList}>
           <input value={addingListTitle} onChange={(e) => setAddingListTitle(e.target.value)} placeholder="Nombre de la lista (ej: Penosil, Shopify)"/>
           <button type="submit" className="primary"><Plus size={16}/> Agregar lista</button>
-          {!lists.length && <button type="button" className="secondary" onClick={applyTemplate}><Sparkles size={16}/> Usar plantilla kanban</button>}
+          <button type="button" className="secondary" onClick={applyTemplate}><Sparkles size={16}/> Usar plantilla kanban</button>
           {!planAlreadyImported && <button type="button" className="secondary" onClick={importCommercialPlan}><CalendarCheck size={16}/> Importar plan comercial</button>}
           <input ref={csvInputRef} type="file" accept=".csv,text/csv" hidden onChange={handleCsvSelected}/>
           <button type="button" className="secondary" onClick={() => csvInputRef.current?.click()}><FileUp size={16}/> Importar CSV</button>
@@ -148,7 +149,6 @@ export default function Board({ lists, cards, onSaveList, onDeleteList, onReorde
       <div className="board-lists">
         {orderedLists.map((list, index) => {
           const listCards = cardsFor(list.id);
-          const overLimit = list.wipLimit > 0 && listCards.length > list.wipLimit;
           return (
             <div
               className="board-list"
@@ -166,19 +166,6 @@ export default function Board({ lists, cards, onSaveList, onDeleteList, onReorde
                   </button>
                 </div>
               </div>
-              <label className="board-wip-limit">
-                Límite WIP
-                <input
-                  type="number"
-                  min="0"
-                  value={list.wipLimit || ''}
-                  placeholder="sin límite"
-                  onChange={(e) => onSaveList({ ...list, wipLimit: Number(e.target.value) || 0 })}
-                />
-              </label>
-              {overLimit && (
-                <p className="form-warning board-wip-warning"><AlertTriangle size={13}/> {listCards.length} tarjetas, límite {list.wipLimit}</p>
-              )}
               <div className="board-cards">
                 {listCards.map((card) => (
                   <div
@@ -189,23 +176,18 @@ export default function Board({ lists, cards, onSaveList, onDeleteList, onReorde
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => { e.stopPropagation(); handleDrop(list.id, card.id); }}
                   >
-                    <GripVertical size={14} className="board-card-grip"/>
-                    <div>
-                      <div onClick={() => setEditingCard(card)}>
-                        {card.tag && <span className="board-card-tag" style={{ background: tagColor(card.tag) }}>{card.tag}</span>}
-                        <p>{card.title}</p>
-                        {card.dueDate && <span className="board-card-date">{card.dueDate}</span>}
-                      </div>
-                      {orderedLists.length > 1 && (
-                        <select
-                          className="board-card-move"
-                          value={list.id}
-                          onChange={(e) => onMoveCard(card.id, e.target.value, null)}
-                          aria-label="Mover tarjeta a otra lista"
-                        >
-                          {orderedLists.map((option) => <option key={option.id} value={option.id}>{option.title}</option>)}
-                        </select>
-                      )}
+                    <button
+                      type="button"
+                      className="icon-button board-card-delete"
+                      aria-label="Eliminar tarjeta"
+                      onClick={(e) => { e.stopPropagation(); if (window.confirm(`¿Eliminar la tarjeta "${card.title}"?`)) onDeleteCard(card.id); }}
+                    >
+                      <Trash2 size={11}/>
+                    </button>
+                    <div onClick={() => setEditingCard(card)}>
+                      {card.tag && <span className="board-card-tag" style={{ background: tagColor(card.tag) }}>{card.tag}</span>}
+                      <p>{card.title}</p>
+                      {card.dueDate && <span className="board-card-date">{card.dueDate}</span>}
                     </div>
                   </div>
                 ))}

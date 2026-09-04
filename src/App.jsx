@@ -56,7 +56,6 @@ import {
   fetchCommercialMaster,
   mergeCommercialMaster,
 } from "./commercial-master";
-import { COMMERCIAL_PLAN } from "./commercial-plan";
 import {
   groupWhatsAppThreads,
   isIgnoredWhatsAppContact,
@@ -1484,7 +1483,6 @@ export default function App() {
     ]],
     ["Organización", [
       ["board", "Tablero", LayoutGrid],
-      ["plan", "Plan comercial", CalendarCheck],
     ]],
     ["Cartera", [
       ["clients", "Empresas", Building2],
@@ -1722,21 +1720,6 @@ export default function App() {
             query={query}
             setQuery={setQuery}
             onOpenClient={setSelectedClientId}
-          />
-        )}
-        {view === "plan" && (
-          <CommercialPlan
-            checks={data.planChecks || {}}
-            onToggle={(id) =>
-              setData((current) => ({
-                ...current,
-                planChecks: {
-                  ...(current.planChecks || {}),
-                  [id]: !current.planChecks?.[id],
-                },
-              }))
-            }
-            clients={data.clients}
           />
         )}
         {view === "replies" && <QuickReplies />}
@@ -3928,90 +3911,6 @@ function ClientDetail({
             </div>
           </>
         )}
-      </section>
-    </div>
-  );
-}
-
-function CommercialPlan({ checks, onToggle, clients }) {
-  const [month, setMonth] = useState("Todos");
-  const months = [
-    "Todos",
-    ...new Set(COMMERCIAL_PLAN.map((item) => item.month)),
-  ];
-  const visible =
-    month === "Todos"
-      ? COMMERCIAL_PLAN
-      : COMMERCIAL_PLAN.filter((item) => item.month === month);
-  const completed = COMMERCIAL_PLAN.filter((item) => checks[item.id]).length;
-  const familyCounts = Object.fromEntries(
-    FAMILIES.map((family) => [
-      family,
-      clients.filter((client) => client.family === family).length,
-    ]),
-  );
-  return (
-    <div className="content-stack">
-      <section className="panel plan-hero">
-        <div>
-          <span className="eyebrow">Roadmap absorbido en el CRM</span>
-          <h2>Plan comercial por familias</h2>
-          <p>
-            Los checks ahora se comparten con el equipo. Completar una etapa no
-            modifica clientes ni envía mensajes.
-          </p>
-        </div>
-        <div className="plan-progress">
-          <strong>
-            {Math.round((completed / COMMERCIAL_PLAN.length) * 100)}%
-          </strong>
-          <span>
-            {completed} de {COMMERCIAL_PLAN.length} hitos
-          </span>
-        </div>
-      </section>
-      <section className="panel">
-        <div className="list-toolbar">
-          <div className="segmented">
-            {months.map((item) => (
-              <button
-                key={item}
-                className={month === item ? "selected" : ""}
-                onClick={() => setMonth(item)}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="plan-list">
-          {visible.map((item) => (
-            <article
-              className={`plan-row ${checks[item.id] ? "done" : ""}`}
-              key={item.id}
-            >
-              <button
-                className="task-check"
-                aria-label={`Marcar ${item.title}`}
-                onClick={() => onToggle(item.id)}
-              >
-                {checks[item.id] && <CheckCircle2 size={18} />}
-              </button>
-              <div>
-                <div className="plan-tags">
-                  <span>{item.month}</span>
-                  <span>{item.family}</span>
-                  <span>{item.phase}</span>
-                </div>
-                <strong>{item.title}</strong>
-                <small>
-                  {item.owner} · {familyCounts[item.family] ?? "—"} fichas
-                  disponibles en esta familia
-                </small>
-              </div>
-            </article>
-          ))}
-        </div>
       </section>
     </div>
   );

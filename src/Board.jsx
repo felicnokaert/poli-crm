@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { AlertTriangle, ChevronLeft, ChevronRight, GripVertical, LayoutGrid, Plus, Sparkles, Trash2, X } from 'lucide-react';
+import { AlertTriangle, CalendarCheck, ChevronLeft, ChevronRight, GripVertical, LayoutGrid, Plus, Sparkles, Trash2, X } from 'lucide-react';
 import { KANBAN_TEMPLATE } from './board-model.mjs';
+import { COMMERCIAL_PLAN } from './commercial-plan';
 
 const TAG_COLORS = {
   '': '#8ba099',
@@ -39,6 +40,38 @@ export default function Board({ lists, cards, onSaveList, onDeleteList, onReorde
     });
   }
 
+  const planAlreadyImported = cards.some((card) => card.id.startsWith('plan-'));
+  function importCommercialPlan() {
+    if (planAlreadyImported) return;
+    const months = [...new Set(COMMERCIAL_PLAN.map((item) => item.month))];
+    const listByMonth = {};
+    months.forEach((month, index) => {
+      const existing = lists.find((list) => list.title === month);
+      if (existing) {
+        listByMonth[month] = existing.id;
+        return;
+      }
+      const id = crypto.randomUUID();
+      listByMonth[month] = id;
+      onSaveList({ id, title: month, order: nextOrder(lists) + index, wipLimit: 0 });
+    });
+    const orderByMonth = {};
+    COMMERCIAL_PLAN.forEach((item) => {
+      const order = orderByMonth[item.month] || 0;
+      orderByMonth[item.month] = order + 1;
+      onSaveCard({
+        id: item.id,
+        listId: listByMonth[item.month],
+        order,
+        title: `${item.family}: ${item.title}`,
+        tag: item.family,
+        description: `Fase: ${item.phase} · Responsable: ${item.owner}`,
+        dueDate: '',
+        createdAt: new Date().toISOString(),
+      });
+    });
+  }
+
   function cardsFor(listId) {
     return cards.filter((card) => card.listId === listId).sort((a, b) => (a.order || 0) - (b.order || 0));
   }
@@ -64,6 +97,7 @@ export default function Board({ lists, cards, onSaveList, onDeleteList, onReorde
           <input value={addingListTitle} onChange={(e) => setAddingListTitle(e.target.value)} placeholder="Nombre de la lista (ej: Penosil, Shopify)"/>
           <button type="submit" className="primary"><Plus size={16}/> Agregar lista</button>
           {!lists.length && <button type="button" className="secondary" onClick={applyTemplate}><Sparkles size={16}/> Usar plantilla kanban</button>}
+          {!planAlreadyImported && <button type="button" className="secondary" onClick={importCommercialPlan}><CalendarCheck size={16}/> Importar plan comercial</button>}
         </form>
       </section>
       <div className="board-lists">

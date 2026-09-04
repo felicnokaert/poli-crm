@@ -6,6 +6,25 @@
 body { margin: 0; min-width: 320px; min-height: 100vh; }
 button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
+/* Look armónico y redondeado para todo input/select/textarea suelto, no
+   solo los que están dentro de un .form-grid (barras de filtros, buscadores,
+   fecha de período, etc.) — sin esto quedaban con el cuadrado por defecto
+   del navegador. */
+input, select, textarea {
+  border: 1px solid #d9e1dd;
+  border-radius: 9px;
+  padding: 9px 11px;
+  color: #18352f;
+  background: #fbfcfb;
+  outline: none;
+}
+input[type="checkbox"], input[type="radio"] {
+  border: revert; border-radius: revert; padding: revert; background: revert; width: auto;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: #4b8d79;
+  box-shadow: 0 0 0 3px #4b8d7915;
+}
 button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid var(--brand-red); outline-offset: 2px; }
 .app-shell { display: grid; grid-template-columns: 238px 1fr; min-height: 100vh; }
 .sidebar { background: #242424; color: #fff; padding: 14px 12px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
@@ -132,6 +151,7 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .conversation-tail time { color: #758781; font-size: 11px; }
 .panel-head-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .form-warning { display: flex; align-items: center; gap: 8px; background: #fff3df; color: #9a651c; border-radius: 9px; padding: 10px 14px; font-size: 12.5px; margin: 0 0 14px; }
+.form-notice { display: flex; align-items: center; gap: 8px; background: #e7f4ee; color: #226b58; border-radius: 9px; padding: 10px 14px; font-size: 12.5px; margin: 0 0 14px; }
 .checkbox-field { display: flex; align-items: center; gap: 8px; font-size: 13px; align-self: end; }
 .checkbox-field input { width: 16px; height: 16px; }
 .board-add-list { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }

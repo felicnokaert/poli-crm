@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Download, FileUp, Plus, ReceiptText, Trash2, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Download, FileUp, Plus, ReceiptText, Trash2, X } from 'lucide-react';
 import { blankSale, duplicateSale, netAmountInArs, normalizedSale, saleCommission, salesToCsv, SALES_UNITS } from './sales-model.mjs';
 
 const money = (value) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(value || 0);
@@ -42,6 +42,7 @@ export default function Sales({ items, onSave, onDelete }) {
   const [editing, setEditing] = useState(null);
   const [importQueue, setImportQueue] = useState([]);
   const [importError, setImportError] = useState('');
+  const [importNotice, setImportNotice] = useState('');
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef(null);
   const filtered = useMemo(() => items.filter((item) =>
@@ -65,6 +66,7 @@ export default function Sales({ items, onSave, onDelete }) {
     event.target.value = '';
     if (!files.length) return;
     setImportError('');
+    setImportNotice('');
     setImporting(true);
     try {
       const { extractPdfText } = await import('./pdf-text.js');
@@ -85,8 +87,10 @@ export default function Sales({ items, onSave, onDelete }) {
         setImportError(
           files.length === 1
             ? 'No pude leer los datos de esta factura (punto de venta, número o ítems). Cargala manualmente.'
-            : `No pude leer ${failed.length} de ${files.length} PDF (${failed.join(', ')}). Los demás quedaron listos para revisar.`,
+            : `Seleccionaste ${files.length} PDF. Leí ${drafts.length} correctamente y no pude leer ${failed.length} (${failed.join(', ')}). Los que sí se leyeron quedaron en cola para revisar uno por uno.`,
         );
+      } else if (files.length > 1) {
+        setImportNotice(`Seleccionaste ${files.length} PDF y los leí todos. Te los voy mostrando uno por uno para que confirmes cada uno.`);
       }
       openNextImport(drafts);
     } catch {
@@ -119,6 +123,7 @@ export default function Sales({ items, onSave, onDelete }) {
         </div>
       </div>
       {importError && <p className="form-warning"><AlertTriangle size={15}/> {importError}</p>}
+      {importNotice && <p className="form-notice"><CheckCircle2 size={15}/> {importNotice}</p>}
       {importQueue.length > 0 && <p className="form-warning">Quedan {importQueue.length} factura{importQueue.length === 1 ? '' : 's'} más por revisar después de esta.</p>}
       <div className="list-toolbar"><input type="month" value={month} onChange={(event) => setMonth(event.target.value)}/><select value={unit} onChange={(event) => setUnit(event.target.value)}><option>Todas</option><option>Poliplast</option><option>Poliocho</option></select><button type="button" className="secondary" onClick={() => exportSalesCsv(filtered, month, unit)} disabled={!filtered.length}><Download size={15}/> Exportar CSV</button></div>
       <div className="opportunity-list">{filtered.map((item) => <button className="opportunity-row" key={item.id} onClick={() => setEditing(item)}><div><strong>{item.customer}</strong><span>{item.unit} · {item.documentType}{item.pointOfSale ? ` ${item.pointOfSale}-${item.documentNumber}` : ` ${item.documentNumber}`}</span></div><span className="opportunity-stage">{item.date}</span><div><strong>{item.currency === 'USD' ? `USD ${item.netAmount}` : money(item.netAmount)}</strong><span>Comisión {money(saleCommission(item))}{item.collected ? ' · Cobrada' : ''}</span></div></button>)}{!filtered.length && <div className="empty-opportunities"><ReceiptText/><p>No hay ventas registradas en este período.</p></div>}</div>

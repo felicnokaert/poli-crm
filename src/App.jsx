@@ -3843,6 +3843,27 @@ function ClientDetail({
                 <input {...field("productPotential")} />
               </label>
               <label>
+                Aplica poliuretano / poliurea
+                <select {...field("puApplicationType")}>
+                  <option value="">No aplica</option>
+                  <option>Poliuretano</option>
+                  <option>Poliurea</option>
+                  <option>Ambos</option>
+                </select>
+              </label>
+              <label>
+                Máquina / pistola
+                <input {...field("machine")} placeholder="Ej: Fusion AP, Gasper" />
+              </label>
+              <label>
+                Zonas de trabajo
+                <input {...field("workZones")} placeholder="Ej: Tandil, sur de Bs As" />
+              </label>
+              <label>
+                Sistemas PU por mes
+                <input {...field("systemsPerMonth")} placeholder="Conjuntos de 470kg poliol+isocianato" />
+              </label>
+              <label>
                 Última compra
                 <input {...field("lastPurchase")} />
               </label>
@@ -3929,6 +3950,10 @@ function ClientDetail({
                 value={client.productPotential}
               />
               <Fact label="Proveedor actual" value={client.currentSupplier} />
+              <Fact label="Aplica PU/Poliurea" value={client.puApplicationType} />
+              <Fact label="Máquina / pistola" value={client.machine} />
+              <Fact label="Zonas de trabajo" value={client.workZones} />
+              <Fact label="Sistemas PU/mes" value={client.systemsPerMonth} />
               <Fact label="Decisor" value={client.decisionMaker} />
               <Fact label="Fuente" value={client.source} />
               <Fact

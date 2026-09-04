@@ -7,14 +7,25 @@ const COLUMNS = [
   ['Etapa', 'stage'], ['Prioridad', 'priority'], ['Producto principal', 'mainProduct'],
   ['Producto potencial', 'productPotential'], ['Proveedor actual', 'currentSupplier'], ['Decisor', 'decisionMaker'],
   ['Última compra', 'lastPurchase'], ['Total compras', 'totalPurchases'], ['Notas', 'notes'], ['Pipeline activo', 'pipelineActive'],
+  // Ficha de aplicador (red RAPYP): con qué máquina/pistola trabaja, en qué
+  // zonas y cuántos sistemas de PU (conjunto de 470kg poliol+isocianato)
+  // aplica por mes — es lo que define si conviene sumarlo a la red.
+  ['Tipo de aplicación', 'puApplicationType'], ['Máquina / pistola', 'machine'],
+  ['Zonas de trabajo', 'workZones'], ['Sistemas PU por mes', 'systemsPerMonth'],
+  ['Código Contabilium', 'contabiliumCode'], ['Unidad de venta', 'salesUnit'],
 ];
 
 const HEADER_ALIASES = new Map([
   ['nombre empresa', 'company'], ['razon social', 'legalName'], ['telefono', 'phone'], ['contacto', 'contact'],
   ['provincia', 'province'], ['ciudad', 'city'], ['familia', 'family'], ['email', 'email'],
-  ['maquina', 'mainProduct'], ['proveedor', 'currentSupplier'], ['observaciones', 'notes'],
+  ['maquina', 'machine'], ['proveedor', 'currentSupplier'], ['observaciones', 'notes'],
   ['tipo entidad', 'clientType'], ['producto propuesta', 'productPotential'], ['estado comercial', 'stage'],
   ['proxima accion', 'nextAction'], ['fecha proxima accion', 'nextDate'],
+  ['zona', 'workZones'], ['zonas', 'workZones'], ['sistemas por mes', 'systemsPerMonth'], ['sistemas mes', 'systemsPerMonth'],
+  ['empresa origen', 'contabiliumCode'], ['total compras', 'totalPurchases'], ['ultima compra', 'lastPurchase'],
+  ['dias sin comprar', 'daysSinceLastPurchase'], ['prioridad historica', 'priority'], ['producto principal', 'mainProduct'],
+  ['sku principal', 'mainSku'], ['familia inferida', 'family'], ['confianza', 'confidence'],
+  ['estado', 'stage'], ['fecha de seguimiento', 'nextDate'], ['fecha proxima', 'nextDate'],
 ]);
 
 function clean(value = '') {

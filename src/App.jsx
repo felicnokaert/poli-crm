@@ -112,6 +112,13 @@ const CHANNELS = {
 // puntual, no en todos los módulos.
 const LOG_CONVERSATION_VIEWS = ["dashboard", "conversations", "pipeline", "clients", "contacts"];
 
+function profileInitials(email = "") {
+  const local = String(email).split("@")[0] || "";
+  const parts = local.split(/[._-]+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return local.slice(0, 2).toUpperCase() || "?";
+}
+
 const PIPELINE = [
   "Nuevo",
   "Contactado",
@@ -1659,7 +1666,9 @@ export default function App() {
             >
               {syncStatus}
             </span>
-            <div className="profile-pill">FC</div>
+            <div className="profile-pill" title={session?.user?.email || ""}>
+              {profileInitials(session?.user?.email)}
+            </div>
             {LOG_CONVERSATION_VIEWS.includes(view) && (
               <button className="primary" onClick={() => setShowForm(true)}>
                 <Plus size={18} /> Registrar conversación
@@ -1670,7 +1679,7 @@ export default function App() {
 
         {view !== "inbox" && (
           <section className="channel-strip">
-            {["general"].map((key) => (
+            {[data.primaryChannel || "general"].map((key) => (
               <div className="channel-card" key={key}>
                 <span
                   className="channel-dot"
@@ -4829,6 +4838,30 @@ function DataSettings({ data, setData, session, syncStatus }) {
   ];
   return (
     <div className="content-stack">
+      <section className="panel">
+        <div className="panel-head">
+          <div>
+            <span className="eyebrow">Tu perfil</span>
+            <h2>Tu canal de WhatsApp</h2>
+          </div>
+        </div>
+        <p>
+          El cartel de arriba de la pantalla muestra este canal. Cada usuario
+          elige el suyo — no afecta a los demás.
+        </p>
+        <label>
+          <select
+            value={data.primaryChannel || "general"}
+            onChange={(event) => setData({ ...data, primaryChannel: event.target.value })}
+          >
+            {Object.entries(CHANNELS)
+              .filter(([key]) => !["call", "email"].includes(key))
+              .map(([key, item]) => (
+                <option value={key} key={key}>{item.name}</option>
+              ))}
+          </select>
+        </label>
+      </section>
       <section className="panel">
         <div className="panel-head">
           <div>

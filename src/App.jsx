@@ -15,6 +15,7 @@ import {
   Plus,
   Search,
   Target,
+  Trash2,
   GraduationCap,
   Sparkles,
   Database,
@@ -1426,6 +1427,17 @@ export default function App() {
     setInboxDraft(null);
   }
 
+  function deleteClient(id) {
+    const client = data.clients.find((item) => item.id === id);
+    if (!client) return;
+    if (!window.confirm(`¿Eliminar "${client.company}" del CRM? Esto no se puede deshacer.`)) return;
+    setData((current) => ({
+      ...current,
+      clients: current.clients.filter((item) => item.id !== id),
+      tasks: current.tasks.filter((task) => task.clientId !== id),
+    }));
+  }
+
   function updateClient(updatedClient) {
     const stamp = new Date().toISOString();
     setData((current) => ({
@@ -1689,6 +1701,8 @@ export default function App() {
               (client) => client.pipelineActive !== false,
             )}
             onOpenClient={setSelectedClientId}
+            onChangeStage={(id, stage) => updateClient({ id, stage })}
+            onDelete={deleteClient}
           />
         )}
         {view === "sales" && (
@@ -3373,7 +3387,7 @@ function TaskForm({ form, setForm, clients, onClose, onSave }) {
   );
 }
 
-function Pipeline({ clients, onOpenClient }) {
+function Pipeline({ clients, onOpenClient, onChangeStage, onDelete }) {
   return (
     <div className="content-stack">
       <section className="panel pipeline-summary">
@@ -3399,18 +3413,35 @@ function Pipeline({ clients, onOpenClient }) {
                 <span>{list.length}</span>
               </header>
               {list.map((client) => (
-                <button
-                  className="deal-card"
-                  key={client.id}
-                  onClick={() => onOpenClient(client.id)}
-                >
-                  <strong>{client.company}</strong>
-                  <span>{client.family}</span>
-                  <small>{client.contact || "Contacto pendiente"}</small>
-                  {client.lossReason && (
-                    <small className="loss-reason">{client.lossReason}</small>
-                  )}
-                </button>
+                <article className="deal-card" key={client.id}>
+                  <button type="button" onClick={() => onOpenClient(client.id)}>
+                    <strong>{client.company}</strong>
+                    <span>{client.family}</span>
+                    <small>{client.contact || "Contacto pendiente"}</small>
+                    {client.lossReason && (
+                      <small className="loss-reason">{client.lossReason}</small>
+                    )}
+                  </button>
+                  <div className="deal-card-actions">
+                    <select
+                      value={stage}
+                      onChange={(e) => onChangeStage(client.id, e.target.value)}
+                      aria-label="Mover a otra etapa"
+                    >
+                      {PIPELINE.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="icon-button"
+                      aria-label="Eliminar cuenta"
+                      onClick={() => onDelete(client.id)}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </article>
               ))}
               {!list.length && <div className="empty-slot">Sin cuentas</div>}
             </section>

@@ -81,6 +81,7 @@ export default function Board({ lists, cards, onSaveList, onDeleteList, onReorde
   const planAlreadyImported = cards.some((card) => card.id.startsWith('plan-'));
   function importCommercialPlan() {
     if (planAlreadyImported) return;
+    if (!window.confirm(`Esto crea ${COMMERCIAL_PLAN.length} tarjetas (una lista por mes: Septiembre, Octubre, Noviembre) con los hitos del plan comercial. ¿Continuar?`)) return;
     const months = [...new Set(COMMERCIAL_PLAN.map((item) => item.month))];
     const listByMonth = {};
     months.forEach((month, index) => {
@@ -108,6 +109,7 @@ export default function Board({ lists, cards, onSaveList, onDeleteList, onReorde
         createdAt: new Date().toISOString(),
       });
     });
+    setCsvNotice(`Importé el plan comercial: ${COMMERCIAL_PLAN.length} tarjetas en ${months.length} listas (${months.join(', ')}).`);
   }
 
   function cardsFor(listId) {

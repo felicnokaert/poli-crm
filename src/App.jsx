@@ -564,21 +564,6 @@ export default function App() {
       .catch(() => setPenosilCleanupRunning(false));
   }, [remoteReady, session?.access_token, data.inbox, penosilCleanupRunning]);
 
-  useEffect(() => {
-    if (!remoteReady) return;
-    let active = true;
-    setData((current) => mergeCommercialCohort(current).state);
-    fetchCommercialMaster(session)
-      .then((clients) => {
-        if (active)
-          setData((current) => mergeCommercialMaster(current, clients).state);
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, [remoteReady, session?.access_token]);
-
   const metrics = useMemo(() => {
     const now = today();
     const weekAgo = new Date();

@@ -1,16 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 import { filterDismissedEvents, isLegacyWhatsAppPreview } from './whatsapp-events.mjs';
 import { whatsappContactIdentity, whatsappContactKey } from './whatsapp-threads.mjs';
-import { defaultBusinessUnits } from './sales-model.mjs';
 export { mergeWorkspaceState, workspaceStatesEqual } from './workspace.mjs';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-// businessUnits arranca con las 2 unidades históricas ya materializadas (no
-// como un cálculo al vuelo) para que un workspace nuevo tenga algo con qué
-// arrancar - pero si el usuario las borra todas después, quedan borradas de
-// verdad (ver unitsMapFrom en sales-model.mjs), no vuelven a aparecer solas.
-const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], boardLists: [], boardCards: [], salesGoals: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '', primaryChannel: 'general', profileName: '', businessUnits: defaultBusinessUnits() };
+// Una cuenta nueva arranca 100% vacía a propósito - clientes, tareas y
+// unidades de negocio incluidas. Nada se auto-completa con datos de otra
+// cuenta; cada usuario carga lo suyo desde cero (ver unitsMapFrom en
+// sales-model.mjs para cómo se resuelve un businessUnits vacío).
+const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], boardLists: [], boardCards: [], salesGoals: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '', primaryChannel: 'general', profileName: '', businessUnits: [] };
 
 function threadKey(event) {
   return whatsappContactKey(event);

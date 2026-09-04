@@ -147,7 +147,6 @@ const INTENTS = [
 ];
 const STORAGE_KEY = "poliplast-sales-copilot-v1";
 const NAV_COLLAPSE_KEY = "poliplast-sales-copilot-nav-collapsed";
-const PENOSIL_V017_CUTOFF = "2026-09-01T23:09:45.829Z";
 const HISTORY_RESET_VERSION = "2026-09-03T16:00:00.000Z";
 
 const initialState = {
@@ -360,7 +359,6 @@ export default function App() {
   const [selectedInteractionId, setSelectedInteractionId] = useState(null);
   const [selectedClientId, setSelectedClientId] = useState(null);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
-  const [penosilCleanupRunning, setPenosilCleanupRunning] = useState(false);
   const [outboundStatusEvents, setOutboundStatusEvents] = useState([]);
 
   useEffect(() => {
@@ -525,44 +523,6 @@ export default function App() {
     }, 700);
     return () => clearTimeout(timer);
   }, [data, remoteReady, session?.user?.id]);
-
-  useEffect(() => {
-    if (!remoteReady || !session?.access_token || penosilCleanupRunning) return;
-    const obsoleteIds = data.inbox
-      .filter(
-        (item) =>
-          item.channel === "penosil" &&
-          item.phone_number_id === "browser-bridge:penosil" &&
-          item.occurred_at < PENOSIL_V017_CUTOFF,
-      )
-      .map((item) => item.event_id);
-    if (!obsoleteIds.length) return;
-    setPenosilCleanupRunning(true);
-    fetch("/api/inbox-delete", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ eventIds: obsoleteIds }),
-    })
-      .then((response) => {
-        if (!response.ok) throw new Error("cleanup failed");
-        setData((current) => ({
-          ...current,
-          inbox: current.inbox.filter(
-            (item) => !obsoleteIds.includes(item.event_id),
-          ),
-          dismissedInboxEventIds: [
-            ...new Set([
-              ...(current.dismissedInboxEventIds || []),
-              ...obsoleteIds,
-            ]),
-          ],
-        }));
-      })
-      .catch(() => setPenosilCleanupRunning(false));
-  }, [remoteReady, session?.access_token, data.inbox, penosilCleanupRunning]);
 
   const metrics = useMemo(() => {
     const now = today();

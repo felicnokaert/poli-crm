@@ -180,6 +180,33 @@ export default function Sales({ items, goals, onSaveGoal, onDeleteGoal, onSave, 
     setBulkSelected(drafts.filter((draft) => !(draft.currency === 'USD' && !(Number(draft.exchangeRate) > 0))).map((draft) => draft.rowId));
   }
 
+  async function handleHistoricalJsonSelected(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    let rows;
+    try {
+      rows = JSON.parse(await file.text());
+    } catch {
+      setBulkFailed((current) => [...current, { name: file.name, reason: 'no es un JSON válido' }]);
+      return;
+    }
+    if (!Array.isArray(rows)) {
+      setBulkFailed((current) => [...current, { name: file.name, reason: 'el JSON debe ser una lista de ventas' }]);
+      return;
+    }
+    const drafts = rows.map((row) => ({
+      ...normalizedSale({ ...blankSale(), ...row }),
+      rowId: crypto.randomUUID(),
+      sourceFile: row._sheet ? `${file.name} · ${row._sheet}` : file.name,
+    }));
+    setBulkDrafts((current) => [...current, ...drafts]);
+    setBulkSelected((current) => [
+      ...current,
+      ...drafts.filter((draft) => !(draft.currency === 'USD' && !(Number(draft.exchangeRate) > 0))).map((draft) => draft.rowId),
+    ]);
+  }
+
   function updateBulkDraft(rowId, field, value) {
     setBulkDrafts((current) => current.map((row) => (row.rowId === rowId ? { ...row, [field]: value } : row)));
   }
@@ -218,6 +245,10 @@ export default function Sales({ items, goals, onSaveGoal, onDeleteGoal, onSave, 
         <div className="panel-head-actions">
           <input ref={fileInputRef} type="file" accept="application/pdf" multiple hidden onChange={handlePdfSelected}/>
           <button type="button" className="secondary" onClick={() => fileInputRef.current?.click()} disabled={importing}><FileUp size={17}/> {importing ? 'Leyendo PDF…' : 'Subir facturas (PDF)'}</button>
+          <label className="secondary upload-button">
+            <FileUp size={17}/> Importar histórico (JSON)
+            <input type="file" accept="application/json,.json" hidden onChange={handleHistoricalJsonSelected}/>
+          </label>
           <button className="primary" onClick={() => setEditing(blankSale())}><Plus size={17}/> Registrar venta</button>
         </div>
       </div>

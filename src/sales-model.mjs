@@ -36,6 +36,13 @@ export function blankSale() {
   };
 }
 
+export function quarterKey(dateStr = '') {
+  const month = Number(String(dateStr).slice(5, 7));
+  const year = String(dateStr).slice(0, 4);
+  if (!year || !month) return '';
+  return `${year}-Q${Math.ceil(month / 3)}`;
+}
+
 export function duplicateSale(sales = [], sale = {}) {
   return sales.find((item) =>
     item.id !== sale.id &&

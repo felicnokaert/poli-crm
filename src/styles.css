@@ -152,6 +152,12 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .panel-head-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .form-warning { display: flex; align-items: center; gap: 8px; background: #fff3df; color: #9a651c; border-radius: 9px; padding: 10px 14px; font-size: 12.5px; margin: 0 0 14px; }
 .form-notice { display: flex; align-items: center; gap: 8px; background: #e7f4ee; color: #226b58; border-radius: 9px; padding: 10px 14px; font-size: 12.5px; margin: 0 0 14px; }
+.goal-bar { margin-top: 14px; }
+.goal-bar-head { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: #526a63; margin-bottom: 6px; }
+.goal-bar-head strong { color: #18352f; }
+.goal-bar-head input { width: 60px; padding: 3px 6px; margin: 0 4px; text-align: center; }
+.goal-bar-track { height: 10px; border-radius: 999px; background: #eef2ef; overflow: hidden; }
+.goal-bar-fill { height: 100%; background: linear-gradient(90deg, #4b8d79, #226b58); border-radius: 999px; transition: width .3s ease; }
 .checkbox-field { display: flex; align-items: center; gap: 8px; font-size: 13px; align-self: end; }
 .checkbox-field input { width: 16px; height: 16px; }
 .board-add-list { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }

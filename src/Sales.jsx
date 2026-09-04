@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Download, FileUp, Plus, ReceiptText, Trash2, X } from 'lucide-react';
-import { blankSale, duplicateSale, netAmountInArs, normalizedSale, saleCommission, salesToCsv, SALES_UNITS } from './sales-model.mjs';
+import { AlertTriangle, CheckCircle2, Download, FileUp, Plus, ReceiptText, Target, Trash2, X } from 'lucide-react';
+import { blankSale, duplicateSale, netAmountInArs, normalizedSale, quarterKey, saleCommission, salesToCsv, SALES_UNITS } from './sales-model.mjs';
 
 const money = (value) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(value || 0);
 const monthKey = (date) => String(date || '').slice(0, 7);
@@ -35,7 +35,27 @@ function draftFromParsedInvoice(parsed) {
   });
 }
 
-export default function Sales({ items, onSave, onDelete }) {
+function GoalBar({ label, period, current, goal, onSaveGoal }) {
+  const pct = goal > 0 ? Math.min(100, Math.round((current / goal) * 100)) : 0;
+  return (
+    <div className="goal-bar">
+      <div className="goal-bar-head">
+        <span>{label} <strong>{period}</strong></span>
+        <span>
+          {current} de{' '}
+          <input
+            type="number" min="0" step="1" value={goal || ''}
+            placeholder="sin meta"
+            onChange={(e) => onSaveGoal(period, Number(e.target.value) || 0)}
+          /> ventas
+        </span>
+      </div>
+      <div className="goal-bar-track"><div className="goal-bar-fill" style={{ width: `${pct}%` }}/></div>
+    </div>
+  );
+}
+
+export default function Sales({ items, goals, onSaveGoal, onSave, onDelete }) {
   const currentMonth = new Date().toISOString().slice(0, 7);
   const [month, setMonth] = useState(currentMonth);
   const [unit, setUnit] = useState('Todas');
@@ -51,6 +71,9 @@ export default function Sales({ items, onSave, onDelete }) {
   const net = filtered.reduce((sum, item) => sum + netAmountInArs(item), 0);
   const commission = filtered.reduce((sum, item) => sum + saleCommission(item), 0);
   const collectedCommission = filtered.filter((item) => item.collected).reduce((sum, item) => sum + saleCommission(item), 0);
+  const currentQuarter = quarterKey(currentMonth + '-01');
+  const monthCount = items.filter((item) => monthKey(item.date) === currentMonth).length;
+  const quarterCount = items.filter((item) => quarterKey(item.date) === currentQuarter).length;
 
   function openNextImport(queue) {
     if (!queue.length) {
@@ -112,6 +135,14 @@ export default function Sales({ items, onSave, onDelete }) {
       <article className="metric-card"><span>Comisión estimada</span><strong>{money(commission)}</strong></article>
       <article className="metric-card"><span>Comisión cobrada</span><strong>{money(collectedCommission)}</strong></article>
       <article className="metric-card"><span>Período</span><strong>{month || 'Todos'}</strong></article>
+    </section>
+    <section className="panel">
+      <div className="panel-head">
+        <div><span className="eyebrow">Cantidad de ventas</span><h2>Objetivos</h2><p>Contra todas las unidades, no solo el filtro de abajo.</p></div>
+        <Target size={22}/>
+      </div>
+      <GoalBar label="Este mes" period={currentMonth} current={monthCount} goal={goals?.[currentMonth] || 0} onSaveGoal={onSaveGoal}/>
+      <GoalBar label="Este trimestre" period={currentQuarter} current={quarterCount} goal={goals?.[currentQuarter] || 0} onSaveGoal={onSaveGoal}/>
     </section>
     <section className="panel">
       <div className="panel-head">

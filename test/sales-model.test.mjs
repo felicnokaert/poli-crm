@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { duplicateSale, netAmountInArs, normalizedSale, saleCommission, salesToCsv } from '../src/sales-model.mjs';
+import { duplicateSale, netAmountInArs, normalizedSale, quarterKey, saleCommission, salesToCsv } from '../src/sales-model.mjs';
 
 test('calcula 3% para Poliplast y 1% para Poliocho', () => {
   assert.equal(saleCommission({ unit: 'Poliplast', netAmount: 100000 }), 3000);
@@ -22,6 +22,14 @@ test('calcula la comisión sobre el equivalente en pesos cuando la factura es en
 test('ignora el tipo de cambio si la venta ya está en pesos', () => {
   const sale = { unit: 'Poliplast', netAmount: 1000, currency: 'ARS', exchangeRate: 1500 };
   assert.equal(netAmountInArs(sale), 1000);
+});
+
+test('calcula el trimestre a partir de la fecha', () => {
+  assert.equal(quarterKey('2026-01-15'), '2026-Q1');
+  assert.equal(quarterKey('2026-04-01'), '2026-Q2');
+  assert.equal(quarterKey('2026-09-03'), '2026-Q3');
+  assert.equal(quarterKey('2026-12-31'), '2026-Q4');
+  assert.equal(quarterKey(''), '');
 });
 
 test('detecta una venta duplicada por unidad, comprobante, punto de venta y número', () => {

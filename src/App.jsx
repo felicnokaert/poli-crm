@@ -153,6 +153,7 @@ const initialState = {
   ignoredWhatsAppContacts: [],
   boardLists: [],
   boardCards: [],
+  salesGoals: {},
   planChecks: {},
   commercialMasterVersion: "",
   historyResetVersion: "",
@@ -879,6 +880,13 @@ export default function App() {
     setData((current) => ({
       ...current,
       sales: (current.sales || []).filter((item) => item.id !== id),
+    }));
+  }
+
+  function saveSalesGoal(period, count) {
+    setData((current) => ({
+      ...current,
+      salesGoals: { ...(current.salesGoals || {}), [period]: count },
     }));
   }
 
@@ -1682,6 +1690,8 @@ export default function App() {
         {view === "sales" && (
           <Sales
             items={data.sales || []}
+            goals={data.salesGoals || {}}
+            onSaveGoal={saveSalesGoal}
             onSave={saveSale}
             onDelete={deleteSale}
           />

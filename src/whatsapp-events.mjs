@@ -9,7 +9,9 @@ export function isLegacyWhatsAppPreview(event) {
   const browserPenosil = event?.channel === 'penosil' && String(event?.phone_number_id || '').startsWith('browser-bridge:');
   // Las versiones anteriores a 0.17 podían confundir salientes, nombres y
   // canales. Se conservan en cuarentena, pero no alimentan la bandeja diaria.
-  if (browserPenosil && bridgeVersion && compareVersions(bridgeVersion, '0.17.0') < 0) return true;
+  // Sin bridge_version (string vacío) se trata como versión desconocida, no
+  // como "versión actual" - si no sabemos qué la generó, no es de fiar.
+  if (browserPenosil && compareVersions(bridgeVersion || '0', '0.17.0') < 0) return true;
   return false;
 }
 

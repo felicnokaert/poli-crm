@@ -91,3 +91,57 @@ test('marks unrecognized text as not recognized', () => {
   const result = parseInvoiceText('esto no es una factura');
   assert.equal(result.recognized, false);
 });
+
+test('finds the exchange rate even when the PDF wraps mid-word across two lines ("Coti" / "zación")', () => {
+  const wrapped = `
+Nº: 0006-00012345
+Fecha: 05/09/2026
+Razón social: CLIENTE WRAPPED
+5 740T POLI-PLUS 740 IR 100,00 21,00 % 0,00 % 500,00
+Importe Neto Gravado: U$S500,00
+La presente factura equivale a $ 765.000,00 , de ser cancelada en pesos argentinos deberá hacerse al tipo de cambio oficial de la fecha efectiva de la acreditación del pago. Coti
+zación del Dolar $ 1.530,00.
+`;
+  const result = parseInvoiceText(wrapped);
+  assert.equal(result.exchangeRate, 1530);
+});
+
+test('parses a real invoice with per-item Bonificación (BALTICO CONSTRUCCIONES) and uses the discounted unit price for memory', () => {
+  const withBonif = `
+Nº: 0013-00000184
+Fecha: 02/09/2026
+Razón social: BALTICO CONSTRUCCIONES
+10 PM-DMF-1 DMF REMOVEDOR EXTRA 15,00 21,00 % 10,00 % 135,00
+10 PCLEAN-1 POLICLEAN 9,90 21,00 % 10,00 % 89,10
+1 PM309550ZAG PISTOLA FUSION AP COMPLETA 2.125,00 21,00 % 15,00 % 1.806,25
+Importe Neto Gravado: U$S2.030,35
+`;
+  const result = parseInvoiceText(withBonif);
+  assert.equal(result.unit, 'Poliplast');
+  assert.equal(result.netAmount, 2030.35);
+  assert.equal(result.items[2].listUnitPrice, 2125);
+  // El precio "de memoria" es el efectivamente cobrado (con el 15% de
+  // bonificación ya aplicado), no el de lista.
+  assert.equal(result.items[2].unitPrice, 1806.25);
+  assert.equal(result.items[0].unitPrice, 13.5);
+});
+
+test('parses a real invoice with no Bonificación column at all (ESTEBAN JOSE SARTORI, X document) instead of silently returning $0', () => {
+  const noBonifColumn = `
+X Documento no válido como factura
+Nº: 0013-00000049
+Fecha: 03/09/2026
+Razón social: ESTEBAN JOSE SARTORI
+2 PMRAC-V-521 PMRAC-V 521 27.272,72 0,00 % 54.545,44
+1 IMP INTERNO IMPUESTO INTERNO 5.727,27 0,00 % 5.727,27
+Importe Total: $60.272,71
+`;
+  const result = parseInvoiceText(noBonifColumn);
+  assert.equal(result.recognized, true);
+  assert.equal(result.currency, 'ARS');
+  assert.equal(result.items.length, 2);
+  // Antes de este fix, la falta de columna Bonif. hacía que el regex nunca
+  // matcheara estas líneas: netAmount quedaba en 0 sin avisar.
+  assert.equal(result.netAmount, 54545.44);
+  assert.equal(result.internalTaxExcluded, 5727.27);
+});

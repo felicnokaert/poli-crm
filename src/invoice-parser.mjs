@@ -22,15 +22,22 @@ function isoFromArgDate(value) {
 
 // Cada renglón de ítems de las facturas de Contabilium tiene esta forma:
 // "<cantidad> <código> <descripción> <precio unitario> <iva%> <bonif%> <importe>"
-const ITEM_LINE = /^\s*(\d+(?:[.,]\d+)?)\s+(\S+)\s+(.+?)\s+([\d.,]+)\s+([\d.,]+)\s*%\s+([\d.,]+)\s*%\s+([\d.,]+)\s*$/gm;
+// La columna de Bonif. no siempre está (hay formatos con solo IVA%), así que
+// ese grupo queda opcional; sin él, las líneas nunca matcheaban y la venta
+// se guardaba con importe $0 sin avisar.
+const ITEM_LINE = /^\s*(\d+(?:[.,]\d+)?)\s+(\S+)\s+(.+?)\s+([\d.,]+)\s+([\d.,]+)\s*%\s+(?:([\d.,]+)\s*%\s+)?([\d.,]+)\s*$/gm;
 
 export function parseInvoiceText(text = '') {
   const clean = String(text).replace(/\r/g, '');
   const numberMatch = clean.match(/N[°ºo]?:?\s*(\d{4})-(\d+)/i);
   const dateMatch = clean.match(/Fecha:\s*(\d{2}\/\d{2}\/\d{4})/i);
   const customerMatch = clean.match(/Raz[oó]n social:\s*([^\n]+)/i);
-  const netGravadoMatch = clean.match(/Importe Neto Gravado:\s*(U\$S|\$)\s*([\d.,]+)/i);
-  const exchangeRateMatch = clean.match(/Cotizaci[oó]n del D[oó]lar\s*\$\s*([\d.,]+)/i);
+  // El párrafo largo de "tipo de cambio" a veces se corta a mitad de palabra
+  // entre dos líneas del PDF ("Coti" / "zación"), sin espacio de por medio.
+  // Sacar los saltos de línea reconstruye la palabra para poder buscarla.
+  const flat = clean.replace(/\n/g, '');
+  const netGravadoMatch = clean.match(/Importe Neto Gravado:\s*(U\$S|\$)\s*([\d.,]+)/i) || flat.match(/Importe Neto Gravado:\s*(U\$S|\$)\s*([\d.,]+)/i);
+  const exchangeRateMatch = flat.match(/Cotizaci[oó]n del D[oó]lar\s*\$\s*([\d.,]+)/i);
   const currency = netGravadoMatch && netGravadoMatch[1].toUpperCase() === 'U$S' ? 'USD' : 'ARS';
 
   const pointOfSale = numberMatch ? numberMatch[1] : '';
@@ -41,13 +48,20 @@ export function parseInvoiceText(text = '') {
   let match;
   ITEM_LINE.lastIndex = 0;
   while ((match = ITEM_LINE.exec(clean))) {
+    const quantity = toNumber(match[1]);
+    const importe = toNumber(match[7]);
     items.push({
-      quantity: toNumber(match[1]),
+      quantity,
       code: match[2],
       description: match[3].trim(),
-      unitPrice: toNumber(match[4]),
+      listUnitPrice: toNumber(match[4]),
       ivaPercent: toNumber(match[5]),
-      importe: toNumber(match[7]),
+      bonifPercent: match[6] ? toNumber(match[6]) : 0,
+      importe,
+      // Precio realmente cobrado por unidad, ya con la bonificación
+      // aplicada (si la hubo). Es el que sirve para recordar precios: el de
+      // lista no refleja lo que el cliente terminó pagando.
+      unitPrice: quantity ? Math.round((importe / quantity) * 100) / 100 : toNumber(match[4]),
     });
   }
 

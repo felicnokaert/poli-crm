@@ -3,6 +3,7 @@ import { AlertTriangle, CalendarCheck, ChevronLeft, ChevronRight, FileUp, GripVe
 import { KANBAN_TEMPLATE } from './board-model.mjs';
 import { COMMERCIAL_PLAN } from './commercial-plan';
 import { parseBoardCsv } from './board-csv.mjs';
+import { readFileSmart } from './text-decode.mjs';
 
 const TAG_COLORS = {
   '': '#8ba099',
@@ -38,7 +39,7 @@ export default function Board({ lists, cards, onSaveList, onDeleteList, onReorde
     setCsvError('');
     setCsvNotice('');
     try {
-      const text = await file.text();
+      const text = await readFileSmart(file);
       const { cards: parsedCards } = parseBoardCsv(text);
       if (!parsedCards.length) {
         setCsvError('No encontré filas con título en ese CSV. Revisá que tenga una columna de nombre/título.');

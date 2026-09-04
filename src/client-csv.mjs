@@ -72,7 +72,11 @@ export function mergeClientsCsv(existing = [], text = '') {
   if (rows.length < 2) throw new Error('El CSV no contiene clientes.');
   const headerMap = new Map([...COLUMNS.map(([label, key]) => [clean(label), key]), ...HEADER_ALIASES]);
   const keys = rows[0].map((header) => headerMap.get(clean(header)) || '');
-  if (!keys.includes('company')) throw new Error('Falta la columna Empresa.');
+  // Algunas planillas (ej. segmentaciones exportadas) solo tienen Razón
+  // social, sin una columna de nombre comercial separada. En ese caso la
+  // razón social hace también de nombre de empresa, en vez de rechazar
+  // todo el archivo por no tener una columna "Empresa" literal.
+  if (!keys.includes('company') && !keys.includes('legalName')) throw new Error('Falta la columna Empresa o Razón social.');
   const clients = [...existing];
   const byCompany = new Map(clients.map((client, index) => [clean(client.company), index]));
   const byCuit = new Map(clients.map((client, index) => [clean(client.cuit), index]).filter(([key]) => key));
@@ -80,6 +84,7 @@ export function mergeClientsCsv(existing = [], text = '') {
   for (const values of rows.slice(1)) {
     const incoming = {};
     keys.forEach((key, index) => { if (key && values[index]?.trim()) incoming[key] = key === 'pipelineActive' ? parseBoolean(values[index]) : values[index].trim(); });
+    if (!incoming.company && incoming.legalName) incoming.company = incoming.legalName;
     if (!incoming.company) { skipped += 1; continue; }
     const index = byCuit.get(clean(incoming.cuit)) ?? byCompany.get(clean(incoming.company));
     if (index === undefined) {

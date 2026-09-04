@@ -69,6 +69,7 @@ import {
 } from "./whatsapp-threads.mjs";
 import { addInteractionOnce, groupConversationHistory } from "./conversation-history.mjs";
 import { clientsToCsv, mergeClientsCsv } from "./client-csv.mjs";
+import { readFileSmart } from "./text-decode.mjs";
 import { removeExplicitTestData, testDataCandidates } from "./data-hygiene.mjs";
 import {
   attachWhatsAppContact,
@@ -4531,7 +4532,7 @@ function DataSettings({ data, setData, session, syncStatus }) {
     const file = event.target.files?.[0];
     if (!file) return;
     try {
-      const result = mergeClientsCsv(data.clients, await file.text());
+      const result = mergeClientsCsv(data.clients, await readFileSmart(file));
       setPendingClientImport({ ...result, fileName: file.name });
       setMessage(
         `Vista previa lista: ${result.added} empresas nuevas, ${result.updated} actualizadas y ${result.skipped} filas omitidas. Todavía no se guardó nada.`,

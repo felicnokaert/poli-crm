@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Download, FileUp, Plus, ReceiptText, Target, Trash2, X } from 'lucide-react';
-import { blankSale, duplicateSale, netAmountInArs, normalizedSale, quarterKey, saleCommission, salesToCsv, SALES_UNITS } from './sales-model.mjs';
+import { blankSale, computeGoalProgress, duplicateSale, GOAL_METRICS, netAmountInArs, normalizedSale, quarterKey, saleCommission, salesToCsv, SALES_UNITS } from './sales-model.mjs';
 
 const money = (value) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(value || 0);
 const monthKey = (date) => String(date || '').slice(0, 7);
@@ -47,27 +47,80 @@ function withTimeout(promise, ms) {
   ]);
 }
 
-function GoalBar({ label, period, current, goal, onSaveGoal }) {
-  const pct = goal > 0 ? Math.min(100, Math.round((current / goal) * 100)) : 0;
+function blankGoalDraft(currentMonth, currentQuarter) {
+  return { periodType: 'month', period: currentMonth, currentMonth, currentQuarter, metric: 'count', unit: 'Todas', pointOfSale: 'Todas', target: '' };
+}
+
+function GoalRow({ goal, current, onDelete }) {
+  const format = GOAL_METRICS[goal.metric]?.format || String;
+  const pct = goal.target > 0 ? Math.min(100, Math.round((current / goal.target) * 100)) : 0;
+  const scopeLabel = [
+    goal.unit !== 'Todas' ? goal.unit : '',
+    goal.pointOfSale !== 'Todas' ? goal.pointOfSale : '',
+  ].filter(Boolean).join(' · ') || 'Todas las unidades';
   return (
     <div className="goal-bar">
       <div className="goal-bar-head">
-        <span>{label} <strong>{period}</strong></span>
         <span>
-          {current} de{' '}
-          <input
-            type="number" min="0" step="1" value={goal || ''}
-            placeholder="sin meta"
-            onChange={(e) => onSaveGoal(period, Number(e.target.value) || 0)}
-          /> ventas
+          {GOAL_METRICS[goal.metric]?.label} · {goal.periodType === 'quarter' ? 'Trimestre' : 'Mes'} <strong>{goal.period}</strong> · {scopeLabel}
         </span>
+        <span>{format(current)} de {format(goal.target)} <button type="button" className="icon-button" onClick={() => onDelete(goal.id)} aria-label="Eliminar objetivo"><X size={13}/></button></span>
       </div>
       <div className="goal-bar-track"><div className="goal-bar-fill" style={{ width: `${pct}%` }}/></div>
     </div>
   );
 }
 
-export default function Sales({ items, goals, onSaveGoal, onSave, onDelete }) {
+function GoalsPanel({ goals, sales, currentMonth, currentQuarter, onSaveGoal, onDeleteGoal }) {
+  const [draft, setDraft] = useState(() => blankGoalDraft(currentMonth, currentQuarter));
+  const updateDraft = (field, value) => setDraft((current) => {
+    const next = { ...current, [field]: value };
+    if (field === 'periodType') next.period = value === 'quarter' ? currentQuarter : currentMonth;
+    if (field === 'unit' && value === 'Todas') next.pointOfSale = 'Todas';
+    return next;
+  });
+  function addGoal(event) {
+    event.preventDefault();
+    if (!(Number(draft.target) > 0)) return;
+    onSaveGoal({ id: crypto.randomUUID(), ...draft, target: Number(draft.target) });
+    setDraft(blankGoalDraft(currentMonth, currentQuarter));
+  }
+  return (
+    <section className="panel">
+      <div className="panel-head">
+        <div><span className="eyebrow">Vos elegís el parámetro</span><h2>Objetivos</h2><p>Por cantidad, por neto en pesos o por comisión — para todas las unidades o una en particular, y un punto de venta si querés afinar más.</p></div>
+        <Target size={22}/>
+      </div>
+      {goals.map((goal) => (
+        <GoalRow key={goal.id} goal={goal} current={computeGoalProgress(sales, goal)} onDelete={onDeleteGoal}/>
+      ))}
+      {!goals.length && <p className="empty-opportunities-inline">Todavía no armaste ningún objetivo.</p>}
+      <form className="goal-form" onSubmit={addGoal}>
+        <select value={draft.periodType} onChange={(e) => updateDraft('periodType', e.target.value)}>
+          <option value="month">Este mes</option>
+          <option value="quarter">Este trimestre</option>
+        </select>
+        <select value={draft.metric} onChange={(e) => updateDraft('metric', e.target.value)}>
+          {Object.entries(GOAL_METRICS).map(([key, meta]) => <option key={key} value={key}>{meta.label}</option>)}
+        </select>
+        <select value={draft.unit} onChange={(e) => updateDraft('unit', e.target.value)}>
+          <option value="Todas">Todas las unidades</option>
+          {Object.keys(SALES_UNITS).map((name) => <option key={name} value={name}>{name}</option>)}
+        </select>
+        {draft.unit !== 'Todas' && (
+          <select value={draft.pointOfSale} onChange={(e) => updateDraft('pointOfSale', e.target.value)}>
+            <option value="Todas">Todos los puntos de venta</option>
+            {SALES_UNITS[draft.unit].invoicePoints.map((point) => <option key={point} value={point}>{point}</option>)}
+          </select>
+        )}
+        <input type="number" min="1" step="1" placeholder="meta" value={draft.target} onChange={(e) => updateDraft('target', e.target.value)}/>
+        <button type="submit" className="secondary"><Plus size={15}/> Agregar objetivo</button>
+      </form>
+    </section>
+  );
+}
+
+export default function Sales({ items, goals, onSaveGoal, onDeleteGoal, onSave, onDelete }) {
   const currentMonth = new Date().toISOString().slice(0, 7);
   const [month, setMonth] = useState(currentMonth);
   const [unit, setUnit] = useState('Todas');
@@ -85,8 +138,6 @@ export default function Sales({ items, goals, onSaveGoal, onSave, onDelete }) {
   const commission = filtered.reduce((sum, item) => sum + saleCommission(item), 0);
   const collectedCommission = filtered.filter((item) => item.collected).reduce((sum, item) => sum + saleCommission(item), 0);
   const currentQuarter = quarterKey(currentMonth + '-01');
-  const monthCount = items.filter((item) => monthKey(item.date) === currentMonth).length;
-  const quarterCount = items.filter((item) => quarterKey(item.date) === currentQuarter).length;
 
   async function handlePdfSelected(event) {
     const files = [...(event.target.files || [])];
@@ -160,14 +211,7 @@ export default function Sales({ items, goals, onSaveGoal, onSave, onDelete }) {
       <article className="metric-card"><span>Comisión cobrada</span><strong>{money(collectedCommission)}</strong></article>
       <article className="metric-card"><span>Período</span><strong>{month || 'Todos'}</strong></article>
     </section>
-    <section className="panel">
-      <div className="panel-head">
-        <div><span className="eyebrow">Cantidad de ventas</span><h2>Objetivos</h2><p>Contra todas las unidades, no solo el filtro de abajo.</p></div>
-        <Target size={22}/>
-      </div>
-      <GoalBar label="Este mes" period={currentMonth} current={monthCount} goal={goals?.[currentMonth] || 0} onSaveGoal={onSaveGoal}/>
-      <GoalBar label="Este trimestre" period={currentQuarter} current={quarterCount} goal={goals?.[currentQuarter] || 0} onSaveGoal={onSaveGoal}/>
-    </section>
+    <GoalsPanel goals={Array.isArray(goals) ? goals : []} sales={items} currentMonth={currentMonth} currentQuarter={currentQuarter} onSaveGoal={onSaveGoal} onDeleteGoal={onDeleteGoal}/>
     <section className="panel">
       <div className="panel-head">
         <div><span className="eyebrow">Resultado comercial</span><h2>Ventas realizadas</h2><p>Registro manual de Facturas y COT, o subí uno o varios PDF: los vas a poder revisar y editar todos juntos en una tabla antes de guardar. La comisión se calcula sobre el importe neto sin IVA (sin impuesto interno) convertido a pesos si la factura vino en dólares.</p></div>

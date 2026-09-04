@@ -43,6 +43,34 @@ export function quarterKey(dateStr = '') {
   return `${year}-Q${Math.ceil(month / 3)}`;
 }
 
+export const GOAL_METRICS = {
+  count: { label: 'Cantidad de ventas', format: (value) => String(Math.round(value)) },
+  netArs: { label: 'Neto en pesos', format: (value) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(value || 0) },
+  commission: { label: 'Comisión (en pesos)', format: (value) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(value || 0) },
+};
+
+// Un objetivo puede ser por cantidad, por monto o por comisión, filtrado
+// opcionalmente por unidad y/o punto de venta - "el parámetro que nosotros
+// decidamos", como pidió Felipe, en vez de una sola métrica fija.
+export function goalPeriodValue(goal, sale) {
+  return goal.periodType === 'quarter' ? quarterKey(sale.date) : monthKeyOf(sale.date);
+}
+
+function monthKeyOf(date = '') {
+  return String(date || '').slice(0, 7);
+}
+
+export function computeGoalProgress(sales = [], goal) {
+  const matching = sales.filter((sale) =>
+    goalPeriodValue(goal, sale) === goal.period &&
+    (goal.unit === 'Todas' || !goal.unit || sale.unit === goal.unit) &&
+    (goal.pointOfSale === 'Todas' || !goal.pointOfSale || sale.pointOfSale === goal.pointOfSale),
+  );
+  if (goal.metric === 'netArs') return matching.reduce((sum, sale) => sum + netAmountInArs(sale), 0);
+  if (goal.metric === 'commission') return matching.reduce((sum, sale) => sum + saleCommission(sale), 0);
+  return matching.length;
+}
+
 export function duplicateSale(sales = [], sale = {}) {
   return sales.find((item) =>
     item.id !== sale.id &&

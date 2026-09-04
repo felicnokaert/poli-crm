@@ -158,6 +158,10 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .goal-bar-head input { width: 60px; padding: 3px 6px; margin: 0 4px; text-align: center; }
 .goal-bar-track { height: 10px; border-radius: 999px; background: #eef2ef; overflow: hidden; }
 .goal-bar-fill { height: 100%; background: linear-gradient(90deg, #4b8d79, #226b58); border-radius: 999px; transition: width .3s ease; }
+.goal-bar-head .icon-button { padding: 2px; margin-left: 6px; color: #a15b52; }
+.goal-form { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid #edf1ef; }
+.goal-form input[type="number"] { width: 90px; }
+.empty-opportunities-inline { color: #84918d; font-size: 12.5px; margin: 10px 0; }
 .radar-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 2px; border-bottom: 1px solid #edf1ef; }
 .radar-row:last-child { border-bottom: 0; }
 .radar-row strong, .radar-row span { display: block; }

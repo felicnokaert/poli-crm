@@ -385,7 +385,7 @@ export default function App() {
     }
     let active = true;
     setSyncStatus("Sincronizando…");
-    loadOnlineState()
+    loadOnlineState(session.user.id)
       .then(({ state, statusEvents }) => {
         if (!active) return;
         const nextState = { ...initialState, ...state, inbox: state.inbox || [] };
@@ -479,7 +479,7 @@ export default function App() {
           event: "UPDATE",
           schema: "public",
           table: "workspace_states",
-          filter: "workspace_key=eq.grupo-poliplast",
+          filter: `workspace_key=eq.${session.user.id}`,
         },
         ({ new: row }) => {
           if (!row?.data || row.updated_by === session.user.id) return;
@@ -4938,18 +4938,53 @@ function DataSettings({ data, setData, session, syncStatus }) {
   );
 }
 
+const SIGNUP_DOMAIN = "@grupopoliplast.com.ar";
+
 function LoginScreen() {
+  const [mode, setMode] = useState("signin"); // 'signin' | 'signup' | 'magic'
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
-  async function submit(event) {
+
+  async function submitPassword(event) {
+    event.preventDefault();
+    if (mode === "signup" && !email.trim().toLocaleLowerCase().endsWith(SIGNUP_DOMAIN)) {
+      setMessage(`Las cuentas nuevas se crean con un correo ${SIGNUP_DOMAIN}.`);
+      return;
+    }
+    setMessage(mode === "signup" ? "Creando tu cuenta…" : "Ingresando…");
+    const { error, data } =
+      mode === "signup"
+        ? await supabase.auth.signUp({
+            email: email.trim(),
+            password,
+            options: { emailRedirectTo: window.location.origin },
+          })
+        : await supabase.auth.signInWithPassword({
+            email: email.trim(),
+            password,
+          });
+    if (error) {
+      setMessage(
+        error.message === "Invalid login credentials"
+          ? "Correo o contraseña incorrectos."
+          : error.message,
+      );
+      return;
+    }
+    setMessage(
+      mode === "signup" && !data.session
+        ? "Cuenta creada. Revisá tu correo para confirmarla y después ingresá."
+        : "",
+    );
+  }
+
+  async function submitMagicLink(event) {
     event.preventDefault();
     setMessage("Enviando acceso…");
     const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: window.location.origin,
-        shouldCreateUser: false,
-      },
+      email: email.trim(),
+      options: { emailRedirectTo: window.location.origin, shouldCreateUser: false },
     });
     setMessage(
       error
@@ -4957,6 +4992,7 @@ function LoginScreen() {
         : "Revisá tu correo y abrí el enlace de acceso.",
     );
   }
+
   return (
     <div className="login-shell">
       <section className="login-card">
@@ -4968,25 +5004,74 @@ function LoginScreen() {
         <span className="eyebrow">Acceso privado</span>
         <h1>Poliplast Sales Copilot</h1>
         <p>
-          Ingresá con el correo habilitado. No necesitás recordar una
-          contraseña.
+          {mode === "signup"
+            ? `Creá tu cuenta con un correo ${SIGNUP_DOMAIN} — cada usuario tiene su propio espacio de trabajo.`
+            : mode === "magic"
+              ? "Ingresá con el correo habilitado. No necesitás recordar una contraseña."
+              : "Ingresá con tu correo y contraseña."}
         </p>
-        <form onSubmit={submit}>
-          <label>
-            Correo
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="nombre@empresa.com"
-            />
-          </label>
-          <button className="primary" type="submit">
-            Enviar enlace de acceso
-          </button>
-        </form>
+        {mode === "magic" ? (
+          <form onSubmit={submitMagicLink}>
+            <label>
+              Correo
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="nombre@empresa.com"
+              />
+            </label>
+            <button className="primary" type="submit">
+              Enviar enlace de acceso
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={submitPassword}>
+            <label>
+              Correo
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="nombre@grupopoliplast.com.ar"
+              />
+            </label>
+            <label>
+              Contraseña
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="••••••••"
+              />
+            </label>
+            <button className="primary" type="submit">
+              {mode === "signup" ? "Crear cuenta" : "Ingresar"}
+            </button>
+          </form>
+        )}
         {message && <div className="system-message">{message}</div>}
+        <div className="login-switch">
+          {mode !== "signin" && (
+            <button type="button" className="link-button" onClick={() => { setMode("signin"); setMessage(""); }}>
+              Ya tengo cuenta
+            </button>
+          )}
+          {mode !== "signup" && (
+            <button type="button" className="link-button" onClick={() => { setMode("signup"); setMessage(""); }}>
+              Crear cuenta nueva
+            </button>
+          )}
+          {mode !== "magic" && (
+            <button type="button" className="link-button" onClick={() => { setMode("magic"); setMessage(""); }}>
+              Prefiero un enlace por correo
+            </button>
+          )}
+        </div>
         <div className="login-legal">
           <a href="/privacidad.html">Privacidad</a>
           <a href="/terminos.html">Términos</a>

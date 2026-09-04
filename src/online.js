@@ -5,7 +5,6 @@ export { mergeWorkspaceState, workspaceStatesEqual } from './workspace.mjs';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const WORKSPACE_KEY = 'grupo-poliplast';
 const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], boardLists: [], boardCards: [], salesGoals: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '' };
 
 function threadKey(event) {
@@ -19,9 +18,13 @@ export const supabase = onlineConfigured
     })
   : null;
 
-export async function loadOnlineState() {
+// Cada usuario tiene su propio espacio de trabajo (workspace_key = su user
+// id): clientes, ventas, tareas y tablero quedan aislados por persona. La
+// bandeja de WhatsApp sigue siendo compartida a propósito - hoy hay un solo
+// número de Meta conectado para todo el equipo, no uno por usuario.
+export async function loadOnlineState(userId) {
   const [{ data: stateRow, error: stateError }, { data: events, error: eventsError }, { data: statusEvents, error: statusError }] = await Promise.all([
-    supabase.from('workspace_states').select('data,updated_at,updated_by_email').eq('workspace_key', WORKSPACE_KEY).maybeSingle(),
+    supabase.from('workspace_states').select('data,updated_at,updated_by_email').eq('workspace_key', userId).maybeSingle(),
     // La bandeja comercial nace de consultas entrantes. Los mensajes enviados
     // por el equipo no crean alertas ni conversaciones por sí solos.
     // Penosil se dejó de operar como chat en vivo en el CRM (decisión de
@@ -59,7 +62,7 @@ export async function loadOnlineState() {
 
 export async function saveOnlineState(userId, email, data) {
   const { error } = await supabase.from('workspace_states').upsert({
-    workspace_key: WORKSPACE_KEY,
+    workspace_key: userId,
     data,
     updated_by: userId,
     updated_by_email: email,

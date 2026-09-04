@@ -20,22 +20,22 @@ export const supabase = onlineConfigured
 
 // Cada usuario tiene su propio espacio de trabajo (workspace_key = su user
 // id): clientes, ventas, tareas y tablero quedan aislados por persona. La
-// bandeja de WhatsApp sigue siendo compartida a propósito - hoy hay un solo
-// número de Meta conectado para todo el equipo, no uno por usuario.
-export async function loadOnlineState(userId) {
+// tabla whatsapp_events sigue siendo una sola para toda la empresa (hoy hay
+// varios números de Meta conectados, cada uno con su dueño), así que acá
+// filtramos por los canales que le pertenecen a quien está pidiendo el
+// estado (allowedChannels) - Juan nunca debe recibir eventos de General o
+// Penosil, ni viceversa.
+export async function loadOnlineState(userId, allowedChannels = ['general']) {
   const [{ data: stateRow, error: stateError }, { data: events, error: eventsError }, { data: statusEvents, error: statusError }] = await Promise.all([
     supabase.from('workspace_states').select('data,updated_at,updated_by_email').eq('workspace_key', userId).maybeSingle(),
     // La bandeja comercial nace de consultas entrantes. Los mensajes enviados
     // por el equipo no crean alertas ni conversaciones por sí solos.
-    // Penosil se dejó de operar como chat en vivo en el CRM (decisión de
-    // Felipe: son consumidores finales, no vale la pena el ruido cruzado con
-    // General). No se borra nada de whatsapp_events, solo se deja de traer.
-    supabase.from('whatsapp_events').select('*').eq('direction', 'inbound').neq('channel', 'penosil').neq('message_type', 'unread_preview').neq('message_type', 'unread_notice').neq('message_type', 'verified_unread_preview').order('occurred_at', { ascending: false }).limit(500),
+    supabase.from('whatsapp_events').select('*').eq('direction', 'inbound').in('channel', allowedChannels).neq('message_type', 'unread_preview').neq('message_type', 'unread_notice').neq('message_type', 'verified_unread_preview').order('occurred_at', { ascending: false }).limit(500),
     // Cuando alguien contesta desde el teléfono (no desde el CRM), Meta no
     // manda el mensaje saliente, pero sí manda confirmaciones de status
     // (sent/delivered/read/played) para lo que se le mandó al cliente. Eso
     // alcanza para detectar "esto ya se respondió afuera" sin inventar nada.
-    supabase.from('whatsapp_events').select('customer_wa_id,occurred_at').eq('direction', 'status').eq('channel', 'general').gte('occurred_at', new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString()).limit(2000),
+    supabase.from('whatsapp_events').select('customer_wa_id,occurred_at').eq('direction', 'status').in('channel', allowedChannels).gte('occurred_at', new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString()).limit(2000),
   ]);
   if (stateError) throw stateError;
   if (eventsError) throw eventsError;

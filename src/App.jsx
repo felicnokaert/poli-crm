@@ -81,6 +81,7 @@ import {
 } from "./client-contacts.mjs";
 import { FAMILIES } from "./families.mjs";
 import { defaultBusinessUnits } from "./sales-model.mjs";
+import { channelsForEmail } from "./user-channels.mjs";
 
 const CHANNELS = {
   general: {
@@ -331,6 +332,7 @@ function blankTask() {
 export default function App() {
   const [data, setData] = useState(loadState);
   const [session, setSession] = useState(null);
+  const myChannels = channelsForEmail(session?.user?.email);
   const [authReady, setAuthReady] = useState(!onlineConfigured);
   const [remoteReady, setRemoteReady] = useState(false);
   const [syncStatus, setSyncStatus] = useState(
@@ -387,7 +389,7 @@ export default function App() {
     }
     let active = true;
     setSyncStatus("Sincronizando…");
-    loadOnlineState(session.user.id)
+    loadOnlineState(session.user.id, myChannels)
       .then(({ state, statusEvents }) => {
         if (!active) return;
         const nextState = { ...initialState, ...state, inbox: state.inbox || [] };
@@ -411,7 +413,7 @@ export default function App() {
         ({ new: event }) => {
           if (
             event.direction !== "inbound" ||
-            event.channel === "penosil" ||
+            !myChannels.includes(event.channel) ||
             ["unread_preview", "unread_notice"].includes(event.message_type)
           )
             return;
@@ -1692,7 +1694,7 @@ export default function App() {
 
         {view !== "inbox" && (
           <section className="channel-strip">
-            {[data.primaryChannel || "general"].map((key) => (
+            {[myChannels.includes(data.primaryChannel) ? data.primaryChannel : myChannels[0]].map((key) => (
               <div className="channel-card" key={key}>
                 <span
                   className="channel-dot"
@@ -4692,6 +4694,7 @@ function Profile({ data, setData, session }) {
 }
 
 function DataSettings({ data, setData, session, syncStatus }) {
+  const myChannels = channelsForEmail(session?.user?.email);
   const [message, setMessage] = useState("");
   const [connecting, setConnecting] = useState(false);
   const [exportFamily, setExportFamily] = useState("Todas");
@@ -4704,7 +4707,7 @@ function DataSettings({ data, setData, session, syncStatus }) {
     }
     setConnecting(true);
     setMessage(
-      `Vinculando esta computadora a ${channel === "general" ? "WhatsApp General" : "WhatsApp Penosil"}…`,
+      `Vinculando esta computadora a ${CHANNELS[channel]?.name || channel}…`,
     );
     try {
       const response = await fetch("/api/bridge-pair", {
@@ -4746,7 +4749,7 @@ function DataSettings({ data, setData, session, syncStatus }) {
       );
       if (await paired) {
         setMessage(
-          `Listo. Esta computadora quedó vinculada a ${channel === "general" ? "WhatsApp General" : "WhatsApp Penosil"}. La memoria se actualiza al usar WhatsApp Web; no tenés que activarla cada día.`,
+          `Listo. Esta computadora quedó vinculada a ${CHANNELS[channel]?.name || channel}. La memoria se actualiza al usar WhatsApp Web; no tenés que activarla cada día.`,
         );
       } else {
         setMessage(
@@ -4781,7 +4784,7 @@ function DataSettings({ data, setData, session, syncStatus }) {
     setMessage("Activando la recepción oficial de ambos canales…");
     try {
       const results = await Promise.all(
-        ["general", "penosil", "juan"].map(async (channel) => {
+        myChannels.map(async (channel) => {
           const response = await fetch("/api/meta-subscribe", {
             method: "POST",
             headers: {
@@ -4978,25 +4981,32 @@ function DataSettings({ data, setData, session, syncStatus }) {
         <div className="panel-head">
           <div>
             <span className="eyebrow">Tu perfil</span>
-            <h2>Tu canal de WhatsApp</h2>
+            <h2>Tu WhatsApp</h2>
           </div>
         </div>
-        <p>
-          El cartel de arriba de la pantalla muestra este canal. Cada usuario
-          elige el suyo — no afecta a los demás.
-        </p>
-        <label>
-          <select
-            value={data.primaryChannel || "general"}
-            onChange={(event) => setData({ ...data, primaryChannel: event.target.value })}
-          >
-            {Object.entries(CHANNELS)
-              .filter(([key]) => !["call", "email"].includes(key))
-              .map(([key, item]) => (
-                <option value={key} key={key}>{item.name}</option>
-              ))}
-          </select>
-        </label>
+        {myChannels.length > 1 ? (
+          <>
+            <p>
+              Tu cuenta tiene más de un número asignado. Elegí cuál mostrar
+              arriba de la pantalla — solo entre los tuyos.
+            </p>
+            <label>
+              <select
+                value={myChannels.includes(data.primaryChannel) ? data.primaryChannel : myChannels[0]}
+                onChange={(event) => setData({ ...data, primaryChannel: event.target.value })}
+              >
+                {myChannels.map((key) => (
+                  <option value={key} key={key}>{CHANNELS[key]?.name || key}</option>
+                ))}
+              </select>
+            </label>
+          </>
+        ) : (
+          <p>
+            Tu número es <strong>{CHANNELS[myChannels[0]]?.name}</strong>
+            {CHANNELS[myChannels[0]]?.number ? ` (${CHANNELS[myChannels[0]].number})` : ""} — no hay otro para elegir.
+          </p>
+        )}
       </section>
       <section className="panel">
         <div className="panel-head">
@@ -5013,20 +5023,23 @@ function DataSettings({ data, setData, session, syncStatus }) {
           vos.
         </p>
         <div className="modal-actions">
-          <button
-            className="primary"
-            disabled={connecting}
-            onClick={() => pairBrowser("general")}
-          >
-            {connecting ? "Vinculando…" : "Vincular a WhatsApp General"}
-          </button>
+          {myChannels.map((channel) => (
+            <button
+              key={channel}
+              className="primary"
+              disabled={connecting}
+              onClick={() => pairBrowser(channel)}
+            >
+              {connecting ? "Vinculando…" : `Vincular a ${CHANNELS[channel]?.name || channel}`}
+            </button>
+          ))}
         </div>
         {message && <div className="system-message">{message}</div>}
         <details>
           <summary>Configuración avanzada de Meta</summary>
           <p>
-            El canal General también recibe eventos por la integración oficial.
-            Usá estas opciones solo para mantenimiento técnico.
+            Tu{myChannels.length > 1 ? "s canales también reciben" : " canal también recibe"} eventos
+            por la integración oficial. Usá estas opciones solo para mantenimiento técnico.
           </p>
           <div className="modal-actions">
             <button

@@ -85,6 +85,9 @@ import {
 import { FAMILIES } from "./families.mjs";
 import { defaultBusinessUnits } from "./sales-model.mjs";
 import { channelsForEmail } from "./user-channels.mjs";
+import { buildSuggestion } from "./suggestion-rules.mjs";
+import { prepareManualQuery } from "./ai-provider.mjs";
+import { docTypeLabel } from "./technical-library.mjs";
 
 const CHANNELS = {
   general: {
@@ -2949,6 +2952,72 @@ function InboxRow({
   );
 }
 
+function CopilotSuggestionPanel({ event }) {
+  const [copied, setCopied] = useState(false);
+  const suggestion = useMemo(() => buildSuggestion(event), [event]);
+  async function copyForAI() {
+    const text = prepareManualQuery({
+      family: suggestion.family,
+      intent: suggestion.intent,
+      temperature: suggestion.temperature,
+      missingQuestions: suggestion.missingQuestions,
+      recommendedDocs: suggestion.recommendedDocs,
+      customerMessage: event.text_body || "",
+    });
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    } catch {
+      setCopied(false);
+    }
+  }
+  return (
+    <div className="copilot-suggestion">
+      <div className="copilot-suggestion-head">
+        <strong>Sugerencia del copiloto</strong>
+        <span className="copilot-suggestion-note">
+          Reglas determinísticas, sin IA todavía. No inventa rendimiento,
+          compatibilidad, precio ni stock.
+        </span>
+      </div>
+      <p>
+        Familia detectada: <b>{suggestion.family}</b> · Intención:{" "}
+        <b>{suggestion.intent}</b> · Temperatura: <b>{suggestion.temperature}</b>
+      </p>
+      {suggestion.missingQuestions.length > 0 && (
+        <div>
+          <span className="copilot-suggestion-label">Preguntas que faltan confirmar</span>
+          <ul>
+            {suggestion.missingQuestions.map((question) => (
+              <li key={question}>{question}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {suggestion.recommendedDocs.length > 0 && (
+        <div>
+          <span className="copilot-suggestion-label">Fichas técnicas a consultar (sin validar todavía)</span>
+          <ul>
+            {suggestion.recommendedDocs.map((doc) => (
+              <li key={doc.id}>
+                {doc.product} — {docTypeLabel(doc.docType)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <p className="copilot-suggestion-pending">
+        Rendimiento, compatibilidad, aplicación, dosificación, seguridad,
+        precio y stock: pendiente de verificar contra ficha validada.
+      </p>
+      <button type="button" className="secondary" onClick={copyForAI}>
+        {copied ? "Copiado" : "Preparar consulta para IA"}
+      </button>
+    </div>
+  );
+}
+
 function InboxDraftModal({ draft, setDraft, onClose, onConfirm }) {
   useModalEscape(onClose);
   const update = (name, value) =>
@@ -2982,6 +3051,7 @@ function InboxDraftModal({ draft, setDraft, onClose, onConfirm }) {
               `[${draft.event.message_type || "mensaje sin texto"}]`}
           </p>
         </div>
+        <CopilotSuggestionPanel event={draft.event} />
         <div className="form-grid">
           <label>
             ¿Qué relación tiene?
@@ -4758,7 +4828,12 @@ function DataSettings({ data, setData, session, syncStatus }) {
     }
   }
 
+  // La cartera maestra y la cohorte prioritaria son datos de General
+  // (Poliuretano, PURMAC, Carrozados, Resinplast) - no le pertenecen a
+  // Penosil ni a Juan. Sin este chequeo, cualquier cuenta podía mezclar la
+  // cartera de otra unidad de negocio en su propio workspace sin querer.
   function importCommercialCohort() {
+    if (!myChannels.includes('general')) return;
     const cohort = buildCommercialCohort();
     const result = mergeCommercialCohort(data);
     setData(result.state);
@@ -4768,6 +4843,7 @@ function DataSettings({ data, setData, session, syncStatus }) {
   }
 
   async function importCommercialMaster() {
+    if (!myChannels.includes('general')) return;
     setConnecting(true);
     try {
       const clients = await fetchCommercialMaster(session);
@@ -4961,37 +5037,41 @@ function DataSettings({ data, setData, session, syncStatus }) {
           </button>
         )}
       </section>
-      <section className="panel">
-        <div className="panel-head">
-          <div>
-            <span className="eyebrow">Base de trabajo protegida</span>
-            <h2>Cartera comercial unificada</h2>
+      {myChannels.includes('general') && (
+        <section className="panel">
+          <div className="panel-head">
+            <div>
+              <span className="eyebrow">Base de trabajo protegida</span>
+              <h2>Cartera comercial unificada</h2>
+            </div>
+            <Target size={22} />
           </div>
-          <Target size={22} />
-        </div>
-        <p>
-          Clientes históricos, relevamientos y empresas objetivo deduplicados.
-          La cartera solo se descarga después de validar un usuario corporativo
-          y se incorpora como fichas editables, sin crear tareas masivas.
-        </p>
-        <div className="modal-actions">
-          <button
-            className="secondary"
-            disabled={connecting}
-            type="button"
-            onClick={importCommercialMaster}
-          >
-            Verificar cartera maestra
-          </button>
-          <button
-            className="secondary"
-            type="button"
-            onClick={importCommercialCohort}
-          >
-            Verificar cohorte prioritaria
-          </button>
-        </div>
-      </section>
+          <p>
+            Clientes históricos, relevamientos y empresas objetivo deduplicados.
+            La cartera solo se descarga después de validar un usuario corporativo
+            y se incorpora como fichas editables, sin crear tareas masivas. Es
+            la cartera de General - no aparece para Penosil ni para Juan, para
+            no mezclar unidades de negocio sin querer.
+          </p>
+          <div className="modal-actions">
+            <button
+              className="secondary"
+              disabled={connecting}
+              type="button"
+              onClick={importCommercialMaster}
+            >
+              Verificar cartera maestra
+            </button>
+            <button
+              className="secondary"
+              type="button"
+              onClick={importCommercialCohort}
+            >
+              Verificar cohorte prioritaria
+            </button>
+          </div>
+        </section>
+      )}
       <section className="panel">
         <div className="panel-head">
           <div>

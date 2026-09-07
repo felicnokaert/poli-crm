@@ -288,3 +288,10 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .day-mode-add input { flex: 1; }
 .day-mode-link { display: block; margin-top: 12px; }
 .price-memory-more { color: #7d8e88; font-size: 12px; margin-top: 10px; }
+.copilot-suggestion { margin-bottom: 18px; padding: 14px 16px; border: 1px dashed #b8c9c2; border-radius: 12px; background: #fbfdfc; }
+.copilot-suggestion-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+.copilot-suggestion-note { font-size: 11.5px; color: #7d8e88; }
+.copilot-suggestion p { margin: 6px 0; font-size: 13px; }
+.copilot-suggestion ul { margin: 4px 0 10px; padding-left: 18px; font-size: 13px; }
+.copilot-suggestion-label { display: block; font-size: 11.5px; font-weight: 600; color: #4f6b62; text-transform: uppercase; letter-spacing: 0.03em; margin-top: 8px; }
+.copilot-suggestion-pending { color: #8a6d1f; font-size: 12px; }

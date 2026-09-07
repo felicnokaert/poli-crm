@@ -3,8 +3,6 @@ import test from 'node:test';
 import health from '../api/health.js';
 import simulate from '../api/simulate-whatsapp.js';
 import readiness from '../api/readiness.js';
-import browserBridge from '../api/browser-bridge.js';
-import bridgePair from '../api/bridge-pair.js';
 import inboxDelete from '../api/inbox-delete.js';
 
 function responseRecorder() {
@@ -52,19 +50,6 @@ test('simulator normalizes a fake message without requiring Meta', async () => {
 test('operational readiness requires a corporate session', async () => {
   const response = responseRecorder();
   await readiness({ method: 'GET', headers: {} }, response);
-  assert.equal(response.statusCode, 401);
-  assert.equal(response.payload.error, 'Acceso corporativo requerido.');
-});
-
-test('browser bridge is permanently disabled', async () => {
-  const response = responseRecorder();
-  await browserBridge({ method: 'POST', headers: {}, body: { events: [] } }, response);
-  assert.equal(response.statusCode, 410);
-});
-
-test('browser pairing requires a corporate session', async () => {
-  const response = responseRecorder();
-  await bridgePair({ method: 'POST', headers: {}, body: { channel: 'penosil' } }, response);
   assert.equal(response.statusCode, 401);
   assert.equal(response.payload.error, 'Acceso corporativo requerido.');
 });

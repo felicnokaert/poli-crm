@@ -75,6 +75,20 @@ const MISSING_QUESTIONS_BY_FAMILY = {
 
 const GENERIC_NEXT_ACTION = 'Revisar conversación de WhatsApp';
 
+// Un reclamo o una consulta de postventa no son una oportunidad de venta
+// nueva - preguntarle a alguien enojado "¿qué aplicación tiene en mente?"
+// (el genérico por familia) es la respuesta equivocada. Estas preguntas
+// buscan ubicar el pedido/problema, no vender un producto.
+const MISSING_QUESTIONS_BY_INTENT = {
+  Reclamo: ['¿A qué pedido, factura o remito corresponde?', '¿Qué pasó exactamente (rotura, faltante, producto vencido, error de envío)?', '¿Cuándo lo recibió?'],
+  Postventa: ['¿A qué pedido o compra se refiere?', '¿Qué necesita (factura, garantía, cambio, seguimiento de envío)?'],
+};
+
+const NEXT_ACTION_BY_INTENT = {
+  Reclamo: 'Pedir disculpas, no prometer una solución todavía (cambio, reembolso, reposición) y escalar internamente antes de responder',
+  Postventa: 'Confirmar el pedido en el sistema (Contabilium/remito) antes de responder',
+};
+
 function detectFamily(text, channel) {
   const lower = text.toLowerCase();
   const genericInfo = GENERIC_INFO_WORDS.test(lower);
@@ -98,9 +112,23 @@ function pendingTechnicalFields() {
   return Object.fromEntries(PENDING_TECHNICAL_FIELDS.map((field) => [field, PENDING_LABEL]));
 }
 
-function buildDraftMessage({ family, missingQuestions, recommendedDocs, closing }) {
+function buildDraftMessage({ family, missingQuestions, recommendedDocs, closing, intent }) {
   if (closing) {
     return 'Este mensaje parece un cierre o agradecimiento de una conversación anterior, no una consulta nueva. Revisá el historial con este contacto antes de responder - no hace falta pedirle datos de nuevo.';
+  }
+  if (intent === 'Reclamo') {
+    return [
+      'Lamentamos el inconveniente. Para poder ayudarte cuanto antes necesitamos confirmar:',
+      ...missingQuestions.map((question) => `- ${question}`),
+      '',
+      'No ofrezcas cambio, reembolso ni reposición todavía: confirmá internamente antes de prometer una solución.',
+    ].join('\n');
+  }
+  if (intent === 'Postventa') {
+    return [
+      'Gracias por escribirnos. Para darte una respuesta precisa sobre tu pedido necesitamos confirmar:',
+      ...missingQuestions.map((question) => `- ${question}`),
+    ].join('\n');
   }
   const lines = [
     'Gracias por escribirnos. Para ayudarte de la forma más precisa posible, necesitamos confirmar algunos datos antes de recomendarte un producto:',
@@ -121,13 +149,16 @@ export function buildSuggestion(event = {}) {
   const intent = inferIntent(text);
   const temperature = detectTemperature(text);
   const closing = isClosingMessage(text);
-  const missingQuestions = closing ? [] : MISSING_QUESTIONS_BY_FAMILY[family] || MISSING_QUESTIONS_BY_FAMILY['Sin definir'];
-  const recommendedDocs = closing ? [] : documentsForFamily(family).map((doc) => ({ id: doc.id, product: doc.product, docType: doc.docType, sourceFile: doc.sourceFile, verified: doc.verified }));
+  const postSaleIntent = MISSING_QUESTIONS_BY_INTENT[intent];
+  // Un reclamo o una consulta de postventa no piden ni recomiendan un
+  // producto nuevo - las fichas técnicas de venta no aplican acá.
+  const missingQuestions = closing ? [] : postSaleIntent || MISSING_QUESTIONS_BY_FAMILY[family] || MISSING_QUESTIONS_BY_FAMILY['Sin definir'];
+  const recommendedDocs = closing || postSaleIntent ? [] : documentsForFamily(family).map((doc) => ({ id: doc.id, product: doc.product, docType: doc.docType, sourceFile: doc.sourceFile, verified: doc.verified }));
   const nextAction = closing
     ? 'Revisar el historial de esta conversación antes de responder - no hace falta un diagnóstico nuevo'
-    : family === 'Sin definir'
+    : NEXT_ACTION_BY_INTENT[intent] || (family === 'Sin definir'
       ? GENERIC_NEXT_ACTION
-      : 'Responder confirmando los datos faltantes y citar la ficha técnica correspondiente una vez validada';
+      : 'Responder confirmando los datos faltantes y citar la ficha técnica correspondiente una vez validada');
 
   return {
     family,
@@ -138,7 +169,7 @@ export function buildSuggestion(event = {}) {
     nextAction,
     recommendedDocs,
     technicalFields: pendingTechnicalFields(),
-    draftMessage: buildDraftMessage({ family, missingQuestions, recommendedDocs, closing }),
+    draftMessage: buildDraftMessage({ family, missingQuestions, recommendedDocs, closing, intent }),
     provenance: {
       family: familyProvenance,
       intent: 'regla_aprobada',

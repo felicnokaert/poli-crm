@@ -72,6 +72,24 @@ test('a longer message that happens to start with a closing word is not misclass
   assert.ok(suggestion.missingQuestions.length > 0);
 });
 
+test('a complaint gets ownership questions, not a product pitch', () => {
+  const suggestion = buildSuggestion({ text_body: 'Llegó roto el pedido, quiero hacer un reclamo' });
+  assert.equal(suggestion.intent, 'Reclamo');
+  assert.deepEqual(suggestion.missingQuestions, ['¿A qué pedido, factura o remito corresponde?', '¿Qué pasó exactamente (rotura, faltante, producto vencido, error de envío)?', '¿Cuándo lo recibió?']);
+  assert.deepEqual(suggestion.recommendedDocs, []);
+  assert.match(suggestion.nextAction, /disculpas/i);
+  assert.match(suggestion.draftMessage, /Lamentamos el inconveniente/);
+  assert.doesNotMatch(suggestion.draftMessage, /recomendarte un producto/i);
+});
+
+test('a post-sale question is not treated as a new commercial opening', () => {
+  const suggestion = buildSuggestion({ text_body: 'Necesito la factura de mi pedido anterior' });
+  assert.equal(suggestion.intent, 'Postventa');
+  assert.deepEqual(suggestion.recommendedDocs, []);
+  assert.match(suggestion.nextAction, /Contabilium|remito/i);
+  assert.match(suggestion.draftMessage, /sobre tu pedido/);
+});
+
 test('handles missing/empty event fields without throwing', () => {
   assert.doesNotThrow(() => buildSuggestion());
   assert.doesNotThrow(() => buildSuggestion({}));

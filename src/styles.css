@@ -46,6 +46,15 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .channel-pill.online { color: #347663; background: #e3f2eb; }
 .channel-pill.waiting { color: #8b671e; background: #fff3d9; }
 .channel-pill.offline { color: #8a5148; background: #f8e9e6; }
+.section-copy { color: #62756f; line-height: 1.55; max-width: 760px; }
+.meli-account-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
+.meli-account { border: 1px solid #dfe5e2; border-radius: 13px; padding: 16px; background: #fbfcfb; display: grid; gap: 12px; }
+.meli-account > div:first-child { display: grid; gap: 3px; }
+.meli-account > div:first-child strong { font: 700 16px 'Manrope'; color: #18352f; }
+.meli-account > div:first-child span, .meli-account p { color: #72827d; font-size: 12px; margin: 0; }
+.meli-account > .channel-pill { justify-self: start; }
+.meli-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 760px) { .meli-account-grid { grid-template-columns: 1fr; } }
 .whatsapp-number-row { display: flex; align-items: center; gap: 10px; margin: 0; }
 .whatsapp-number-row strong { font-size: 13px; }
 .whatsapp-number-row select { flex: 1; }

@@ -30,6 +30,7 @@ import {
   Flame,
   ListChecks,
   UserCog,
+  ShoppingBag,
 } from "lucide-react";
 import { useConfirm } from "./ConfirmDialog";
 import {
@@ -88,6 +89,7 @@ import { channelsForEmail } from "./user-channels.mjs";
 import { buildSuggestion } from "./suggestion-rules.mjs";
 import { prepareManualQuery } from "./ai-provider.mjs";
 import { docTypeLabel } from "./technical-library.mjs";
+import MercadoLibre from "./MercadoLibre";
 
 const CHANNELS = {
   general: {
@@ -1536,6 +1538,9 @@ export default function App() {
     ["Organización", [
       ["board", "Tablero", LayoutGrid],
     ]],
+    ["Canales", [
+      ["mercadolibre", "Mercado Libre", ShoppingBag],
+    ]],
     ["Cartera", [
       ["clients", "Empresas", Building2],
       ["contacts", "Contactos", Users],
@@ -1767,6 +1772,7 @@ export default function App() {
             onMoveCard={moveBoardCard}
           />
         )}
+        {view === "mercadolibre" && <MercadoLibre session={session} />}
         {view === "clients" && (
           <Clients
             clients={filteredClients}

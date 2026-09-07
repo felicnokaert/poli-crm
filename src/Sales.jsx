@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CalendarCheck, CheckCircle2, Download, FileUp, Plus, ReceiptText, Target, Trash2, X } from 'lucide-react';
 import { blankSale, computeGoalProgress, duplicateSale, GOAL_METRICS, netAmountInArs, normalizedSale, quarterKey, saleCommission, salesToCsv, unitsMapFrom } from './sales-model.mjs';
 import { FAMILIES } from './families.mjs';
+import { useConfirm } from './ConfirmDialog';
 
 const money = (value) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(value || 0);
 const monthKey = (date) => String(date || '').slice(0, 7);
@@ -419,13 +420,14 @@ function BulkReviewTable({ rows, selected, existingSales, units, unitNames, onTo
 }
 
 function SaleModal({ value, sales, units, unitNames, onClose, onSave, onDelete }) {
+  const confirm = useConfirm();
   const [form, setForm] = useState(value);
   const update = (name, value) => setForm((current) => ({ ...current, [name]: value }));
   const changeUnit = (unit) => setForm((current) => ({ ...current, unit, pointOfSale: current.documentType === 'Factura' ? (units[unit]?.invoicePoints[0] || '') : '' }));
   const duplicate = duplicateSale(sales, form);
-  function submit(event) {
+  async function submit(event) {
     event.preventDefault();
-    if (duplicate && !window.confirm(`Ya existe una venta con este mismo comprobante para ${duplicate.customer} (${money(duplicate.netAmount)}). ¿Guardar de todas formas?`)) return;
+    if (duplicate && !(await confirm(`Ya existe una venta con este mismo comprobante para ${duplicate.customer} (${money(duplicate.netAmount)}). ¿Guardar de todas formas?`))) return;
     onSave(form);
   }
   return <div className="modal-backdrop"><form className="modal" onSubmit={submit}>

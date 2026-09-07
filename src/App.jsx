@@ -30,6 +30,7 @@ import {
   ListChecks,
   UserCog,
 } from "lucide-react";
+import { useConfirm } from "./ConfirmDialog";
 import {
   CLASSIFICATIONS,
   QUICK_REPLIES,
@@ -329,6 +330,7 @@ function blankTask() {
 }
 
 export default function App() {
+  const confirm = useConfirm();
   const [data, setData] = useState(loadState);
   const [session, setSession] = useState(null);
   const myChannels = channelsForEmail(session?.user?.email);
@@ -757,8 +759,8 @@ export default function App() {
     });
   }
 
-  function deleteOpportunity(id) {
-    if (!window.confirm("¿Eliminar esta oportunidad del CRM?")) return;
+  async function deleteOpportunity(id) {
+    if (!(await confirm("¿Eliminar esta oportunidad del CRM?", { danger: true, confirmLabel: "Eliminar" }))) return;
     setData({
       ...data,
       opportunities: data.opportunities.filter((item) => item.id !== id),
@@ -848,17 +850,17 @@ export default function App() {
     });
   }
 
-  function deleteSale(id) {
-    if (!window.confirm("¿Eliminar esta venta del registro?")) return;
+  async function deleteSale(id) {
+    if (!(await confirm("¿Eliminar esta venta del registro?", { danger: true, confirmLabel: "Eliminar" }))) return;
     setData((current) => ({
       ...current,
       sales: (current.sales || []).filter((item) => item.id !== id),
     }));
   }
 
-  function deleteSales(ids) {
+  async function deleteSales(ids) {
     if (!ids.length) return;
-    if (!window.confirm(`¿Eliminar ${ids.length} venta${ids.length === 1 ? "" : "s"} del registro?`)) return;
+    if (!(await confirm(`¿Eliminar ${ids.length} venta${ids.length === 1 ? "" : "s"} del registro?`, { danger: true, confirmLabel: "Eliminar" }))) return;
     setData((current) => ({
       ...current,
       sales: (current.sales || []).filter((item) => !ids.includes(item.id)),
@@ -892,8 +894,8 @@ export default function App() {
     });
   }
 
-  function deleteBusinessUnit(id) {
-    if (!window.confirm("¿Eliminar esta unidad de negocio? Las ventas ya cargadas con esta unidad no se modifican.")) return;
+  async function deleteBusinessUnit(id) {
+    if (!(await confirm("¿Eliminar esta unidad de negocio? Las ventas ya cargadas con esta unidad no se modifican.", { danger: true, confirmLabel: "Eliminar" }))) return;
     setData((current) => {
       const existing = Array.isArray(current.businessUnits) && current.businessUnits.length
         ? current.businessUnits
@@ -1100,14 +1102,15 @@ export default function App() {
     });
   }
 
-  function deleteInbox(eventId) {
+  async function deleteInbox(eventId) {
     const event = data.inbox.find((item) => item.event_id === eventId);
     if (!event) return;
     const name = event.customer_name || event.customer_wa_id || "este contacto";
     if (
-      !window.confirm(
+      !(await confirm(
         `¿Eliminar del CRM la memoria de ${name}? Esto no borra el chat original de WhatsApp.`,
-      )
+        { danger: true, confirmLabel: "Eliminar" },
+      ))
     )
       return;
     const deletedIds = data.inbox
@@ -1208,7 +1211,7 @@ export default function App() {
     });
   }
 
-  function batchDeleteInbox(eventIds) {
+  async function batchDeleteInbox(eventIds) {
     const keys = new Set(
       data.inbox
         .filter((item) => eventIds.includes(item.event_id))
@@ -1216,9 +1219,10 @@ export default function App() {
     );
     if (
       !keys.size ||
-      !window.confirm(
+      !(await confirm(
         `¿Eliminar del CRM ${keys.size} ${keys.size === 1 ? "contacto seleccionado" : "contactos seleccionados"}? Los chats originales de WhatsApp no se modifican.`,
-      )
+        { danger: true, confirmLabel: "Eliminar" },
+      ))
     )
       return;
     const deletedIds = data.inbox
@@ -1242,13 +1246,14 @@ export default function App() {
       }).catch(() => {});
   }
 
-  function deleteLegacyInbox(eventId) {
+  async function deleteLegacyInbox(eventId) {
     const event = data.inbox.find((item) => item.event_id === eventId);
     if (!event) return;
     if (
-      !window.confirm(
+      !(await confirm(
         "¿Quitar del CRM esta captura anterior? El chat original de WhatsApp no se modifica.",
-      )
+        { danger: true, confirmLabel: "Quitar" },
+      ))
     )
       return;
     // Las filas de "Canal por confirmar" no tienen legacyCapture (ese flag
@@ -1267,12 +1272,13 @@ export default function App() {
     });
   }
 
-  function deleteAllLegacyInbox(items) {
+  async function deleteAllLegacyInbox(items) {
     if (!items.length) return;
     if (
-      !window.confirm(
+      !(await confirm(
         `¿Quitar del CRM las ${items.length} capturas en cuarentena? Los chats originales de WhatsApp no se modifican.`,
-      )
+        { danger: true, confirmLabel: "Quitar todo" },
+      ))
     )
       return;
     const keys = new Set(items.map(whatsappThreadKey));
@@ -1435,10 +1441,10 @@ export default function App() {
     setInboxDraft(null);
   }
 
-  function deleteClient(id) {
+  async function deleteClient(id) {
     const client = data.clients.find((item) => item.id === id);
     if (!client) return;
-    if (!window.confirm(`¿Eliminar "${client.company}" del CRM? Esto no se puede deshacer.`)) return;
+    if (!(await confirm(`¿Eliminar "${client.company}" del CRM? Esto no se puede deshacer.`, { danger: true, confirmLabel: "Eliminar" }))) return;
     setData((current) => ({
       ...current,
       clients: current.clients.filter((item) => item.id !== id),

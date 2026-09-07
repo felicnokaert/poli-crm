@@ -3,6 +3,7 @@ import { AlertTriangle, CalendarCheck, ChevronLeft, ChevronRight, FileUp, Layout
 import { COMMERCIAL_PLAN } from './commercial-plan';
 import { parseBoardCsv } from './board-csv.mjs';
 import { readFileSmart } from './text-decode.mjs';
+import { useConfirm } from './ConfirmDialog';
 
 const TAG_COLORS = {
   '': '#8ba099',
@@ -23,6 +24,7 @@ function nextOrder(cards) {
 }
 
 export default function Board({ lists, cards, onSaveList, onDeleteList, onReorderList, onSaveCard, onDeleteCard, onMoveCard }) {
+  const confirm = useConfirm();
   const [addingListTitle, setAddingListTitle] = useState('');
   const [viewMode, setViewMode] = useState(() => {
     try { return localStorage.getItem('poliplast-board-view') || 'board'; } catch { return 'board'; }
@@ -80,9 +82,9 @@ export default function Board({ lists, cards, onSaveList, onDeleteList, onReorde
   }
 
   const planAlreadyImported = cards.some((card) => card.id.startsWith('plan-'));
-  function importCommercialPlan() {
+  async function importCommercialPlan() {
     if (planAlreadyImported) return;
-    if (!window.confirm(`Esto crea ${COMMERCIAL_PLAN.length} tarjetas (una lista por mes: Septiembre, Octubre, Noviembre) con los hitos del plan comercial. ¿Continuar?`)) return;
+    if (!(await confirm(`Esto crea ${COMMERCIAL_PLAN.length} tarjetas (una lista por mes: Septiembre, Octubre, Noviembre) con los hitos del plan comercial. ¿Continuar?`))) return;
     const months = [...new Set(COMMERCIAL_PLAN.map((item) => item.month))];
     const listByMonth = {};
     months.forEach((month, index) => {
@@ -166,7 +168,7 @@ export default function Board({ lists, cards, onSaveList, onDeleteList, onReorde
                 <div className="board-list-controls">
                   <button type="button" className="icon-button" disabled={index === 0} onClick={() => onReorderList(list.id, -1)} aria-label="Mover lista a la izquierda"><ChevronLeft size={14}/></button>
                   <button type="button" className="icon-button" disabled={index === orderedLists.length - 1} onClick={() => onReorderList(list.id, 1)} aria-label="Mover lista a la derecha"><ChevronRight size={14}/></button>
-                  <button type="button" className="icon-button" onClick={() => { if (window.confirm(`¿Eliminar la lista "${list.title}" y sus tarjetas?`)) onDeleteList(list.id); }} aria-label="Eliminar lista">
+                  <button type="button" className="icon-button" onClick={async () => { if (await confirm(`¿Eliminar la lista "${list.title}" y sus tarjetas?`, { danger: true, confirmLabel: 'Eliminar' })) onDeleteList(list.id); }} aria-label="Eliminar lista">
                     <Trash2 size={14}/>
                   </button>
                 </div>
@@ -185,7 +187,7 @@ export default function Board({ lists, cards, onSaveList, onDeleteList, onReorde
                       type="button"
                       className="icon-button board-card-delete"
                       aria-label="Eliminar tarjeta"
-                      onClick={(e) => { e.stopPropagation(); if (window.confirm(`¿Eliminar la tarjeta "${card.title}"?`)) onDeleteCard(card.id); }}
+                      onClick={async (e) => { e.stopPropagation(); if (await confirm(`¿Eliminar la tarjeta "${card.title}"?`, { danger: true, confirmLabel: 'Eliminar' })) onDeleteCard(card.id); }}
                     >
                       <Trash2 size={11}/>
                     </button>

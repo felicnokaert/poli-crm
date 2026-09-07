@@ -34,6 +34,35 @@ test('needs at least two purchases of the same product to estimate a cycle', () 
   assert.equal(result.length, 0);
 });
 
+test('averages quantity per purchase when invoices have it, to estimate how much to reorder', () => {
+  const sales = [
+    { customer: 'Cliente E', date: '2026-07-01', items: [{ description: 'Bolsa PU', quantity: 10 }] },
+    { customer: 'Cliente E', date: '2026-08-01', items: [{ description: 'Bolsa PU', quantity: 20 }] },
+  ];
+  const result = buildRepurchaseRadar(sales, new Date('2026-09-15'));
+  assert.equal(result.length, 1);
+  assert.equal(result[0].avgQuantity, 15);
+});
+
+test('does not invent a quantity for old invoices that never had one', () => {
+  const sales = [
+    { customer: 'Cliente F', date: '2026-07-01', items: [{ description: 'Sin cantidad' }] },
+    { customer: 'Cliente F', date: '2026-08-01', items: [{ description: 'Sin cantidad' }] },
+  ];
+  const result = buildRepurchaseRadar(sales, new Date('2026-09-15'));
+  assert.equal(result.length, 1);
+  assert.equal(result[0].avgQuantity, null);
+});
+
+test('averages only the purchases that do have a quantity, when some invoices are missing it', () => {
+  const sales = [
+    { customer: 'Cliente G', date: '2026-07-01', items: [{ description: 'Mixto', quantity: 8 }] },
+    { customer: 'Cliente G', date: '2026-08-01', items: [{ description: 'Mixto' }] },
+  ];
+  const result = buildRepurchaseRadar(sales, new Date('2026-09-15'));
+  assert.equal(result[0].avgQuantity, 8);
+});
+
 test('tracks products separately per customer', () => {
   const sales = [
     { customer: 'Cliente D', date: '2026-07-01', items: [{ description: 'Producto X' }] },

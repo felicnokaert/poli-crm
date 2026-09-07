@@ -32,10 +32,12 @@ function draftFromParsedInvoice(parsed, fileName, units) {
       exchangeRate: parsed.currency === 'USD' ? (parsed.exchangeRate || '') : '',
       notes: parsed.internalTaxExcluded ? `Impuesto interno excluido de la comisión: ${money(parsed.internalTaxExcluded)}.` : '',
       // Se guardan los ítems para poder recordar precios por producto más
-      // adelante (memoria de precios en Entrenamiento).
+      // adelante (memoria de precios en Entrenamiento) y para estimar
+      // consumo/frecuencia de recompra por cliente y producto (radar de
+      // reposición en Inicio).
       items: (parsed.items || [])
         .filter((item) => !/impuesto\s+interno/i.test(item.description || ''))
-        .map((item) => ({ description: item.description, code: item.code, unitPrice: item.unitPrice })),
+        .map((item) => ({ description: item.description, code: item.code, unitPrice: item.unitPrice, quantity: item.quantity })),
     }, units),
     rowId: crypto.randomUUID(),
     sourceFile: fileName,

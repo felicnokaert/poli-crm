@@ -2164,7 +2164,10 @@ function Dashboard({
                 </div>
                 <div>
                   <span className="radar-badge overdue">+{item.overdueDays}d</span>
-                  <small>cada {item.avgIntervalDays}d, último hace {item.daysSinceLast}d</small>
+                  <small>
+                    cada {item.avgIntervalDays}d, último hace {item.daysSinceLast}d
+                    {item.avgQuantity ? ` · ~${item.avgQuantity} por compra` : ""}
+                  </small>
                 </div>
               </article>
             ))

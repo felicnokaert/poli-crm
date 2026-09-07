@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CalendarCheck, CheckCircle2, Download, FileUp, Plus, ReceiptText, Target, Trash2, X } from 'lucide-react';
-import { blankSale, computeGoalProgress, duplicateSale, GOAL_METRICS, netAmountInArs, normalizedSale, quarterKey, saleCommission, salesToCsv, unitsMapFrom } from './sales-model.mjs';
+import { blankSale, computeGoalProgress, defaultBusinessUnits, duplicateSale, GOAL_METRICS, netAmountInArs, normalizedSale, quarterKey, saleCommission, salesToCsv, unitsMapFrom } from './sales-model.mjs';
 import { FAMILIES } from './families.mjs';
 import { useConfirm } from './ConfirmDialog';
 
@@ -460,7 +460,7 @@ function blankBusinessUnit() {
 }
 
 function BusinessUnitsPanel({ businessUnits, onSave, onDelete }) {
-  const units = Array.isArray(businessUnits) ? businessUnits : [];
+  const units = Array.isArray(businessUnits) && businessUnits.length ? businessUnits : defaultBusinessUnits();
   const [editing, setEditing] = useState(null);
   const [pointDraft, setPointDraft] = useState('');
 

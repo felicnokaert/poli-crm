@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeGoalProgress, duplicateSale, netAmountInArs, netAmountInUsd, normalizedSale, quarterKey, saleCommission, salesToCsv } from '../src/sales-model.mjs';
+import { computeGoalProgress, duplicateSale, netAmountInArs, netAmountInUsd, normalizedSale, quarterKey, saleCommission, salesToCsv, unitsMapFrom } from '../src/sales-model.mjs';
 
 test('calcula 3% para Poliplast y 1% para Poliocho', () => {
   assert.equal(saleCommission({ unit: 'Poliplast', netAmount: 100000 }), 3000);
@@ -10,6 +10,12 @@ test('calcula 3% para Poliplast y 1% para Poliocho', () => {
 test('mantiene las comisiones historicas si el workspace todavia no tiene unidades configuradas', () => {
   assert.equal(saleCommission({ unit: 'Poliplast', netAmount: 100000 }, {}), 3000);
   assert.equal(saleCommission({ unit: 'Poliocho', netAmount: 100000 }, {}), 1000);
+});
+
+test('ofrece las unidades historicas al registrar una venta en un workspace antiguo', () => {
+  assert.deepEqual(Object.keys(unitsMapFrom([])), ['Poliplast', 'Poliocho']);
+  assert.equal(unitsMapFrom([]).Poliplast.rate, 0.03);
+  assert.deepEqual(unitsMapFrom([]).Poliocho.invoicePoints, ['0003']);
 });
 
 test('normaliza los números de factura', () => {

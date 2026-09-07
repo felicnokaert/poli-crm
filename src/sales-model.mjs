@@ -50,7 +50,12 @@ export function netAmountInArs(sale) {
 }
 
 export function saleCommission(sale, units = SALES_UNITS) {
-  return netAmountInArs(sale) * (units[sale?.unit]?.rate || 0);
+  // Los workspaces creados antes de que existiera la configuracion de
+  // unidades pueden tener businessUnits=[] aun cuando ya contienen ventas.
+  // Para las dos unidades historicas conservamos las tasas oficiales; una
+  // configuracion explicita sigue teniendo prioridad.
+  const rate = units?.[sale?.unit]?.rate ?? SALES_UNITS[sale?.unit]?.rate ?? 0;
+  return netAmountInArs(sale) * rate;
 }
 
 // Casi todo se vende en dólares; una venta en pesos no trae su propio tipo
@@ -122,12 +127,16 @@ export function computeGoalProgress(sales = [], goal, units = SALES_UNITS) {
 }
 
 export function duplicateSale(sales = [], sale = {}) {
+  const pointOfSale = sale.documentType === 'Factura'
+    ? String(sale.pointOfSale || '').padStart(4, '0')
+    : '';
+  const documentNumber = String(sale.documentNumber || '').padStart(5, '0');
   return sales.find((item) =>
     item.id !== sale.id &&
     item.unit === sale.unit &&
     item.documentType === sale.documentType &&
-    String(item.pointOfSale || '') === String(sale.pointOfSale || '') &&
-    String(item.documentNumber || '') === String(sale.documentNumber || ''),
+    (item.documentType === 'Factura' ? String(item.pointOfSale || '').padStart(4, '0') : '') === pointOfSale &&
+    String(item.documentNumber || '').padStart(5, '0') === documentNumber,
   );
 }
 

@@ -7,6 +7,11 @@ test('calcula 3% para Poliplast y 1% para Poliocho', () => {
   assert.equal(saleCommission({ unit: 'Poliocho', netAmount: 100000 }), 1000);
 });
 
+test('mantiene las comisiones historicas si el workspace todavia no tiene unidades configuradas', () => {
+  assert.equal(saleCommission({ unit: 'Poliplast', netAmount: 100000 }, {}), 3000);
+  assert.equal(saleCommission({ unit: 'Poliocho', netAmount: 100000 }, {}), 1000);
+});
+
 test('normaliza los números de factura', () => {
   assert.deepEqual(normalizedSale({ unit: 'Poliocho', documentType: 'Factura', pointOfSale: '3', documentNumber: '42', netAmount: '100' }), {
     unit: 'Poliocho', documentType: 'Factura', pointOfSale: '0003', documentNumber: '00042', netAmount: 100, currency: 'ARS', exchangeRate: 0, commission: 1, collected: false,
@@ -37,6 +42,7 @@ test('detecta una venta duplicada por unidad, comprobante, punto de venta y núm
   assert.ok(duplicateSale(sales, { id: '2', unit: 'Poliplast', documentType: 'Factura', pointOfSale: '0006', documentNumber: '00042' }));
   assert.equal(duplicateSale(sales, { id: '1', unit: 'Poliplast', documentType: 'Factura', pointOfSale: '0006', documentNumber: '00042' }), undefined);
   assert.equal(duplicateSale(sales, { id: '3', unit: 'Poliocho', documentType: 'Factura', pointOfSale: '0003', documentNumber: '00042' }), undefined);
+  assert.ok(duplicateSale(sales, { id: '2', unit: 'Poliplast', documentType: 'Factura', pointOfSale: '6', documentNumber: '42' }));
 });
 
 test('exporta ventas a CSV con la comisión calculada', () => {

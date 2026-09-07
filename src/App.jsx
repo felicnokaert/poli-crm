@@ -27,6 +27,7 @@ import {
   LayoutGrid,
   RefreshCw,
   Snowflake,
+  Flame,
   ListChecks,
   UserCog,
 } from "lucide-react";
@@ -55,6 +56,7 @@ import {
 import { inferIntent } from "./commercial-intelligence.mjs";
 import { buildRepurchaseRadar } from "./repurchase-radar.mjs";
 import { findColdQuotes } from "./cold-quotes.mjs";
+import { findStaleHotLeads } from "./hot-leads-radar.mjs";
 import Sales from "./Sales";
 import Board from "./Board";
 import PriceMemory from "./PriceMemory";
@@ -1935,7 +1937,7 @@ const PINNED_TASKS_BY_CHANNEL = {
   ],
 };
 
-function DayMode({ overdueTasks, dueTodayTasks, coldQuotes, repurchaseRadar, myChannels, onNavigate }) {
+function DayMode({ overdueTasks, dueTodayTasks, hotLeads, coldQuotes, repurchaseRadar, myChannels, onNavigate }) {
   const [plan, setPlan] = useDayPlan();
   const [customText, setCustomText] = useState("");
   const planIds = new Set(plan.map((item) => item.id));
@@ -1958,6 +1960,7 @@ function DayMode({ overdueTasks, dueTodayTasks, coldQuotes, repurchaseRadar, myC
   }
 
   const candidates = [
+    ...hotLeads.map((item) => ({ id: `hot:${item.eventId}`, label: `🔥 Responder — ${item.customer} lleva ${item.daysSince}d sin respuesta` })),
     ...[...overdueTasks, ...dueTodayTasks].map((task) => ({
       id: `task:${task.id}`,
       label: `${task.title}${task.company ? ` — ${task.company}` : ""}`,
@@ -2018,6 +2021,11 @@ function DayMode({ overdueTasks, dueTodayTasks, coldQuotes, repurchaseRadar, myC
           Ver todas las tareas vencidas en Tareas
         </button>
       )}
+      {hotLeads.length > 0 && (
+        <button type="button" className="link-button day-mode-link" onClick={() => onNavigate("inbox")}>
+          Ver los mensajes calientes sin responder en Por revisar
+        </button>
+      )}
     </section>
   );
 }
@@ -2036,6 +2044,7 @@ function Dashboard({
 }) {
   const repurchaseRadar = buildRepurchaseRadar(sales).slice(0, 6);
   const coldQuotes = findColdQuotes(inbox, sales).slice(0, 6);
+  const hotLeads = findStaleHotLeads(inbox).slice(0, 6);
   const now = today();
   const overdueTasks = tasks.filter((task) => !task.done && task.dueDate && task.dueDate < now);
   const dueTodayTasks = tasks.filter((task) => !task.done && task.dueDate === now);
@@ -2064,12 +2073,19 @@ function Dashboard({
       metrics.dueToday ? `${metrics.dueToday} para hoy` : "Ninguno para hoy",
       CircleAlert,
     ],
+    [
+      "Calientes sin responder",
+      hotLeads.length,
+      hotLeads.length ? "Mensajes urgentes en la bandeja" : "Ninguno por ahora",
+      Flame,
+    ],
   ];
   return (
     <div className="content-stack">
       <DayMode
         overdueTasks={overdueTasks}
         dueTodayTasks={dueTodayTasks}
+        hotLeads={hotLeads}
         coldQuotes={coldQuotes}
         repurchaseRadar={repurchaseRadar}
         myChannels={myChannels}
@@ -2178,6 +2194,34 @@ function Dashboard({
           )}
         </article>
       </section>
+      {hotLeads.length > 0 && (
+        <section className="panel">
+          <div className="panel-head">
+            <div>
+              <span className="eyebrow">Urgente + comercial, sin clasificar</span>
+              <h2>Calientes sin responder</h2>
+              <p>Mensajes en "Por revisar" que suenan urgentes (hoy, mañana, para el viernes) y comerciales (precio, cantidad, stock), pero llevan más de 2 días sin que nadie los toque.</p>
+            </div>
+            <Flame size={22} />
+          </div>
+          {hotLeads.map((item) => (
+            <button
+              type="button"
+              className="radar-row radar-row-clickable"
+              key={item.eventId}
+              onClick={() => onNavigate("inbox")}
+            >
+              <div>
+                <strong>{item.customer}</strong>
+                <span>{item.text}</span>
+              </div>
+              <div>
+                <span className="radar-badge hot">{item.daysSince}d</span>
+              </div>
+            </button>
+          ))}
+        </section>
+      )}
     </div>
   );
 }

@@ -2985,32 +2985,41 @@ function CopilotSuggestionPanel({ event }) {
         Familia detectada: <b>{suggestion.family}</b> · Intención:{" "}
         <b>{suggestion.intent}</b> · Temperatura: <b>{suggestion.temperature}</b>
       </p>
-      {suggestion.missingQuestions.length > 0 && (
-        <div>
-          <span className="copilot-suggestion-label">Preguntas que faltan confirmar</span>
-          <ul>
-            {suggestion.missingQuestions.map((question) => (
-              <li key={question}>{question}</li>
-            ))}
-          </ul>
-        </div>
+      {suggestion.isClosingMessage ? (
+        <p className="copilot-suggestion-pending">
+          Parece un cierre o agradecimiento de una conversación anterior — revisá
+          el historial antes de responder, no hace falta pedirle datos de nuevo.
+        </p>
+      ) : (
+        <>
+          {suggestion.missingQuestions.length > 0 && (
+            <div>
+              <span className="copilot-suggestion-label">Preguntas que faltan confirmar</span>
+              <ul>
+                {suggestion.missingQuestions.map((question) => (
+                  <li key={question}>{question}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {suggestion.recommendedDocs.length > 0 && (
+            <div>
+              <span className="copilot-suggestion-label">Fichas técnicas a consultar (sin validar todavía)</span>
+              <ul>
+                {suggestion.recommendedDocs.map((doc) => (
+                  <li key={doc.id}>
+                    {doc.product} — {docTypeLabel(doc.docType)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <p className="copilot-suggestion-pending">
+            Rendimiento, compatibilidad, aplicación, dosificación, seguridad,
+            precio y stock: pendiente de verificar contra ficha validada.
+          </p>
+        </>
       )}
-      {suggestion.recommendedDocs.length > 0 && (
-        <div>
-          <span className="copilot-suggestion-label">Fichas técnicas a consultar (sin validar todavía)</span>
-          <ul>
-            {suggestion.recommendedDocs.map((doc) => (
-              <li key={doc.id}>
-                {doc.product} — {docTypeLabel(doc.docType)}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      <p className="copilot-suggestion-pending">
-        Rendimiento, compatibilidad, aplicación, dosificación, seguridad,
-        precio y stock: pendiente de verificar contra ficha validada.
-      </p>
       <button type="button" className="secondary" onClick={copyForAI}>
         {copied ? "Copiado" : "Preparar consulta para IA"}
       </button>

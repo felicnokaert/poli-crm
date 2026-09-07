@@ -34,6 +34,27 @@ const URGENT_WORDS = /hoy|urgente|mañana|manana|esta semana|para el viernes|cua
 const COMMERCIAL_WORDS = /precio|cotiz|comprar|necesito|kg|litros|unidades|cantidad|stock/;
 const GENERIC_INFO_WORDS = /m[aá]s informaci[oó]n|informaci[oó]n sobre esto|info sobre esto|quisiera informaci[oó]n|quiero saber m[aá]s/;
 
+// Mensajes cortos de cierre/agradecimiento ("Gracias!", "Dale", "Perfecto")
+// casi siempre responden a una conversación anterior, no abren una consulta
+// nueva. Sin esto, el motor preguntaba "¿qué producto le interesa?" a un
+// "Gracias!" - técnicamente honesto (no inventa nada) pero inútil en la
+// práctica. Se limita a mensajes cortos para no atrapar frases largas que
+// solo empiezan con estas palabras.
+const CLOSING_WORDS = new Set(['muchas', 'mil', 'gracias', 'genial', 'buenisimo', 'joya', 'excelente', 'perfecto', 'dale', 'listo', 'okay', 'ok', 'de', 'acuerdo', 'entendido']);
+const MAX_CLOSING_MESSAGE_LENGTH = 30;
+
+function isClosingMessage(text) {
+  const normalized = text.trim();
+  if (!normalized || normalized.length > MAX_CLOSING_MESSAGE_LENGTH) return false;
+  const words = normalized
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[¡!¿?.,]/g, '')
+    .split(/\s+/)
+    .filter(Boolean);
+  return words.length > 0 && words.every((word) => CLOSING_WORDS.has(word));
+}
+
 // Campos técnicos que este motor jamás completa con un valor inventado.
 export const PENDING_TECHNICAL_FIELDS = ['rendimiento', 'compatibilidad', 'aplicación', 'dosificación', 'seguridad', 'precio', 'stock'];
 const PENDING_LABEL = 'Pendiente de verificar (sin ficha validada)';
@@ -77,7 +98,10 @@ function pendingTechnicalFields() {
   return Object.fromEntries(PENDING_TECHNICAL_FIELDS.map((field) => [field, PENDING_LABEL]));
 }
 
-function buildDraftMessage({ family, missingQuestions, recommendedDocs }) {
+function buildDraftMessage({ family, missingQuestions, recommendedDocs, closing }) {
+  if (closing) {
+    return 'Este mensaje parece un cierre o agradecimiento de una conversación anterior, no una consulta nueva. Revisá el historial con este contacto antes de responder - no hace falta pedirle datos de nuevo.';
+  }
   const lines = [
     'Gracias por escribirnos. Para ayudarte de la forma más precisa posible, necesitamos confirmar algunos datos antes de recomendarte un producto:',
     ...missingQuestions.map((question) => `- ${question}`),
@@ -96,19 +120,25 @@ export function buildSuggestion(event = {}) {
   const { family, provenance: familyProvenance } = detectFamily(text, channel);
   const intent = inferIntent(text);
   const temperature = detectTemperature(text);
-  const missingQuestions = MISSING_QUESTIONS_BY_FAMILY[family] || MISSING_QUESTIONS_BY_FAMILY['Sin definir'];
-  const recommendedDocs = documentsForFamily(family).map((doc) => ({ id: doc.id, product: doc.product, docType: doc.docType, sourceFile: doc.sourceFile, verified: doc.verified }));
-  const nextAction = family === 'Sin definir' ? GENERIC_NEXT_ACTION : 'Responder confirmando los datos faltantes y citar la ficha técnica correspondiente una vez validada';
+  const closing = isClosingMessage(text);
+  const missingQuestions = closing ? [] : MISSING_QUESTIONS_BY_FAMILY[family] || MISSING_QUESTIONS_BY_FAMILY['Sin definir'];
+  const recommendedDocs = closing ? [] : documentsForFamily(family).map((doc) => ({ id: doc.id, product: doc.product, docType: doc.docType, sourceFile: doc.sourceFile, verified: doc.verified }));
+  const nextAction = closing
+    ? 'Revisar el historial de esta conversación antes de responder - no hace falta un diagnóstico nuevo'
+    : family === 'Sin definir'
+      ? GENERIC_NEXT_ACTION
+      : 'Responder confirmando los datos faltantes y citar la ficha técnica correspondiente una vez validada';
 
   return {
     family,
     intent,
     temperature,
+    isClosingMessage: closing,
     missingQuestions,
     nextAction,
     recommendedDocs,
     technicalFields: pendingTechnicalFields(),
-    draftMessage: buildDraftMessage({ family, missingQuestions, recommendedDocs }),
+    draftMessage: buildDraftMessage({ family, missingQuestions, recommendedDocs, closing }),
     provenance: {
       family: familyProvenance,
       intent: 'regla_aprobada',

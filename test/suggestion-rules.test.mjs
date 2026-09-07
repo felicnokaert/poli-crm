@@ -55,6 +55,23 @@ test('draft message never states a technical claim, only cites doc names and ask
   }
 });
 
+test('a short closing/thank-you message does not trigger a diagnostic questionnaire', () => {
+  for (const text of ['Gracias!', 'muchas gracias', 'Dale', 'perfecto', 'Ok, gracias!']) {
+    const suggestion = buildSuggestion({ text_body: text });
+    assert.equal(suggestion.isClosingMessage, true, `expected "${text}" to be detected as closing`);
+    assert.deepEqual(suggestion.missingQuestions, []);
+    assert.deepEqual(suggestion.recommendedDocs, []);
+    assert.match(suggestion.draftMessage, /historial/i);
+    assert.doesNotMatch(suggestion.draftMessage, /qué producto/i);
+  }
+});
+
+test('a longer message that happens to start with a closing word is not misclassified', () => {
+  const suggestion = buildSuggestion({ text_body: 'Gracias, pero necesito cotizar 200 litros de resina para un proyecto grande' });
+  assert.equal(suggestion.isClosingMessage, false);
+  assert.ok(suggestion.missingQuestions.length > 0);
+});
+
 test('handles missing/empty event fields without throwing', () => {
   assert.doesNotThrow(() => buildSuggestion());
   assert.doesNotThrow(() => buildSuggestion({}));

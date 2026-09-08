@@ -1,3 +1,9 @@
+// Puntos de venta históricos, de respaldo para cuando no se pasa un mapa
+// explícito. Cualquier unidad de negocio nueva que el usuario agregue desde
+// Ventas > Objetivos (con sus propios puntos de venta) se resuelve con el
+// mapa que le pasa Sales.jsx - ver parseInvoiceText más abajo. Sin eso, una
+// unidad nueva (ej. "Imperpur", punto de venta 0009) nunca se reconocía
+// porque esta tabla no la conocía.
 const POINT_OF_SALE_UNIT = {
   '0006': 'Poliplast',
   '0011': 'Poliplast',
@@ -38,7 +44,7 @@ const NON_INVOICE_TYPES = [
   ['Recibo', /\bRecibo\b/i],
 ];
 
-export function parseInvoiceText(text = '') {
+export function parseInvoiceText(text = '', pointOfSaleUnit = {}) {
   const clean = String(text).replace(/\r/g, '');
   const detectedNonInvoiceType = NON_INVOICE_TYPES.find(([, pattern]) => pattern.test(clean));
   const numberMatch = clean.match(/N[°ºo]?:?\s*(\d{4})-(\d+)/i);
@@ -54,7 +60,7 @@ export function parseInvoiceText(text = '') {
 
   const pointOfSale = numberMatch ? numberMatch[1] : '';
   const documentNumber = numberMatch ? numberMatch[2].slice(-5).padStart(5, '0') : '';
-  const unit = POINT_OF_SALE_UNIT[pointOfSale] || '';
+  const unit = pointOfSaleUnit[pointOfSale] || POINT_OF_SALE_UNIT[pointOfSale] || '';
 
   const items = [];
   let match;

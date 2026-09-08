@@ -23,6 +23,19 @@ export function defaultBusinessUnits() {
 // que usan saleCommission/normalizedSale. Los workspaces creados antes de
 // incorporar esta configuracion llegan con una lista vacia: en ese caso deben
 // seguir pudiendo registrar ventas con las dos unidades historicas.
+// Invierte el mapa de unidades a {puntoDeVenta: nombreDeUnidad} para que el
+// importador de PDF pueda reconocer una unidad de negocio nueva sin tener
+// que hardcodear su punto de venta en invoice-parser.mjs.
+export function pointOfSaleMapFrom(units = {}) {
+  const map = {};
+  for (const [name, unit] of Object.entries(units)) {
+    for (const point of unit?.invoicePoints || []) {
+      if (point) map[point] = name;
+    }
+  }
+  return map;
+}
+
 export function unitsMapFrom(businessUnits) {
   const source = Array.isArray(businessUnits) && businessUnits.length
     ? businessUnits

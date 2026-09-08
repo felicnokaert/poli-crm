@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeGoalProgress, duplicateSale, netAmountInArs, netAmountInUsd, normalizedSale, quarterKey, saleCommission, salesToCsv, unitsMapFrom } from '../src/sales-model.mjs';
+import { computeGoalProgress, duplicateSale, netAmountInArs, netAmountInUsd, normalizedSale, pointOfSaleMapFrom, quarterKey, saleCommission, salesToCsv, unitsMapFrom } from '../src/sales-model.mjs';
 
 test('calcula 3% para Poliplast y 1% para Poliocho', () => {
   assert.equal(saleCommission({ unit: 'Poliplast', netAmount: 100000 }), 3000);
@@ -16,6 +16,22 @@ test('ofrece las unidades historicas al registrar una venta en un workspace anti
   assert.deepEqual(Object.keys(unitsMapFrom([])), ['Poliplast', 'Poliocho']);
   assert.equal(unitsMapFrom([]).Poliplast.rate, 0.03);
   assert.deepEqual(unitsMapFrom([]).Poliocho.invoicePoints, ['0003']);
+});
+
+test('pointOfSaleMapFrom lets a newly added business unit be recognized when importing PDFs', () => {
+  const units = unitsMapFrom([
+    { name: 'Poliplast', ratePct: 3, invoicePoints: ['0006', '0011'] },
+    { name: 'Imperpur', ratePct: 3, invoicePoints: ['0009'] },
+  ]);
+  const map = pointOfSaleMapFrom(units);
+  assert.equal(map['0009'], 'Imperpur');
+  assert.equal(map['0006'], 'Poliplast');
+});
+
+test('pointOfSaleMapFrom ignores empty point-of-sale placeholders', () => {
+  const units = unitsMapFrom([{ name: 'Sin puntos', ratePct: 3, invoicePoints: [] }]);
+  const map = pointOfSaleMapFrom(units);
+  assert.deepEqual(map, {});
 });
 
 test('normaliza los números de factura', () => {

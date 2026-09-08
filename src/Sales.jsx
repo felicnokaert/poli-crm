@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CalendarCheck, CheckCircle2, Download, FileUp, Plus, ReceiptText, Target, Trash2, X } from 'lucide-react';
-import { blankSale, computeGoalProgress, defaultBusinessUnits, duplicateSale, GOAL_METRICS, netAmountInArs, normalizedSale, quarterKey, saleCommission, salesToCsv, unitsMapFrom } from './sales-model.mjs';
+import { blankSale, computeGoalProgress, defaultBusinessUnits, duplicateSale, GOAL_METRICS, netAmountInArs, normalizedSale, pointOfSaleMapFrom, quarterKey, saleCommission, salesToCsv, unitsMapFrom } from './sales-model.mjs';
 import { FAMILIES } from './families.mjs';
 import { useConfirm } from './ConfirmDialog';
 
@@ -196,7 +196,7 @@ export default function Sales({ items, goals, businessUnits, onSaveGoal, onDelet
         // resolver ni rechazar la promesa; sin este límite, un solo archivo
         // roto trababa todo el lote y ninguno de los demás se procesaba.
         const text = await withTimeout(extractPdfText(file), PDF_TIMEOUT_MS);
-        const parsed = parseInvoiceText(text);
+        const parsed = parseInvoiceText(text, pointOfSaleMapFrom(units));
         if (parsed.recognized) {
           drafts.push(draftFromParsedInvoice(parsed, file.name, units));
         } else if (parsed.documentTypeRejected) {

@@ -103,6 +103,34 @@ Importe Neto Gravado: U$S580,00
   }
 });
 
+test('recognizes a point of sale from a newly added business unit, not just the hardcoded table', () => {
+  const newUnitInvoice = `
+Nº: 0009-00000004
+Fecha: 05/09/2026
+Razón social: DAVID ALEJANDRO BENOSILIO
+3 IMP-01 Imperpur 200,00 21,00 % 0,00 % 600,00
+Importe Neto Gravado: $600,00
+`;
+  const withoutMap = parseInvoiceText(newUnitInvoice);
+  assert.equal(withoutMap.recognized, false, 'point of sale 0009 is unknown without an explicit map');
+
+  const withMap = parseInvoiceText(newUnitInvoice, { '0009': 'Imperpur' });
+  assert.equal(withMap.recognized, true);
+  assert.equal(withMap.unit, 'Imperpur');
+  assert.equal(withMap.netAmount, 600);
+});
+
+test('an explicit point-of-sale map does not break the hardcoded fallback for known points', () => {
+  const result = parseInvoiceText(`
+Nº: 0006-00099999
+Fecha: 05/09/2026
+Razón social: CLIENTE DE PRUEBA
+5 740T POLI-PLUS 740 IR 100,00 21,00 % 0,00 % 500,00
+Importe Neto Gravado: U$S500,00
+`, { '0009': 'Imperpur' });
+  assert.equal(result.unit, 'Poliplast');
+});
+
 test('marks unrecognized text as not recognized', () => {
   const result = parseInvoiceText('esto no es una factura');
   assert.equal(result.recognized, false);

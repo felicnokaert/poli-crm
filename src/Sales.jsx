@@ -19,6 +19,10 @@ function exportSalesCsv(sales, month, unit) {
 }
 
 function draftFromParsedInvoice(parsed, fileName, units) {
+  const excludedNotes = [
+    parsed.internalTaxExcluded ? `Impuesto interno excluido de la comisión: ${money(parsed.internalTaxExcluded)}.` : '',
+    parsed.shippingExcluded ? `Envío/flete excluido de la comisión: ${money(parsed.shippingExcluded)}.` : '',
+  ].filter(Boolean);
   return {
     ...normalizedSale({
       ...blankSale(),
@@ -30,13 +34,15 @@ function draftFromParsedInvoice(parsed, fileName, units) {
       netAmount: parsed.netAmount,
       currency: parsed.currency,
       exchangeRate: parsed.currency === 'USD' ? (parsed.exchangeRate || '') : '',
-      notes: parsed.internalTaxExcluded ? `Impuesto interno excluido de la comisión: ${money(parsed.internalTaxExcluded)}.` : '',
+      notes: excludedNotes.join(' '),
       // Se guardan los ítems para poder recordar precios por producto más
       // adelante (memoria de precios en Entrenamiento) y para estimar
       // consumo/frecuencia de recompra por cliente y producto (radar de
-      // reposición en Inicio).
+      // reposición en Inicio). Envío/flete no es un producto - no debe
+      // ensuciar ninguna de esas dos cosas.
       items: (parsed.items || [])
         .filter((item) => !/impuesto\s+interno/i.test(item.description || ''))
+        .filter((item) => !/env[ií]os?|flete/i.test(item.description || ''))
         .map((item) => ({ description: item.description, code: item.code, unitPrice: item.unitPrice, quantity: item.quantity })),
     }, units),
     rowId: crypto.randomUUID(),

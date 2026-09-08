@@ -87,6 +87,22 @@ Importe Neto Gravado: U$S550,00
   assert.equal(result.netGravadoTotal, 550);
 });
 
+test('excludes "Envío"/"Flete" line items from the commission base', () => {
+  for (const label of ['Envio', 'Envío', 'Envios', 'Flete']) {
+    const withShipping = `
+Nº: 0006-00099999
+Fecha: 05/09/2026
+Razón social: CLIENTE DE PRUEBA
+5 740T POLI-PLUS 740 IR 100,00 21,00 % 0,00 % 500,00
+1 ENV-01 ${label} 80,00 0,00 % 0,00 % 80,00
+Importe Neto Gravado: U$S580,00
+`;
+    const result = parseInvoiceText(withShipping);
+    assert.equal(result.netAmount, 500, `expected "${label}" to be excluded`);
+    assert.equal(result.shippingExcluded, 80);
+  }
+});
+
 test('marks unrecognized text as not recognized', () => {
   const result = parseInvoiceText('esto no es una factura');
   assert.equal(result.recognized, false);

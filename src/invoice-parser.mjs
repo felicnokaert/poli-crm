@@ -78,10 +78,16 @@ export function parseInvoiceText(text = '') {
   }
 
   const isInternalTax = (item) => /impuesto\s+interno/i.test(item.description);
+  // "Envío", "envíos", "flete" son la misma línea de costo de despacho con
+  // distintos nombres según quién facture - no se cobra comisión sobre eso,
+  // igual que con el impuesto interno.
+  const isShipping = (item) => /env[ií]os?|flete/i.test(item.description);
+  const isExcludedFromCommission = (item) => isInternalTax(item) || isShipping(item);
   const internalTaxAmount = items.filter(isInternalTax).reduce((sum, item) => sum + item.importe, 0);
+  const shippingAmount = items.filter(isShipping).reduce((sum, item) => sum + item.importe, 0);
   // La comisión se calcula sobre el neto de los ítems de venta, nunca sobre
-  // el impuesto interno (no es venta, es un impuesto que se traslada).
-  const netAmount = items.filter((item) => !isInternalTax(item)).reduce((sum, item) => sum + item.importe, 0);
+  // el impuesto interno ni el envío/flete (no son venta de producto).
+  const netAmount = items.filter((item) => !isExcludedFromCommission(item)).reduce((sum, item) => sum + item.importe, 0);
 
   return {
     unit,
@@ -92,6 +98,7 @@ export function parseInvoiceText(text = '') {
     netAmount: Math.round(netAmount * 100) / 100,
     netGravadoTotal: netGravadoMatch ? toNumber(netGravadoMatch[2]) : null,
     internalTaxExcluded: Math.round(internalTaxAmount * 100) / 100,
+    shippingExcluded: Math.round(shippingAmount * 100) / 100,
     currency,
     exchangeRate: exchangeRateMatch ? toNumber(exchangeRateMatch[1]) : null,
     items,

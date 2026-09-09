@@ -29,12 +29,14 @@ test('completes every due task through an authorized cutoff exactly once', () =>
     tasks: [
       { id: 'old', dueDate: '2026-09-08', done: false },
       { id: 'cutoff', dueDate: '2026-09-09', done: false },
+      { id: 'undated-old', dueDate: '', createdAt: '2026-08-27T12:00:00Z', done: false },
       { id: 'future', dueDate: '2026-09-10', done: false },
     ],
     tasksClosedThrough: '',
   }, '2026-09-09');
   assert.equal(result.tasks.find((item) => item.id === 'old').done, true);
   assert.equal(result.tasks.find((item) => item.id === 'cutoff').done, true);
+  assert.equal(result.tasks.find((item) => item.id === 'undated-old').done, true);
   assert.equal(result.tasks.find((item) => item.id === 'future').done, false);
   assert.equal(result.tasksClosedThrough, '2026-09-09');
   assert.equal(completeTasksThrough(result, '2026-09-09'), result);

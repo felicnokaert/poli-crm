@@ -61,13 +61,15 @@ export function consolidateDuplicateClients(state = EMPTY_STATE) {
 export function completeTasksThrough(state = EMPTY_STATE, cutoff = '') {
   if (!cutoff || (state.tasksClosedThrough || '') >= cutoff) return state;
   const stamp = new Date().toISOString();
+  const cutoffDate = cutoff.slice(0, 10);
   return {
     ...state,
-    tasks: (state.tasks || []).map((task) =>
-      !task.done && task.dueDate && task.dueDate <= cutoff
+    tasks: (state.tasks || []).map((task) => {
+      const taskDate = task.dueDate || String(task.createdAt || '').slice(0, 10);
+      return !task.done && taskDate && taskDate <= cutoffDate
         ? { ...task, done: true, completedAt: stamp, updatedAt: stamp }
-        : task,
-    ),
+        : task;
+    }),
     tasksClosedThrough: cutoff,
   };
 }

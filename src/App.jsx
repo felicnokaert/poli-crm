@@ -93,7 +93,9 @@ import { docTypeLabel } from "./technical-library.mjs";
 import { isLowSignalWhatsAppEvent } from "./whatsapp-events.mjs";
 import MercadoLibre from "./MercadoLibre";
 
-const TASKS_CLOSED_THROUGH = "2026-09-09";
+// El sufijo fuerza una única segunda pasada que también incluye las tareas
+// antiguas sin fecha de vencimiento, usando su fecha de creación.
+const TASKS_CLOSED_THROUGH = "2026-09-09.1";
 
 const CHANNELS = {
   general: {

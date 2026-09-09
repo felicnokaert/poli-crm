@@ -41,6 +41,7 @@ import {
   scoreBand,
 } from "./knowledge";
 import {
+  completeTasksThrough,
   loadOnlineState,
   mergeWorkspaceState,
   onlineConfigured,
@@ -91,6 +92,8 @@ import { prepareManualQuery } from "./ai-provider.mjs";
 import { docTypeLabel } from "./technical-library.mjs";
 import { isLowSignalWhatsAppEvent } from "./whatsapp-events.mjs";
 import MercadoLibre from "./MercadoLibre";
+
+const TASKS_CLOSED_THROUGH = "2026-09-09";
 
 const CHANNELS = {
   general: {
@@ -400,10 +403,14 @@ export default function App() {
     loadOnlineState(session.user.id, myChannels)
       .then(({ state, statusEvents }) => {
         if (!active) return;
-        const nextState = { ...initialState, ...state, inbox: state.inbox || [] };
+        let nextState = { ...initialState, ...state, inbox: state.inbox || [] };
         if (nextState.historyResetVersion !== HISTORY_RESET_VERSION) {
           nextState.interactions = [];
           nextState.historyResetVersion = HISTORY_RESET_VERSION;
+          saveOnlineState(session.user.id, session.user.email, nextState).catch(() => {});
+        }
+        if ((nextState.tasksClosedThrough || "") < TASKS_CLOSED_THROUGH) {
+          nextState = completeTasksThrough(nextState, TASKS_CLOSED_THROUGH);
           saveOnlineState(session.user.id, session.user.email, nextState).catch(() => {});
         }
         setData(nextState);
@@ -494,7 +501,7 @@ export default function App() {
           filter: `workspace_key=eq.${session.user.id}`,
         },
         ({ new: row }) => {
-          if (!row?.data || row.updated_by === session.user.id) return;
+          if (!row?.data) return;
           setData((current) => {
             const merged = mergeWorkspaceState(current, row.data);
             return workspaceStatesEqual(current, merged) ? current : merged;
@@ -694,12 +701,14 @@ export default function App() {
 
   function toggleTask(id) {
     const stamp = new Date().toISOString();
-    setData({
-      ...data,
-      tasks: data.tasks.map((task) =>
-        task.id === id ? { ...task, done: !task.done, updatedAt: stamp } : task,
+    setData((current) => ({
+      ...current,
+      tasks: current.tasks.map((task) =>
+        task.id === id
+          ? { ...task, done: !task.done, completedAt: !task.done ? stamp : null, updatedAt: stamp }
+          : task,
       ),
-    });
+    }));
   }
 
   function saveOpportunity(opportunity) {

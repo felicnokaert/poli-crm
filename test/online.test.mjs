@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { consolidateDuplicateClients, mergeWorkspaceState, workspaceStatesEqual } from '../src/workspace.mjs';
+import { completeTasksThrough, consolidateDuplicateClients, mergeWorkspaceState, workspaceStatesEqual } from '../src/workspace.mjs';
 import { filterDismissedEvents, isLegacyWhatsAppPreview, isLowSignalWhatsAppEvent, isTrustedWhatsAppEvent } from '../src/whatsapp-events.mjs';
 
 test('consolidates duplicate company cards and rewires their history to one commercial identity', () => {
@@ -22,6 +22,22 @@ test('identifies reactions, unsupported events and automatic away replies as low
   assert.equal(isLowSignalWhatsAppEvent({ text_body: '[unsupported]' }), true);
   assert.equal(isLowSignalWhatsAppEvent({ text_body: 'Gracias por comunicarte con ARGENPLAST. Nuestro horario es de 07:00 a 12:00. Tan pronto como leamos tu mensaje responderemos.' }), true);
   assert.equal(isLowSignalWhatsAppEvent({ text_body: 'Necesito precio del kit para hoy' }), false);
+});
+
+test('completes every due task through an authorized cutoff exactly once', () => {
+  const result = completeTasksThrough({
+    tasks: [
+      { id: 'old', dueDate: '2026-09-08', done: false },
+      { id: 'cutoff', dueDate: '2026-09-09', done: false },
+      { id: 'future', dueDate: '2026-09-10', done: false },
+    ],
+    tasksClosedThrough: '',
+  }, '2026-09-09');
+  assert.equal(result.tasks.find((item) => item.id === 'old').done, true);
+  assert.equal(result.tasks.find((item) => item.id === 'cutoff').done, true);
+  assert.equal(result.tasks.find((item) => item.id === 'future').done, false);
+  assert.equal(result.tasksClosedThrough, '2026-09-09');
+  assert.equal(completeTasksThrough(result, '2026-09-09'), result);
 });
 
 test('hides legacy browser previews that could mix chat names and senders', () => {

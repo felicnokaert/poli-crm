@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { filterDismissedEvents, isLegacyWhatsAppPreview } from './whatsapp-events.mjs';
 import { whatsappContactIdentity, whatsappContactKey } from './whatsapp-threads.mjs';
-export { mergeWorkspaceState, workspaceStatesEqual } from './workspace.mjs';
+export { completeTasksThrough, mergeWorkspaceState, workspaceStatesEqual } from './workspace.mjs';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -9,7 +9,7 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 // unidades de negocio incluidas. Nada se auto-completa con datos de otra
 // cuenta; cada usuario carga lo suyo desde cero (ver unitsMapFrom en
 // sales-model.mjs para cómo se resuelve un businessUnits vacío).
-const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], boardLists: [], boardCards: [], salesGoals: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '', primaryChannel: 'general', profileName: '', businessUnits: [] };
+const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], boardLists: [], boardCards: [], salesGoals: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '', tasksClosedThrough: '', primaryChannel: 'general', profileName: '', businessUnits: [] };
 
 function threadKey(event) {
   return whatsappContactKey(event);

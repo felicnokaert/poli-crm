@@ -1,4 +1,4 @@
-const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '' };
+const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '', tasksClosedThrough: '' };
 const OBSOLETE_PREVIEW_TYPES = new Set(['unread_preview', 'unread_notice', 'verified_unread_preview']);
 
 function normalizedCompany(value = '') {
@@ -58,6 +58,20 @@ export function consolidateDuplicateClients(state = EMPTY_STATE) {
   return { ...state, clients: consolidated, interactions: rewire(state.interactions), tasks: rewire(state.tasks), opportunities: rewire(state.opportunities) };
 }
 
+export function completeTasksThrough(state = EMPTY_STATE, cutoff = '') {
+  if (!cutoff || (state.tasksClosedThrough || '') >= cutoff) return state;
+  const stamp = new Date().toISOString();
+  return {
+    ...state,
+    tasks: (state.tasks || []).map((task) =>
+      !task.done && task.dueDate && task.dueDate <= cutoff
+        ? { ...task, done: true, completedAt: stamp, updatedAt: stamp }
+        : task,
+    ),
+    tasksClosedThrough: cutoff,
+  };
+}
+
 export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
   const dismissedInboxEventIds = [...new Set([...(remote.dismissedInboxEventIds || []), ...(local.dismissedInboxEventIds || [])])].sort();
   const dismissed = new Set(dismissedInboxEventIds);
@@ -82,6 +96,7 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
     planChecks: { ...(remote.planChecks || {}), ...(local.planChecks || {}) },
     commercialMasterVersion: local.commercialMasterVersion || remote.commercialMasterVersion || '',
     historyResetVersion: [localHistoryReset, remoteHistoryReset].sort().at(-1) || '',
+    tasksClosedThrough: [local.tasksClosedThrough || '', remote.tasksClosedThrough || ''].sort().at(-1) || '',
   });
 }
 

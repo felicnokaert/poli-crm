@@ -2256,14 +2256,23 @@ function Dashboard({
 
 function Conversations({ items, clients, onOpen, onOpenClient }) {
   const [query, setQuery] = useState("");
+  const [family, setFamily] = useState("all");
+  const [temperature, setTemperature] = useState("all");
   const conversations = groupConversationHistory(items);
   const clientIds = new Set(clients.map((client) => client.id));
   const clientsById = new Map(clients.map((client) => [client.id, client]));
-  const filtered = conversations.filter((item) =>
-    `${item.company || ""} ${item.contact || ""} ${item.summary || ""} ${item.need || ""} ${item.family || ""}`
+  const filtered = conversations.filter((item) => {
+    const matchesQuery = `${item.company || ""} ${item.contact || ""} ${item.summary || ""} ${item.need || ""} ${item.family || ""}`
       .toLowerCase()
-      .includes(query.toLowerCase()),
-  );
+      .includes(query.toLowerCase());
+    const matchesFamily = family === "all" || item.family === family;
+    const validClientIds = (item.clientIds || [item.clientId]).filter((id) => clientIds.has(id));
+    const liveTemperature = validClientIds.length === 1
+      ? clientsById.get(validClientIds[0])?.temperature
+      : null;
+    const matchesTemperature = temperature === "all" || (liveTemperature || item.temperature || "Tibio") === temperature;
+    return matchesQuery && matchesFamily && matchesTemperature;
+  });
   return (
     <section className="panel">
       <div className="panel-head">
@@ -2275,6 +2284,8 @@ function Conversations({ items, clients, onOpen, onOpenClient }) {
             nuevo que todavía requiere revisión.
           </p>
         </div>
+      </div>
+      <div className="list-toolbar inbox-filters">
         <label className="search">
           <Search size={17} />
           <input
@@ -2283,6 +2294,18 @@ function Conversations({ items, clients, onOpen, onOpenClient }) {
             placeholder="Buscar cliente o conversación…"
           />
         </label>
+        <select value={family} onChange={(event) => setFamily(event.target.value)}>
+          <option value="all">Todas las familias</option>
+          {FAMILIES.map((item) => (
+            <option key={item}>{item}</option>
+          ))}
+        </select>
+        <select value={temperature} onChange={(event) => setTemperature(event.target.value)}>
+          <option value="all">Todas las temperaturas</option>
+          <option>Caliente</option>
+          <option>Tibio</option>
+          <option>Frío</option>
+        </select>
       </div>
       {filtered.length ? (
         <div className="conversation-list">

@@ -29,3 +29,11 @@ export function filterDismissedEvents(events = [], dismissedIds = []) {
   const dismissed = new Set(dismissedIds);
   return events.filter((event) => !dismissed.has(event?.event_id));
 }
+
+export function isLowSignalWhatsAppEvent(event = {}) {
+  const type = String(event?.message_type || '').toLowerCase();
+  const text = String(event?.text_body || '').trim();
+  if (['reaction', 'unsupported', 'status'].includes(type)) return true;
+  if (/^\[(reaction|unsupported)\]$/i.test(text)) return true;
+  return /gracias por comunicarte.{0,180}(horario|tan pronto como|fuera de horario)/i.test(text);
+}

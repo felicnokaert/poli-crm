@@ -89,6 +89,7 @@ import { channelsForEmail } from "./user-channels.mjs";
 import { buildSuggestion } from "./suggestion-rules.mjs";
 import { prepareManualQuery } from "./ai-provider.mjs";
 import { docTypeLabel } from "./technical-library.mjs";
+import { isLowSignalWhatsAppEvent } from "./whatsapp-events.mjs";
 import MercadoLibre from "./MercadoLibre";
 
 const CHANNELS = {
@@ -584,7 +585,7 @@ export default function App() {
       contact: form.contact.trim(),
       family: form.family,
       currentIntent: form.intent,
-      temperature: form.temperature,
+      temperature: existing?.temperature || form.temperature || "Tibio",
       stage: form.stage,
       clientType: form.clientType,
       industry: form.industry,
@@ -603,6 +604,7 @@ export default function App() {
     const interaction = {
       ...editingInteraction,
       ...form,
+      temperature: existing?.temperature || form.temperature || "Tibio",
       id: editingInteraction?.id || crypto.randomUUID(),
       clientId,
       createdAt: editingInteraction?.createdAt || stamp,
@@ -619,7 +621,7 @@ export default function App() {
               title: form.nextAction.trim(),
               dueDate: form.nextDate,
               cadence: "Diaria",
-              priority: form.temperature === "Caliente" ? "Alta" : "Media",
+              priority: (existing?.temperature || form.temperature) === "Caliente" ? "Alta" : "Media",
               done: false,
               createdAt: stamp,
               updatedAt: stamp,
@@ -1970,14 +1972,15 @@ function DayMode({ overdueTasks, dueTodayTasks, hotLeads, coldQuotes, repurchase
 
   const candidates = [
     ...hotLeads.map((item) => ({ id: `hot:${item.eventId}`, label: `🔥 Responder — ${item.customer} lleva ${item.daysSince}d sin respuesta` })),
-    ...[...overdueTasks, ...dueTodayTasks].map((task) => ({
+    ...dueTodayTasks.map((task) => ({
       id: `task:${task.id}`,
       label: `${task.title}${task.company ? ` — ${task.company}` : ""}`,
     })),
+    ...(overdueTasks.length ? [{ id: "overdue:summary", label: `Revisar ${overdueTasks.length} seguimientos vencidos en Tareas` }] : []),
     ...coldQuotes.map((item) => ({ id: `cold:${item.eventId}`, label: `Retomar cotización fría — ${item.customer}` })),
     ...repurchaseRadar.map((item) => ({ id: `repurchase:${item.customer}-${item.product}`, label: `Ofrecer recompra — ${item.customer} (${item.product})` })),
     ...(myChannels || []).flatMap((channel) => PINNED_TASKS_BY_CHANNEL[channel] || []),
-  ].filter((item) => !planIds.has(item.id));
+  ].filter((item) => !planIds.has(item.id)).slice(0, 10);
 
   const doneCount = plan.filter((item) => item.done).length;
 
@@ -2370,7 +2373,7 @@ function WhatsAppInbox({
   const [priority, setPriority] = useState("all");
   const [selected, setSelected] = useState([]);
   const threads = groupWhatsAppThreads(
-    items.filter((item) => !item.legacyCapture),
+    items.filter((item) => !item.legacyCapture && !isLowSignalWhatsAppEvent(item)),
   ).map((item) => {
     const client =
       clients.find(
@@ -5521,14 +5524,13 @@ function InteractionForm({ form, setForm, myChannels = [], editing = false, onCl
               placeholder="Problema, aplicación, volumen o urgencia"
             />
           </label>
-          <label>
-            Temperatura comercial
-            <select {...field("temperature")}>
-              <option>Frío</option>
-              <option>Tibio</option>
-              <option>Caliente</option>
-            </select>
-          </label>
+          <div className="form-readonly-note">
+            <strong>Temperatura comercial</strong>
+            <span>
+              {form.temperature || "Tibio"} · se administra una sola vez desde
+              la ficha del cliente.
+            </span>
+          </div>
           <label>
             Etapa
             <select {...field("stage")}>

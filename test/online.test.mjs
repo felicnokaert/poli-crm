@@ -1,7 +1,28 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { mergeWorkspaceState, workspaceStatesEqual } from '../src/workspace.mjs';
-import { filterDismissedEvents, isLegacyWhatsAppPreview, isTrustedWhatsAppEvent } from '../src/whatsapp-events.mjs';
+import { consolidateDuplicateClients, mergeWorkspaceState, workspaceStatesEqual } from '../src/workspace.mjs';
+import { filterDismissedEvents, isLegacyWhatsAppPreview, isLowSignalWhatsAppEvent, isTrustedWhatsAppEvent } from '../src/whatsapp-events.mjs';
+
+test('consolidates duplicate company cards and rewires their history to one commercial identity', () => {
+  const result = consolidateDuplicateClients({
+    clients: [
+      { id: 'old', company: 'Báltico Construcciones', temperature: 'Frío', updatedAt: '2026-09-01' },
+      { id: 'new', company: 'BALTICO CONSTRUCCIONES', temperature: 'Caliente', updatedAt: '2026-09-02' },
+    ],
+    interactions: [{ id: 'i1', clientId: 'old' }], tasks: [{ id: 't1', clientId: 'old' }], opportunities: [], inbox: [],
+  });
+  assert.equal(result.clients.length, 1);
+  assert.equal(result.clients[0].temperature, 'Caliente');
+  assert.equal(result.interactions[0].clientId, 'new');
+  assert.equal(result.tasks[0].clientId, 'new');
+});
+
+test('identifies reactions, unsupported events and automatic away replies as low-signal', () => {
+  assert.equal(isLowSignalWhatsAppEvent({ message_type: 'reaction', text_body: '[reaction]' }), true);
+  assert.equal(isLowSignalWhatsAppEvent({ text_body: '[unsupported]' }), true);
+  assert.equal(isLowSignalWhatsAppEvent({ text_body: 'Gracias por comunicarte con ARGENPLAST. Nuestro horario es de 07:00 a 12:00. Tan pronto como leamos tu mensaje responderemos.' }), true);
+  assert.equal(isLowSignalWhatsAppEvent({ text_body: 'Necesito precio del kit para hoy' }), false);
+});
 
 test('hides legacy browser previews that could mix chat names and senders', () => {
   assert.equal(isTrustedWhatsAppEvent({ event_id: 'bridge.legacyhash' }), false);

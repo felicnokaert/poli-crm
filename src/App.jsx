@@ -888,10 +888,12 @@ export default function App() {
   }
 
   function saveSalesGoal(goal) {
-    setData((current) => ({
-      ...current,
-      salesGoals: [...(Array.isArray(current.salesGoals) ? current.salesGoals : []), goal],
-    }));
+    setData((current) => {
+      const existing = Array.isArray(current.salesGoals) ? current.salesGoals : [];
+      const index = existing.findIndex((item) => item.id === goal.id);
+      const salesGoals = index === -1 ? [...existing, goal] : existing.map((item, i) => (i === index ? goal : item));
+      return { ...current, salesGoals };
+    });
   }
 
   function deleteSalesGoal(id) {

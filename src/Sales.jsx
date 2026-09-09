@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { AlertTriangle, CalendarCheck, CheckCircle2, Download, FileUp, Plus, ReceiptText, Target, Trash2, X } from 'lucide-react';
+import { AlertTriangle, CalendarCheck, CheckCircle2, Download, FileUp, Pencil, Plus, ReceiptText, Target, Trash2, X } from 'lucide-react';
 import { blankSale, computeGoalProgress, defaultBusinessUnits, duplicateSale, GOAL_METRICS, netAmountInArs, normalizedSale, pointOfSaleMapFrom, quarterKey, saleCommission, salesToCsv, unitsMapFrom } from './sales-model.mjs';
 import { FAMILIES } from './families.mjs';
 import { useConfirm } from './ConfirmDialog';
@@ -58,10 +58,26 @@ function withTimeout(promise, ms) {
 }
 
 function blankGoalDraft(currentMonth, currentQuarter) {
-  return { periodType: 'month', period: currentMonth, currentMonth, currentQuarter, metric: 'count', unit: 'Todas', pointOfSale: 'Todas', family: 'Todas', target: '', fallbackRate: '' };
+  return { id: '', periodType: 'month', period: currentMonth, currentMonth, currentQuarter, metric: 'count', unit: 'Todas', pointOfSale: 'Todas', family: 'Todas', target: '', fallbackRate: '' };
 }
 
-function GoalRow({ goal, current, onDelete }) {
+function draftFromGoal(goal, currentMonth, currentQuarter) {
+  return {
+    id: goal.id,
+    periodType: goal.periodType || 'month',
+    period: goal.period || currentMonth,
+    currentMonth,
+    currentQuarter,
+    metric: goal.metric || 'count',
+    unit: goal.unit || 'Todas',
+    pointOfSale: goal.pointOfSale || 'Todas',
+    family: goal.family || 'Todas',
+    target: goal.target ?? '',
+    fallbackRate: goal.fallbackRate ?? '',
+  };
+}
+
+function GoalRow({ goal, current, onEdit, onDelete }) {
   const format = GOAL_METRICS[goal.metric]?.format || String;
   const pct = goal.target > 0 ? Math.min(100, Math.round((current / goal.target) * 100)) : 0;
   const scopeLabel = [
@@ -75,7 +91,11 @@ function GoalRow({ goal, current, onDelete }) {
         <span>
           {GOAL_METRICS[goal.metric]?.label} · {goal.periodType === 'quarter' ? 'Trimestre' : 'Mes'} <strong>{goal.period}</strong> · {scopeLabel}
         </span>
-        <span>{format(current)} de {format(goal.target)} <button type="button" className="icon-button" onClick={() => onDelete(goal.id)} aria-label="Eliminar objetivo"><X size={13}/></button></span>
+        <span>
+          {format(current)} de {format(goal.target)}{" "}
+          <button type="button" className="icon-button" onClick={() => onEdit(goal)} aria-label="Editar objetivo"><Pencil size={13}/></button>
+          <button type="button" className="icon-button" onClick={() => onDelete(goal.id)} aria-label="Eliminar objetivo"><X size={13}/></button>
+        </span>
       </div>
       <div className="goal-bar-track"><div className="goal-bar-fill" style={{ width: `${pct}%` }}/></div>
     </div>
@@ -93,10 +113,20 @@ function GoalsPanel({ goals, sales, businessUnits, currentMonth, currentQuarter,
   function selectPeriodType(value) {
     setDraft((current) => ({ ...current, periodType: value, period: value === 'quarter' ? currentQuarter : currentMonth }));
   }
+  function editGoal(goal) {
+    setDraft(draftFromGoal(goal, currentMonth, currentQuarter));
+  }
+  function cancelEdit() {
+    setDraft(blankGoalDraft(currentMonth, currentQuarter));
+  }
   function addGoal(event) {
     event.preventDefault();
     if (!(Number(draft.target) > 0)) return;
-    onSaveGoal({ id: crypto.randomUUID(), ...draft, target: Number(draft.target) });
+    // Editar reemplaza el objetivo existente (mismo id) en vez de duplicarlo.
+    // El progreso nunca se guarda en el objetivo - se recalcula en vivo desde
+    // las ventas - así que cambiar el tipo de cambio u otro filtro no pierde
+    // nada de lo ya cargado.
+    onSaveGoal({ ...draft, id: draft.id || crypto.randomUUID(), target: Number(draft.target) });
     setDraft(blankGoalDraft(currentMonth, currentQuarter));
   }
   return (
@@ -106,9 +136,15 @@ function GoalsPanel({ goals, sales, businessUnits, currentMonth, currentQuarter,
         <Target size={22}/>
       </div>
       {goals.map((goal) => (
-        <GoalRow key={goal.id} goal={goal} current={computeGoalProgress(sales, goal, units)} onDelete={onDeleteGoal}/>
+        <GoalRow key={goal.id} goal={goal} current={computeGoalProgress(sales, goal, units)} onEdit={editGoal} onDelete={onDeleteGoal}/>
       ))}
       {!goals.length && <p className="empty-opportunities-inline">Todavía no armaste ningún objetivo.</p>}
+      {draft.id && (
+        <p className="empty-opportunities-inline">
+          Editando el objetivo seleccionado.{" "}
+          <button type="button" className="icon-button" onClick={cancelEdit}>Cancelar edición</button>
+        </p>
+      )}
       <form className="goal-form" onSubmit={addGoal}>
         <select value={draft.periodType} onChange={(e) => selectPeriodType(e.target.value)}>
           <option value="month">Este mes</option>
@@ -135,7 +171,7 @@ function GoalsPanel({ goals, sales, businessUnits, currentMonth, currentQuarter,
           <input type="number" min="0" step="0.01" placeholder="T. cambio para ventas en $" value={draft.fallbackRate} onChange={(e) => updateDraft('fallbackRate', e.target.value)} title="Tipo de cambio para convertir a USD las ventas que se facturaron en pesos"/>
         )}
         <input type="number" min="1" step="1" placeholder="meta" value={draft.target} onChange={(e) => updateDraft('target', e.target.value)}/>
-        <button type="submit" className="secondary"><Plus size={15}/> Agregar objetivo</button>
+        <button type="submit" className="secondary">{draft.id ? <><Pencil size={15}/> Guardar cambios</> : <><Plus size={15}/> Agregar objetivo</>}</button>
       </form>
     </section>
   );

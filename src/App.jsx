@@ -3128,7 +3128,23 @@ function InboxRow({
 
 function CopilotSuggestionPanel({ event }) {
   const [copied, setCopied] = useState(false);
-  const suggestion = useMemo(() => buildSuggestion(event), [event]);
+  const [liveCatalog, setLiveCatalog] = useState(null);
+  useEffect(() => {
+    let active = true;
+    // La base técnica real (Supabase) tiene 68 fichas y crece; el índice
+    // estático de 31 (technical-library.mjs) queda como respaldo si todavía
+    // no hay conexión online o la consulta falla - buildSuggestion() ya sabe
+    // usar uno u otro.
+    import("./technical-documents-repo.mjs")
+      .then(({ fetchTechnicalDocuments }) => fetchTechnicalDocuments())
+      .then((docs) => { if (active) setLiveCatalog(docs); })
+      .catch(() => { if (active) setLiveCatalog(null); });
+    return () => { active = false; };
+  }, []);
+  const suggestion = useMemo(
+    () => buildSuggestion(event, liveCatalog ? { documents: liveCatalog } : {}),
+    [event, liveCatalog],
+  );
   async function copyForAI() {
     const text = prepareManualQuery({
       family: suggestion.family,

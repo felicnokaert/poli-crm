@@ -141,8 +141,21 @@ function buildDraftMessage({ family, missingQuestions, recommendedDocs, closing,
   return lines.join('\n');
 }
 
+// Adapta un documento de la base técnica viva (Supabase, forma de
+// technical-documents-mapping.mjs: fromRow()) a la misma forma que ya usaba
+// el índice estático - así el resto de esta función no necesita saber de
+// dónde vino cada documento.
+function fromLiveCatalog(doc) {
+  return { id: doc.id, product: doc.product, docType: doc.docType, sourceFile: doc.sourceFile, verified: doc.status === 'vigente' };
+}
+
 // event: { channel, text_body, customer_name }
-export function buildSuggestion(event = {}) {
+// options.documents: catálogo a usar para recomendar fichas - si no se pasa,
+// cae en el índice estático de 31 documentos (technical-library.mjs, Fase 1).
+// Cuando se pasa, se espera la forma de technical-documents-repo.mjs
+// (fetchTechnicalDocuments(), camelCase con `status`), ya filtrado o sin
+// filtrar por familia - acá se filtra igual.
+export function buildSuggestion(event = {}, options = {}) {
   const text = String(event?.text_body || '').trim();
   const channel = event?.channel || '';
   const { family, provenance: familyProvenance } = detectFamily(text, channel);
@@ -153,7 +166,10 @@ export function buildSuggestion(event = {}) {
   // Un reclamo o una consulta de postventa no piden ni recomiendan un
   // producto nuevo - las fichas técnicas de venta no aplican acá.
   const missingQuestions = closing ? [] : postSaleIntent || MISSING_QUESTIONS_BY_FAMILY[family] || MISSING_QUESTIONS_BY_FAMILY['Sin definir'];
-  const recommendedDocs = closing || postSaleIntent ? [] : documentsForFamily(family).map((doc) => ({ id: doc.id, product: doc.product, docType: doc.docType, sourceFile: doc.sourceFile, verified: doc.verified }));
+  const catalog = Array.isArray(options.documents)
+    ? options.documents.filter((doc) => doc.family === family).map(fromLiveCatalog)
+    : documentsForFamily(family).map((doc) => ({ id: doc.id, product: doc.product, docType: doc.docType, sourceFile: doc.sourceFile, verified: doc.verified }));
+  const recommendedDocs = closing || postSaleIntent ? [] : catalog;
   const nextAction = closing
     ? 'Revisar el historial de esta conversación antes de responder - no hace falta un diagnóstico nuevo'
     : NEXT_ACTION_BY_INTENT[intent] || (family === 'Sin definir'

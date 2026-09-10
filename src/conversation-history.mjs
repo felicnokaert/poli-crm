@@ -7,33 +7,26 @@ export function conversationIdentity(interaction = {}) {
 }
 
 export function groupConversationHistory(interactions = []) {
-  // Los datos históricos pueden contener dos fichas internas para la misma
-  // empresa (por ejemplo, una importada y otra creada desde WhatsApp). Para la
-  // vista comercial deben seguir siendo una sola conversación. Unimos registros
-  // que compartan clientId O nombre de empresa normalizado, conservando clientIds
-  // para que la inconsistencia siga siendo auditable.
-  const parents = interactions.map((_, index) => index);
-  const find = (index) => parents[index] === index ? index : (parents[index] = find(parents[index]));
-  const union = (left, right) => {
-    const a = find(left);
-    const b = find(right);
-    if (a !== b) parents[b] = a;
-  };
-  const seen = new Map();
-  interactions.forEach((interaction, index) => {
-    const identities = [
-      interaction.clientId && `client:${interaction.clientId}`,
-      interaction.company && `company:${normalized(interaction.company)}`,
-      !interaction.company && interaction.contact && `contact:${normalized(interaction.contact)}`,
-    ].filter(Boolean);
-    for (const identity of identities) {
-      if (seen.has(identity)) union(index, seen.get(identity));
-      else seen.set(identity, index);
-    }
-  });
+  // Un nombre parecido no prueba identidad. Las fichas con clientId sólo se
+  // agrupan por ese ID. Un registro histórico sin clientId puede sumarse por
+  // nombre únicamente cuando ese nombre corresponde a una sola ficha; si hay
+  // dos candidatas queda separado para revisión, nunca se oculta el conflicto.
+  const companyClientIds = new Map();
+  for (const interaction of interactions) {
+    if (!interaction.clientId || !interaction.company) continue;
+    const key = normalized(interaction.company);
+    companyClientIds.set(key, new Set([...(companyClientIds.get(key) || []), interaction.clientId]));
+  }
   const groups = new Map();
-  interactions.forEach((interaction, index) => {
-    const key = find(index);
+  interactions.forEach((interaction) => {
+    const companyKey = normalized(interaction.company || '');
+    const candidates = companyClientIds.get(companyKey);
+    const uniqueCandidate = !interaction.clientId && candidates?.size === 1 ? [...candidates][0] : '';
+    const key = interaction.clientId
+      ? `client:${interaction.clientId}`
+      : uniqueCandidate
+        ? `client:${uniqueCandidate}`
+        : `legacy:${companyKey || normalized(interaction.contact || interaction.id || 'sin-identificar')}`;
     groups.set(key, [...(groups.get(key) || []), interaction]);
   });
   return [...groups.values()].map((records) => {
@@ -50,6 +43,15 @@ export function groupConversationHistory(interactions = []) {
       latestContactAt: latest?.createdAt || '',
     };
   }).sort((a, b) => new Date(b.latestContactAt || 0) - new Date(a.latestContactAt || 0));
+}
+
+export function filterInteractionsByDate(interactions = [], from = '', to = '') {
+  const start = from ? new Date(`${from}T00:00:00`).getTime() : Number.NEGATIVE_INFINITY;
+  const end = to ? new Date(`${to}T23:59:59.999`).getTime() : Number.POSITIVE_INFINITY;
+  return interactions.filter((item) => {
+    const stamp = new Date(item.createdAt || 0).getTime();
+    return Number.isFinite(stamp) && stamp >= start && stamp <= end;
+  });
 }
 
 export function addInteractionOnce(interactions = [], interaction = {}) {

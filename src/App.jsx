@@ -74,7 +74,7 @@ import {
   whatsappContactIdentity,
   whatsappContactKey,
 } from "./whatsapp-threads.mjs";
-import { addInteractionOnce, groupConversationHistory } from "./conversation-history.mjs";
+import { addInteractionOnce, filterInteractionsByDate, groupConversationHistory } from "./conversation-history.mjs";
 import { clientsToCsv, mergeClientsCsv } from "./client-csv.mjs";
 import { readFileSmart } from "./text-decode.mjs";
 import { removeExplicitTestData, testDataCandidates } from "./data-hygiene.mjs";
@@ -2282,15 +2282,18 @@ function Conversations({ items, clients, onOpen, onOpenClient }) {
   const [query, setQuery] = useState("");
   const [family, setFamily] = useState("all");
   const [temperature, setTemperature] = useState("all");
-  const conversations = groupConversationHistory(items);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const conversations = groupConversationHistory(filterInteractionsByDate(items, fromDate, toDate));
   const clientIds = new Set(clients.map((client) => client.id));
   const clientsById = new Map(clients.map((client) => [client.id, client]));
   const filtered = conversations.filter((item) => {
     const matchesQuery = `${item.company || ""} ${item.contact || ""} ${item.summary || ""} ${item.need || ""} ${item.family || ""}`
       .toLowerCase()
       .includes(query.toLowerCase());
-    const matchesFamily = family === "all" || item.family === family;
     const validClientIds = (item.clientIds || [item.clientId]).filter((id) => clientIds.has(id));
+    const liveFamily = validClientIds.length === 1 ? clientsById.get(validClientIds[0])?.family : null;
+    const matchesFamily = family === "all" || (liveFamily || item.family) === family;
     const liveTemperature = validClientIds.length === 1
       ? clientsById.get(validClientIds[0])?.temperature
       : null;
@@ -2330,6 +2333,8 @@ function Conversations({ items, clients, onOpen, onOpenClient }) {
           <option>Tibio</option>
           <option>Frío</option>
         </select>
+        <label className="date-filter">Desde<input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} /></label>
+        <label className="date-filter">Hasta<input type="date" value={toDate} min={fromDate || undefined} onChange={(event) => setToDate(event.target.value)} /></label>
       </div>
       {filtered.length ? (
         <div className="conversation-list">
@@ -2375,10 +2380,7 @@ function Conversations({ items, clients, onOpen, onOpenClient }) {
                 </div>
                 <div className="conversation-tail">
                   <time>
-                    {new Date(item.latestContactAt).toLocaleTimeString(
-                      "es-AR",
-                      { hour: "2-digit", minute: "2-digit", hour12: false },
-                    )}
+                    {new Date(item.latestContactAt).toLocaleDateString("es-AR")} · {new Date(item.latestContactAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false })} hs
                   </time>
                   <span
                     className={`temp ${(liveTemperature || item.temperature || "Tibio").toLowerCase()}`}

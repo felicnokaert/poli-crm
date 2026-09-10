@@ -350,6 +350,8 @@ El manual queda aprobado cuando Felipe puede resolver sin ayuda estas acciones:
 12. **(10/09/2026, Claude)** abrir una conversación real en Por revisar y confirmar que el panel "Sugerencia del copiloto" recomienda una ficha técnica que existe de verdad en Base técnica (no una lista vieja desconectada).
 13. **(10/09/2026, Claude)** en Base técnica, renombrar una ficha y ver que las fichas quedan agrupadas por carpeta, igual que en Drive.
 14. **(10/09/2026, Claude)** eliminar un cliente y confirmar que sus conversaciones también desaparecen de Historial; eliminar una conversación suelta o una tarea sin tener que borrar todo el cliente.
+15. **(10/09/2026, Claude)** en Base técnica, abrir/cerrar carpetas anidadas de verdad (como en Drive/el explorador de archivos), no una lista con el camino completo como título.
+16. **(10/09/2026, Claude)** en Base técnica, cargar el texto de una ficha ("Cargar texto") y confirmar que, una vez vigente y validada, el copiloto empieza a citar una línea real de esa ficha en vez de "Pendiente de verificar".
 
 ### Registro de avances (Claude, sesión 10/09/2026)
 
@@ -364,3 +366,8 @@ El manual queda aprobado cuando Felipe puede resolver sin ayuda estas acciones:
 - Bug reportado por Felipe: al eliminar un cliente, "seguía apareciendo en Historial". Causa real: se borraban la ficha y las tareas, pero no las conversaciones vinculadas. Corregido (commit `d32c7f9`).
 - Todos los botones "Eliminar" del CRM se veían cuadrados y sin forma (nunca tuvieron estilo, solo color de texto). Corregido con un estilo compartido — misma píldora redondeada que el resto de los botones, con un rojo suave para distinguirlos (commit `d32c7f9`).
 - Auditoría del mismo tipo de bug en el resto del CRM: encontrado que no existía forma de eliminar una conversación o una tarea de forma individual (solo se borraban en cascada al borrar el cliente entero). Agregado el botón y la función de borrado para ambos casos (commit `70e5b79`).
+- Mismo bug encontrado también en "Quitar" contacto (ficha de cliente): sin forma, solo texto rojo. Corregido (commit `cc543c6`).
+- Base técnica: se puede marcar una ficha "desactualizado" y vincular cuál la reemplaza (`replaced_by` ya existía en la base pero no tenía pantalla) (commit `c075f99`).
+- Base técnica ahora se ve como una carpeta real de Drive/explorador de archivos: carpetas anidadas colapsables, los documentos solo aparecen en su carpeta hoja (commit `b525ef0`).
+- El copiloto ya puede "leer" las fichas técnicas: se agregó `extracted_text` a la base (migración en Supabase, cubierta por el mismo RLS que ya existía), los PDFs nuevos se procesan solos al importar, y los 68 ya cargados se pueden completar uno por uno con "Cargar texto". Con eso, cuando una ficha está vigente y validada, el copiloto puede citar una línea real de rendimiento/dosificación/aplicación/compatibilidad/seguridad en vez de "Pendiente de verificar" — nunca inventa ni resume, solo cita lo que está escrito. Precio y stock siguen siempre pendientes (no son datos de una ficha técnica) (commit `bf4c074`).
+- Mercado Libre / E-commerce: sin cambios — la decisión de si se usa o no sigue en Trello, tal como se acordó.

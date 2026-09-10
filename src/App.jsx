@@ -1518,8 +1518,8 @@ export default function App() {
 
   async function deleteClient(id) {
     const client = data.clients.find((item) => item.id === id);
-    if (!client) return;
-    if (!(await confirm(`¿Eliminar "${client.company}" del CRM? Esto no se puede deshacer.`, { danger: true, confirmLabel: "Eliminar" }))) return;
+    if (!client) return false;
+    if (!(await confirm(`¿Eliminar "${client.company}" del CRM? Esto no se puede deshacer.`, { danger: true, confirmLabel: "Eliminar" }))) return false;
     setData((current) => {
       const taskIds = current.tasks.filter((task) => task.clientId === id).map((task) => task.id);
       return recordDeletions({
@@ -1528,6 +1528,7 @@ export default function App() {
         tasks: current.tasks.filter((task) => task.clientId !== id),
       }, { clients: [id], tasks: taskIds });
     });
+    return true;
   }
 
   function addPipelineClient(company, stage) {
@@ -1954,6 +1955,7 @@ export default function App() {
           onNewInteraction={startClientInteraction}
           onNewTask={startClientTask}
           onSave={updateClient}
+          onDelete={deleteClient}
         />
       )}
       {selectedTaskId && (
@@ -4265,6 +4267,7 @@ function ClientDetail({
   onNewInteraction,
   onNewTask,
   onSave,
+  onDelete,
 }) {
   useModalEscape(onClose);
   const [editing, setEditing] = useState(false);
@@ -4676,6 +4679,17 @@ function ClientDetail({
               >
                 Registrar conversación
               </button>
+              {onDelete && (
+                <button
+                  className="danger-link"
+                  type="button"
+                  onClick={async () => {
+                    if (await onDelete(client.id)) onClose();
+                  }}
+                >
+                  Eliminar cliente
+                </button>
+              )}
             </div>
             <div className="history">
               <h3>Historial</h3>

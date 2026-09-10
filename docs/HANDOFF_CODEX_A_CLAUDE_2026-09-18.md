@@ -25,7 +25,7 @@ Permitir que Claude continúe el Sistema Comercial Grupo Poliplast y coordine el
 | Módulo | Estado | Evidencia | Pendiente |
 |---|---|---|---|
 | Empresas | Operativo; rendimiento corregido | `adaa155`, prueba con 2.001 clientes | QA en producción |
-| Identidad única | Base utilizable | `c84cdcb`: varias personas/teléfonos y contacto principal | no comercial por persona; fusión diferida |
+| Identidad única | Base utilizable | `c84cdcb` + `0ce5a6a`: varias personas/teléfonos, contacto principal y clasificación no comercial por persona | fusión/deshacer diferida por Felipe |
 | Posibles duplicados | Solo lectura | `2b31da0` | acciones y fusión/deshacer diferidas por Felipe |
 | Academia comercial | Contenedor y conocimiento estructurado operativos | `1e7c8f9`, `c0b9688`: 12 etapas, 13 objeciones, 10 playbooks y E-C-E-R-A | validar contenido con casos reales de Cohorte 1 |
 | Ayuda contextual | v1 construida y publicada | `caa680f`: recomendación por empresa según etapa, familia, perfil, objeción y venta cruzada; 175 tests | QA visual/funcional en producción y triage rápido |

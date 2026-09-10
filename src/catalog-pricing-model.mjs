@@ -6,7 +6,9 @@ export const PRICE_STATUSES = Object.freeze([
 ]);
 
 function finiteNumber(value) {
-  const parsed = typeof value === 'string' ? Number(value.replace(',', '.')) : Number(value);
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string' && !value.trim()) return null;
+  const parsed = typeof value === 'string' ? Number(value.trim().replace(',', '.')) : Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
@@ -70,7 +72,9 @@ export function buildEditablePrice(input = {}) {
 
 export function validateEditablePrice(price = {}) {
   const errors = [];
-  if (price.status === 'confirmado' && !(price.price >= 0)) errors.push('precio_confirmado_sin_valor');
+  if (price.status === 'confirmado' && (price.price === null || price.price === undefined || price.price < 0)) {
+    errors.push('precio_confirmado_sin_valor');
+  }
   if (price.status === 'confirmado' && !price.source) errors.push('precio_confirmado_sin_fuente');
   if (price.status === 'excepcion_manual' && !price.overrideReason) errors.push('excepcion_sin_motivo');
   if (price.price !== null && !price.costCurrency) errors.push('moneda_faltante');

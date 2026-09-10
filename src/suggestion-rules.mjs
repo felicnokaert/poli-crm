@@ -89,12 +89,30 @@ const NEXT_ACTION_BY_INTENT = {
   Postventa: 'Confirmar el pedido en el sistema (Contabilium/remito) antes de responder',
 };
 
-function detectFamily(text, channel) {
+// Solo se usa cuando las palabras clave genéricas de FAMILY_RULES no
+// encontraron nada - mencionar un producto puntual del catálogo real
+// ("necesito isoBUNKER 619") es una señal más precisa que una palabra
+// genérica, pero no reemplaza las reglas ya aprobadas, las complementa.
+function detectFamilyFromCatalog(lower, documents) {
+  if (!Array.isArray(documents)) return null;
+  for (const doc of documents) {
+    const product = String(doc?.product || '').trim().toLowerCase();
+    // Evita falsos positivos con nombres de producto demasiado cortos o
+    // genéricos (ej. "PMA-4" solo, o carpetas como "PRODUCTOS").
+    if (product.length < 5) continue;
+    if (lower.includes(product)) return doc.family;
+  }
+  return null;
+}
+
+function detectFamily(text, channel, documents) {
   const lower = text.toLowerCase();
   const genericInfo = GENERIC_INFO_WORDS.test(lower);
   const penosilOpening = channel === 'penosil' && genericInfo;
   const match = FAMILY_RULES.find(([, words]) => words.some((word) => lower.includes(word)));
   if (match) return { family: match[0], provenance: 'regla_aprobada' };
+  const catalogFamily = detectFamilyFromCatalog(lower, documents);
+  if (catalogFamily) return { family: catalogFamily, provenance: 'metadata_ficha' };
   if (penosilOpening) return { family: 'Penosil', provenance: 'regla_aprobada' };
   return { family: 'Sin definir', provenance: 'regla_aprobada' };
 }
@@ -112,7 +130,7 @@ function pendingTechnicalFields() {
   return Object.fromEntries(PENDING_TECHNICAL_FIELDS.map((field) => [field, PENDING_LABEL]));
 }
 
-function buildDraftMessage({ family, missingQuestions, recommendedDocs, closing, intent }) {
+function buildDraftMessage({ family, missingQuestions, recommendedDocs, closing, intent, isFollowUp }) {
   if (closing) {
     return 'Este mensaje parece un cierre o agradecimiento de una conversación anterior, no una consulta nueva. Revisá el historial con este contacto antes de responder - no hace falta pedirle datos de nuevo.';
   }
@@ -131,7 +149,13 @@ function buildDraftMessage({ family, missingQuestions, recommendedDocs, closing,
     ].join('\n');
   }
   const lines = [
-    'Gracias por escribirnos. Para ayudarte de la forma más precisa posible, necesitamos confirmar algunos datos antes de recomendarte un producto:',
+    isFollowUp
+      // Es un mensaje más dentro de una conversación que ya viene de antes -
+      // "Gracias por escribirnos" ahí suena a que el CRM no se acuerda de
+      // nada. Antes de mandar esto hay que revisar qué de esto ya se
+      // preguntó/contestó en el historial - el motor no lo sabe todavía.
+      ? 'Es un seguimiento de una conversación existente - revisá el historial antes de repetir algo que el contacto ya contestó. Lo que seguiría faltando confirmar:'
+      : 'Gracias por escribirnos. Para ayudarte de la forma más precisa posible, necesitamos confirmar algunos datos antes de recomendarte un producto:',
     ...missingQuestions.map((question) => `- ${question}`),
   ];
   if (recommendedDocs.length > 0) {
@@ -158,10 +182,14 @@ function fromLiveCatalog(doc) {
 export function buildSuggestion(event = {}, options = {}) {
   const text = String(event?.text_body || '').trim();
   const channel = event?.channel || '';
-  const { family, provenance: familyProvenance } = detectFamily(text, channel);
+  const { family, provenance: familyProvenance } = detectFamily(text, channel, options.documents);
   const intent = inferIntent(text);
   const temperature = detectTemperature(text);
   const closing = isClosingMessage(text);
+  // messageCount lo arma openInboxDraft() en App.jsx contando todos los
+  // eventos del mismo hilo (entrantes y salientes) - más de uno significa
+  // que ya hubo intercambio previo con este contacto, no es la apertura.
+  const isFollowUp = Number(event?.messageCount) > 1;
   const postSaleIntent = MISSING_QUESTIONS_BY_INTENT[intent];
   // Un reclamo o una consulta de postventa no piden ni recomiendan un
   // producto nuevo - las fichas técnicas de venta no aplican acá.
@@ -174,18 +202,21 @@ export function buildSuggestion(event = {}, options = {}) {
     ? 'Revisar el historial de esta conversación antes de responder - no hace falta un diagnóstico nuevo'
     : NEXT_ACTION_BY_INTENT[intent] || (family === 'Sin definir'
       ? GENERIC_NEXT_ACTION
-      : 'Responder confirmando los datos faltantes y citar la ficha técnica correspondiente una vez validada');
+      : isFollowUp
+        ? 'Revisar el historial de esta conversación antes de responder - puede que estas preguntas ya estén contestadas más arriba'
+        : 'Responder confirmando los datos faltantes y citar la ficha técnica correspondiente una vez validada');
 
   return {
     family,
     intent,
     temperature,
     isClosingMessage: closing,
+    isFollowUp,
     missingQuestions,
     nextAction,
     recommendedDocs,
     technicalFields: pendingTechnicalFields(),
-    draftMessage: buildDraftMessage({ family, missingQuestions, recommendedDocs, closing, intent }),
+    draftMessage: buildDraftMessage({ family, missingQuestions, recommendedDocs, closing, intent, isFollowUp }),
     provenance: {
       family: familyProvenance,
       intent: 'regla_aprobada',

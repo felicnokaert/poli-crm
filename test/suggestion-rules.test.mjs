@@ -90,6 +90,46 @@ test('a post-sale question is not treated as a new commercial opening', () => {
   assert.match(suggestion.draftMessage, /sobre tu pedido/);
 });
 
+test('detects family from a real product name in the live catalog when generic keywords find nothing', () => {
+  const documents = [{ id: 'd1', family: 'Poliuretano', product: 'isoBUNKER 619-SP', docType: 'ficha_tecnica', sourceFile: 'x.pdf', status: 'inventariado' }];
+  const suggestion = buildSuggestion({ text_body: 'hola, necesito el isoBUNKER 619-SP para un techo' }, { documents });
+  assert.equal(suggestion.family, 'Poliuretano');
+  assert.equal(suggestion.provenance.family, 'metadata_ficha');
+});
+
+test('a generic FAMILY_RULES keyword still wins over a product-name match (rule provenance takes priority)', () => {
+  const documents = [{ id: 'd1', family: 'Resinplast', product: 'Máquina especial', docType: 'ficha_tecnica', sourceFile: 'x.pdf', status: 'inventariado' }];
+  const suggestion = buildSuggestion({ text_body: 'necesito una máquina especial purmac' }, { documents });
+  assert.equal(suggestion.family, 'PURMAC');
+  assert.equal(suggestion.provenance.family, 'regla_aprobada');
+});
+
+test('ignores very short product names to avoid false-positive family matches', () => {
+  const documents = [{ id: 'd1', family: 'PURMAC', product: 'PM-4', docType: 'ficha_tecnica', sourceFile: 'x.pdf', status: 'inventariado' }];
+  const suggestion = buildSuggestion({ text_body: 'hola, quiero comprar algo' }, { documents });
+  assert.equal(suggestion.family, 'Sin definir');
+});
+
+test('a message with messageCount > 1 is flagged as follow-up, does not repeat the opening greeting', () => {
+  const suggestion = buildSuggestion({ text_body: 'necesito espuma rígida de poliuretano', messageCount: 4 });
+  assert.equal(suggestion.isFollowUp, true);
+  assert.match(suggestion.nextAction, /historial/i);
+  assert.match(suggestion.draftMessage, /seguimiento/i);
+  assert.doesNotMatch(suggestion.draftMessage, /Gracias por escribirnos/);
+});
+
+test('a first message (messageCount 1 or missing) is not treated as a follow-up', () => {
+  assert.equal(buildSuggestion({ text_body: 'necesito espuma rígida de poliuretano', messageCount: 1 }).isFollowUp, false);
+  assert.equal(buildSuggestion({ text_body: 'necesito espuma rígida de poliuretano' }).isFollowUp, false);
+});
+
+test('follow-up framing does not apply to closing messages or reclamo/postventa - those already have their own tone', () => {
+  const closing = buildSuggestion({ text_body: 'Gracias!', messageCount: 5 });
+  assert.doesNotMatch(closing.draftMessage, /seguimiento/i);
+  const reclamo = buildSuggestion({ text_body: 'llegó roto el pedido, reclamo', messageCount: 5 });
+  assert.doesNotMatch(reclamo.draftMessage, /seguimiento/i);
+});
+
 test('handles missing/empty event fields without throwing', () => {
   assert.doesNotThrow(() => buildSuggestion());
   assert.doesNotThrow(() => buildSuggestion({}));

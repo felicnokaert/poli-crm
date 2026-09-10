@@ -3174,6 +3174,9 @@ function CopilotSuggestionPanel({ event }) {
       <p>
         Familia detectada: <b>{suggestion.family}</b> · Intención:{" "}
         <b>{suggestion.intent}</b> · Temperatura: <b>{suggestion.temperature}</b>
+        {suggestion.isFollowUp && !suggestion.isClosingMessage && (
+          <> · <b>Seguimiento</b> (ya hubo mensajes antes)</>
+        )}
       </p>
       {suggestion.isClosingMessage ? (
         <p className="copilot-suggestion-pending">

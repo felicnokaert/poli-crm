@@ -63,6 +63,52 @@ export function isTechnicalDocumentAdmin(email = '') {
   return TECHNICAL_DOCUMENT_ADMINS.includes(String(email || '').trim().toLowerCase());
 }
 
+// Adivina familia/producto a partir de la ruta relativa de un archivo (por
+// ejemplo, la que da webkitRelativePath al elegir una carpeta entera) - es
+// solo una sugerencia inicial para no dejar el campo en blanco: Felipe (o
+// quien importe) la puede cambiar antes de guardar, nunca se guarda a
+// ciegas. Basado en los mismos patrones ya vistos al inventariar Drive a
+// mano (10/09/2026).
+const FAMILY_PATH_RULES = [
+  [/MAQUINAS\/|REPUESTOS-ACCESORIOS\//i, 'PURMAC'],
+  [/AGLUPLAST/i, 'Otra'],
+  [/DMF|ISOCIANATO/i, 'Poliuretano'],
+  [/IMPERMEABILIZA|\bPA[ _-]?500\b/i, 'Imperpur'],
+  [/IMPRIMANTE.*POLIUREA|POLIUREA/i, 'Poliurea'],
+  [/RESINA/i, 'Resinplast'],
+  [/SILICONA/i, 'Otra'],
+  [/POLIURETANO/i, 'Poliuretano'],
+  [/PENOSIL/i, 'Penosil'],
+  [/CARROZADO/i, 'Carrozados'],
+  [/BALDE/i, 'Baldes'],
+  [/\bPISO/i, 'Pisos'],
+  [/\bEPP\b/i, 'EPP'],
+  [/ALMOHADA/i, 'Almohadas'],
+  [/PRFV|FIBRA DE VIDRIO/i, 'PRFV'],
+  [/FOAM FACTORY/i, 'Foam Factory'],
+];
+
+export function guessFamilyFromPath(path = '') {
+  for (const [pattern, family] of FAMILY_PATH_RULES) {
+    if (pattern.test(path)) return family;
+  }
+  return 'Otra';
+}
+
+// De "PRODUCTOS/POLIURETANOS RIGIDOS/Ficha Técnica 619 SP/PDS isoBUNKER 619-SP.pdf"
+// saca título (nombre de archivo sin extensión), producto (carpeta
+// inmediata) y familia sugerida - todo editable después, nada definitivo.
+export function parsePathHints(relativePath = '') {
+  const clean = String(relativePath || '').replace(/^\.?\//, '');
+  const parts = clean.split('/').filter(Boolean);
+  const fileName = parts.at(-1) || clean;
+  return {
+    title: fileName.replace(/\.(pdf|docx?|xlsx?)$/i, ''),
+    product: parts.length > 1 ? parts.at(-2) : '',
+    family: guessFamilyFromPath(clean),
+  };
+}
+
 export function historyFromRow(row = {}) {
   return {
     id: row.id,

@@ -5322,7 +5322,6 @@ function TechnicalDocumentsAdmin({ session }) {
                     <button
                       type="button"
                       className="secondary"
-                      disabled={draft.status === doc.status && !draft.notes}
                       onClick={() => saveStatus(doc)}
                     >
                       Guardar
@@ -5346,9 +5345,9 @@ function DataSettings({ data, setData, session, syncStatus }) {
   const [connecting, setConnecting] = useState(false);
   const [exportFamily, setExportFamily] = useState("Todas");
   const [pendingClientImport, setPendingClientImport] = useState(null);
-  const [technicalImportFamily, setTechnicalImportFamily] = useState(FAMILIES[1] || FAMILIES[0]);
   const [technicalImportPreview, setTechnicalImportPreview] = useState(null);
   const [technicalImportBusy, setTechnicalImportBusy] = useState(false);
+  const [technicalImportFamilyOverrides, setTechnicalImportFamilyOverrides] = useState({});
 
   async function importTechnicalDocuments(event) {
     const files = [...(event.target.files || [])];
@@ -5356,29 +5355,39 @@ function DataSettings({ data, setData, session, syncStatus }) {
     if (!files.length) return;
     setTechnicalImportBusy(true);
     setTechnicalImportPreview(null);
+    setTechnicalImportFamilyOverrides({});
     try {
-      const [{ sha256Hex }, { classifyInventoryImport }, { fetchTechnicalDocuments }] =
+      const [{ sha256Hex }, { classifyInventoryImport }, { fetchTechnicalDocuments }, { parsePathHints }] =
         await Promise.all([
           import("./file-hash.mjs"),
           import("./technical-inventory-import.mjs"),
           import("./technical-documents-repo.mjs"),
+          import("./technical-documents-mapping.mjs"),
         ]);
       const existing = await fetchTechnicalDocuments();
       const candidates = await Promise.all(
-        files.map(async (file) => ({
-          title: file.name.replace(/\.(pdf|docx?|xlsx?)$/i, ""),
-          family: technicalImportFamily,
-          docType: "sin_clasificar",
-          source: "drive",
-          sourceFile: file.name,
-          sizeBytes: file.size,
-          sha256: await sha256Hex(file),
-        })),
+        files.map(async (file) => {
+          // webkitRelativePath solo existe si se eligió una carpeta entera
+          // (input con webkitdirectory) - conserva la estructura de Drive.
+          // Con archivos sueltos, cae en el nombre nomás.
+          const relativePath = file.webkitRelativePath || file.name;
+          const hints = parsePathHints(relativePath);
+          return {
+            title: hints.title,
+            family: hints.family,
+            product: hints.product,
+            docType: "sin_clasificar",
+            source: "drive",
+            sourceFile: relativePath,
+            sizeBytes: file.size,
+            sha256: await sha256Hex(file),
+          };
+        }),
       );
       const preview = classifyInventoryImport(candidates, existing);
       setTechnicalImportPreview(preview);
       setMessage(
-        `Vista previa lista: ${preview.new.length} nuevos, ${preview.modified.length} modificados, ${preview.exactDuplicates.length} duplicados exactos, ${preview.possibleDuplicates.length} posibles duplicados, ${preview.errors.length} errores. Nada se guardó todavía.`,
+        `Vista previa lista: ${preview.new.length} nuevos, ${preview.modified.length} modificados, ${preview.exactDuplicates.length} duplicados exactos, ${preview.possibleDuplicates.length} posibles duplicados, ${preview.errors.length} errores. Nada se guardó todavía. Revisá la familia sugerida de cada uno antes de guardar.`,
       );
     } catch (error) {
       setMessage(error.message || "No se pudo analizar los archivos.");
@@ -5392,11 +5401,16 @@ function DataSettings({ data, setData, session, syncStatus }) {
     setTechnicalImportBusy(true);
     try {
       const { saveInventoryImport } = await import("./technical-documents-repo.mjs");
-      const saved = await saveInventoryImport(technicalImportPreview.new);
+      const withFamily = technicalImportPreview.new.map((doc) => ({
+        ...doc,
+        family: technicalImportFamilyOverrides[doc.sourceFile] || doc.family,
+      }));
+      const saved = await saveInventoryImport(withFamily);
       setMessage(
         `${saved.length} documentos guardados como "inventariado". Ningún documento quedó "vigente" automáticamente - falta la validación humana.`,
       );
       setTechnicalImportPreview(null);
+      setTechnicalImportFamilyOverrides({});
     } catch (error) {
       setMessage(error.message || "No se pudo guardar el inventario.");
     } finally {
@@ -5777,28 +5791,36 @@ function DataSettings({ data, setData, session, syncStatus }) {
             <Upload size={24} />
             <h3>Importar fichas técnicas</h3>
             <p>
-              Muestra vista previa (nuevos, modificados, duplicados exactos,
-              posibles duplicados, errores) antes de guardar. Nada queda
-              "vigente" automáticamente - eso lo decide una persona después.
+              Elegí una carpeta entera (conserva la estructura de Drive, sirve
+              para sugerir familia y producto) o archivos sueltos. Muestra
+              vista previa (nuevos, modificados, duplicados exactos, posibles
+              duplicados, errores) antes de guardar - nada queda "vigente"
+              automáticamente. La familia sugerida se puede corregir por
+              archivo antes de guardar, no hace falta que todo el lote sea de
+              la misma.
             </p>
-            <select
-              value={technicalImportFamily}
-              onChange={(event) => setTechnicalImportFamily(event.target.value)}
-            >
-              {FAMILIES.filter((item) => item !== "Sin definir").map((item) => (
-                <option key={item}>{item}</option>
-              ))}
-            </select>
-            <label className="secondary upload-button">
-              {technicalImportBusy ? "Analizando…" : "Elegir archivos"}
-              <input
-                type="file"
-                accept=".pdf,.doc,.docx"
-                multiple
-                disabled={technicalImportBusy}
-                onChange={importTechnicalDocuments}
-              />
-            </label>
+            <div className="modal-actions">
+              <label className="secondary upload-button">
+                {technicalImportBusy ? "Analizando…" : "Elegir carpeta"}
+                <input
+                  type="file"
+                  webkitdirectory=""
+                  directory=""
+                  disabled={technicalImportBusy}
+                  onChange={importTechnicalDocuments}
+                />
+              </label>
+              <label className="secondary upload-button">
+                {technicalImportBusy ? "Analizando…" : "Elegir archivos sueltos"}
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  multiple
+                  disabled={technicalImportBusy}
+                  onChange={importTechnicalDocuments}
+                />
+              </label>
+            </div>
           </article>
         </div>
         {technicalImportPreview && (
@@ -5807,11 +5829,26 @@ function DataSettings({ data, setData, session, syncStatus }) {
             {technicalImportPreview.new.length > 0 && (
               <div>
                 <span className="copilot-suggestion-label">
-                  Nuevos ({technicalImportPreview.new.length})
+                  Nuevos ({technicalImportPreview.new.length}) - revisá la familia de cada uno
                 </span>
-                <ul>
+                <ul className="technical-import-new-list">
                   {technicalImportPreview.new.map((doc) => (
-                    <li key={doc.sourceFile}>{doc.title}</li>
+                    <li key={doc.sourceFile}>
+                      <span>{doc.title}</span>
+                      <select
+                        value={technicalImportFamilyOverrides[doc.sourceFile] || doc.family}
+                        onChange={(event) =>
+                          setTechnicalImportFamilyOverrides((current) => ({
+                            ...current,
+                            [doc.sourceFile]: event.target.value,
+                          }))
+                        }
+                      >
+                        {FAMILIES.filter((item) => item !== "Sin definir").map((item) => (
+                          <option key={item}>{item}</option>
+                        ))}
+                      </select>
+                    </li>
                   ))}
                 </ul>
               </div>

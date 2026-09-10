@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildTechnicalDocument } from '../src/technical-document-governance.mjs';
-import { fromRow, historyFromRow, isTechnicalDocumentAdmin, toRow } from '../src/technical-documents-mapping.mjs';
+import { fromRow, guessFamilyFromPath, historyFromRow, isTechnicalDocumentAdmin, parsePathHints, toRow } from '../src/technical-documents-mapping.mjs';
 
 test('toRow maps a built document to snake_case columns, defaulting to inventariado', () => {
   const document = buildTechnicalDocument({ title: 'isoBUNKER 619-SP', family: 'Poliuretano', product: 'isoBUNKER 619-SP', sourceFile: 'a.pdf', sha256: 'abc', sizeBytes: 100 });
@@ -49,6 +49,28 @@ test('isTechnicalDocumentAdmin only allows the same two accounts as the DB-level
   assert.equal(isTechnicalDocumentAdmin('juan@grupopoliplast.com.ar'), false);
   assert.equal(isTechnicalDocumentAdmin('info@grupopoliplast.com.ar'), false);
   assert.equal(isTechnicalDocumentAdmin(''), false);
+});
+
+test('guessFamilyFromPath suggests a family from folder names, never leaves it blank', () => {
+  assert.equal(guessFamilyFromPath('MAQUINAS/Airless 390.pdf'), 'PURMAC');
+  assert.equal(guessFamilyFromPath('PRODUCTOS/POLIURETANOS RIGIDOS/Ficha X.pdf'), 'Poliuretano');
+  assert.equal(guessFamilyFromPath('PRODUCTOS/RESINAS/Ficha.pdf'), 'Resinplast');
+  assert.equal(guessFamilyFromPath('algo/sin/pista.pdf'), 'Otra');
+  assert.equal(guessFamilyFromPath(''), 'Otra');
+});
+
+test('parsePathHints derives title/product/family from a relative path, all meant to be edited before saving', () => {
+  const hints = parsePathHints('PRODUCTOS/POLIURETANOS RIGIDOS/Ficha Técnica 619 SP/PDS isoBUNKER 619-SP.pdf');
+  assert.equal(hints.title, 'PDS isoBUNKER 619-SP');
+  assert.equal(hints.product, 'Ficha Técnica 619 SP');
+  assert.equal(hints.family, 'Poliuretano');
+});
+
+test('parsePathHints handles a flat file with no folder (regular multi-file picker, not a folder picker)', () => {
+  const hints = parsePathHints('Airless 390.pdf');
+  assert.equal(hints.title, 'Airless 390');
+  assert.equal(hints.product, '');
+  assert.equal(hints.family, 'Otra');
 });
 
 test('toRow/fromRow round-trip preserves the fields that matter for the preview', () => {

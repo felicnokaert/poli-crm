@@ -35,7 +35,8 @@ Permitir que Claude continúe el Sistema Comercial Grupo Poliplast y coordine el
 | Historial comercial | Identidad y filtros corregidos | `16f1e02`: no une fichas distintas solo por nombre; vincula legado únicamente si no hay ambigüedad; filtro inclusivo desde/hasta y fecha/hora 24 h; 183 tests | QA visual con historial real |
 | Contactos no comerciales | Persistencia por persona construida | `0ce5a6a`: categoría guardada en el contacto exacto y regla de exclusión sincronizada; reversible sin afectar a toda la empresa; 184 tests | QA con un contacto real reversible |
 | WhatsApp General | No modificar sin regresión específica | pruebas automatizadas | seguimiento operativo |
-| WhatsApp Penosil | Meta oficial; puente retirado | documentación y pruebas del webhook | coexistencia/validación real según estado vigente |
+| WhatsApp Penosil | Diferido por decisión de Felipe (10/09/2026) | Meta oficial y webhook construidos; puente retirado | Retomar con Claude cuando haya disponibilidad: activar coexistencia del número físico y validar un mensaje entrante real. No bloquea el cierre Codex |
+| WhatsApp Juan | Diferido por decisión de Felipe (10/09/2026) | aislamiento y configuración técnica existentes | Retomar con Claude cuando haya disponibilidad: validar acceso, canal propio y uso real. No bloquea el cierre Codex |
 | Mercado Libre | Integración oficial de lectura construida para POLIPLAST y FOAM | endpoints OAuth/sync + tests | autorización real y validación de paridad |
 | Ventas y comisiones | Implementado parcialmente | parser, objetivos y pruebas | validación con datos reales/multi-comercial |
 
@@ -47,6 +48,7 @@ Permitir que Claude continúe el Sistema Comercial Grupo Poliplast y coordine el
 - Ninguna sugerencia del copiloto envía mensajes por sí sola.
 - Precios, stock, rendimiento y compatibilidad siempre requieren fuente verificable.
 - Las tareas se crean solo ante compromisos, urgencia, cotización pendiente, recompra probable o seguimiento expresamente acordado.
+- Penosil y Juan quedan en backlog explícito: no se consideran fallas abiertas ni prioridades del sprint final de Codex. WhatsApp General permanece operativo y fuera de cambios salvo una regresión comprobada.
 
 ## 5. Sprint final Codex: 10 al 18 de septiembre
 

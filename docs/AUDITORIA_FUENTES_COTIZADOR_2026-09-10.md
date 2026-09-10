@@ -101,11 +101,12 @@ Primero se genera como auditoría y vista previa. No se carga automáticamente a
 
 El 10/09/2026 se generó `output/catalogo/Base_Maestra_Cotizador_2026-09-10.xlsx` con:
 
-- 1.133 filas operativas de origen.
-- 1.130 SKU únicos consolidados.
+- 2.077 filas operativas consideradas.
+- 2.074 SKU únicos consolidados.
+- 944 SKU agregados desde la hoja operativa amplia que no estaban en la revisión curada.
 - 3 SKU duplicados, conservados en una hoja de conflictos y no fusionados.
-- 24 precios mayoristas Resinplast confirmados por coincidencia exacta de SKU.
+- 26 precios mayoristas Resinplast confirmados por coincidencia exacta de SKU.
 - 24 precios Penosil conservados como `REVISAR_TIPO_LISTA`, porque la fuente está rotulada PVP y no autoriza declararlos mayoristas sin confirmación.
-- 1.082 SKU con mayorista `PENDIENTE` y valor vacío.
+- 2.024 SKU con mayorista `PENDIENTE` y valor vacío.
 
 El archivo separa precio operativo de referencia y precio mayorista. No utiliza uno para completar automáticamente el otro. Incluye hojas `Resumen`, `Catalogo maestro`, `Conflictos` y `Fuentes`, filtros de tabla y columnas editables para decisión de Felipe, ficha técnica e imagen.

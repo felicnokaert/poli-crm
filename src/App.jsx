@@ -104,6 +104,7 @@ import {
   PLAYBOOKS,
   findObjections,
 } from "./commercial-knowledge.mjs";
+import { buildCommercialGuidance } from "./commercial-guidance.mjs";
 
 // El sufijo fuerza una única segunda pasada que también incluye las tareas
 // antiguas sin fecha de vencimiento, usando su fecha de creación.
@@ -4132,6 +4133,7 @@ function ClientDetail({
     setEditing(false);
   }
   const contacts = clientContacts(draft);
+  const guidance = buildCommercialGuidance({ client, interactions });
   function changeContact(contactId, fieldName, value) {
     setDraft((current) => updateClientContact(current, contactId, { [fieldName]: value }));
   }
@@ -4180,6 +4182,22 @@ function ClientDetail({
             </button>
           </div>
         </div>
+        {!editing && (
+          <div className="commercial-guidance">
+            <div className="commercial-guidance-head">
+              <div><span className="eyebrow">Copiloto comercial · sin IA paga</span><h3>Cómo avanzar con esta cuenta</h3></div>
+              <span className="guidance-stage">{guidance.stage.label}</span>
+            </div>
+            <div className="guidance-grid">
+              <article><span>Objetivo de etapa</span><strong>{guidance.stage.objective}</strong><p>{guidance.stage.advanceWhen}</p></article>
+              <article><span>Perfil sugerido</span><strong>{guidance.playbook?.label || "Pendiente de definir"}</strong><p>{guidance.playbook?.motivation || "Completá la familia o industria para recomendar un playbook."}</p></article>
+              <article><span>{guidance.objection ? "Objeción detectada" : "Próxima pregunta"}</span><strong>{guidance.objection?.label || guidance.nextQuestion}</strong><p>{guidance.objection ? guidance.objection.explore : guidance.playbook?.nextStep || "Conseguir contexto antes de recomendar."}</p></article>
+            </div>
+            {guidance.objection && <div className="guidance-response"><strong>Respuesta a construir con E-C-E-R-A</strong><p>{guidance.objection.response}</p><small>Escuchar → Confirmar → Explorar → Responder → Acordar. No enviar automáticamente.</small></div>}
+            {!!guidance.crossSellFamilies.length && <p className="guidance-cross-sell"><strong>Venta cruzada posible:</strong> {guidance.crossSellFamilies.join(" · ")}. Confirmar necesidad antes de ofrecer.</p>}
+            <details><summary>Por qué aparece esta sugerencia</summary><ul>{guidance.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul><p>Fuente: {guidance.source}</p></details>
+          </div>
+        )}
         {editing ? (
           <form onSubmit={submit}>
             <div className="form-grid">

@@ -5295,11 +5295,12 @@ function TechnicalDocumentsAdmin({ session }) {
   }, [session?.user?.email]);
 
   function draftFor(doc) {
-    return drafts[doc.id] || { status: doc.status, notes: "" };
+    return drafts[doc.id] || { status: doc.status, notes: "", replacedBy: doc.replacedBy || "" };
   }
   function updateDraft(docId, patch) {
     setDrafts((current) => {
-      const base = current[docId] || { status: documents.find((item) => item.id === docId)?.status || "inventariado", notes: "" };
+      const doc = documents.find((item) => item.id === docId);
+      const base = current[docId] || { status: doc?.status || "inventariado", notes: "", replacedBy: doc?.replacedBy || "" };
       return { ...current, [docId]: { ...base, ...patch } };
     });
   }
@@ -5318,9 +5319,10 @@ function TechnicalDocumentsAdmin({ session }) {
         notes: draft.notes,
         verifiedByUserId: draft.status === "vigente" ? session?.user?.id : null,
         verifiedByEmail: draft.status === "vigente" ? session?.user?.email : null,
+        replacedBy: draft.status === "desactualizado" ? draft.replacedBy || null : null,
       });
       setDocuments((current) => current.map((item) => (item.id === doc.id ? updated : item)));
-      setDrafts((current) => ({ ...current, [doc.id]: { status: updated.status, notes: "" } }));
+      setDrafts((current) => ({ ...current, [doc.id]: { status: updated.status, notes: "", replacedBy: updated.replacedBy || "" } }));
       setMessage(`"${doc.title}" quedó en ${TECHNICAL_DOCUMENT_STATUS_LABELS[updated.status] || updated.status}.`);
     } catch (error) {
       setMessage(error.message || "No se pudo guardar el cambio de estado.");
@@ -5443,6 +5445,11 @@ function TechnicalDocumentGroups({ documents, groupByFolder, titleDrafts, setTit
                       {doc.verifiedAt ? new Date(doc.verifiedAt).toLocaleDateString("es-AR") : ""}
                     </span>
                   )}
+                  {doc.status === "desactualizado" && doc.replacedBy && (
+                    <span>
+                      Reemplazada por: {documents.find((item) => item.id === doc.replacedBy)?.title || "documento eliminado"}
+                    </span>
+                  )}
                 </div>
                 <div className="technical-document-actions">
                   <select
@@ -5455,6 +5462,19 @@ function TechnicalDocumentGroups({ documents, groupByFolder, titleDrafts, setTit
                         <option key={key} value={key}>{label}</option>
                       ))}
                   </select>
+                  {draft.status === "desactualizado" && (
+                    <select
+                      value={draft.replacedBy || ""}
+                      onChange={(event) => updateDraft(doc.id, { replacedBy: event.target.value })}
+                    >
+                      <option value="">Reemplazada por (opcional)</option>
+                      {documents
+                        .filter((item) => item.id !== doc.id)
+                        .map((item) => (
+                          <option key={item.id} value={item.id}>{item.title}</option>
+                        ))}
+                    </select>
+                  )}
                   <input
                     placeholder="Observación (queda en el historial)"
                     value={draft.notes}

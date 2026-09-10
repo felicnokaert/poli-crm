@@ -33,13 +33,16 @@ export async function saveInventoryImport(newDocuments = []) {
 // is_poliplast_crm_admin con verified_by/verified_at presentes). notes queda
 // como la observación de ese cambio puntual - log_technical_document_status_change
 // la copia al historial automáticamente.
-export async function updateTechnicalDocumentStatus(id, { status, notes = '', verifiedByUserId = null, verifiedByEmail = null, verifiedAt = null } = {}) {
+export async function updateTechnicalDocumentStatus(id, { status, notes = '', verifiedByUserId = null, verifiedByEmail = null, verifiedAt = null, replacedBy = undefined } = {}) {
   const patch = { status, notes };
   if (status === 'vigente') {
     patch.verified_by = verifiedByUserId;
     patch.verified_by_email = verifiedByEmail;
     patch.verified_at = verifiedAt || new Date().toISOString();
   }
+  // replacedBy solo se toca si vino explícito - así un cambio de estado que
+  // no habla de reemplazo no borra un vínculo ya guardado.
+  if (replacedBy !== undefined) patch.replaced_by = replacedBy || null;
   const { data, error } = await supabase.from('technical_documents').update(patch).eq('id', id).select().maybeSingle();
   if (error) throw error;
   return data ? fromRow(data) : null;

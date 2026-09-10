@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildTechnicalDocument } from '../src/technical-document-governance.mjs';
-import { fromRow, historyFromRow, toRow } from '../src/technical-documents-mapping.mjs';
+import { fromRow, historyFromRow, isTechnicalDocumentAdmin, toRow } from '../src/technical-documents-mapping.mjs';
 
 test('toRow maps a built document to snake_case columns, defaulting to inventariado', () => {
   const document = buildTechnicalDocument({ title: 'isoBUNKER 619-SP', family: 'Poliuretano', product: 'isoBUNKER 619-SP', sourceFile: 'a.pdf', sha256: 'abc', sizeBytes: 100 });
@@ -40,6 +40,15 @@ test('historyFromRow maps an audit row to camelCase', () => {
   assert.equal(entry.documentId, 'd1');
   assert.equal(entry.previousStatus, 'inventariado');
   assert.equal(entry.newStatus, 'vigente');
+});
+
+test('isTechnicalDocumentAdmin only allows the same two accounts as the DB-level admin check, case-insensitively', () => {
+  assert.equal(isTechnicalDocumentAdmin('felipe@grupopoliplast.com.ar'), true);
+  assert.equal(isTechnicalDocumentAdmin('Felipe@GrupoPoliplast.com.ar'), true);
+  assert.equal(isTechnicalDocumentAdmin('felipecnokaert@gmail.com'), true);
+  assert.equal(isTechnicalDocumentAdmin('juan@grupopoliplast.com.ar'), false);
+  assert.equal(isTechnicalDocumentAdmin('info@grupopoliplast.com.ar'), false);
+  assert.equal(isTechnicalDocumentAdmin(''), false);
 });
 
 test('toRow/fromRow round-trip preserves the fields that matter for the preview', () => {

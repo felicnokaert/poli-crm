@@ -31,6 +31,7 @@ import {
   UserCog,
   ShoppingBag,
   ExternalLink,
+  FileCheck2,
 } from "lucide-react";
 import { useConfirm } from "./ConfirmDialog";
 import {
@@ -1629,6 +1630,7 @@ export default function App() {
     ]],
     ["Recursos", [
       ["academy", "Academia comercial", GraduationCap],
+      ["techdocs", "Base técnica", FileCheck2],
     ]],
     ["Sistema", [
       ["profile", "Perfil", UserCog],
@@ -1868,6 +1870,9 @@ export default function App() {
             data={data}
             setData={setData}
           />
+        )}
+        {view === "techdocs" && (
+          <TechnicalDocumentsAdmin session={session} />
         )}
         {view === "profile" && (
           <Profile data={data} setData={setData} session={session} />
@@ -5160,6 +5165,176 @@ function Profile({ data, setData, session }) {
           </div>
         </form>
         {message && <div className="system-message">{message}</div>}
+      </section>
+    </div>
+  );
+}
+
+const TECHNICAL_DOCUMENT_STATUS_LABELS = {
+  inventariado: "Inventariado",
+  posible_duplicado: "Posible duplicado",
+  pendiente_validacion: "Pendiente de validación",
+  vigente: "Vigente",
+  desactualizado: "Desactualizado",
+  no_tecnico: "No técnico",
+};
+
+function TechnicalDocumentsAdmin({ session }) {
+  const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [familyFilter, setFamilyFilter] = useState("all");
+  const [drafts, setDrafts] = useState({});
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const [{ fetchTechnicalDocuments }, { isTechnicalDocumentAdmin }] = await Promise.all([
+        import("./technical-documents-repo.mjs"),
+        import("./technical-documents-mapping.mjs"),
+      ]);
+      const docs = await fetchTechnicalDocuments();
+      setDocuments(docs);
+      setIsAdmin(isTechnicalDocumentAdmin(session?.user?.email));
+    } catch (error) {
+      setMessage(error.message || "No se pudo cargar la base técnica.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.email]);
+
+  function draftFor(doc) {
+    return drafts[doc.id] || { status: doc.status, notes: "" };
+  }
+  function updateDraft(docId, patch) {
+    setDrafts((current) => {
+      const base = current[docId] || { status: documents.find((item) => item.id === docId)?.status || "inventariado", notes: "" };
+      return { ...current, [docId]: { ...base, ...patch } };
+    });
+  }
+
+  async function saveStatus(doc) {
+    const draft = draftFor(doc);
+    if (draft.status === "vigente" && !isAdmin) {
+      setMessage('Solo Felipe puede marcar un documento "vigente".');
+      return;
+    }
+    setMessage("Guardando…");
+    try {
+      const { updateTechnicalDocumentStatus } = await import("./technical-documents-repo.mjs");
+      const updated = await updateTechnicalDocumentStatus(doc.id, {
+        status: draft.status,
+        notes: draft.notes,
+        verifiedByUserId: draft.status === "vigente" ? session?.user?.id : null,
+        verifiedByEmail: draft.status === "vigente" ? session?.user?.email : null,
+      });
+      setDocuments((current) => current.map((item) => (item.id === doc.id ? updated : item)));
+      setDrafts((current) => ({ ...current, [doc.id]: { status: updated.status, notes: "" } }));
+      setMessage(`"${doc.title}" quedó en ${TECHNICAL_DOCUMENT_STATUS_LABELS[updated.status] || updated.status}.`);
+    } catch (error) {
+      setMessage(error.message || "No se pudo guardar el cambio de estado.");
+    }
+  }
+
+  const families = [...new Set(documents.map((doc) => doc.family))].sort();
+  const filtered = documents.filter(
+    (doc) =>
+      (statusFilter === "all" || doc.status === statusFilter) &&
+      (familyFilter === "all" || doc.family === familyFilter),
+  );
+
+  return (
+    <div className="content-stack">
+      <section className="panel">
+        <div className="panel-head">
+          <div>
+            <span className="eyebrow">Catálogo compartido, sin copiar el archivo</span>
+            <h2>Base técnica</h2>
+            <p>
+              Documentos importados desde Drive, indexados acá. Solo Felipe
+              puede marcar un documento "vigente" - hasta entonces, ninguna
+              sugerencia del copiloto puede citarlo.
+            </p>
+          </div>
+          <FileCheck2 size={22} />
+        </div>
+        <div className="list-toolbar inbox-filters">
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+            <option value="all">Todos los estados</option>
+            {Object.entries(TECHNICAL_DOCUMENT_STATUS_LABELS).map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+          <select value={familyFilter} onChange={(event) => setFamilyFilter(event.target.value)}>
+            <option value="all">Todas las familias</option>
+            {families.map((family) => (
+              <option key={family}>{family}</option>
+            ))}
+          </select>
+        </div>
+        {message && <div className="system-message">{message}</div>}
+        {loading ? (
+          <Empty text="Cargando…" />
+        ) : filtered.length ? (
+          <div className="conversation-list">
+            {filtered.map((doc) => {
+              const draft = draftFor(doc);
+              return (
+                <article className="technical-document-row" key={doc.id}>
+                  <div>
+                    <strong>{doc.title}</strong>
+                    <span>
+                      {doc.family}
+                      {doc.product ? ` · ${doc.product}` : ""} ·{" "}
+                      {TECHNICAL_DOCUMENT_STATUS_LABELS[doc.status] || doc.status}
+                      {doc.sourceFile ? ` · ${doc.sourceFile}` : ""}
+                    </span>
+                    {doc.status === "vigente" && (
+                      <span>
+                        Validado por {doc.verifiedByEmail || "?"} ·{" "}
+                        {doc.verifiedAt ? new Date(doc.verifiedAt).toLocaleDateString("es-AR") : ""}
+                      </span>
+                    )}
+                  </div>
+                  <div className="technical-document-actions">
+                    <select
+                      value={draft.status}
+                      onChange={(event) => updateDraft(doc.id, { status: event.target.value })}
+                    >
+                      {Object.entries(TECHNICAL_DOCUMENT_STATUS_LABELS)
+                        .filter(([key]) => key !== "vigente" || isAdmin)
+                        .map(([key, label]) => (
+                          <option key={key} value={key}>{label}</option>
+                        ))}
+                    </select>
+                    <input
+                      placeholder="Observación (queda en el historial)"
+                      value={draft.notes}
+                      onChange={(event) => updateDraft(doc.id, { notes: event.target.value })}
+                    />
+                    <button
+                      type="button"
+                      className="secondary"
+                      disabled={draft.status === doc.status && !draft.notes}
+                      onClick={() => saveStatus(doc)}
+                    >
+                      Guardar
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <Empty text="No hay documentos importados todavía. Subí fichas desde Datos → Importar fichas técnicas." />
+        )}
       </section>
     </div>
   );

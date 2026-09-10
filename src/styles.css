@@ -316,3 +316,8 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .copilot-suggestion ul { margin: 4px 0 10px; padding-left: 18px; font-size: 13px; }
 .copilot-suggestion-label { display: block; font-size: 11.5px; font-weight: 600; color: #4f6b62; text-transform: uppercase; letter-spacing: 0.03em; margin-top: 8px; }
 .copilot-suggestion-pending { color: #8a6d1f; font-size: 12px; }
+.technical-document-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 1px solid #e3e8e5; }
+.technical-document-row strong { display: block; font-size: 13px; }
+.technical-document-row > div:first-child span { display: block; color: #758781; font-size: 11.5px; margin-top: 2px; }
+.technical-document-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.technical-document-actions input { min-width: 200px; }

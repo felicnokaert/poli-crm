@@ -52,6 +52,17 @@ export function fromRow(row = {}) {
   };
 }
 
+// Mismo criterio que public.is_poliplast_crm_admin() en
+// docs/MIGRACION_BASE_TECNICA.sql - repetido acá a propósito, como en
+// api/commercial-master.js/meta-subscribe.js. Es solo para la UI (mostrar u
+// ocultar la opción "vigente"); la seguridad real la hace RLS del lado del
+// servidor, esto nunca es lo único que protege el dato.
+const TECHNICAL_DOCUMENT_ADMINS = ['felipecnokaert@gmail.com', 'felipe@grupopoliplast.com.ar'];
+
+export function isTechnicalDocumentAdmin(email = '') {
+  return TECHNICAL_DOCUMENT_ADMINS.includes(String(email || '').trim().toLowerCase());
+}
+
 export function historyFromRow(row = {}) {
   return {
     id: row.id,

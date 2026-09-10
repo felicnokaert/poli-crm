@@ -46,6 +46,32 @@ test('every technical field is explicitly pending, never a guessed value', () =>
   assert.equal(suggestion.provenance.technicalFields, 'pendiente_de_validacion');
 });
 
+test('cites a real excerpt only from a vigente, validated ficha with extracted text - the one path where a technical field stops being pending', () => {
+  const vigenteConTexto = {
+    id: 'doc-1', family: 'Poliuretano', product: 'isoBUNKER 619-SP', docType: 'ficha_tecnica',
+    status: 'vigente', sourceUrl: 'https://drive.google.com/x', verifiedBy: 'user-1', verifiedAt: '2026-09-10T00:00:00Z',
+    extractedText: 'Rendimiento: 1 kg de mezcla rinde 30 litros de espuma expandida',
+  };
+  const suggestion = buildSuggestion({ text_body: 'consulta sobre isoBUNKER poliuretano rígido' }, { documents: [vigenteConTexto] });
+  assert.equal(suggestion.family, 'Poliuretano');
+  assert.match(suggestion.technicalFields.rendimiento, /Rendimiento: 1 kg de mezcla rinde 30 litros/);
+  assert.match(suggestion.technicalFields.rendimiento, /isoBUNKER 619-SP/);
+  // Nunca de precio/stock, ni de campos sin coincidencia literal en el texto.
+  assert.equal(suggestion.technicalFields.precio, 'Pendiente de verificar (sin ficha validada)');
+  assert.equal(suggestion.technicalFields.compatibilidad, 'Pendiente de verificar (sin ficha validada)');
+  assert.equal(suggestion.provenance.technicalFields, 'ficha_vigente_validada');
+});
+
+test('does not cite a non-vigente or unvalidated ficha even if its text has the keyword', () => {
+  const sinValidar = {
+    id: 'doc-2', family: 'Poliuretano', product: 'isoBUNKER 619-SP', docType: 'ficha_tecnica',
+    status: 'inventariado', extractedText: 'Rendimiento: 30 litros por kg',
+  };
+  const suggestion = buildSuggestion({ text_body: 'consulta sobre isoBUNKER poliuretano rígido' }, { documents: [sinValidar] });
+  assert.equal(suggestion.technicalFields.rendimiento, 'Pendiente de verificar (sin ficha validada)');
+  assert.equal(suggestion.provenance.technicalFields, 'pendiente_de_validacion');
+});
+
 test('draft message never states a technical claim, only cites doc names and asks questions', () => {
   const suggestion = buildSuggestion({ text_body: 'necesito espuma rígida de poliuretano para techo' });
   assert.ok(suggestion.draftMessage.includes('Pendiente de verificar'));

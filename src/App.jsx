@@ -5342,6 +5342,28 @@ function TechnicalDocumentsAdmin({ session }) {
     }
   }
 
+  // Backfill para las fichas que ya estaban cargadas antes de que existiera
+  // extracted_text (68 al día de hoy): Felipe vuelve a elegir el mismo
+  // archivo puntual, se extrae el texto y se guarda - no reimporta ni
+  // duplica el documento, solo le agrega el contenido que le faltaba.
+  async function uploadExtractedText(doc, file) {
+    if (!file) return;
+    setMessage(`Extrayendo texto de "${doc.title}"…`);
+    try {
+      const [{ extractPdfText }, { updateTechnicalDocumentExtractedText }] = await Promise.all([
+        import("./pdf-text.js"),
+        import("./technical-documents-repo.mjs"),
+      ]);
+      const text = await extractPdfText(file);
+      if (!text.trim()) throw new Error("No se pudo extraer texto de ese archivo (¿es un PDF escaneado como imagen?).");
+      const updated = await updateTechnicalDocumentExtractedText(doc.id, text);
+      setDocuments((current) => current.map((item) => (item.id === doc.id ? updated : item)));
+      setMessage(`Texto cargado para "${doc.title}". El copiloto ya puede citarlo si está vigente y validado.`);
+    } catch (error) {
+      setMessage(error.message || "No se pudo extraer el texto de ese archivo.");
+    }
+  }
+
   const families = [...new Set(documents.map((doc) => doc.family))].sort();
   const filtered = documents.filter(
     (doc) =>
@@ -5396,6 +5418,7 @@ function TechnicalDocumentsAdmin({ session }) {
             updateDraft={updateDraft}
             saveStatus={saveStatus}
             isAdmin={isAdmin}
+            uploadExtractedText={uploadExtractedText}
           />
         ) : (
           <Empty text="No hay documentos importados todavía. Subí fichas desde Datos → Importar fichas técnicas." />
@@ -5405,7 +5428,7 @@ function TechnicalDocumentsAdmin({ session }) {
   );
 }
 
-function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin }) {
+function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, uploadExtractedText }) {
   const draft = draftFor(doc);
   return (
     <article className="technical-document-row">
@@ -5432,6 +5455,21 @@ function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleDrafts, 
             Reemplazada por: {allDocuments.find((item) => item.id === doc.replacedBy)?.title || "documento eliminado"}
           </span>
         )}
+        <span className={doc.extractedText ? "technical-document-text-ok" : "technical-document-text-missing"}>
+          {doc.extractedText
+            ? "Texto cargado · el copiloto puede citarlo si está vigente"
+            : "Sin texto cargado · el copiloto no puede citar datos de esta ficha todavía"}
+          {" "}
+          <label className="technical-document-upload-text-link">
+            {doc.extractedText ? "Reemplazar" : "Cargar texto"}
+            <input
+              type="file"
+              accept="application/pdf"
+              hidden
+              onChange={(event) => uploadExtractedText(doc, event.target.files?.[0])}
+            />
+          </label>
+        </span>
       </div>
       <div className="technical-document-actions">
         <select
@@ -5508,12 +5546,12 @@ function TechnicalDocumentFolderNode({ node, depth, rowProps }) {
   );
 }
 
-function TechnicalDocumentGroups({ documents, groupByFolder, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin }) {
+function TechnicalDocumentGroups({ documents, groupByFolder, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, uploadExtractedText }) {
   const [buildFolderTree, setBuildFolderTree] = useState(null);
   useEffect(() => {
     import("./technical-documents-mapping.mjs").then(({ buildFolderTree: fn }) => setBuildFolderTree(() => fn));
   }, []);
-  const rowProps = { allDocuments: documents, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin };
+  const rowProps = { allDocuments: documents, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, uploadExtractedText };
   if (!groupByFolder || !buildFolderTree) {
     return (
       <div className="conversation-list">
@@ -5564,6 +5602,19 @@ function DataSettings({ data, setData, session, syncStatus }) {
           // Con archivos sueltos, cae en el nombre nomás.
           const relativePath = file.webkitRelativePath || file.name;
           const hints = parsePathHints(relativePath);
+          // Extraer el texto es "mejor esfuerzo": si el archivo no es un PDF
+          // legible o pdf.js falla, el documento igual se importa - solo
+          // queda sin texto, como estaba antes, y el copiloto sigue sin citar
+          // nada de él hasta que alguien lo cargue a mano.
+          let extractedText = null;
+          if (/\.pdf$/i.test(file.name)) {
+            try {
+              const { extractPdfText } = await import("./pdf-text.js");
+              extractedText = await extractPdfText(file);
+            } catch {
+              extractedText = null;
+            }
+          }
           return {
             title: hints.title,
             family: hints.family,
@@ -5573,6 +5624,7 @@ function DataSettings({ data, setData, session, syncStatus }) {
             sourceFile: relativePath,
             sizeBytes: file.size,
             sha256: await sha256Hex(file),
+            extractedText,
           };
         }),
       );

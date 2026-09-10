@@ -3,7 +3,9 @@ import test from 'node:test';
 import {
   buildTechnicalDocument,
   canCiteTechnicalFact,
+  citableExcerpt,
   citationDecision,
+  extractFactExcerpt,
   groupDuplicateCandidates,
   normalizeDocumentName,
 } from '../src/technical-document-governance.mjs';
@@ -56,4 +58,41 @@ test('solo permite citar datos tecnicos con documento vigente, fuente y validaci
     allowed: false,
     reason: 'documento_no_vigente',
   });
+});
+
+test('extractFactExcerpt solo cita una linea que existe literalmente en el texto, nunca inventa ni resume', () => {
+  const text = [
+    'FICHA TECNICA isoBUNKER 619-SP',
+    'Densidad libre: 35 kg/m3',
+    'Rendimiento: 1 kg de mezcla rinde aproximadamente 30 litros de espuma expandida',
+    'Almacenar en lugar fresco y seco',
+  ].join('\n');
+  assert.equal(
+    extractFactExcerpt(text, 'rendimiento'),
+    'Rendimiento: 1 kg de mezcla rinde aproximadamente 30 litros de espuma expandida Almacenar en lugar fresco y seco',
+  );
+  assert.equal(extractFactExcerpt(text, 'compatibilidad'), null);
+  assert.equal(extractFactExcerpt('', 'rendimiento'), null);
+  assert.equal(extractFactExcerpt(text, 'tipo_inventado'), null);
+});
+
+test('citableExcerpt nunca cita de un documento no vigente/no validado, aunque el texto tenga la palabra clave', () => {
+  const text = 'Rendimiento: 30 litros por kg';
+  const notVerified = buildTechnicalDocument({ id: 'a', title: 'Ficha A', status: 'inventariado', extractedText: text });
+  assert.equal(citableExcerpt(notVerified, 'rendimiento'), null);
+
+  const verifiedNoText = buildTechnicalDocument({
+    id: 'b', title: 'Ficha B', status: 'vigente', sourceUrl: 'https://drive/x',
+    verifiedBy: 'Felipe', verifiedAt: '2026-09-10T00:00:00Z',
+  });
+  assert.equal(citableExcerpt(verifiedNoText, 'rendimiento'), null);
+
+  const verifiedWithText = buildTechnicalDocument({
+    id: 'c', title: 'Ficha C', product: 'isoBUNKER 619-SP', status: 'vigente', sourceUrl: 'https://drive/x',
+    verifiedBy: 'Felipe', verifiedAt: '2026-09-10T00:00:00Z', extractedText: text,
+  });
+  const cited = citableExcerpt(verifiedWithText, 'rendimiento');
+  assert.equal(cited.excerpt, 'Rendimiento: 30 litros por kg');
+  assert.equal(cited.source, 'isoBUNKER 619-SP');
+  assert.equal(cited.allowed, true);
 });

@@ -59,6 +59,17 @@ export async function updateTechnicalDocumentTitle(id, title) {
   return data ? fromRow(data) : null;
 }
 
+// Guarda el texto real extraído del archivo (ver src/pdf-text.js) para que
+// el copiloto pueda citar una línea literal de una ficha vigente en vez de
+// depender solo del nombre (technical-document-governance.mjs
+// citableExcerpt). No cambia el estado ni dispara historial de validación -
+// es contenido, no una decisión de gobernanza.
+export async function updateTechnicalDocumentExtractedText(id, extractedText) {
+  const { data, error } = await supabase.from('technical_documents').update({ extracted_text: extractedText || null }).eq('id', id).select().maybeSingle();
+  if (error) throw error;
+  return data ? fromRow(data) : null;
+}
+
 export async function fetchTechnicalDocumentHistory(documentId) {
   const { data, error } = await supabase
     .from('technical_document_history')

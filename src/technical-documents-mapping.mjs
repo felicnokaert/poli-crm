@@ -21,6 +21,7 @@ export function toRow(document = {}) {
     size_bytes: document.sizeBytes || null,
     status: document.status || 'inventariado',
     notes: document.notes || '',
+    extracted_text: document.extractedText || null,
   };
 }
 
@@ -46,6 +47,7 @@ export function fromRow(row = {}) {
     verifiedAt: row.verified_at,
     replacedBy: row.replaced_by,
     notes: row.notes,
+    extractedText: row.extracted_text,
     createdByEmail: row.created_by_email,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

@@ -9,7 +9,10 @@ test('uses the live catalog (technical-documents-repo shape) when provided, inst
   ];
   const suggestion = buildSuggestion({ text_body: 'necesito espuma rígida de poliuretano' }, { documents: liveDocs });
   assert.equal(suggestion.family, 'Poliuretano');
-  assert.deepEqual(suggestion.recommendedDocs, [{ id: 'live-1', product: 'isoBUNKER 619-SP', docType: 'ficha_tecnica', sourceFile: 'x.pdf', verified: false }]);
+  assert.deepEqual(suggestion.recommendedDocs, [{
+    id: 'live-1', product: 'isoBUNKER 619-SP', docType: 'ficha_tecnica', sourceFile: 'x.pdf', verified: false,
+    status: 'inventariado', sourceUrl: undefined, verifiedBy: undefined, verifiedAt: undefined, extractedText: undefined,
+  }]);
 });
 
 test('maps status "vigente" to verified:true, everything else to false', () => {

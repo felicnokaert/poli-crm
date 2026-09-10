@@ -14,6 +14,7 @@
 //   - recomendar qué ficha técnica consultar (solo el nombre, no su contenido);
 //   - redactar un mensaje con copy comercial genérico ya aprobado.
 import { inferIntent } from './commercial-intelligence.mjs';
+import { citableExcerpt } from './technical-document-governance.mjs';
 import { documentsForFamily, docTypeLabel } from './technical-library.mjs';
 
 // Mismas reglas de familia que usa la clasificación manual en App.jsx
@@ -130,6 +131,38 @@ function pendingTechnicalFields() {
   return Object.fromEntries(PENDING_TECHNICAL_FIELDS.map((field) => [field, PENDING_LABEL]));
 }
 
+// precio y stock nunca salen de una ficha técnica (son datos de
+// catálogo/inventario, no del documento) - por eso no tienen factType acá y
+// quedan siempre "pendiente de verificar" en este motor.
+const FIELD_TO_FACT_TYPE = {
+  rendimiento: 'rendimiento',
+  compatibilidad: 'compatibilidad',
+  aplicación: 'aplicacion',
+  dosificación: 'dosificacion',
+  seguridad: 'seguridad',
+};
+
+// Único lugar donde un dato técnico puntual puede reemplazar "pendiente de
+// verificar": solo si hay una ficha recomendada, vigente, validada por
+// Felipe y con una línea literal en su texto extraído que hable de eso. Si
+// falta cualquiera de esas condiciones, el campo se queda pendiente - nunca
+// se completa con una suposición del motor.
+function technicalFieldsFrom(recommendedDocs) {
+  const fields = pendingTechnicalFields();
+  let anyCited = false;
+  for (const [field, factType] of Object.entries(FIELD_TO_FACT_TYPE)) {
+    for (const doc of recommendedDocs) {
+      const cited = citableExcerpt(doc, factType);
+      if (cited) {
+        fields[field] = `"${cited.excerpt}" (fuente: ficha vigente de ${cited.source}, validada)`;
+        anyCited = true;
+        break;
+      }
+    }
+  }
+  return { fields, anyCited };
+}
+
 function buildDraftMessage({ family, missingQuestions, recommendedDocs, closing, intent, isFollowUp }) {
   if (closing) {
     return 'Este mensaje parece un cierre o agradecimiento de una conversación anterior, no una consulta nueva. Revisá el historial con este contacto antes de responder - no hace falta pedirle datos de nuevo.';
@@ -170,7 +203,22 @@ function buildDraftMessage({ family, missingQuestions, recommendedDocs, closing,
 // el índice estático - así el resto de esta función no necesita saber de
 // dónde vino cada documento.
 function fromLiveCatalog(doc) {
-  return { id: doc.id, product: doc.product, docType: doc.docType, sourceFile: doc.sourceFile, verified: doc.status === 'vigente' };
+  return {
+    id: doc.id,
+    product: doc.product,
+    docType: doc.docType,
+    sourceFile: doc.sourceFile,
+    verified: doc.status === 'vigente',
+    // Estos cuatro campos nunca se muestran directo en la UI de
+    // recomendación (ver el test "sin inventar" en suggestion-rules.test.mjs)
+    // - solo alimentan citableExcerpt() para decidir si un dato puntual se
+    // puede citar textual, nunca para mostrar el documento completo.
+    status: doc.status,
+    sourceUrl: doc.sourceUrl,
+    verifiedBy: doc.verifiedBy,
+    verifiedAt: doc.verifiedAt,
+    extractedText: doc.extractedText,
+  };
 }
 
 // event: { channel, text_body, customer_name }
@@ -206,6 +254,8 @@ export function buildSuggestion(event = {}, options = {}) {
         ? 'Revisar el historial de esta conversación antes de responder - puede que estas preguntas ya estén contestadas más arriba'
         : 'Responder confirmando los datos faltantes y citar la ficha técnica correspondiente una vez validada');
 
+  const { fields: technicalFields, anyCited } = technicalFieldsFrom(recommendedDocs);
+
   return {
     family,
     intent,
@@ -215,7 +265,7 @@ export function buildSuggestion(event = {}, options = {}) {
     missingQuestions,
     nextAction,
     recommendedDocs,
-    technicalFields: pendingTechnicalFields(),
+    technicalFields,
     draftMessage: buildDraftMessage({ family, missingQuestions, recommendedDocs, closing, intent, isFollowUp }),
     provenance: {
       family: familyProvenance,
@@ -224,7 +274,7 @@ export function buildSuggestion(event = {}, options = {}) {
       missingQuestions: 'regla_aprobada',
       nextAction: 'regla_aprobada',
       recommendedDocs: recommendedDocs.length > 0 ? 'metadata_ficha' : 'regla_aprobada',
-      technicalFields: 'pendiente_de_validacion',
+      technicalFields: anyCited ? 'ficha_vigente_validada' : 'pendiente_de_validacion',
       draftMessage: 'regla_aprobada',
     },
   };

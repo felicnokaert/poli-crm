@@ -31,11 +31,16 @@ function sameContact(left, right) {
 
 export function clientContacts(client = {}) {
   const source = [];
-  if (client.contact || client.phone || client.email || client.whatsappId) source.push({
+  const storedContacts = Array.isArray(client.contacts) ? client.contacts : [];
+  // Los contactos estructurados son la fuente principal. Los campos históricos
+  // sólo completan fichas viejas; no deben pisar una edición nueva ni generar
+  // un id distinto cada vez que React vuelve a renderizar.
+  source.push(...storedContacts);
+  if (!storedContacts.length && (client.contact || client.phone || client.email || client.whatsappId)) source.push({
+    id: client.primaryContactId || `legacy-${client.id || 'client'}`,
     name: client.contact || '', phone: client.phone || client.whatsappId || '', email: client.email || '',
     whatsappId: client.whatsappId || '', primary: true, source: client.source || 'Ficha principal',
   });
-  source.push(...(Array.isArray(client.contacts) ? client.contacts : []));
   const contacts = [];
   for (const raw of source) {
     const incoming = normalizeContact(raw);
@@ -63,6 +68,41 @@ export function withClientContact(client = {}, contact = {}) {
     email: primary.email || client.email || '',
     whatsappId: primary.whatsappId || client.whatsappId || '',
   };
+}
+
+function syncPrimaryContact(client, contacts) {
+  const next = contacts.map((item, index) => ({
+    ...item,
+    primary: contacts.some((contact) => contact.primary) ? Boolean(item.primary) : index === 0,
+  }));
+  const primary = next.find((item) => item.primary) || next[0] || {};
+  return {
+    ...client,
+    contacts: next,
+    contact: primary.name || '',
+    phone: primary.phone || primary.whatsappId || '',
+    email: primary.email || '',
+    whatsappId: primary.whatsappId || '',
+    primaryContactId: primary.id || '',
+  };
+}
+
+export function updateClientContact(client = {}, contactId, changes = {}) {
+  const contacts = clientContacts(client).map((item) =>
+    item.id === contactId ? normalizeContact({ ...item, ...changes, id: item.id }) : item,
+  );
+  return syncPrimaryContact(client, contacts);
+}
+
+export function removeClientContact(client = {}, contactId) {
+  return syncPrimaryContact(client, clientContacts(client).filter((item) => item.id !== contactId));
+}
+
+export function setPrimaryClientContact(client = {}, contactId) {
+  return syncPrimaryContact(client, clientContacts(client).map((item) => ({
+    ...item,
+    primary: item.id === contactId,
+  })));
 }
 
 export function findClientByWhatsApp(clients = [], event = {}) {

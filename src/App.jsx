@@ -83,6 +83,10 @@ import {
   clientContacts,
   clientSearchText,
   findClientByWhatsApp,
+  removeClientContact,
+  setPrimaryClientContact,
+  updateClientContact,
+  withClientContact,
 } from "./client-contacts.mjs";
 import { FAMILIES } from "./families.mjs";
 import { defaultBusinessUnits } from "./sales-model.mjs";
@@ -4104,6 +4108,7 @@ function ClientDetail({
   useModalEscape(onClose);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(client || {});
+  const [newContact, setNewContact] = useState({ name: "", role: "", phone: "", email: "" });
   useEffect(() => setDraft(client || {}), [client?.id]);
   if (!client) return null;
   const latest = interactions[0];
@@ -4122,6 +4127,15 @@ function ClientDetail({
       contact: draft.contact?.trim() || "",
     });
     setEditing(false);
+  }
+  const contacts = clientContacts(draft);
+  function changeContact(contactId, fieldName, value) {
+    setDraft((current) => updateClientContact(current, contactId, { [fieldName]: value }));
+  }
+  function addContact() {
+    if (!newContact.name.trim() && !newContact.phone.trim() && !newContact.email.trim()) return;
+    setDraft((current) => withClientContact(current, newContact));
+    setNewContact({ name: "", role: "", phone: "", email: "" });
   }
   return (
     <div className="modal-backdrop">
@@ -4178,18 +4192,35 @@ function ClientDetail({
                 CUIT
                 <input {...field("cuit")} />
               </label>
-              <label>
-                Persona / cargo
-                <input {...field("contact")} />
-              </label>
-              <label>
-                Teléfono
-                <input {...field("phone")} />
-              </label>
-              <label>
-                Email
-                <input type="email" {...field("email")} />
-              </label>
+              <div className="span-2 contact-editor">
+                <div className="contact-editor-head">
+                  <div>
+                    <strong>Personas y medios de contacto</strong>
+                    <p>Todos pertenecen a esta misma empresa. Elegí cuál se muestra como contacto principal.</p>
+                  </div>
+                </div>
+                <div className="contact-editor-list">
+                  {contacts.map((contact) => (
+                    <div className="contact-editor-row" key={contact.id}>
+                      <input aria-label="Nombre del contacto" placeholder="Nombre" value={contact.name} onChange={(event) => changeContact(contact.id, "name", event.target.value)} />
+                      <input aria-label="Cargo del contacto" placeholder="Cargo / área" value={contact.role} onChange={(event) => changeContact(contact.id, "role", event.target.value)} />
+                      <input aria-label="Teléfono del contacto" placeholder="Teléfono" value={contact.phone || contact.whatsappId} onChange={(event) => changeContact(contact.id, "phone", event.target.value)} />
+                      <input aria-label="Email del contacto" placeholder="Email" type="email" value={contact.email} onChange={(event) => changeContact(contact.id, "email", event.target.value)} />
+                      <button className={contact.primary ? "primary contact-primary" : "secondary contact-primary"} type="button" onClick={() => setDraft((current) => setPrimaryClientContact(current, contact.id))}>
+                        {contact.primary ? "Principal" : "Hacer principal"}
+                      </button>
+                      <button className="text-danger" type="button" onClick={() => setDraft((current) => removeClientContact(current, contact.id))}>Quitar</button>
+                    </div>
+                  ))}
+                  <div className="contact-editor-row new-contact">
+                    <input aria-label="Nombre del contacto nuevo" placeholder="Nueva persona" value={newContact.name} onChange={(event) => setNewContact({ ...newContact, name: event.target.value })} />
+                    <input aria-label="Cargo del contacto nuevo" placeholder="Cargo / área" value={newContact.role} onChange={(event) => setNewContact({ ...newContact, role: event.target.value })} />
+                    <input aria-label="Teléfono del contacto nuevo" placeholder="Teléfono" value={newContact.phone} onChange={(event) => setNewContact({ ...newContact, phone: event.target.value })} />
+                    <input aria-label="Email del contacto nuevo" placeholder="Email" type="email" value={newContact.email} onChange={(event) => setNewContact({ ...newContact, email: event.target.value })} />
+                    <button className="secondary" type="button" onClick={addContact}>Agregar contacto</button>
+                  </div>
+                </div>
+              </div>
               <label className="span-2">
                 Sitio web
                 <input {...field("website")} />
@@ -4386,6 +4417,19 @@ function ClientDetail({
                 />
               )}
             </div>
+            {clientContacts(client).length > 0 && (
+              <div className="detail-block">
+                <span>Personas y medios de contacto</span>
+                <div className="contact-summary-list">
+                  {clientContacts(client).map((contact) => (
+                    <div className="contact-summary" key={contact.id}>
+                      <strong>{contact.name || "Persona sin nombre"}{contact.primary ? " · Principal" : ""}</strong>
+                      <p>{[contact.role, contact.phone || contact.whatsappId, contact.email].filter(Boolean).join(" · ") || "Datos pendientes"}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {client.notes && (
               <div className="detail-block">
                 <span>Observaciones</span>

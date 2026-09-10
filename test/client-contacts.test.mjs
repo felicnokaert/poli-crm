@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { attachWhatsAppContact, clientContacts, duplicatePhoneSignals, findClientByWhatsApp, withClientContact } from '../src/client-contacts.mjs';
+import { attachWhatsAppContact, clientContacts, duplicatePhoneSignals, findClientByWhatsApp, removeClientContact, setPrimaryClientContact, updateClientContact, withClientContact } from '../src/client-contacts.mjs';
 
 test('keeps several people and phone numbers under one company', () => {
   let client = { id: 'a', company: 'Empresa A' };
@@ -20,4 +20,21 @@ test('flags a shared phone across different companies without merging them', () 
   const first = withClientContact({ id: 'a', company: 'Zatti Sebastian' }, { phone: '3435118264' });
   const second = withClientContact({ id: 'b', company: 'Tecno Pur' }, { phone: '3435118264' });
   assert.equal(duplicatePhoneSignals([first, second]).length, 1);
+});
+
+test('edits, selects and removes contacts while keeping legacy primary fields synchronized', () => {
+  let client = withClientContact({ id: 'a', company: 'Empresa A' }, { name: 'Ana', phone: '111' });
+  client = withClientContact(client, { name: 'Carlos', phone: '222' });
+  const carlos = clientContacts(client).find((item) => item.name === 'Carlos');
+  client = updateClientContact(client, carlos.id, { role: 'Compras', email: 'carlos@empresa.com' });
+  client = setPrimaryClientContact(client, carlos.id);
+  assert.equal(client.contact, 'Carlos');
+  assert.equal(client.phone, '222');
+  assert.equal(client.email, 'carlos@empresa.com');
+  assert.equal(clientContacts(client).find((item) => item.name === 'Carlos').role, 'Compras');
+
+  client = removeClientContact(client, carlos.id);
+  assert.equal(clientContacts(client).length, 1);
+  assert.equal(client.contact, 'Ana');
+  assert.equal(client.phone, '111');
 });

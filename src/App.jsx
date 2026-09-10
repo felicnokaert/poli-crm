@@ -30,6 +30,7 @@ import {
   ListChecks,
   UserCog,
   ShoppingBag,
+  ExternalLink,
 } from "lucide-react";
 import { useConfirm } from "./ConfirmDialog";
 import {
@@ -60,7 +61,6 @@ import { buildRepurchaseRadar } from "./repurchase-radar.mjs";
 import { findColdQuotes } from "./cold-quotes.mjs";
 import { findStaleHotLeads } from "./hot-leads-radar.mjs";
 import Sales from "./Sales";
-import Board from "./Board";
 import PriceMemory from "./PriceMemory";
 import { moveCard, reorderList } from "./board-model.mjs";
 import { wasAnsweredOutside } from "./answered-outside.mjs";
@@ -1598,7 +1598,7 @@ export default function App() {
       ["sales", "Ventas", ReceiptText],
     ]],
     ["Organización", [
-      ["board", "Tablero", LayoutGrid],
+      ["board", "Tablero / Trello", LayoutGrid],
     ]],
     ["Canales", [
       ["mercadolibre", "Mercado Libre", ShoppingBag],
@@ -1822,16 +1822,7 @@ export default function App() {
           />
         )}
         {view === "board" && (
-          <Board
-            lists={data.boardLists || []}
-            cards={data.boardCards || []}
-            onSaveList={saveBoardList}
-            onDeleteList={deleteBoardList}
-            onReorderList={reorderBoardList}
-            onSaveCard={saveBoardCard}
-            onDeleteCard={deleteBoardCard}
-            onMoveCard={moveBoardCard}
-          />
+          <ProjectBoardGateway />
         )}
         {view === "mercadolibre" && <MercadoLibre session={session} />}
         {view === "clients" && (
@@ -1965,6 +1956,52 @@ export default function App() {
 }
 
 const DAY_PLAN_PREFIX = "poliplast-day-plan-";
+
+function ProjectBoardGateway() {
+  return (
+    <div className="content-stack">
+      <section className="panel academy-hero">
+        <div>
+          <span className="eyebrow">Organización del trabajo</span>
+          <h2>Tablero maestro en Trello</h2>
+          <p>
+            Trello es la única fuente para proyectos, prioridades, responsables y fechas. El CRM conserva clientes,
+            conversaciones, tareas comerciales y ventas. Así evitamos dos tableros que se contradigan.
+          </p>
+        </div>
+        <a
+          className="primary"
+          href="https://trello.com/b/uSYz1qMF/ventas-grupo-poliplast"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Abrir VENTAS — Grupo Poliplast <ExternalLink size={16} />
+        </a>
+      </section>
+
+      <section className="panel commercial-knowledge">
+        <div className="panel-head">
+          <div>
+            <span className="eyebrow">Guía única</span>
+            <h2>Cómo usar el tablero</h2>
+          </div>
+        </div>
+        <div className="knowledge-grid stages">
+          <article><span>1</span><h3>00 — Norte y métricas</h3><p>Entrá acá para recordar objetivos, reglas y estado general.</p></article>
+          <article><span>2</span><h3>Prioridad semanal</h3><p>Solo lo verdaderamente importante durante esta semana.</p></article>
+          <article><span>3</span><h3>En ejecución</h3><p>Trabajo que alguien está realizando ahora, con responsable claro.</p></article>
+          <article><span>4</span><h3>Esperando / Bloqueado</h3><p>Separá lo que depende de terceros de lo que tiene un impedimento real.</p></article>
+          <article><span>5</span><h3>Revisión / Terminado</h3><p>Primero se valida el resultado; después se cierra la tarjeta.</p></article>
+          <article><span>6</span><h3>Backlog</h3><p>Ideas y trabajos futuros que no deben competir con la semana actual.</p></article>
+        </div>
+        <p className="quality-note">
+          <strong>Regla:</strong> una empresa o conversación nunca se convierte en tarjeta de Trello. Se registra en
+          Empresas, Por revisar, Historial o Tareas dentro del CRM.
+        </p>
+      </section>
+    </div>
+  );
+}
 
 function useDayPlan() {
   const key = DAY_PLAN_PREFIX + today();

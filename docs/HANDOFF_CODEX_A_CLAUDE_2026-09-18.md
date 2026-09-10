@@ -39,6 +39,7 @@ Permitir que Claude continúe el Sistema Comercial Grupo Poliplast y coordine el
 | WhatsApp Juan | Diferido por decisión de Felipe (10/09/2026) | aislamiento y configuración técnica existentes | Retomar con Claude cuando haya disponibilidad: validar acceso, canal propio y uso real. No bloquea el cierre Codex |
 | Mercado Libre | Integración oficial de lectura construida para POLIPLAST y FOAM | endpoints OAuth/sync + tests | autorización real y validación de paridad |
 | Ventas y comisiones | Implementado parcialmente | parser, objetivos y pruebas | validación con datos reales/multi-comercial |
+| Tablero de proyectos | Trello declarado fuente única | el tablero interno era una copia independiente y desactualizada; el CRM ahora abre el Trello maestro y muestra la misma guía | mantener prioridades y responsables únicamente en Trello; los datos del tablero anterior se conservan sin borrarse |
 
 ## 4. Estado funcional que Claude debe conocer
 
@@ -49,6 +50,7 @@ Permitir que Claude continúe el Sistema Comercial Grupo Poliplast y coordine el
 - Precios, stock, rendimiento y compatibilidad siempre requieren fuente verificable.
 - Las tareas se crean solo ante compromisos, urgencia, cotización pendiente, recompra probable o seguimiento expresamente acordado.
 - Penosil y Juan quedan en backlog explícito: no se consideran fallas abiertas ni prioridades del sprint final de Codex. WhatsApp General permanece operativo y fuera de cambios salvo una regresión comprobada.
+- El botón `Tablero / Trello` del CRM no mantiene un Kanban paralelo: lleva al tablero maestro y explica su flujo. Trello administra proyectos; las tareas vinculadas a clientes continúan en `Tareas` del CRM.
 
 ## 5. Sprint final Codex: 10 al 18 de septiembre
 

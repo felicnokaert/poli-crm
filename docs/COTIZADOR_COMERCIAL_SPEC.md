@@ -48,6 +48,8 @@ Cada tipo de dato tendrá una fuente explícita:
 
 Nunca se debe inferir un precio por similitud de nombre ni publicar como vigente un dato sin fuente y fecha.
 
+La fuente canónica de identidad y taxonomía es `Catalogo_Maestro_v12_LIMPIO_FINAL.xlsx` de la carpeta de Drive indicada por Felipe. Su corte declara 1.749 productos vigentes, 285 excluidos y 0 pendientes de clasificación. `carga productos.xlsx` complementa costos, precios y datos operativos, pero no reemplaza las decisiones de Familia/Subfamilia de la v12.
+
 ## 4. Modelo mínimo
 
 - `brands`: identidad visual y reglas por marca.
@@ -62,6 +64,8 @@ Nunca se debe inferir un precio por similitud de nombre ni publicar como vigente
 - `brand_templates`: logos, colores y reglas de co-branding.
 
 Los identificadores deben ser estables. Una corrección de nombre no puede crear otro producto ni perder historial.
+
+Costo, precio, markup y margen son campos separados. El usuario autorizado podrá elegir si calcula desde markup sobre costo o desde margen sobre venta; el sistema siempre mostrará ambos resultados efectivos para evitar confundirlos. Todo cambio conservará responsable, fecha, fuente y valor anterior. Un precio mayorista pendiente permanece vacío hasta recibir una fuente o decisión explícita.
 
 ## 5. Experiencia comercial
 

@@ -44,6 +44,7 @@ import {
   loadOnlineState,
   mergeWorkspaceState,
   onlineConfigured,
+  recordDeletions,
   saveOnlineState,
   supabase,
   workspaceStatesEqual,
@@ -189,6 +190,7 @@ const initialState = {
   boardLists: [],
   boardCards: [],
   salesGoals: [],
+  deletedRecordIds: {},
   planChecks: {},
   commercialMasterVersion: "",
   historyResetVersion: "",
@@ -796,10 +798,13 @@ export default function App() {
 
   async function deleteOpportunity(id) {
     if (!(await confirm("¿Eliminar esta oportunidad del CRM?", { danger: true, confirmLabel: "Eliminar" }))) return;
-    setData({
-      ...data,
-      opportunities: data.opportunities.filter((item) => item.id !== id),
-      tasks: data.tasks.filter((item) => item.opportunityId !== id),
+    setData((current) => {
+      const linkedTaskIds = current.tasks.filter((item) => item.opportunityId === id).map((item) => item.id);
+      return recordDeletions({
+        ...current,
+        opportunities: current.opportunities.filter((item) => item.id !== id),
+        tasks: current.tasks.filter((item) => item.opportunityId !== id),
+      }, { opportunities: [id], tasks: linkedTaskIds });
     });
   }
 
@@ -813,11 +818,14 @@ export default function App() {
   }
 
   function deleteBoardList(id) {
-    setData((current) => ({
-      ...current,
-      boardLists: (current.boardLists || []).filter((item) => item.id !== id),
-      boardCards: (current.boardCards || []).filter((item) => item.listId !== id),
-    }));
+    setData((current) => {
+      const cardIds = (current.boardCards || []).filter((item) => item.listId === id).map((item) => item.id);
+      return recordDeletions({
+        ...current,
+        boardLists: (current.boardLists || []).filter((item) => item.id !== id),
+        boardCards: (current.boardCards || []).filter((item) => item.listId !== id),
+      }, { boardLists: [id], boardCards: cardIds });
+    });
   }
 
   function reorderBoardList(listId, direction) {
@@ -837,10 +845,10 @@ export default function App() {
   }
 
   function deleteBoardCard(id) {
-    setData((current) => ({
+    setData((current) => recordDeletions({
       ...current,
       boardCards: (current.boardCards || []).filter((item) => item.id !== id),
-    }));
+    }, { boardCards: [id] }));
   }
 
   function moveBoardCard(cardId, toListId, beforeCardId) {
@@ -887,19 +895,19 @@ export default function App() {
 
   async function deleteSale(id) {
     if (!(await confirm("¿Eliminar esta venta del registro?", { danger: true, confirmLabel: "Eliminar" }))) return;
-    setData((current) => ({
+    setData((current) => recordDeletions({
       ...current,
       sales: (current.sales || []).filter((item) => item.id !== id),
-    }));
+    }, { sales: [id] }));
   }
 
   async function deleteSales(ids) {
     if (!ids.length) return;
     if (!(await confirm(`¿Eliminar ${ids.length} venta${ids.length === 1 ? "" : "s"} del registro?`, { danger: true, confirmLabel: "Eliminar" }))) return;
-    setData((current) => ({
+    setData((current) => recordDeletions({
       ...current,
       sales: (current.sales || []).filter((item) => !ids.includes(item.id)),
-    }));
+    }, { sales: ids }));
   }
 
   function saveSalesGoal(goal) {
@@ -912,10 +920,10 @@ export default function App() {
   }
 
   function deleteSalesGoal(id) {
-    setData((current) => ({
+    setData((current) => recordDeletions({
       ...current,
       salesGoals: (Array.isArray(current.salesGoals) ? current.salesGoals : []).filter((goal) => goal.id !== id),
-    }));
+    }, { salesGoals: [id] }));
   }
 
   function saveBusinessUnit(unit) {
@@ -937,7 +945,7 @@ export default function App() {
       const existing = Array.isArray(current.businessUnits) && current.businessUnits.length
         ? current.businessUnits
         : defaultBusinessUnits();
-      return { ...current, businessUnits: existing.filter((item) => item.id !== id) };
+      return recordDeletions({ ...current, businessUnits: existing.filter((item) => item.id !== id) }, { businessUnits: [id] });
     });
   }
 
@@ -1484,11 +1492,14 @@ export default function App() {
     const client = data.clients.find((item) => item.id === id);
     if (!client) return;
     if (!(await confirm(`¿Eliminar "${client.company}" del CRM? Esto no se puede deshacer.`, { danger: true, confirmLabel: "Eliminar" }))) return;
-    setData((current) => ({
-      ...current,
-      clients: current.clients.filter((item) => item.id !== id),
-      tasks: current.tasks.filter((task) => task.clientId !== id),
-    }));
+    setData((current) => {
+      const taskIds = current.tasks.filter((task) => task.clientId === id).map((task) => task.id);
+      return recordDeletions({
+        ...current,
+        clients: current.clients.filter((item) => item.id !== id),
+        tasks: current.tasks.filter((task) => task.clientId !== id),
+      }, { clients: [id], tasks: taskIds });
+    });
   }
 
   function addPipelineClient(company, stage) {

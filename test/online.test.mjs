@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { completeTasksThrough, consolidateDuplicateClients, mergeWorkspaceState, workspaceStatesEqual } from '../src/workspace.mjs';
+import { completeTasksThrough, consolidateDuplicateClients, mergeWorkspaceState, recordDeletions, workspaceStatesEqual } from '../src/workspace.mjs';
 import { filterDismissedEvents, isLegacyWhatsAppPreview, isLowSignalWhatsAppEvent, isTrustedWhatsAppEvent } from '../src/whatsapp-events.mjs';
 
 test('consolidates duplicate company cards and rewires their history to one commercial identity', () => {
@@ -137,6 +137,21 @@ test('workspace synchronization preserves board, sales configuration and profile
   assert.equal(merged.businessUnits[0].id, 'poliplast');
   assert.equal(merged.primaryChannel, 'penosil');
   assert.equal(merged.profileName, 'Felipe');
+});
+
+test('synchronized deletion tombstones prevent old remote records from reappearing', () => {
+  const local = recordDeletions(
+    { clients: [], tasks: [], deletedRecordIds: {} },
+    { clients: ['client-1'], tasks: ['task-1'] },
+  );
+  const merged = mergeWorkspaceState(local, {
+    clients: [{ id: 'client-1', company: 'Registro viejo' }],
+    tasks: [{ id: 'task-1', title: 'Tarea vieja' }],
+  });
+  assert.deepEqual(merged.clients, []);
+  assert.deepEqual(merged.tasks, []);
+  assert.deepEqual(merged.deletedRecordIds.clients, ['client-1']);
+  assert.deepEqual(merged.deletedRecordIds.tasks, ['task-1']);
 });
 
 test('merges concurrent workspace changes without dropping records', () => {

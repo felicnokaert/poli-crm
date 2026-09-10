@@ -1,4 +1,5 @@
-const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], boardLists: [], boardCards: [], salesGoals: [], businessUnits: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '', tasksClosedThrough: '', primaryChannel: 'general', profileName: '' };
+const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], boardLists: [], boardCards: [], salesGoals: [], businessUnits: [], deletedRecordIds: {}, dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '', tasksClosedThrough: '', primaryChannel: 'general', profileName: '' };
+const RECORD_COLLECTIONS = ['clients', 'interactions', 'tasks', 'opportunities', 'sales', 'boardLists', 'boardCards', 'salesGoals', 'businessUnits'];
 const OBSOLETE_PREVIEW_TYPES = new Set(['unread_preview', 'unread_notice', 'verified_unread_preview']);
 
 function normalizedCompany(value = '') {
@@ -18,6 +19,31 @@ function mergeRecords(local = [], remote = [], key = 'id') {
     if (!current || recordStamp(record) >= recordStamp(current)) merged.set(id, { ...current, ...record });
   }
   return [...merged.values()].sort((a, b) => String(a?.[key] || '').localeCompare(String(b?.[key] || '')));
+}
+
+function mergeDeletedRecordIds(local = {}, remote = {}) {
+  return Object.fromEntries(RECORD_COLLECTIONS.map((collection) => [
+    collection,
+    [...new Set([...(remote[collection] || []), ...(local[collection] || [])])].sort(),
+  ]));
+}
+
+export function recordDeletions(state = EMPTY_STATE, deletions = {}) {
+  return {
+    ...state,
+    deletedRecordIds: mergeDeletedRecordIds(deletions, state.deletedRecordIds),
+  };
+}
+
+export function restoreRecordId(state = EMPTY_STATE, collection, id) {
+  if (!RECORD_COLLECTIONS.includes(collection) || !id) return state;
+  return {
+    ...state,
+    deletedRecordIds: {
+      ...(state.deletedRecordIds || {}),
+      [collection]: (state.deletedRecordIds?.[collection] || []).filter((item) => item !== id),
+    },
+  };
 }
 
 export function consolidateDuplicateClients(state = EMPTY_STATE) {
@@ -79,28 +105,34 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
   const dismissed = new Set(dismissedInboxEventIds);
   const localHistoryReset = local.historyResetVersion || '';
   const remoteHistoryReset = remote.historyResetVersion || '';
+  const deletedRecordIds = mergeDeletedRecordIds(local.deletedRecordIds, remote.deletedRecordIds);
+  const liveRecords = (collection) => {
+    const deleted = new Set(deletedRecordIds[collection] || []);
+    return mergeRecords(local[collection], remote[collection]).filter((item) => !deleted.has(item.id));
+  };
   // La sincronización sólo reconcilia versiones del mismo registro por ID.
   // Dos clientes con el mismo nombre pueden ser empresas distintas o fichas
   // con datos en conflicto; su posible fusión requiere revisión humana y un
   // registro reversible (ver docs/IDENTIDAD_UNICA_CLIENTE_SPEC.md).
   return {
-    clients: mergeRecords(local.clients, remote.clients),
+    clients: liveRecords('clients'),
     interactions: localHistoryReset || remoteHistoryReset
       ? mergeRecords(
           localHistoryReset >= remoteHistoryReset ? local.interactions : [],
           remoteHistoryReset >= localHistoryReset ? remote.interactions : [],
         ).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
       : mergeRecords(local.interactions, remote.interactions).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')),
-    tasks: mergeRecords(local.tasks, remote.tasks),
+    tasks: liveRecords('tasks'),
     inbox: mergeRecords(local.inbox, remote.inbox, 'event_id')
       .filter((item) => !dismissed.has(item.event_id) && !OBSOLETE_PREVIEW_TYPES.has(item.message_type))
       .sort((a, b) => (b.occurred_at || '').localeCompare(a.occurred_at || '')),
-    opportunities: mergeRecords(local.opportunities, remote.opportunities),
-    sales: mergeRecords(local.sales, remote.sales),
-    boardLists: mergeRecords(local.boardLists, remote.boardLists),
-    boardCards: mergeRecords(local.boardCards, remote.boardCards),
-    salesGoals: mergeRecords(local.salesGoals, remote.salesGoals),
-    businessUnits: mergeRecords(local.businessUnits, remote.businessUnits),
+    opportunities: liveRecords('opportunities'),
+    sales: liveRecords('sales'),
+    boardLists: liveRecords('boardLists'),
+    boardCards: liveRecords('boardCards'),
+    salesGoals: liveRecords('salesGoals'),
+    businessUnits: liveRecords('businessUnits'),
+    deletedRecordIds,
     dismissedInboxEventIds,
     ignoredWhatsAppContacts: mergeRecords(local.ignoredWhatsAppContacts, remote.ignoredWhatsAppContacts, 'key'),
     planChecks: { ...(remote.planChecks || {}), ...(local.planChecks || {}) },

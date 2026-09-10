@@ -154,17 +154,30 @@ function profileInitials(nameOrEmail = "") {
   return local.slice(0, 2).toUpperCase() || "?";
 }
 
-const PIPELINE = [
-  "Nuevo",
-  "Contactado",
-  "Conversación",
-  "Calificado",
-  "Propuesta",
-  "Negociación",
-  "Ganado",
-  "Pausado",
-  "Perdido",
-];
+const LEGACY_STAGE_MAP = {
+  Nuevo: "Preparación",
+  Contactado: "Apertura",
+  Conversación: "Diagnóstico",
+  Calificado: "Calificación",
+  Propuesta: "Propuesta",
+  Negociación: "Negociación",
+  Ganado: "Posventa",
+  Pausado: "Seguimiento",
+  Perdido: "Seguimiento",
+};
+const PIPELINE = COMMERCIAL_STAGES.map((stage) => stage.label);
+
+function commercialStage(stage) {
+  return LEGACY_STAGE_MAP[stage] || (PIPELINE.includes(stage) ? stage : "Preparación");
+}
+
+function commercialOutcome(record = {}) {
+  if (record.outcome) return record.outcome;
+  if (record.stage === "Ganado") return "Ganado";
+  if (record.stage === "Perdido") return "Perdido";
+  if (record.stage === "Pausado") return "Pausado";
+  return "Abierto";
+}
 const INTENTS = [
   "Información",
   "Precio / cotización",
@@ -258,7 +271,7 @@ function draftFromWhatsApp(event) {
       : text,
     temperature:
       urgent && commercial ? "Caliente" : commercial ? "Tibio" : "Frío",
-    stage: commercial ? "Contactado" : "Conversación",
+    stage: commercial ? "Apertura" : "Diagnóstico",
     // Clasificar una conversación no implica asumir un compromiso. El usuario
     // crea seguimiento solamente cuando define una acción y una fecha reales.
     nextAction: "",
@@ -331,7 +344,8 @@ function blankInteraction() {
     need: "",
     objection: "",
     temperature: "Tibio",
-    stage: "Conversación",
+    stage: "Diagnóstico",
+    outcome: "Abierto",
     nextAction: "",
     nextDate: today(),
     clientType: "Desconocido",
@@ -612,7 +626,8 @@ export default function App() {
       family: form.family,
       currentIntent: form.intent,
       temperature: existing?.temperature || form.temperature || "Tibio",
-      stage: form.stage,
+      stage: commercialStage(form.stage),
+      outcome: form.outcome || commercialOutcome(existing),
       clientType: form.clientType,
       industry: form.industry,
       fit: form.fit,
@@ -630,6 +645,7 @@ export default function App() {
     const interaction = {
       ...editingInteraction,
       ...form,
+      stage: commercialStage(form.stage),
       temperature: existing?.temperature || form.temperature || "Tibio",
       id: editingInteraction?.id || crypto.randomUUID(),
       clientId,
@@ -637,7 +653,7 @@ export default function App() {
       updatedAt: stamp,
     };
     const tasks =
-      !editingInteraction && form.nextAction.trim()
+      !editingInteraction && shouldCreateFollowup(form)
         ? [
             ...data.tasks,
             {
@@ -693,7 +709,7 @@ export default function App() {
       contact: client.contact || "",
       family: client.family || "Sin definir",
       temperature: client.temperature || "Tibio",
-      stage: client.stage || "Conversación",
+      stage: commercialStage(client.stage),
       clientType: client.clientType || "Desconocido",
       industry: client.industry || "Desconocida",
       fit: client.fit || "A confirmar",
@@ -985,7 +1001,7 @@ export default function App() {
         family: "Sin definir",
         currentIntent: inferIntent(event.text_body),
         temperature: "Tibio",
-        stage: decision === "followup" ? "Contactado" : "Conversación",
+        stage: decision === "followup" ? "Apertura" : "Diagnóstico",
         clientType: "Desconocido",
         industry: "Desconocida",
         fit: "A confirmar",
@@ -3290,7 +3306,7 @@ function InboxDraftModal({ draft, setDraft, onClose, onConfirm }) {
           <label>
             Etapa
             <select
-              value={form.stage}
+              value={commercialStage(form.stage)}
               onChange={(event) => update("stage", event.target.value)}
             >
               {PIPELINE.map((item) => (
@@ -3851,10 +3867,10 @@ function Pipeline({ clients, onOpenClient, onChangeStage, onDelete, onAdd }) {
       </section>
       <div className="kanban">
         {PIPELINE.map((stage) => {
-          const list = clients.filter((client) => client.stage === stage);
+          const list = clients.filter((client) => commercialStage(client.stage) === stage);
           return (
             <section
-              className={`kanban-column ${["Pausado", "Perdido"].includes(stage) ? "inactive" : ""}`}
+              className="kanban-column"
               key={stage}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
@@ -4222,6 +4238,8 @@ function ClientDetail({
       ...draft,
       company: draft.company.trim(),
       contact: draft.contact?.trim() || "",
+      stage: commercialStage(draft.stage),
+      outcome: commercialOutcome(draft),
     });
     setEditing(false);
   }
@@ -4387,10 +4405,19 @@ function ClientDetail({
               </label>
               <label>
                 Etapa
-                <select {...field("stage")}>
+                <select value={commercialStage(draft.stage)} onChange={(event) => setDraft({ ...draft, stage: event.target.value })}>
                   {PIPELINE.map((item) => (
                     <option key={item}>{item}</option>
                   ))}
+                </select>
+              </label>
+              <label>
+                Resultado
+                <select value={commercialOutcome(draft)} onChange={(event) => setDraft({ ...draft, outcome: event.target.value })}>
+                  <option>Abierto</option>
+                  <option>Ganado</option>
+                  <option>Perdido</option>
+                  <option>Pausado</option>
                 </select>
               </label>
               <label>
@@ -4454,9 +4481,9 @@ function ClientDetail({
                 Observaciones
                 <textarea {...field("notes")} />
               </label>
-              {["Pausado", "Perdido"].includes(draft.stage) && (
+              {["Pausado", "Perdido"].includes(commercialOutcome(draft)) && (
                 <label className="span-2">
-                  Motivo de {draft.stage.toLowerCase()}
+                  Motivo de {commercialOutcome(draft).toLowerCase()}
                   <input required {...field("lossReason")} />
                 </label>
               )}
@@ -5851,10 +5878,19 @@ function InteractionForm({ form, setForm, myChannels = [], editing = false, onCl
           </div>
           <label>
             Etapa
-            <select {...field("stage")}>
+            <select value={commercialStage(form.stage)} onChange={(event) => setForm((current) => ({ ...current, stage: event.target.value }))}>
               {PIPELINE.map((item) => (
                 <option key={item}>{item}</option>
               ))}
+            </select>
+          </label>
+          <label>
+            Resultado
+            <select {...field("outcome")}>
+              <option>Abierto</option>
+              <option>Ganado</option>
+              <option>Perdido</option>
+              <option>Pausado</option>
             </select>
           </label>
           <label>
@@ -5868,9 +5904,9 @@ function InteractionForm({ form, setForm, myChannels = [], editing = false, onCl
               placeholder="Ej. llamar para confirmar consumo"
             />
           </label>
-          {["Pausado", "Perdido"].includes(form.stage) && (
+          {["Pausado", "Perdido"].includes(form.outcome) && (
             <label className="span-2">
-              Motivo de {form.stage.toLowerCase()}
+              Motivo de {form.outcome.toLowerCase()}
               <input
                 required
                 {...field("lossReason")}

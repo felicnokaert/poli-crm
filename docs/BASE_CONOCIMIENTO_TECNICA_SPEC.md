@@ -80,6 +80,24 @@ No se incorpora todo el sitio. Primero se cruza el catálogo realmente vendido p
 
 Empezar con Poliuretano o PURMAC: ya cuentan con documentación y consultas comerciales reales. Validar entre 5 y 10 documentos completos antes de escalar. Penosil entra después de tener la lista exacta de productos comercializados.
 
+## 10.1 Piloto ejecutado (Claude, 10/09/2026)
+
+Siguiendo `docs/PROMPT_CONTINUIDAD_CLAUDE_CODE_BASE_TECNICA.md`, se construyó el importador de inventario con vista previa pedido en la Sección 8, punto 4 de este documento:
+
+- **`src/technical-inventory-import.mjs`** (commit pendiente de push): clasifica una lista de candidatos detectados contra lo ya indexado en cinco categorías — nuevos, modificados (mismo nombre+familia+producto pero hash distinto), duplicados exactos (mismo SHA-256), posibles duplicados (nombre/tamaño similar) y errores (falta familia, o falta nombre/archivo fuente). Se apoya en `technical-document-governance.mjs` sin duplicar su lógica. Ningún documento se guarda ni se marca `vigente` automáticamente — es solo la vista previa exigida.
+- **9 pruebas nuevas** (`test/technical-inventory-import.test.mjs`), 200/200 en total, build limpio.
+- **Piloto real ejecutado** sobre 9 archivos de PURMAC (Drive local, carpetas `MAQUINAS` y `REPUESTOS-ACCESORIOS`), con SHA-256 y tamaño calculados de verdad (`sha256sum`), sin mover ni modificar ningún archivo:
+  - Resultado: **7 nuevos, 2 duplicados exactos, 0 modificados, 0 posibles duplicados, 0 errores.**
+  - Los 2 duplicados exactos son reales y verificables: `REPUESTOS-ACCESORIOS/Ficha Manta Purmac-final.pdf` está repetido byte a byte en `REPUESTOS-ACCESORIOS/Ficha Técnica Manta PURMAC/`, y `MANUAL PISTOLA PM 3500.pdf` está repetido byte a byte como `MANUAL PISTOLA PM 3500 (1).pdf` en otra subcarpeta. Ninguno se borró ni se marcó automáticamente — quedan como evidencia para que una persona decida.
+- **Bug real encontrado y corregido durante el piloto:** la primera versión de `classifyInventoryImport` solo comparaba cada candidato contra `existingDocuments`, no contra los demás candidatos del mismo lote. Con un catálogo vacío (primera carga), los 2 pares de duplicados reales de arriba salían como "9 nuevos" en vez de "7 nuevos + 2 duplicados" — exactamente el escenario de una primera importación masiva. Se corrigió indexando cada candidato aceptado como "nuevo" antes de evaluar el siguiente del mismo lote, y se agregó una prueba que reproduce el caso.
+- **Limitación observada, no corregida (fuera de este bloque):** `MANUAL PISTOLA - PURMAC (2).pdf` (996 KB) y `MANUAL PISTOLA PM 3500.pdf` (23 MB) son casi con certeza dos versiones del mismo manual, pero `possibleDuplicateKey` (en `technical-document-governance.mjs`, ya construido por Codex) exige tamaño idéntico además de nombre similar, así que no se agrupan como posible duplicado. Se deja documentado para una eventual revisión de esa regla, no se tocó en este cambio para no mezclar bloques.
+
+**Pendiente real, requiere decisión antes de construir la UI de importación:** dónde persistir el catálogo cuando se guarde (hoy sigue siendo la vista previa, nada se guarda todavía). Dos opciones evaluadas, sin resolver:
+1. Tabla nueva en Supabase (`technical_documents` + historial de auditoría), consistente con el resto del CRM multiusuario.
+2. Extender `technical-library.mjs` como archivo estático versionado en el repo (más simple, pero no permite que alguien sin acceso al repo cargue un documento, y mezclaría el índice con el código).
+
+No se avanzó con ninguna de las dos sin que Felipe/Codex lo confirmen, según la sección 5 de `docs/PROMPT_CONTINUIDAD_CLAUDE_CODE_BASE_TECNICA.md` ("no mezclar bloques... priorizar cambios pequeños, revisables y con rollback").
+
 ## 10. Definición de hecho de la primera fase
 
 - Inventario completo, sin modificar Drive.

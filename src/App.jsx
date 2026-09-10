@@ -5405,94 +5405,128 @@ function TechnicalDocumentsAdmin({ session }) {
   );
 }
 
-function TechnicalDocumentGroups({ documents, groupByFolder, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin }) {
-  const [groupDocumentsByFolder, setGroupDocumentsByFolder] = useState(null);
-  useEffect(() => {
-    import("./technical-documents-mapping.mjs").then(({ groupDocumentsByFolder: fn }) => setGroupDocumentsByFolder(() => fn));
-  }, []);
-  const groups = groupByFolder && groupDocumentsByFolder
-    ? groupDocumentsByFolder(documents)
-    : [{ folder: null, documents: [...documents].sort((a, b) => (a.title || "").localeCompare(b.title || "")) }];
+function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin }) {
+  const draft = draftFor(doc);
   return (
-    <div className="conversation-list">
-      {groups.map(({ folder, documents: docsInGroup }) => (
-        <div key={folder || "flat"}>
-          {folder && (
-            <div className="technical-document-folder-heading">
-              📁 {folder} <span>({docsInGroup.length})</span>
-            </div>
-          )}
-          {docsInGroup.map((doc) => {
-            const draft = draftFor(doc);
-            return (
-              <article className="technical-document-row" key={doc.id}>
-                <div>
-                  <input
-                    className="technical-document-title-input"
-                    value={titleDrafts[doc.id] ?? doc.title}
-                    onChange={(event) => setTitleDrafts((current) => ({ ...current, [doc.id]: event.target.value }))}
-                    onBlur={() => saveTitle(doc)}
-                  />
-                  <span>
-                    {doc.family}
-                    {doc.product ? ` · ${doc.product}` : ""} ·{" "}
-                    {TECHNICAL_DOCUMENT_STATUS_LABELS[doc.status] || doc.status}
-                    {doc.sourceFile ? ` · ${doc.sourceFile}` : ""}
-                  </span>
-                  {doc.status === "vigente" && (
-                    <span>
-                      Validado por {doc.verifiedByEmail || "?"} ·{" "}
-                      {doc.verifiedAt ? new Date(doc.verifiedAt).toLocaleDateString("es-AR") : ""}
-                    </span>
-                  )}
-                  {doc.status === "desactualizado" && doc.replacedBy && (
-                    <span>
-                      Reemplazada por: {documents.find((item) => item.id === doc.replacedBy)?.title || "documento eliminado"}
-                    </span>
-                  )}
-                </div>
-                <div className="technical-document-actions">
-                  <select
-                    value={draft.status}
-                    onChange={(event) => updateDraft(doc.id, { status: event.target.value })}
-                  >
-                    {Object.entries(TECHNICAL_DOCUMENT_STATUS_LABELS)
-                      .filter(([key]) => key !== "vigente" || isAdmin)
-                      .map(([key, label]) => (
-                        <option key={key} value={key}>{label}</option>
-                      ))}
-                  </select>
-                  {draft.status === "desactualizado" && (
-                    <select
-                      value={draft.replacedBy || ""}
-                      onChange={(event) => updateDraft(doc.id, { replacedBy: event.target.value })}
-                    >
-                      <option value="">Reemplazada por (opcional)</option>
-                      {documents
-                        .filter((item) => item.id !== doc.id)
-                        .map((item) => (
-                          <option key={item.id} value={item.id}>{item.title}</option>
-                        ))}
-                    </select>
-                  )}
-                  <input
-                    placeholder="Observación (queda en el historial)"
-                    value={draft.notes}
-                    onChange={(event) => updateDraft(doc.id, { notes: event.target.value })}
-                  />
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => saveStatus(doc)}
-                  >
-                    Guardar
-                  </button>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      ))}
+    <article className="technical-document-row">
+      <div>
+        <input
+          className="technical-document-title-input"
+          value={titleDrafts[doc.id] ?? doc.title}
+          onChange={(event) => setTitleDrafts((current) => ({ ...current, [doc.id]: event.target.value }))}
+          onBlur={() => saveTitle(doc)}
+        />
+        <span>
+          {doc.family}
+          {doc.product ? ` · ${doc.product}` : ""} ·{" "}
+          {TECHNICAL_DOCUMENT_STATUS_LABELS[doc.status] || doc.status}
+        </span>
+        {doc.status === "vigente" && (
+          <span>
+            Validado por {doc.verifiedByEmail || "?"} ·{" "}
+            {doc.verifiedAt ? new Date(doc.verifiedAt).toLocaleDateString("es-AR") : ""}
+          </span>
+        )}
+        {doc.status === "desactualizado" && doc.replacedBy && (
+          <span>
+            Reemplazada por: {allDocuments.find((item) => item.id === doc.replacedBy)?.title || "documento eliminado"}
+          </span>
+        )}
+      </div>
+      <div className="technical-document-actions">
+        <select
+          value={draft.status}
+          onChange={(event) => updateDraft(doc.id, { status: event.target.value })}
+        >
+          {Object.entries(TECHNICAL_DOCUMENT_STATUS_LABELS)
+            .filter(([key]) => key !== "vigente" || isAdmin)
+            .map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+        </select>
+        {draft.status === "desactualizado" && (
+          <select
+            value={draft.replacedBy || ""}
+            onChange={(event) => updateDraft(doc.id, { replacedBy: event.target.value })}
+          >
+            <option value="">Reemplazada por (opcional)</option>
+            {allDocuments
+              .filter((item) => item.id !== doc.id)
+              .map((item) => (
+                <option key={item.id} value={item.id}>{item.title}</option>
+              ))}
+          </select>
+        )}
+        <input
+          placeholder="Observación (queda en el historial)"
+          value={draft.notes}
+          onChange={(event) => updateDraft(doc.id, { notes: event.target.value })}
+        />
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => saveStatus(doc)}
+        >
+          Guardar
+        </button>
+      </div>
+    </article>
+  );
+}
+
+// Una carpeta real por nivel (Drive/Explorador de archivos), no una fila con
+// el camino completo como título - PRODUCTOS > POLIURETANOS RIGIDOS > Ficha
+// Técnica 619 SP son tres carpetas anidadas, cada una colapsable, y los
+// documentos solo cuelgan de la carpeta hoja a la que pertenecen.
+function TechnicalDocumentFolderNode({ node, depth, rowProps }) {
+  if (node.name === null) {
+    return (
+      <>
+        {node.children.map((child) => (
+          <TechnicalDocumentFolderNode key={child.path} node={child} depth={0} rowProps={rowProps} />
+        ))}
+        {node.documents.map((doc) => (
+          <TechnicalDocumentRow key={doc.id} doc={doc} {...rowProps} />
+        ))}
+      </>
+    );
+  }
+  return (
+    <details className="technical-document-folder" open>
+      <summary className="technical-document-folder-heading">
+        📁 {node.name} <span>({node.count})</span>
+      </summary>
+      <div className="technical-document-folder-body">
+        {node.children.map((child) => (
+          <TechnicalDocumentFolderNode key={child.path} node={child} depth={depth + 1} rowProps={rowProps} />
+        ))}
+        {node.documents.map((doc) => (
+          <TechnicalDocumentRow key={doc.id} doc={doc} {...rowProps} />
+        ))}
+      </div>
+    </details>
+  );
+}
+
+function TechnicalDocumentGroups({ documents, groupByFolder, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin }) {
+  const [buildFolderTree, setBuildFolderTree] = useState(null);
+  useEffect(() => {
+    import("./technical-documents-mapping.mjs").then(({ buildFolderTree: fn }) => setBuildFolderTree(() => fn));
+  }, []);
+  const rowProps = { allDocuments: documents, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin };
+  if (!groupByFolder || !buildFolderTree) {
+    return (
+      <div className="conversation-list">
+        {[...documents].sort((a, b) => (a.title || "").localeCompare(b.title || "")).map((doc) => (
+          <TechnicalDocumentRow key={doc.id} doc={doc} {...rowProps} />
+        ))}
+      </div>
+    );
+  }
+  const tree = buildFolderTree(documents);
+  return (
+    <div className="conversation-list technical-document-tree">
+      <TechnicalDocumentFolderNode node={tree} depth={0} rowProps={rowProps} />
     </div>
   );
 }

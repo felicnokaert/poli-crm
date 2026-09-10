@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildTechnicalDocument } from '../src/technical-document-governance.mjs';
-import { folderFromSourceFile, fromRow, groupDocumentsByFolder, guessFamilyFromPath, historyFromRow, isTechnicalDocumentAdmin, parsePathHints, toRow } from '../src/technical-documents-mapping.mjs';
+import { buildFolderTree, folderFromSourceFile, fromRow, groupDocumentsByFolder, guessFamilyFromPath, historyFromRow, isTechnicalDocumentAdmin, parsePathHints, toRow } from '../src/technical-documents-mapping.mjs';
 
 test('toRow maps a built document to snake_case columns, defaulting to inventariado', () => {
   const document = buildTechnicalDocument({ title: 'isoBUNKER 619-SP', family: 'Poliuretano', product: 'isoBUNKER 619-SP', sourceFile: 'a.pdf', sha256: 'abc', sizeBytes: 100 });
@@ -91,6 +91,29 @@ test('groupDocumentsByFolder groups and sorts documents exactly like the Drive t
   const grouped = groupDocumentsByFolder(documents);
   assert.deepEqual(grouped.map((g) => g.folder), ['PRODUCTOS / RESINAS', 'Sin carpeta']);
   assert.deepEqual(grouped[0].documents.map((d) => d.title), ['A', 'B']);
+});
+
+test('buildFolderTree builds real nested folders, like Drive or a file explorer, not a flat list of paths', () => {
+  const documents = [
+    { title: 'PDS isoBUNKER 619-SP', sourceFile: 'PRODUCTOS/POLIURETANOS RIGIDOS/Ficha Técnica 619 SP/PDS isoBUNKER 619-SP.pdf' },
+    { title: 'MSDS isoBUNKER 619-SP', sourceFile: 'PRODUCTOS/POLIURETANOS RIGIDOS/Ficha Técnica 619 SP/MSDS isoBUNKER 619-SP.pdf' },
+    { title: 'Ficha resina', sourceFile: 'PRODUCTOS/RESINAS/Ficha resina.pdf' },
+    { title: 'Airless 390', sourceFile: 'Airless 390.pdf' },
+  ];
+  const tree = buildFolderTree(documents);
+  assert.equal(tree.name, null);
+  assert.deepEqual(tree.documents.map((d) => d.title), ['Airless 390']);
+  assert.deepEqual(tree.children.map((c) => c.name), ['PRODUCTOS']);
+  const productos = tree.children[0];
+  assert.equal(productos.count, 3);
+  assert.equal(productos.documents.length, 0);
+  assert.deepEqual(productos.children.map((c) => c.name), ['POLIURETANOS RIGIDOS', 'RESINAS']);
+  const poliuretanos = productos.children[0];
+  assert.equal(poliuretanos.documents.length, 0);
+  assert.deepEqual(poliuretanos.children.map((c) => c.name), ['Ficha Técnica 619 SP']);
+  const fichaLeaf = poliuretanos.children[0];
+  assert.equal(fichaLeaf.path, 'PRODUCTOS / POLIURETANOS RIGIDOS / Ficha Técnica 619 SP');
+  assert.deepEqual(fichaLeaf.documents.map((d) => d.title), ['MSDS isoBUNKER 619-SP', 'PDS isoBUNKER 619-SP']);
 });
 
 test('toRow/fromRow round-trip preserves the fields that matter for the preview', () => {

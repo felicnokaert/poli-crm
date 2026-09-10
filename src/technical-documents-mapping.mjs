@@ -122,6 +122,54 @@ export function folderFromSourceFile(sourceFile = '') {
   return parts.slice(0, -1).join(' / ');
 }
 
+// Árbol real de carpetas (no una lista plana con el camino completo como
+// título) - cada tramo de folderFromSourceFile es un nivel propio, como en
+// Drive o el explorador de archivos. Los documentos solo cuelgan de la
+// carpeta hoja a la que pertenecen; las carpetas intermedias no tienen
+// documentos propios, solo subcarpetas.
+function sortedDocuments(documents) {
+  return [...documents].sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+}
+
+export function buildFolderTree(documents = []) {
+  const root = { name: null, path: '', children: new Map(), documents: [] };
+  for (const doc of documents) {
+    const folder = folderFromSourceFile(doc.sourceFile);
+    if (folder === 'Sin carpeta') {
+      root.documents.push(doc);
+      continue;
+    }
+    const parts = folder.split(' / ');
+    let node = root;
+    const pathParts = [];
+    for (const part of parts) {
+      pathParts.push(part);
+      if (!node.children.has(part)) {
+        node.children.set(part, { name: part, path: pathParts.join(' / '), children: new Map(), documents: [] });
+      }
+      node = node.children.get(part);
+    }
+    node.documents.push(doc);
+  }
+  return serializeFolderNode(root);
+}
+
+function countDocuments(node) {
+  return node.documents.length + [...node.children.values()].reduce((sum, child) => sum + countDocuments(child), 0);
+}
+
+function serializeFolderNode(node) {
+  return {
+    name: node.name,
+    path: node.path,
+    documents: sortedDocuments(node.documents),
+    count: countDocuments(node),
+    children: [...node.children.values()]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(serializeFolderNode),
+  };
+}
+
 export function groupDocumentsByFolder(documents = []) {
   const groups = new Map();
   for (const doc of documents) {

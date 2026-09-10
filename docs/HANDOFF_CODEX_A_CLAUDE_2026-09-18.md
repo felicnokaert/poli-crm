@@ -41,6 +41,7 @@ Permitir que Claude continúe el Sistema Comercial Grupo Poliplast y coordine el
 | Mercado Libre | Integración oficial de lectura construida para POLIPLAST y FOAM | endpoints OAuth/sync + tests | autorización real y validación de paridad |
 | Ventas y comisiones | Implementado parcialmente | parser, objetivos y pruebas | validación con datos reales/multi-comercial |
 | Tablero de proyectos | Trello declarado fuente única | el tablero interno era una copia independiente y desactualizada; el CRM ahora abre el Trello maestro y muestra la misma guía | mantener prioridades y responsables únicamente en Trello; los datos del tablero anterior se conservan sin borrarse |
+| Creación de seguimientos | Corregida durante QA operativo | una clasificación de WhatsApp ya no propone ni crea una tarea genérica por defecto; exige próxima acción y fecha elegidas por la persona; 186 tests | verificar con la próxima clasificación real; las tareas históricas no se eliminan automáticamente |
 
 ## 4. Estado funcional que Claude debe conocer
 

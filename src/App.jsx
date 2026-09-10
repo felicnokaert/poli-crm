@@ -108,6 +108,7 @@ import {
 } from "./commercial-knowledge.mjs";
 import { buildCommercialGuidance } from "./commercial-guidance.mjs";
 import { TRIAGE_VARIABLES, scoreTriage, suggestTriage } from "./commercial-triage.mjs";
+import { shouldCreateFollowup } from "./followup-policy.mjs";
 
 // El sufijo fuerza una única segunda pasada que también incluye las tareas
 // antiguas sin fecha de vencimiento, usando su fecha de creación.
@@ -258,12 +259,10 @@ function draftFromWhatsApp(event) {
     temperature:
       urgent && commercial ? "Caliente" : commercial ? "Tibio" : "Frío",
     stage: commercial ? "Contactado" : "Conversación",
-    nextAction: penosilOpening
-      ? "Preguntar aplicación, superficie, cantidad, ubicación y para cuándo lo necesita"
-      : commercial
-        ? "Responder y completar diagnóstico comercial"
-        : "Revisar conversación de WhatsApp",
-    nextDate: urgent ? today() : addDays(commercial ? 1 : 2),
+    // Clasificar una conversación no implica asumir un compromiso. El usuario
+    // crea seguimiento solamente cuando define una acción y una fecha reales.
+    nextAction: "",
+    nextDate: "",
     relationship: "A confirmar",
     representsCompany: "A confirmar",
     sellerOpinion: "",
@@ -1454,7 +1453,7 @@ export default function App() {
       createdAt: source.occurred_at || stamp,
       createdBy: session?.user?.email || "",
     };
-    const task = draft.nextAction.trim()
+    const task = shouldCreateFollowup(draft)
       ? {
           id: crypto.randomUUID(),
           clientId,
@@ -3352,7 +3351,7 @@ function InboxDraftModal({ draft, setDraft, onClose, onConfirm }) {
             Ahora no
           </button>
           <button className="primary" type="submit">
-            Guardar memoria y seguimiento
+            {shouldCreateFollowup(form) ? "Guardar memoria y seguimiento" : "Guardar conversación"}
           </button>
         </div>
       </form>

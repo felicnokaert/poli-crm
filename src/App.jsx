@@ -1537,6 +1537,28 @@ export default function App() {
     return true;
   }
 
+  async function deleteInteraction(id) {
+    const interaction = data.interactions.find((item) => item.id === id);
+    if (!interaction) return false;
+    if (!(await confirm(`¿Eliminar esta conversación de "${interaction.company}"? Esto no se puede deshacer.`, { danger: true, confirmLabel: "Eliminar" }))) return false;
+    setData((current) => recordDeletions({
+      ...current,
+      interactions: current.interactions.filter((item) => item.id !== id),
+    }, { interactions: [id] }));
+    return true;
+  }
+
+  async function deleteTask(id) {
+    const task = data.tasks.find((item) => item.id === id);
+    if (!task) return false;
+    if (!(await confirm(`¿Eliminar la tarea "${task.title}"? Esto no se puede deshacer.`, { danger: true, confirmLabel: "Eliminar" }))) return false;
+    setData((current) => recordDeletions({
+      ...current,
+      tasks: current.tasks.filter((item) => item.id !== id),
+    }, { tasks: [id] }));
+    return true;
+  }
+
   function addPipelineClient(company, stage) {
     const stamp = new Date().toISOString();
     const client = {
@@ -1945,6 +1967,9 @@ export default function App() {
             setSelectedInteractionId(null);
             setSelectedClientId(clientId);
           }}
+          onDelete={async (id) => {
+            if (await deleteInteraction(id)) setSelectedInteractionId(null);
+          }}
         />
       )}
       {selectedClientId && (
@@ -1981,6 +2006,9 @@ export default function App() {
           onOpenClient={(clientId) => {
             setSelectedTaskId(null);
             setSelectedClientId(clientId);
+          }}
+          onDelete={async (id) => {
+            if (await deleteTask(id)) setSelectedTaskId(null);
           }}
         />
       )}
@@ -3480,6 +3508,7 @@ function InteractionDetail({
   onClose,
   onEdit,
   onOpenClient,
+  onDelete,
 }) {
   useModalEscape(onClose);
   if (!interaction) return null;
@@ -3547,6 +3576,13 @@ function InteractionDetail({
               Ver ficha del cliente
             </button>
           )}
+          <button
+            className="danger-link"
+            type="button"
+            onClick={() => onDelete(interaction.id)}
+          >
+            Eliminar conversación
+          </button>
         </div>
       </section>
     </div>
@@ -3662,7 +3698,7 @@ function TaskList({
   ));
 }
 
-function TaskDetail({ task, client, onClose, onToggle, onSave, onOpenClient }) {
+function TaskDetail({ task, client, onClose, onToggle, onSave, onOpenClient, onDelete }) {
   useModalEscape(onClose);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(task || {});
@@ -3805,6 +3841,13 @@ function TaskDetail({ task, client, onClose, onToggle, onSave, onOpenClient }) {
                 onClick={() => onToggle(task.id)}
               >
                 {task.done ? "Marcar pendiente" : "Completar tarea"}
+              </button>
+              <button
+                className="danger-link"
+                type="button"
+                onClick={() => onDelete(task.id)}
+              >
+                Eliminar tarea
               </button>
             </div>
           </>

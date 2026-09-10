@@ -1522,11 +1522,17 @@ export default function App() {
     if (!(await confirm(`¿Eliminar "${client.company}" del CRM? Esto no se puede deshacer.`, { danger: true, confirmLabel: "Eliminar" }))) return false;
     setData((current) => {
       const taskIds = current.tasks.filter((task) => task.clientId === id).map((task) => task.id);
+      // Las conversaciones vinculadas a este cliente también se borran - si
+      // no, el nombre seguía apareciendo en Historial ("ficha pendiente de
+      // revincular") aunque la ficha ya no existiera, que es justo lo que
+      // pasó: Felipe borró el cliente y "Felipe" siguió en Historial.
+      const interactionIds = current.interactions.filter((item) => item.clientId === id).map((item) => item.id);
       return recordDeletions({
         ...current,
         clients: current.clients.filter((item) => item.id !== id),
         tasks: current.tasks.filter((task) => task.clientId !== id),
-      }, { clients: [id], tasks: taskIds });
+        interactions: current.interactions.filter((item) => item.clientId !== id),
+      }, { clients: [id], tasks: taskIds, interactions: interactionIds });
     });
     return true;
   }

@@ -3,7 +3,7 @@
 **Estado:** Manual operativo canónico — v2
 **Responsable:** Felipe Cnokaert
 **Equipo:** ver sección 4 (Equipo y funciones)
-**Última actualización:** 9 de septiembre de 2026
+**Última actualización:** 10 de septiembre de 2026
 **Cadencia de revisión:** semanal durante la implementación; mensual una vez estabilizado
 
 ## 0. Control de versión y changelog
@@ -23,6 +23,8 @@ Esos cuatro documentos quedan como **respaldo histórico** en `docs/historico/` 
 |---|---|---|
 | v1 | 09/09/2026 | Primera versión canónica (Codex). Definía un proceso propio de 9 macroetapas, un triage de 6 variables y un cuadro de 10 objeciones, sin reconciliar con el método de 12 etapas ya cargado en el CRM ni con los documentos previos de Claude (31/08). Copia conservada en `docs/historico/SISTEMA_COMERCIAL_GRUPO_POLIPLAST_v1_2026-09-09.md`. |
 | v2 | 09/09/2026 | Fusiona v1 con el método de 12 etapas (confirmado en producción, `src/opportunities-model.mjs`), el sistema de 5 criterios y el triage de 6 variables en un único triage, la biblioteca de 11 objeciones con las 10 nuevas, y los 10 playbooks por segmento. Corrige "CRM 45% / Meta 65%" (dato histórico del 28/08, retirado), identifica "Fase 6" como ajena al proceso comercial, distingue personas confirmadas de funciones de apoyo, deja el Ejecutivo Comercial como pendiente de confirmación, y agrega la tabla de datos pendientes de validación. Aprobada con condiciones por Marketing el 09/09/2026. |
+| v2.1 | 10/09/2026 | Registra el arranque de la implementación del bloque #1 de la sección 19.1 (identidad única del cliente): desactivación de la fusión automática por nombre (`consolidateDuplicateClients`) y construcción del detector de posibles duplicados, ambos sin fusionar ni migrar datos existentes. Incorpora en sección 21 las decisiones de Felipe sobre las 4 preguntas abiertas de `docs/IDENTIDAD_UNICA_CLIENTE_SPEC.md`. No cambia método, triage, objeciones ni playbooks. |
+| v2.2 | 10/09/2026 | Incorpora la arquitectura aprobada de "CRM como copiloto comercial" (nuevo documento `docs/COPILOTO_COMERCIAL_ARQUITECTURA.md`): tres niveles (ayuda contextual, Academia comercial, aprendizaje con casos reales) que continúan la sección 19.1 después del bloque #1. Ajusta la sección 19.2, cuyos ítems de objeciones/playbooks/casos se absorben en el nuevo documento. No cambia método, triage, objeciones ni playbooks (secciones 5-8). |
 
 ---
 
@@ -609,7 +611,7 @@ El documento define el método. El CRM registra la operación. Trello administra
 
 No se implementan las mejoras del CRM todas juntas. El primer bloque a ejecutar es **identidad única + persistencia + clasificación rápida** — sin eso, agregar más pantallas solo agranda un CRM todavía inconsistente.
 
-1. **Identidad única del cliente:** una empresa puede tener varios teléfonos, pero temperatura, familia, condición comercial e historial se registran una sola vez.
+1. **Identidad única del cliente:** una empresa puede tener varias personas y teléfonos, pero temperatura, familia, condición comercial e historial se registran una sola vez. **Implementación base cerrada (10/09/2026):** fusión automática desactivada; detector y pantalla de posibles duplicados construidos; rendimiento corregido para carteras grandes; alta, edición, baja y elección de contacto principal disponibles dentro de una empresa. Felipe difirió la fusión reversible y las acciones sobre candidatos. Sigue pendiente la clasificación no comercial persistente a nivel de persona y el QA con casos reales. Detalle en sección 21 y en `docs/IDENTIDAD_UNICA_CLIENTE_SPEC.md`.
 2. **Clasificación rápida:** el copiloto precompleta familia, intención, temperatura y triage (sección 6); el vendedor solo confirma o corrige.
 3. **Persistencia verdadera:** tareas completadas, contactos no comerciales, archivos y eliminaciones no pueden reaparecer al recargar.
 4. **Historial útil:** cliente único, filtros por fecha/familia/temperatura, sin duplicación General/Penosil.
@@ -617,9 +619,13 @@ No se implementan las mejoras del CRM todas juntas. El primer bloque a ejecutar 
 6. **Ventas y comisiones:** completar y validar el módulo (sección 11.1) con facturas reales.
 7. **Después:** alerta de tipo de cambio, botón "Armar seguimiento", mejoras del copiloto.
 
+**Continuación aprobada (10/09/2026):** una vez que cierre el bloque #1, la secuencia se extiende hacia el CRM como copiloto comercial ("Academia comercial" + ayuda contextual + aprendizaje con casos reales) según `docs/COPILOTO_COMERCIAL_ARQUITECTURA.md` — ese documento desarrolla en detalle los ítems 2 y 5 de esta lista y absorbe varios de los puntos de la sección 19.2 (biblioteca de objeciones estructurada, matriz de mensajes por etapa, casos comerciales estandarizados). No reemplaza este orden, lo continúa.
+
 ### 19.2 Otros pendientes
 
-Biblioteca de objeciones ampliada con casos reales; matriz de mensajes y contenido por etapa; tablero de triage y conversión; rutas de cross-selling; programa de referidos; casos comerciales estandarizados; onboarding para nuevos vendedores; formación y certificación interna (ver `PROGRAMA_FORMACION_COMERCIAL_4_SEMANAS.md`); integración de Google Calendar; asistente de IA con fuentes técnicas verificadas; panel de dirección y forecasting basado en datos reales.
+Tablero de triage y conversión; rutas de cross-selling; programa de referidos; onboarding para nuevos vendedores; formación y certificación interna (ver `PROGRAMA_FORMACION_COMERCIAL_4_SEMANAS.md`); integración de Google Calendar; panel de dirección y forecasting basado en datos reales.
+
+*(Biblioteca de objeciones ampliada, matriz de mensajes por etapa, casos comerciales estandarizados y asistente de IA con fuentes técnicas verificadas pasaron a `docs/COPILOTO_COMERCIAL_ARQUITECTURA.md`, donde están desarrollados con más detalle que en esta lista.)*
 
 ## 20. Criterio de éxito
 
@@ -667,6 +673,34 @@ Espacio vivo para que Codex documente, a medida que ocurre, el estado técnico y
 - Cierre previsto 17-18/09: documentación y handoff completo a Claude.
 - Versionado: commit `4cfd48d` en GitHub (repo `poliplast-sales-copilot`). El `.git/index.lock` trabado que había quedado de una sesión anterior fue reubicado a un archivo recuperable, no borrado.
 - "Fase 6" confirmado como cerrado (Anexo A): costos, precios y rentabilidad del frente Catálogo — no es una fase del sistema comercial.
+
+**10/09/2026 — Marketing/Codex, avance del bloque #1 de identidad única (commits `f09313e` y `e2e77f7`):**
+
+- `consolidateDuplicateClients` (fusión automática por nombre de empresa en cada sincronización) fue **desactivada**. Se confirmaron duplicados reales visibles en producción (Carrocería Argentina, Ferref Refrigeración, Metalúrgica Bonano) sin fusionar, eliminar ni migrar ningún cliente existente. Se agregó una prueba que garantiza que dos fichas con el mismo nombre permanezcan separadas.
+- Se construyó un **detector de posibles duplicados** de solo lectura: evalúa CUIT, teléfono, email, razón social y nombre comercial; cada candidato indica por qué apareció; coincidencia de nombre sola queda siempre en confianza baja; ningún candidato se fusiona automáticamente, ni siquiera en confianza alta. 165 pruebas y compilación completa pasando; producción responde correctamente en General y Penosil.
+- Pendiente todavía (siguiente bloque, ya scopeado por Codex): pantalla "Posibles duplicados" dentro de Empresas (confianza alta visible primero, baja oculta por defecto), acciones Revisar / No son duplicados / Postergar, vista lado a lado de datos/temperatura/contactos/historial, y recién después Fusionar con registro y deshacer.
+- **Decisiones de Felipe sobre las 4 preguntas abiertas de `docs/IDENTIDAD_UNICA_CLIENTE_SPEC.md` (Anexo, esa misma ficha):**
+  1. El cliente se clasifica **una sola vez** (historial e identidad unificados); productos, intereses y conversaciones se mantienen separados por unidad de negocio/canal, pero **no** hay dos temperaturas independientes para el mismo cliente.
+  2. Fusiones administradas **solo por Felipe** al inicio; más adelante podrá habilitarse a supervisores, no a cualquier comercial.
+  3. Candidatos de confianza alta: confirmación con **un clic** después de ver el resumen; pedir campo por campo únicamente cuando hay conflictos reales de datos.
+  4. Fusiones históricas ya ocurridas (antes de desactivar `consolidateDuplicateClients`): primero el diagnóstico completo de solo lectura; después revisar prioritariamente las empresas con más ventas, tareas o actividad.
+- Impacto sobre este manual: actualiza el estado del bloque #1 de la sección 19.1. No cambia método, triage, objeciones ni playbooks (secciones 5-8).
+
+**10/09/2026 — Marketing, arquitectura de "CRM como copiloto comercial" (nuevo documento `docs/COPILOTO_COMERCIAL_ARQUITECTURA.md`):**
+
+- Definición aprobada del diferencial real del CRM: no solo registrar ventas, sino enseñar y acompañar al vendedor durante la conversación, en tres niveles — ayuda contextual (sugerencias atadas a la conversación abierta), Academia comercial (fusión de Respuestas + Entrenador en una sola sección), y aprendizaje con casos reales (estadísticas comerciales basadas en resultados, no en supuestos).
+- Se agregó a `docs/IDENTIDAD_UNICA_CLIENTE_SPEC.md` (sección 5.1) el detalle de qué debe mostrar la pantalla de comparación antes de fusionar dos fichas (empresa que se conserva, teléfonos/personas que se incorporan, historial/tareas que se trasladan, valores en conflicto, opción de deshacer) — queda documentado para cuando se construya ese bloque, no es el que se está construyendo ahora.
+- Orden recomendado para después del cierre del bloque #1 (identidad única): Academia comercial → objeciones/playbooks como datos editables → consejos contextuales en pantalla → triage rápido (ya en sección 19.1) → registrar si una sugerencia funcionó → estadísticas comerciales → recién al final, IA generativa para borradores, condicionada a tener biblioteca estructurada y datos reales.
+- No se espera a que Claude termine de mejorar el contenido del manual para que Codex empiece a construir el contenedor (arquitectura de los tres niveles) — avanzan en paralelo; las versiones aprobadas del manual se sincronizan sobre esa arquitectura.
+- Impacto sobre este manual: actualiza sección 19.1 (agrega continuación aprobada tras el bloque #1) y sección 19.2 (varios ítems se absorben en el nuevo documento, con nota de referencia). No cambia método, triage, objeciones ni playbooks (secciones 5-8) — el nuevo documento es de arquitectura de interfaz, no de contenido comercial.
+
+**10/09/2026 — Codex, cierre de la base utilizable de identidad única (commits `2b31da0`, `adaa155` y `c84cdcb`):**
+
+- Se incorporó en Empresas la revisión de posibles duplicados en modo solo lectura, sin fusionar ni alterar datos reales.
+- Se reemplazó la comparación cuadrática de toda la cartera por índices de CUIT, teléfono, email y nombres. La prueba con 2.001 clientes evita que la pantalla Empresas vuelva a trabarse por este cálculo.
+- La ficha Empresa ahora permite varias personas y medios de contacto, elección de principal, edición y baja individual. El buscador contempla cualquiera de esos datos.
+- Verificación: 167 pruebas automatizadas y compilación de producción completas.
+- Decisión de Felipe: las acciones de candidatos y la fusión/deshacer quedan diferidas. El próximo frente habilitado es Academia comercial; identidad conserva como pendientes la clasificación no comercial por persona y el QA real.
 
 ---
 

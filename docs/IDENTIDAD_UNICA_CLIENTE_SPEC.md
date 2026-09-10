@@ -1,10 +1,23 @@
 # Especificación: Identidad única del cliente
 
-**Estado:** Propuesta técnica, sin implementar. No modifica código, Supabase ni el CRM.
+**Estado:** En implementación parcial (ver "Estado de implementación" abajo). Diseño original sin tocar código; los pasos ya ejecutados por Codex están documentados y verificados.
 **Autor:** Claude (Cowork), a pedido de Marketing / equipo Grupo Poliplast.
-**Fecha:** 09/09/2026.
+**Fecha:** 09/09/2026. Actualizado 10/09/2026 (estado de implementación + decisiones de Felipe).
 **Prioridad:** Bloque #1 del orden de implementación CRM (ver manual, Sección 19.1).
 **Para:** Codex (implementación), Felipe (decisiones comerciales pendientes).
+
+---
+
+## Estado de implementación (actualizado 10/09/2026)
+
+- ✅ **Hecho (commit `f09313e`):** desactivada `consolidateDuplicateClients` (fusión automática por nombre en cada sincronización, descripta como riesgo #1 en la Sección 1). Se verificó contra duplicados reales de producción (Carrocería Argentina, Ferref Refrigeración, Metalúrgica Bonano) sin fusionar, eliminar ni migrar nada existente. Prueba agregada para impedir que se reactive sin querer. 160 pruebas + compilación completa pasando.
+- ✅ **Hecho (commit `e2e77f7`):** construido el detector de posibles duplicados de la Sección 3.4/4 (solo lectura, no persiste todavía como bandeja): evalúa CUIT, teléfono, email, razón social y nombre comercial; cada candidato explica su señal; nombre coincidente solo queda en confianza baja; ninguna confianza fusiona sola. 165 pruebas + compilación pasando.
+- ✅ **Hecho (commit `2b31da0`):** pantalla de solo lectura "Posibles duplicados" dentro de Empresas, con nivel de confianza, señales y comparación básica de las dos fichas. No fusiona ni modifica datos.
+- ✅ **Hecho (commit `adaa155`):** detector indexado para carteras grandes. Se eliminó el cálculo cuadrático que trababa Empresas; prueba de rendimiento con 2.001 clientes incorporada.
+- ✅ **Hecho (commit `c84cdcb`):** una empresa puede administrar varias personas y medios de contacto, elegir el principal, editarlo o quitarlo sin eliminar la empresa. Los campos históricos permanecen sincronizados con el contacto principal.
+- ⏸️ **Diferido por Felipe (10/09/2026):** acciones No son duplicados / Postergar y fusión reversible con comparación completa, `mergeLog` y deshacer. No bloquea el comienzo de Academia comercial.
+- 🔜 **Pendiente del bloque de identidad:** clasificación no comercial persistente a nivel de persona (Sección 6) y QA con casos reales de varias personas/teléfonos.
+- **Preguntas de la Sección 8/Anexo:** ya respondidas por Felipe — ver "Decisiones de Felipe" más abajo, que reemplaza el Anexo original.
 
 ---
 
@@ -131,6 +144,18 @@ Señales, de más a menos confiables. Ninguna señal por sí sola dispara una fu
 5. **Deshacer:** disponible mientras exista el `mergeLog` correspondiente (no hay límite de tiempo propuesto, aunque se puede definir uno más adelante). Restaura los registros desde `snapshotAntes` y marca el log como `deshecho`.
 6. Caso "una persona trabaja con varias empresas": nunca se asume automáticamente. Si un contacto aparece escribiendo a nombre de una empresa distinta a la que tiene asignada como principal, el sistema lo señala como "contacto visto en otra empresa" (no lo reasigna, no lo fusiona) y dentro de la ficha de la persona se acumula en `empresasHistoricas[]`. La decisión de si es la misma persona cambiando de trabajo, la misma persona con dos changas, o dos personas con el mismo nombre, es siempre humana.
 
+### 5.1 Pantalla de comparación antes de fusionar (detalle agregado 10/09/2026 — para cuando se construya este bloque, no es el próximo a implementar)
+
+Antes de ejecutar el paso 3, la pantalla de fusión debe mostrar explícitamente:
+
+- Qué empresa se conserva (el registro elegido como sobreviviente).
+- Qué teléfonos y personas se incorporan (los contactos que llegan desde el registro fusionado).
+- Qué historial y tareas se trasladan (interacciones, oportunidades, ventas, notas).
+- Qué valores están en conflicto (los campos donde los dos registros tenían datos distintos, para que la elección del paso 3 sea explícita y no implícita).
+- Posibilidad de deshacer la unión, visible en la misma pantalla de confirmación, no solo disponible después buscándola.
+
+Este detalle no cambia el diseño de la Sección 3.5 (`mergeLog`) ni del resto de esta sección — es la especificación de la interfaz que muestra esos mismos datos antes de confirmar. Queda documentado para cuando Codex llegue a este bloque (ver orden en `docs/COPILOTO_COMERCIAL_ARQUITECTURA.md`, Sección 5); no es parte del bloque que se está construyendo ahora (la bandeja de revisión sin fusión, Sección 3.4).
+
 ---
 
 ## 6. Clasificaciones no comerciales (Equipo interno / Familiar / Proveedor / Otro)
@@ -189,11 +214,9 @@ Este diseño no implementa multi-tenant, pero está pensado para no tener que re
 
 ---
 
-## Anexo: preguntas pendientes para Felipe
+## Anexo: decisiones de Felipe (10/09/2026, reemplaza las preguntas abiertas)
 
-Ver detalle también en la entrega de chat que acompaña este documento. Resumen:
-
-1. ¿Cuándo un mismo contacto aparece en General y en Penosil por una consulta real de las dos unidades de negocio, querés que el historial se vea unificado en una sola ficha de persona, pero que la evaluación comercial (temperatura, etapa) se lleve por separado por unidad de negocio, o preferís una sola evaluación comercial general?
-2. Para la bandeja de posibles duplicados: ¿querés que la revisión sea solo tuya, o también del equipo comercial cuando exista (ejecutivo comercial confirmado)?
-3. ¿Hay un plazo o volumen de fusiones "de confianza alta" (CUIT/teléfono exacto) que preferís que el sistema pre-apruebe con solo un clic de confirmación, en vez de pedir elegir campo por campo cada vez?
-4. Sobre las fusiones automáticas que ya ocurrieron en el pasado (por `consolidateDuplicateClients`): ¿tiene sentido para vos revisar manualmente los casos de mayor volumen de facturación primero, o preferís esperar el diagnóstico completo antes de decidir por dónde empezar?
+1. **Historial unificado, temperatura única.** El cliente se clasifica una sola vez. Intereses, productos y conversaciones se conservan separados por unidad de negocio/canal (General/Penosil/Juan), pero no hay dos temperaturas ni dos etapas independientes para el mismo cliente — esto ajusta la Sección 2 ("el estado comercial vive en un solo lugar") y cierra el caso límite #3 de la Sección 7 sin ambigüedad.
+2. **Fusiones administradas por Felipe, inicialmente.** Más adelante podrá habilitarse a supervisores, nunca a cualquier comercial sin criterio — esto fija el primer paso del modelo de permisos de la Sección 9.
+3. **Confianza alta = confirmación de un clic.** Después de ver el resumen del candidato (Sección 3.4), un clic alcanza para fusionar cuando no hay conflicto de datos; pedir campo por campo queda reservado para cuando sí lo hay (Sección 5, paso 3).
+4. **Fusiones históricas: diagnóstico primero, después prioridad por actividad.** Antes de tocar nada se corre el diagnóstico completo de solo lectura (Sección 8, riesgo 1); resuelto eso, se revisan primero las empresas con más ventas, tareas o actividad — no por orden alfabético ni por antigüedad.

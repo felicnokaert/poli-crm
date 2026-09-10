@@ -45,6 +45,17 @@ export async function updateTechnicalDocumentStatus(id, { status, notes = '', ve
   return data ? fromRow(data) : null;
 }
 
+// Renombrar un documento (el "nombre de la carpeta"/ficha que ve el equipo,
+// no el archivo real en Drive - source_file no se toca). No dispara
+// historial de validación: no es un cambio de estado, es prolijidad.
+export async function updateTechnicalDocumentTitle(id, title) {
+  const clean = String(title || '').trim();
+  if (!clean) throw new Error('El nombre no puede quedar vacío.');
+  const { data, error } = await supabase.from('technical_documents').update({ title: clean }).eq('id', id).select().maybeSingle();
+  if (error) throw error;
+  return data ? fromRow(data) : null;
+}
+
 export async function fetchTechnicalDocumentHistory(documentId) {
   const { data, error } = await supabase
     .from('technical_document_history')

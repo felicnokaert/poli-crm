@@ -324,3 +324,8 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .technical-import-new-list { list-style: none; margin: 4px 0 10px; padding: 0; }
 .technical-import-new-list li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 4px 0; border-bottom: 1px solid #eef1ef; }
 .technical-import-new-list li span { font-size: 12.5px; }
+.technical-document-title-input { font-size: 13px; font-weight: 600; border: 1px solid transparent; background: transparent; padding: 2px 4px; border-radius: 6px; width: 100%; max-width: 320px; }
+.technical-document-title-input:hover, .technical-document-title-input:focus { border-color: #cfd9d5; background: #fff; outline: none; }
+.technical-document-folder-heading { font-size: 12px; font-weight: 700; color: #4f6b62; text-transform: uppercase; letter-spacing: 0.03em; margin: 18px 4px 4px; }
+.technical-document-folder-heading span { font-weight: 400; text-transform: none; color: #8a9994; }
+.technical-document-group-toggle { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: #4f6b62; }

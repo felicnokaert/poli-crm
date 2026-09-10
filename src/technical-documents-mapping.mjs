@@ -109,6 +109,31 @@ export function parsePathHints(relativePath = '') {
   };
 }
 
+// La carpeta de un documento no vive en una columna propia - se deriva de
+// source_file, que ya guarda la ruta completa de Drive (ej.
+// "PRODUCTOS/POLIURETANOS RIGIDOS/Ficha Técnica 619 SP/PDS isoBUNKER
+// 619-SP.pdf" -> carpeta "PRODUCTOS / POLIURETANOS RIGIDOS / Ficha Técnica
+// 619 SP"). Así la organización por carpetas queda igual que en Drive, sin
+// agregar una columna ni una tabla nueva que se pueda desincronizar.
+export function folderFromSourceFile(sourceFile = '') {
+  const clean = String(sourceFile || '').replace(/^\.?\//, '');
+  const parts = clean.split('/').filter(Boolean);
+  if (parts.length <= 1) return 'Sin carpeta';
+  return parts.slice(0, -1).join(' / ');
+}
+
+export function groupDocumentsByFolder(documents = []) {
+  const groups = new Map();
+  for (const doc of documents) {
+    const folder = folderFromSourceFile(doc.sourceFile);
+    if (!groups.has(folder)) groups.set(folder, []);
+    groups.get(folder).push(doc);
+  }
+  return [...groups.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([folder, docs]) => ({ folder, documents: docs.sort((a, b) => (a.title || '').localeCompare(b.title || '')) }));
+}
+
 export function historyFromRow(row = {}) {
   return {
     id: row.id,

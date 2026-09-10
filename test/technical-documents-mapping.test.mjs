@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildTechnicalDocument } from '../src/technical-document-governance.mjs';
-import { fromRow, guessFamilyFromPath, historyFromRow, isTechnicalDocumentAdmin, parsePathHints, toRow } from '../src/technical-documents-mapping.mjs';
+import { folderFromSourceFile, fromRow, groupDocumentsByFolder, guessFamilyFromPath, historyFromRow, isTechnicalDocumentAdmin, parsePathHints, toRow } from '../src/technical-documents-mapping.mjs';
 
 test('toRow maps a built document to snake_case columns, defaulting to inventariado', () => {
   const document = buildTechnicalDocument({ title: 'isoBUNKER 619-SP', family: 'Poliuretano', product: 'isoBUNKER 619-SP', sourceFile: 'a.pdf', sha256: 'abc', sizeBytes: 100 });
@@ -71,6 +71,26 @@ test('parsePathHints handles a flat file with no folder (regular multi-file pick
   assert.equal(hints.title, 'Airless 390');
   assert.equal(hints.product, '');
   assert.equal(hints.family, 'Otra');
+});
+
+test('folderFromSourceFile derives the Drive folder path, mirroring the real structure', () => {
+  assert.equal(
+    folderFromSourceFile('PRODUCTOS/POLIURETANOS RIGIDOS/Ficha Técnica 619 SP/PDS isoBUNKER 619-SP.pdf'),
+    'PRODUCTOS / POLIURETANOS RIGIDOS / Ficha Técnica 619 SP',
+  );
+  assert.equal(folderFromSourceFile('Airless 390.pdf'), 'Sin carpeta');
+  assert.equal(folderFromSourceFile(''), 'Sin carpeta');
+});
+
+test('groupDocumentsByFolder groups and sorts documents exactly like the Drive tree', () => {
+  const documents = [
+    { title: 'B', sourceFile: 'PRODUCTOS/RESINAS/B.pdf' },
+    { title: 'A', sourceFile: 'PRODUCTOS/RESINAS/A.pdf' },
+    { title: 'Airless 390', sourceFile: 'Airless 390.pdf' },
+  ];
+  const grouped = groupDocumentsByFolder(documents);
+  assert.deepEqual(grouped.map((g) => g.folder), ['PRODUCTOS / RESINAS', 'Sin carpeta']);
+  assert.deepEqual(grouped[0].documents.map((d) => d.title), ['A', 'B']);
 });
 
 test('toRow/fromRow round-trip preserves the fields that matter for the preview', () => {

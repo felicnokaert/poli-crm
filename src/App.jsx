@@ -5220,6 +5220,8 @@ function TechnicalDocumentsAdmin({ session }) {
   const [familyFilter, setFamilyFilter] = useState("all");
   const [drafts, setDrafts] = useState({});
   const [isAdmin, setIsAdmin] = useState(false);
+  const [titleDrafts, setTitleDrafts] = useState({});
+  const [groupByFolder, setGroupByFolder] = useState(true);
 
   async function load() {
     setLoading(true);
@@ -5276,6 +5278,19 @@ function TechnicalDocumentsAdmin({ session }) {
     }
   }
 
+  async function saveTitle(doc) {
+    const nextTitle = (titleDrafts[doc.id] ?? doc.title).trim();
+    if (!nextTitle || nextTitle === doc.title) return;
+    try {
+      const { updateTechnicalDocumentTitle } = await import("./technical-documents-repo.mjs");
+      const updated = await updateTechnicalDocumentTitle(doc.id, nextTitle);
+      setDocuments((current) => current.map((item) => (item.id === doc.id ? updated : item)));
+      setMessage(`Nombre actualizado: "${updated.title}".`);
+    } catch (error) {
+      setMessage(error.message || "No se pudo renombrar el documento.");
+    }
+  }
+
   const families = [...new Set(documents.map((doc) => doc.family))].sort();
   const filtered = documents.filter(
     (doc) =>
@@ -5311,63 +5326,104 @@ function TechnicalDocumentsAdmin({ session }) {
               <option key={family}>{family}</option>
             ))}
           </select>
+          <label className="technical-document-group-toggle">
+            <input type="checkbox" checked={groupByFolder} onChange={(event) => setGroupByFolder(event.target.checked)} />
+            Agrupar por carpeta (como en Drive)
+          </label>
         </div>
         {message && <div className="system-message">{message}</div>}
         {loading ? (
           <Empty text="Cargando…" />
         ) : filtered.length ? (
-          <div className="conversation-list">
-            {filtered.map((doc) => {
-              const draft = draftFor(doc);
-              return (
-                <article className="technical-document-row" key={doc.id}>
-                  <div>
-                    <strong>{doc.title}</strong>
-                    <span>
-                      {doc.family}
-                      {doc.product ? ` · ${doc.product}` : ""} ·{" "}
-                      {TECHNICAL_DOCUMENT_STATUS_LABELS[doc.status] || doc.status}
-                      {doc.sourceFile ? ` · ${doc.sourceFile}` : ""}
-                    </span>
-                    {doc.status === "vigente" && (
-                      <span>
-                        Validado por {doc.verifiedByEmail || "?"} ·{" "}
-                        {doc.verifiedAt ? new Date(doc.verifiedAt).toLocaleDateString("es-AR") : ""}
-                      </span>
-                    )}
-                  </div>
-                  <div className="technical-document-actions">
-                    <select
-                      value={draft.status}
-                      onChange={(event) => updateDraft(doc.id, { status: event.target.value })}
-                    >
-                      {Object.entries(TECHNICAL_DOCUMENT_STATUS_LABELS)
-                        .filter(([key]) => key !== "vigente" || isAdmin)
-                        .map(([key, label]) => (
-                          <option key={key} value={key}>{label}</option>
-                        ))}
-                    </select>
-                    <input
-                      placeholder="Observación (queda en el historial)"
-                      value={draft.notes}
-                      onChange={(event) => updateDraft(doc.id, { notes: event.target.value })}
-                    />
-                    <button
-                      type="button"
-                      className="secondary"
-                      onClick={() => saveStatus(doc)}
-                    >
-                      Guardar
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+          <TechnicalDocumentGroups
+            documents={filtered}
+            groupByFolder={groupByFolder}
+            titleDrafts={titleDrafts}
+            setTitleDrafts={setTitleDrafts}
+            saveTitle={saveTitle}
+            draftFor={draftFor}
+            updateDraft={updateDraft}
+            saveStatus={saveStatus}
+            isAdmin={isAdmin}
+          />
         ) : (
           <Empty text="No hay documentos importados todavía. Subí fichas desde Datos → Importar fichas técnicas." />
         )}
       </section>
+    </div>
+  );
+}
+
+function TechnicalDocumentGroups({ documents, groupByFolder, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin }) {
+  const [groupDocumentsByFolder, setGroupDocumentsByFolder] = useState(null);
+  useEffect(() => {
+    import("./technical-documents-mapping.mjs").then(({ groupDocumentsByFolder: fn }) => setGroupDocumentsByFolder(() => fn));
+  }, []);
+  const groups = groupByFolder && groupDocumentsByFolder
+    ? groupDocumentsByFolder(documents)
+    : [{ folder: null, documents: [...documents].sort((a, b) => (a.title || "").localeCompare(b.title || "")) }];
+  return (
+    <div className="conversation-list">
+      {groups.map(({ folder, documents: docsInGroup }) => (
+        <div key={folder || "flat"}>
+          {folder && (
+            <div className="technical-document-folder-heading">
+              📁 {folder} <span>({docsInGroup.length})</span>
+            </div>
+          )}
+          {docsInGroup.map((doc) => {
+            const draft = draftFor(doc);
+            return (
+              <article className="technical-document-row" key={doc.id}>
+                <div>
+                  <input
+                    className="technical-document-title-input"
+                    value={titleDrafts[doc.id] ?? doc.title}
+                    onChange={(event) => setTitleDrafts((current) => ({ ...current, [doc.id]: event.target.value }))}
+                    onBlur={() => saveTitle(doc)}
+                  />
+                  <span>
+                    {doc.family}
+                    {doc.product ? ` · ${doc.product}` : ""} ·{" "}
+                    {TECHNICAL_DOCUMENT_STATUS_LABELS[doc.status] || doc.status}
+                    {doc.sourceFile ? ` · ${doc.sourceFile}` : ""}
+                  </span>
+                  {doc.status === "vigente" && (
+                    <span>
+                      Validado por {doc.verifiedByEmail || "?"} ·{" "}
+                      {doc.verifiedAt ? new Date(doc.verifiedAt).toLocaleDateString("es-AR") : ""}
+                    </span>
+                  )}
+                </div>
+                <div className="technical-document-actions">
+                  <select
+                    value={draft.status}
+                    onChange={(event) => updateDraft(doc.id, { status: event.target.value })}
+                  >
+                    {Object.entries(TECHNICAL_DOCUMENT_STATUS_LABELS)
+                      .filter(([key]) => key !== "vigente" || isAdmin)
+                      .map(([key, label]) => (
+                        <option key={key} value={key}>{label}</option>
+                      ))}
+                  </select>
+                  <input
+                    placeholder="Observación (queda en el historial)"
+                    value={draft.notes}
+                    onChange={(event) => updateDraft(doc.id, { notes: event.target.value })}
+                  />
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => saveStatus(doc)}
+                  >
+                    Guardar
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 }

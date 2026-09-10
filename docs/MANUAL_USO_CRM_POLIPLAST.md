@@ -1,10 +1,10 @@
 # Manual práctico de Poliplast Sales Copilot
 
-**Versión:** 1.0  
+**Versión:** 1.1  
 **Fecha:** 10/09/2026  
 **Aplicación:** <https://poli-crm.vercel.app>  
 **Audiencia:** Felipe y equipo comercial de Grupo Poliplast  
-**Estado:** primera versión operativa para revisión de Felipe y revisión pedagógica de Claude
+**Estado:** revisión pedagógica de Claude y validación técnica QA de Codex aplicadas. Las 12 etapas coinciden con el sistema y con `SISTEMA_COMERCIAL_GRUPO_POLIPLAST.md`. PDF de revisión generado; pendiente la lectura rápida de Felipe (sección 21) antes de publicar la versión aprobada en Drive.
 
 ## 1. Para qué sirve
 
@@ -132,20 +132,9 @@ No crear tareas masivas para toda la cartera “por las dudas”. Al marcar una 
 
 La temperatura y la etapa pertenecen a la empresa comercial, no a cada número de teléfono.
 
-Las 12 etapas del método son:
+Las 12 etapas del método son: Preparación, Apertura, Diagnóstico, Calificación, Recomendación, Objeción, Propuesta, Seguimiento, Negociación, Cierre, Posventa y Recompra. El detalle de qué significa cada una y cuándo pasar a la siguiente está en `SISTEMA_COMERCIAL_GRUPO_POLIPLAST.md`, sección 5 — esa es la fuente para aprender el método; acá solo se usa.
 
-1. Cuenta objetivo.
-2. Contacto identificado.
-3. Contacto iniciado.
-4. Conversación abierta.
-5. Diagnóstico.
-6. Solución diseñada.
-7. Propuesta enviada.
-8. Negociación.
-9. Cierre ganado.
-10. Cierre perdido.
-11. Seguimiento.
-12. Recompra / expansión.
+El resultado de una cuenta cerrada (ganada o perdida) no es una etapa aparte: se registra por separado, en el campo de resultado de la ficha, sin mover la cuenta a una etapa "Cierre ganado" o "Cierre perdido" que no existe en el sistema.
 
 Mover la etapa cuando exista evidencia suficiente. No avanzar una cuenta para que “se vea mejor” el tablero.
 

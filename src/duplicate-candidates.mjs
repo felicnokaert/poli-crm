@@ -46,9 +46,35 @@ function confidenceFor(signals) {
 }
 
 export function detectDuplicateClientCandidates(clients = []) {
+  // Generamos pares sólo dentro de índices que comparten alguna señal. Esto
+  // evita comparar toda la cartera contra toda la cartera (O(n²)), que con
+  // más de mil fichas bloqueaba la pantalla Empresas.
+  const indexes = {
+    cuit: new Map(), phone: new Map(), email: new Map(), legalName: new Map(), company: new Map(),
+  };
+  const add = (index, value, clientIndex) => {
+    if (!value) return;
+    index.set(value, [...(index.get(value) || []), clientIndex]);
+  };
+  clients.forEach((client, clientIndex) => {
+    add(indexes.cuit, normalizedCuit(client.cuit), clientIndex);
+    valuesFor(client, 'phone').forEach((value) => add(indexes.phone, value, clientIndex));
+    valuesFor(client, 'email').forEach((value) => add(indexes.email, value, clientIndex));
+    add(indexes.legalName, normalizedText(client.legalName), clientIndex);
+    add(indexes.company, normalizedText(client.company), clientIndex);
+  });
+  const pairKeys = new Set();
+  Object.values(indexes).forEach((index) => index.forEach((members) => {
+    const unique = [...new Set(members)];
+    for (let left = 0; left < unique.length; left += 1) {
+      for (let right = left + 1; right < unique.length; right += 1) {
+        pairKeys.add(`${Math.min(unique[left], unique[right])}:${Math.max(unique[left], unique[right])}`);
+      }
+    }
+  }));
   const candidates = [];
-  for (let leftIndex = 0; leftIndex < clients.length; leftIndex += 1) {
-    for (let rightIndex = leftIndex + 1; rightIndex < clients.length; rightIndex += 1) {
+  for (const pairKey of pairKeys) {
+      const [leftIndex, rightIndex] = pairKey.split(':').map(Number);
       const left = clients[leftIndex];
       const right = clients[rightIndex];
       if (!left?.id || !right?.id || left.id === right.id) continue;
@@ -62,9 +88,7 @@ export function detectDuplicateClientCandidates(clients = []) {
         signals,
         requiresHumanReview: true,
       });
-    }
   }
   const order = { high: 0, medium: 1, low: 2 };
   return candidates.sort((a, b) => order[a.confidence] - order[b.confidence] || a.id.localeCompare(b.id));
 }
-

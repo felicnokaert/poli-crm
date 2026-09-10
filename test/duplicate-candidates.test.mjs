@@ -46,3 +46,18 @@ test('returns stable confidence ordering', () => {
   assert.equal(result[0].confidence, 'high');
   assert.equal(result.at(-1).confidence, 'low');
 });
+
+test('scans a large mostly-unique portfolio without quadratic comparisons', () => {
+  const clients = Array.from({ length: 2000 }, (_, index) => ({
+    id: `client-${index}`,
+    company: `Empresa única ${index}`,
+    cuit: `30${String(index).padStart(8, '0')}1`,
+    contacts: [{ phone: `11${String(index).padStart(8, '0')}` }],
+  }));
+  clients.push({ id: 'duplicate', company: 'Empresa única 17', cuit: clients[17].cuit });
+  const startedAt = performance.now();
+  const result = detectDuplicateClientCandidates(clients);
+  assert.equal(result.length, 1);
+  assert.equal(result[0].confidence, 'high');
+  assert.ok(performance.now() - startedAt < 250);
+});

@@ -5171,6 +5171,63 @@ function DataSettings({ data, setData, session, syncStatus }) {
   const [connecting, setConnecting] = useState(false);
   const [exportFamily, setExportFamily] = useState("Todas");
   const [pendingClientImport, setPendingClientImport] = useState(null);
+  const [technicalImportFamily, setTechnicalImportFamily] = useState(FAMILIES[1] || FAMILIES[0]);
+  const [technicalImportPreview, setTechnicalImportPreview] = useState(null);
+  const [technicalImportBusy, setTechnicalImportBusy] = useState(false);
+
+  async function importTechnicalDocuments(event) {
+    const files = [...(event.target.files || [])];
+    event.target.value = "";
+    if (!files.length) return;
+    setTechnicalImportBusy(true);
+    setTechnicalImportPreview(null);
+    try {
+      const [{ sha256Hex }, { classifyInventoryImport }, { fetchTechnicalDocuments }] =
+        await Promise.all([
+          import("./file-hash.mjs"),
+          import("./technical-inventory-import.mjs"),
+          import("./technical-documents-repo.mjs"),
+        ]);
+      const existing = await fetchTechnicalDocuments();
+      const candidates = await Promise.all(
+        files.map(async (file) => ({
+          title: file.name.replace(/\.(pdf|docx?|xlsx?)$/i, ""),
+          family: technicalImportFamily,
+          docType: "sin_clasificar",
+          source: "drive",
+          sourceFile: file.name,
+          sizeBytes: file.size,
+          sha256: await sha256Hex(file),
+        })),
+      );
+      const preview = classifyInventoryImport(candidates, existing);
+      setTechnicalImportPreview(preview);
+      setMessage(
+        `Vista previa lista: ${preview.new.length} nuevos, ${preview.modified.length} modificados, ${preview.exactDuplicates.length} duplicados exactos, ${preview.possibleDuplicates.length} posibles duplicados, ${preview.errors.length} errores. Nada se guardó todavía.`,
+      );
+    } catch (error) {
+      setMessage(error.message || "No se pudo analizar los archivos.");
+    } finally {
+      setTechnicalImportBusy(false);
+    }
+  }
+
+  async function confirmTechnicalImport() {
+    if (!technicalImportPreview?.new?.length) return;
+    setTechnicalImportBusy(true);
+    try {
+      const { saveInventoryImport } = await import("./technical-documents-repo.mjs");
+      const saved = await saveInventoryImport(technicalImportPreview.new);
+      setMessage(
+        `${saved.length} documentos guardados como "inventariado". Ningún documento quedó "vigente" automáticamente - falta la validación humana.`,
+      );
+      setTechnicalImportPreview(null);
+    } catch (error) {
+      setMessage(error.message || "No se pudo guardar el inventario.");
+    } finally {
+      setTechnicalImportBusy(false);
+    }
+  }
 
   async function startWhatsAppConnection() {
     setConnecting(true);
@@ -5541,7 +5598,122 @@ function DataSettings({ data, setData, session, syncStatus }) {
               />
             </label>
           </article>
+          <article>
+            <Upload size={24} />
+            <h3>Importar fichas técnicas</h3>
+            <p>
+              Muestra vista previa (nuevos, modificados, duplicados exactos,
+              posibles duplicados, errores) antes de guardar. Nada queda
+              "vigente" automáticamente - eso lo decide una persona después.
+            </p>
+            <select
+              value={technicalImportFamily}
+              onChange={(event) => setTechnicalImportFamily(event.target.value)}
+            >
+              {FAMILIES.filter((item) => item !== "Sin definir").map((item) => (
+                <option key={item}>{item}</option>
+              ))}
+            </select>
+            <label className="secondary upload-button">
+              {technicalImportBusy ? "Analizando…" : "Elegir archivos"}
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx"
+                multiple
+                disabled={technicalImportBusy}
+                onChange={importTechnicalDocuments}
+              />
+            </label>
+          </article>
         </div>
+        {technicalImportPreview && (
+          <div className="import-preview">
+            <strong>Vista previa de fichas técnicas</strong>
+            {technicalImportPreview.new.length > 0 && (
+              <div>
+                <span className="copilot-suggestion-label">
+                  Nuevos ({technicalImportPreview.new.length})
+                </span>
+                <ul>
+                  {technicalImportPreview.new.map((doc) => (
+                    <li key={doc.sourceFile}>{doc.title}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {technicalImportPreview.modified.length > 0 && (
+              <div>
+                <span className="copilot-suggestion-label">
+                  Modificados ({technicalImportPreview.modified.length}) - no se reemplazan solos
+                </span>
+                <ul>
+                  {technicalImportPreview.modified.map((entry) => (
+                    <li key={entry.candidate.sourceFile}>
+                      {entry.candidate.title} — ya existe como "{entry.existing.title}"
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {technicalImportPreview.exactDuplicates.length > 0 && (
+              <div>
+                <span className="copilot-suggestion-label">
+                  Duplicados exactos ({technicalImportPreview.exactDuplicates.length})
+                </span>
+                <ul>
+                  {technicalImportPreview.exactDuplicates.map((entry) => (
+                    <li key={entry.candidate.sourceFile}>
+                      {entry.candidate.sourceFile} = {entry.existing.sourceFile || entry.existing.title}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {technicalImportPreview.possibleDuplicates.length > 0 && (
+              <div>
+                <span className="copilot-suggestion-label">
+                  Posibles duplicados ({technicalImportPreview.possibleDuplicates.length}) - a revisar a mano
+                </span>
+                <ul>
+                  {technicalImportPreview.possibleDuplicates.map((entry) => (
+                    <li key={entry.candidate.sourceFile}>{entry.candidate.title}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {technicalImportPreview.errors.length > 0 && (
+              <div>
+                <span className="copilot-suggestion-label">
+                  Errores ({technicalImportPreview.errors.length})
+                </span>
+                <ul>
+                  {technicalImportPreview.errors.map((entry, index) => (
+                    <li key={index}>
+                      {entry.candidate?.sourceFile || entry.candidate?.title || "(sin nombre)"} — {entry.reason}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div className="modal-actions">
+              <button
+                className="secondary"
+                type="button"
+                onClick={() => setTechnicalImportPreview(null)}
+              >
+                Descartar vista previa
+              </button>
+              <button
+                className="primary"
+                type="button"
+                disabled={!technicalImportPreview.new.length || technicalImportBusy}
+                onClick={confirmTechnicalImport}
+              >
+                Guardar {technicalImportPreview.new.length} nuevos como "inventariado"
+              </button>
+            </div>
+          </div>
+        )}
         {pendingClientImport && (
           <div className="import-preview">
             <strong>Vista previa · {pendingClientImport.fileName}</strong>

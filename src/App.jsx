@@ -92,6 +92,7 @@ import { prepareManualQuery } from "./ai-provider.mjs";
 import { docTypeLabel } from "./technical-library.mjs";
 import { isLowSignalWhatsAppEvent } from "./whatsapp-events.mjs";
 import MercadoLibre from "./MercadoLibre";
+import { detectDuplicateClientCandidates } from "./duplicate-candidates.mjs";
 
 // El sufijo fuerza una única segunda pasada que también incluye las tareas
 // antiguas sin fecha de vencimiento, usando su fecha de creación.
@@ -3824,8 +3825,17 @@ function Clients({ clients, query, setQuery, onOpenClient }) {
   const [portfolio, setPortfolio] = useState("Todos");
   const [contact, setContact] = useState("Todos");
   const [review, setReview] = useState("Por validar");
+  const [showDuplicates, setShowDuplicates] = useState(false);
   const [page, setPage] = useState(1);
   const pageSize = 50;
+  const duplicateCandidates = useMemo(
+    () => detectDuplicateClientCandidates(clients),
+    [clients],
+  );
+  const duplicateCounts = duplicateCandidates.reduce(
+    (counts, candidate) => ({ ...counts, [candidate.confidence]: counts[candidate.confidence] + 1 }),
+    { high: 0, medium: 0, low: 0 },
+  );
   const families = [
     "Todas",
     ...new Set(clients.map((client) => client.family || "Sin definir")),
@@ -3907,7 +3917,54 @@ function Clients({ clients, query, setQuery, onOpenClient }) {
           <option>Con contacto</option>
           <option>Falta contacto</option>
         </select>
+        <button
+          type="button"
+          className={`duplicate-toggle ${showDuplicates ? "selected" : ""}`}
+          onClick={() => setShowDuplicates(!showDuplicates)}
+        >
+          Posibles duplicados · {duplicateCandidates.length}
+        </button>
       </div>
+      {showDuplicates && (
+        <div className="duplicate-review">
+          <div className="duplicate-summary">
+            <div><strong>{duplicateCounts.high}</strong><span>Confianza alta</span></div>
+            <div><strong>{duplicateCounts.medium}</strong><span>Confianza media</span></div>
+            <div><strong>{duplicateCounts.low}</strong><span>Revisar nombre</span></div>
+          </div>
+          <p className="duplicate-note">
+            Son sugerencias de revisión. El CRM no fusiona ni modifica ninguna ficha automáticamente.
+          </p>
+          <div className="duplicate-list">
+            {duplicateCandidates.map((candidate) => {
+              const [left, right] = candidate.clientIds.map((id) => clients.find((client) => client.id === id));
+              if (!left || !right) return null;
+              return (
+                <article className="duplicate-card" key={candidate.id}>
+                  <span className={`duplicate-confidence ${candidate.confidence}`}>
+                    {candidate.confidence === "high" ? "Alta" : candidate.confidence === "medium" ? "Media" : "Baja"}
+                  </span>
+                  <div className="duplicate-pair">
+                    <button type="button" onClick={() => onOpenClient(left.id)}>
+                      <strong>{left.company}</strong>
+                      <span>{left.contact || left.phone || left.email || "Sin contacto"} · {left.temperature || "Sin temperatura"}</span>
+                    </button>
+                    <span>posible coincidencia</span>
+                    <button type="button" onClick={() => onOpenClient(right.id)}>
+                      <strong>{right.company}</strong>
+                      <span>{right.contact || right.phone || right.email || "Sin contacto"} · {right.temperature || "Sin temperatura"}</span>
+                    </button>
+                  </div>
+                  <div className="duplicate-signals">
+                    {candidate.signals.map((signal) => <span key={signal.type}>{signal.label}</span>)}
+                  </div>
+                </article>
+              );
+            })}
+            {!duplicateCandidates.length && <Empty text="No se detectaron posibles duplicados." />}
+          </div>
+        </div>
+      )}
       {paged.length ? (
         <>
           <div className="client-table">

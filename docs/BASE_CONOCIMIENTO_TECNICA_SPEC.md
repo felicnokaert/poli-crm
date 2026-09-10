@@ -92,9 +92,13 @@ Siguiendo `docs/PROMPT_CONTINUIDAD_CLAUDE_CODE_BASE_TECNICA.md`, se construyó e
 - **Bug real encontrado y corregido durante el piloto:** la primera versión de `classifyInventoryImport` solo comparaba cada candidato contra `existingDocuments`, no contra los demás candidatos del mismo lote. Con un catálogo vacío (primera carga), los 2 pares de duplicados reales de arriba salían como "9 nuevos" en vez de "7 nuevos + 2 duplicados" — exactamente el escenario de una primera importación masiva. Se corrigió indexando cada candidato aceptado como "nuevo" antes de evaluar el siguiente del mismo lote, y se agregó una prueba que reproduce el caso.
 - **Limitación observada, no corregida (fuera de este bloque):** `MANUAL PISTOLA - PURMAC (2).pdf` (996 KB) y `MANUAL PISTOLA PM 3500.pdf` (23 MB) son casi con certeza dos versiones del mismo manual, pero `possibleDuplicateKey` (en `technical-document-governance.mjs`, ya construido por Codex) exige tamaño idéntico además de nombre similar, así que no se agrupan como posible duplicado. Se deja documentado para una eventual revisión de esa regla, no se tocó en este cambio para no mezclar bloques.
 
-**Pendiente real, requiere decisión antes de construir la UI de importación:** dónde persistir el catálogo cuando se guarde (hoy sigue siendo la vista previa, nada se guarda todavía). Dos opciones evaluadas, sin resolver:
-1. Tabla nueva en Supabase (`technical_documents` + historial de auditoría), consistente con el resto del CRM multiusuario.
-2. Extender `technical-library.mjs` como archivo estático versionado en el repo (más simple, pero no permite que alguien sin acceso al repo cargue un documento, y mezclaría el índice con el código).
+**Decisión del 10/09/2026:** persistir el catálogo técnico en Supabase, no en un archivo estático. La vista previa continúa siendo obligatoria y nada se marca vigente automáticamente.
+
+La información técnica pertenece a Grupo Poliplast y se comparte entre las aplicaciones autorizadas; no se duplica por canal de WhatsApp. El acceso debe resolverse con RLS por organización y rol. General, Penosil o Juan pueden definir contexto comercial, pero no crear copias divergentes de una misma ficha.
+
+Opciones evaluadas:
+1. **Elegida:** tabla nueva en Supabase (`technical_documents` + historial de auditoría), consistente con el trabajo multiusuario y editable sin deploy.
+2. **Descartada como persistencia:** extender `technical-library.mjs` como archivo estático. Puede conservarse como semilla o fixture de pruebas, pero no como fuente operativa.
 
 No se avanzó con ninguna de las dos sin que Felipe/Codex lo confirmen, según la sección 5 de `docs/PROMPT_CONTINUIDAD_CLAUDE_CODE_BASE_TECNICA.md` ("no mezclar bloques... priorizar cambios pequeños, revisables y con rollback").
 

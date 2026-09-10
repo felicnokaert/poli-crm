@@ -8,7 +8,7 @@
 
 No se construirán cotizadores separados para Resinplast, Penosil, PURMAC, PRFV o Baldes.
 
-Se construirá una única herramienta comercial interna, integrada al CRM, que funcione como:
+Se construirá una única herramienta comercial interna **separada del CRM en su primera etapa**, que funcione como:
 
 - catálogo navegable de todo Grupo Poliplast;
 - buscador de productos y variantes;
@@ -18,6 +18,8 @@ Se construirá una única herramienta comercial interna, integrada al CRM, que f
 - memoria operativa de precios, presentaciones, reglas y condiciones.
 
 La experiencia puede parecerse a Shopify por su facilidad para recorrer productos y variantes, pero Shopify no será la fuente canónica ni el cotizador será una tienda pública. El objetivo es que el vendedor encuentre y prepare una propuesta sin volver a preguntar dónde está cada precio, variante o ficha.
+
+Tendrá interfaz y despliegue propios para no aumentar la complejidad ni el riesgo operativo del CRM. Compartirá una base comercial gobernada y dejará preparada una integración futura por identificadores estables y API. Separar la aplicación no significa duplicar catálogo, precios o fichas.
 
 ## 2. Jerarquía única del catálogo
 
@@ -68,7 +70,7 @@ Los identificadores deben ser estables. Una corrección de nombre no puede crear
 3. Elegir variante y cantidad.
 4. Aplicar la escala válida; una excepción manual exige motivo.
 5. Agregar productos de una o varias familias a una misma cotización.
-6. Elegir o crear el cliente desde el CRM.
+6. Elegir el cliente o completar sus datos básicos; la vinculación automática con el CRM será posterior.
 7. Sugerir las fichas técnicas correspondientes.
 8. Mostrar una vista previa antes de guardar o exportar.
 9. Emitir PDF de cotización o lista de precios.
@@ -116,7 +118,7 @@ La primera versión no será “el cotizador de Resinplast”. Debe crear la bas
 6. identidad visual configurable por marca;
 7. asociación y sugerencia de fichas técnicas;
 8. cotización y lista de precios en PDF;
-9. vínculo con cliente e historial del CRM.
+9. identificadores estables para una futura vinculación con cliente e historial del CRM.
 
 Las familias verificadas pueden habilitarse para cotizar primero, pero sin crear una arquitectura exclusiva que luego haya que rehacer.
 
@@ -151,7 +153,7 @@ Las familias verificadas pueden habilitarse para cotizar primero, pero sin crear
 5. Configurar marcas de Grupo Poliplast, Penosil, Resinplast y PURMAC.
 6. Vincular fichas técnicas gobernadas.
 7. Generar cotización y lista de precios en PDF.
-8. Vincular con clientes, historial y seguimiento del CRM.
+8. Integrar con clientes, historial y seguimiento del CRM cuando el cotizador independiente esté validado.
 9. Evaluar lectura automática desde Contabilium y otras sincronizaciones.
 
 ## 13. Decisiones pendientes

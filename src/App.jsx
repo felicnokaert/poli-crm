@@ -105,6 +105,7 @@ import {
   findObjections,
 } from "./commercial-knowledge.mjs";
 import { buildCommercialGuidance } from "./commercial-guidance.mjs";
+import { TRIAGE_VARIABLES, scoreTriage, suggestTriage } from "./commercial-triage.mjs";
 
 // El sufijo fuerza una única segunda pasada que también incluye las tareas
 // antiguas sin fecha de vencimiento, usando su fecha de creación.
@@ -264,6 +265,7 @@ function draftFromWhatsApp(event) {
     representsCompany: "A confirmar",
     sellerOpinion: "",
     memoryNote: "",
+    triage: suggestTriage(event),
   };
 }
 
@@ -1410,6 +1412,8 @@ export default function App() {
         representsCompany: draft.representsCompany,
         sellerOpinion: draft.sellerOpinion.trim(),
         memoryNote: draft.memoryNote.trim(),
+        triage: draft.triage,
+        triagePriority: scoreTriage(draft.triage).priority,
         updatedBy: session?.user?.email || "",
       },
       source,
@@ -3089,6 +3093,9 @@ function InboxDraftModal({ draft, setDraft, onClose, onConfirm }) {
   const update = (name, value) =>
     setDraft({ ...draft, form: { ...draft.form, [name]: value } });
   const form = draft.form;
+  const triageResult = scoreTriage(form.triage);
+  const updateTriage = (name, value) =>
+    update("triage", { ...form.triage, [name]: value === "" ? null : Number(value) });
   return (
     <div className="modal-backdrop">
       <form className="modal" onSubmit={onConfirm}>
@@ -3223,6 +3230,24 @@ function InboxDraftModal({ draft, setDraft, onClose, onConfirm }) {
               ))}
             </select>
           </label>
+          <fieldset className="triage-fieldset span-2">
+            <legend>Triage comercial · una sola vez por empresa</legend>
+            <div className="triage-summary">
+              <strong>{triageResult.score}/12 · {triageResult.complete ? `Prioridad ${triageResult.priority}` : `${triageResult.known}/6 confirmadas`}</strong>
+              <span>Los campos sin evidencia quedan sin confirmar; el CRM no completa supuestos.</span>
+            </div>
+            <div className="triage-grid">
+              {TRIAGE_VARIABLES.map((variable) => (
+                <label key={variable.id} title={variable.question}>
+                  {variable.label}
+                  <select value={form.triage?.[variable.id] ?? ""} onChange={(event) => updateTriage(variable.id, event.target.value)}>
+                    <option value="">Sin confirmar</option>
+                    {variable.options.map((option, index) => <option key={option} value={index}>{index} · {option}</option>)}
+                  </select>
+                </label>
+              ))}
+            </div>
+          </fieldset>
           <label>
             Fecha próxima
             <input

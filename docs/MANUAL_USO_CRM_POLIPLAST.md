@@ -348,6 +348,8 @@ El manual queda aprobado cuando Felipe puede resolver sin ayuda estas acciones:
 10. **(10/09/2026, Claude)** en Recursos → Base técnica, elegir una carpeta de Drive completa, revisar la vista previa (nuevos/modificados/duplicados exactos/posibles duplicados/errores), corregir la familia sugerida de un documento y guardar;
 11. **(10/09/2026, Claude)** en Base técnica, cambiar el estado de un documento (inventariado → pendiente de validación → vigente) y confirmar que la base bloquea marcarlo "vigente" sin fuente/responsable/fecha;
 12. **(10/09/2026, Claude)** abrir una conversación real en Por revisar y confirmar que el panel "Sugerencia del copiloto" recomienda una ficha técnica que existe de verdad en Base técnica (no una lista vieja desconectada).
+13. **(10/09/2026, Claude)** en Base técnica, renombrar una ficha y ver que las fichas quedan agrupadas por carpeta, igual que en Drive.
+14. **(10/09/2026, Claude)** eliminar un cliente y confirmar que sus conversaciones también desaparecen de Historial; eliminar una conversación suelta o una tarea sin tener que borrar todo el cliente.
 
 ### Registro de avances (Claude, sesión 10/09/2026)
 
@@ -358,3 +360,7 @@ El manual queda aprobado cuando Felipe puede resolver sin ayuda estas acciones:
 - Panel de sugerencia del copiloto conectado al catálogo real de Supabase en vez del índice estático de 31 documentos (commit `1456db8`).
 - Migración de Catálogo/Precios/Inventario para el futuro Cotizador (`catalog_products`, `catalog_variants`, costos, listas de precios, inventario, auditoría de importaciones) aplicada en producción — este bloque es de Codex, no del CRM; Claude solo ejecutó la migración ya escrita porque requería acceso a la base compartida.
 - Objetivos de Ventas ahora se pueden editar sin duplicar (commit `d05b764`); envío/flete excluido de la comisión (commit `41d73bf`); Imperpur y otras unidades nuevas ya reconocen su punto de venta en la importación de facturas (commit `584c83a`).
+- Base técnica: fichas ahora se pueden renombrar y quedan agrupadas por carpeta (como en Drive), sin agregar ninguna tabla nueva — la carpeta se calcula de la ruta que ya se guardaba (commit `70e5b79` es posterior; esta parte específica sin commit propio en el registro, ver historial de `technical-documents-mapping.mjs`).
+- Bug reportado por Felipe: al eliminar un cliente, "seguía apareciendo en Historial". Causa real: se borraban la ficha y las tareas, pero no las conversaciones vinculadas. Corregido (commit `d32c7f9`).
+- Todos los botones "Eliminar" del CRM se veían cuadrados y sin forma (nunca tuvieron estilo, solo color de texto). Corregido con un estilo compartido — misma píldora redondeada que el resto de los botones, con un rojo suave para distinguirlos (commit `d32c7f9`).
+- Auditoría del mismo tipo de bug en el resto del CRM: encontrado que no existía forma de eliminar una conversación o una tarea de forma individual (solo se borraban en cascada al borrar el cliente entero). Agregado el botón y la función de borrado para ambos casos (commit `70e5b79`).

@@ -468,6 +468,11 @@ export default function App() {
           setData((current) => {
             if (current.inbox.some((item) => item.event_id === event.event_id))
               return current;
+            // Un mensaje que ya se eliminó del CRM no debe resucitar solo
+            // porque llega por el canal de tiempo real - este chequeo faltaba
+            // acá aunque sí se aplica al cargar la bandeja completa.
+            if ((current.dismissedInboxEventIds || []).includes(event.event_id))
+              return current;
             const ignoredRule = isIgnoredWhatsAppContact(current.ignoredWhatsAppContacts || [], event);
             const client =
               findClientByWhatsApp(current.clients, event) ||

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
-  BookOpen,
   Building2,
   CalendarCheck,
   CheckCircle2,
@@ -1566,8 +1565,7 @@ export default function App() {
       ["contacts", "Contactos", Users],
     ]],
     ["Recursos", [
-      ["replies", "Biblioteca", BookOpen],
-      ["coach", "Entrenamiento", GraduationCap],
+      ["academy", "Academia comercial", GraduationCap],
     ]],
     ["Sistema", [
       ["profile", "Perfil", UserCog],
@@ -1809,16 +1807,13 @@ export default function App() {
             onOpenClient={setSelectedClientId}
           />
         )}
-        {view === "replies" && <QuickReplies myChannels={myChannels} />}
-        {view === "coach" && (
-          <div className="content-stack">
-            <PriceMemory sales={data.sales || []} />
-            <Coach
-              interactions={data.interactions}
-              data={data}
-              setData={setData}
-            />
-          </div>
+        {view === "academy" && (
+          <Academy
+            myChannels={myChannels}
+            interactions={data.interactions}
+            data={data}
+            setData={setData}
+          />
         )}
         {view === "profile" && (
           <Profile data={data} setData={setData} session={session} />
@@ -4573,6 +4568,31 @@ function QuickReplies({ myChannels }) {
         </div>
       </section>
       <Training />
+    </div>
+  );
+}
+
+function Academy({ myChannels, interactions, data, setData }) {
+  const [section, setSection] = useState("library");
+  return (
+    <div className="content-stack">
+      <section className="panel academy-hero">
+        <div>
+          <span className="eyebrow">Sistema Comercial Grupo Poliplast</span>
+          <h2>Academia comercial</h2>
+          <p>Prepará conversaciones, practicá situaciones reales y convertí cada resultado en aprendizaje para el equipo.</p>
+        </div>
+        <div className="segmented">
+          <button className={section === "library" ? "selected" : ""} onClick={() => setSection("library")}>Biblioteca y práctica</button>
+          <button className={section === "coach" ? "selected" : ""} onClick={() => setSection("coach")}>Evaluar conversaciones</button>
+        </div>
+      </section>
+      {section === "library" ? <QuickReplies myChannels={myChannels} /> : (
+        <>
+          <PriceMemory sales={data.sales || []} />
+          <Coach interactions={interactions} data={data} setData={setData} />
+        </>
+      )}
     </div>
   );
 }

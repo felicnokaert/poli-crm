@@ -16,6 +16,7 @@ Permitir que Claude continúe el Sistema Comercial Grupo Poliplast y coordine el
 - **Método comercial:** `docs/SISTEMA_COMERCIAL_GRUPO_POLIPLAST.md`.
 - **Arquitectura del copiloto:** `docs/COPILOTO_COMERCIAL_ARQUITECTURA.md`.
 - **Identidad de clientes:** `docs/IDENTIDAD_UNICA_CLIENTE_SPEC.md`.
+- **Uso cotidiano del CRM:** `docs/MANUAL_USO_CRM_POLIPLAST.md`.
 - **Trabajo y responsables:** Trello `VENTAS — Grupo Poliplast`.
 - **Publicación para el equipo:** Drive Grupo Poliplast, `00_CONTROL` y `05_REPORTES`.
 - **Clientes y conversaciones:** CRM. No se duplican como tarjetas de Trello.
@@ -67,6 +68,7 @@ Permitir que Claude continúe el Sistema Comercial Grupo Poliplast y coordine el
 ## 6. Cronograma de cierre
 
 - **10-11/09:** Academia unificada, conocimiento comercial, ayuda contextual y triage rápido v1 completados (`1e7c8f9`, `c0b9688`, `caa680f`, `b105b2a`; 179 tests y build verde).
+- **10/09:** primera versión del manual práctico del CRM redactada desde la aplicación real; pendiente revisión de Felipe y revisión pedagógica de Claude.
 - **12-13/09:** ayuda contextual y clasificación/triage rápido sobre casos reales.
 - **14-15/09:** QA de persistencia, historial, tareas, identidad y canales; Mercado Libre si está habilitado.
 - **16/09:** documentación y Drive sincronizados; inventario final de automatizaciones y fuentes.

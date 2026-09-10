@@ -50,6 +50,7 @@ Permitir que Claude continúe el Sistema Comercial Grupo Poliplast y coordine el
 - Canal, conversación e interés por unidad se conservan separados; la identidad comercial no se duplica.
 - Las coincidencias de nombres no fusionan clientes automáticamente.
 - Ninguna sugerencia del copiloto envía mensajes por sí sola.
+- La base técnica ya tiene reglas de gobernanza testeables en `src/technical-document-governance.mjs`: estados de vigencia, duplicados exactos por hash, candidatos por nombre/tamaño y bloqueo de citas técnicas sin fuente validada. La arquitectura y el orden Drive -> índice -> CRM están en `docs/BASE_CONOCIMIENTO_TECNICA_SPEC.md`; todavía no existe inventario recursivo, extracción ni sincronización automática con Drive.
 - Precios, stock, rendimiento y compatibilidad siempre requieren fuente verificable.
 - Las tareas se crean solo ante compromisos, urgencia, cotización pendiente, recompra probable o seguimiento expresamente acordado.
 - Penosil y Juan quedan en backlog explícito: no se consideran fallas abiertas ni prioridades del sprint final de Codex. WhatsApp General permanece operativo y fuera de cambios salvo una regresión comprobada.

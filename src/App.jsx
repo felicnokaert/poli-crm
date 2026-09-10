@@ -5530,9 +5530,12 @@ function TechnicalDocumentFolderNode({ node, depth, rowProps }) {
     );
   }
   return (
-    <details className="technical-document-folder" open>
+    <details className="technical-document-folder">
       <summary className="technical-document-folder-heading">
-        📁 {node.name} <span>({node.count})</span>
+        <span className="technical-document-folder-arrow" aria-hidden="true" />
+        <span className="technical-document-folder-icon" aria-hidden="true">📁</span>
+        <span className="technical-document-folder-name">{node.name}</span>
+        <span className="technical-document-folder-count">{node.count}</span>
       </summary>
       <div className="technical-document-folder-body">
         {node.children.map((child) => (

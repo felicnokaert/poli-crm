@@ -322,7 +322,8 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .copilot-suggestion ul { margin: 4px 0 10px; padding-left: 18px; font-size: 13px; }
 .copilot-suggestion-label { display: block; font-size: 11.5px; font-weight: 600; color: #4f6b62; text-transform: uppercase; letter-spacing: 0.03em; margin-top: 8px; }
 .copilot-suggestion-pending { color: #8a6d1f; font-size: 12px; }
-.technical-document-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 1px solid #e3e8e5; }
+.technical-document-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; margin: 3px 0; border-radius: 10px; background: #fff; border: 1px solid #eaeeec; transition: border-color .12s, box-shadow .12s; }
+.technical-document-row:hover { border-color: #d3ddd8; box-shadow: 0 2px 8px #10241d0d; }
 .technical-document-row strong { display: block; font-size: 13px; }
 .technical-document-row > div:first-child span { display: block; color: #758781; font-size: 11.5px; margin-top: 2px; }
 .technical-document-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
@@ -332,13 +333,23 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .technical-import-new-list li span { font-size: 12.5px; }
 .technical-document-title-input { font-size: 13px; font-weight: 600; border: 1px solid transparent; background: transparent; padding: 2px 4px; border-radius: 6px; width: 100%; max-width: 320px; }
 .technical-document-title-input:hover, .technical-document-title-input:focus { border-color: #cfd9d5; background: #fff; outline: none; }
-.technical-document-folder-heading { font-size: 12px; font-weight: 700; color: #4f6b62; text-transform: uppercase; letter-spacing: 0.03em; margin: 6px 4px; cursor: pointer; list-style: none; }
+
+/* Árbol de carpetas: colapsadas por defecto, se abren recién al clickear -
+   nunca "open" por defecto (ver feedback de Felipe: prefiere ir buscando él,
+   no que le abran todo de entrada). */
+.technical-document-tree { display: flex; flex-direction: column; gap: 2px; }
+.technical-document-folder { border-radius: 10px; }
+.technical-document-folder-heading { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border-radius: 9px; font-size: 12.5px; font-weight: 700; color: #33534a; cursor: pointer; list-style: none; user-select: none; }
 .technical-document-folder-heading::-webkit-details-marker { display: none; }
-.technical-document-folder-heading:hover { color: #23483f; }
-.technical-document-folder-heading span { font-weight: 400; text-transform: none; color: #8a9994; }
+.technical-document-folder-heading:hover { background: #eef4f1; }
+.technical-document-folder-arrow { width: 0; height: 0; flex: none; border-style: solid; border-width: 4px 0 4px 6px; border-color: transparent transparent transparent #7d9089; transition: transform .15s ease; }
+.technical-document-folder[open] > .technical-document-folder-heading .technical-document-folder-arrow { transform: rotate(90deg); }
+.technical-document-folder-icon { font-size: 14px; }
+.technical-document-folder-name { flex: 1; text-transform: none; letter-spacing: 0; }
+.technical-document-folder-count { font-weight: 600; font-size: 11px; color: #5c7a6f; background: #e2ece6; border-radius: 999px; padding: 1px 8px; }
 .technical-document-group-toggle { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: #4f6b62; }
-.technical-document-tree .technical-document-folder { border-left: 2px solid #e3e8e5; }
-.technical-document-tree .technical-document-folder-body { padding-left: 16px; }
+.technical-document-tree .technical-document-folder .technical-document-folder { margin-top: 2px; }
+.technical-document-folder-body { margin: 2px 0 4px 10px; padding-left: 12px; border-left: 2px solid #e3e8e5; display: flex; flex-direction: column; gap: 2px; }
 .technical-document-text-ok { color: #3f7a5c; }
 .technical-document-text-missing { color: #a15b52; }
 .technical-document-upload-text-link { color: #2c5c8f; font-weight: 700; cursor: pointer; text-decoration: underline; }

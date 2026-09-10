@@ -79,7 +79,11 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
   const dismissed = new Set(dismissedInboxEventIds);
   const localHistoryReset = local.historyResetVersion || '';
   const remoteHistoryReset = remote.historyResetVersion || '';
-  return consolidateDuplicateClients({
+  // La sincronización sólo reconcilia versiones del mismo registro por ID.
+  // Dos clientes con el mismo nombre pueden ser empresas distintas o fichas
+  // con datos en conflicto; su posible fusión requiere revisión humana y un
+  // registro reversible (ver docs/IDENTIDAD_UNICA_CLIENTE_SPEC.md).
+  return {
     clients: mergeRecords(local.clients, remote.clients),
     interactions: localHistoryReset || remoteHistoryReset
       ? mergeRecords(
@@ -99,7 +103,7 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
     commercialMasterVersion: local.commercialMasterVersion || remote.commercialMasterVersion || '',
     historyResetVersion: [localHistoryReset, remoteHistoryReset].sort().at(-1) || '',
     tasksClosedThrough: [local.tasksClosedThrough || '', remote.tasksClosedThrough || ''].sort().at(-1) || '',
-  });
+  };
 }
 
 export function workspaceStatesEqual(left = EMPTY_STATE, right = EMPTY_STATE) {

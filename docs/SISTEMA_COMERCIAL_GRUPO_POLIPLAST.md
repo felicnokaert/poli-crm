@@ -605,7 +605,21 @@ El documento define el método. El CRM registra la operación. Trello administra
 
 ## 19. Backlog posterior
 
-Biblioteca de objeciones ampliada con casos reales; matriz de mensajes y contenido por etapa; tablero de triage y conversión; rutas de cross-selling; programa de referidos; casos comerciales estandarizados; onboarding para nuevos vendedores; formación y certificación interna (ver `PROGRAMA_FORMACION_COMERCIAL_4_SEMANAS.md`); integración de Google Calendar; asistente de IA con fuentes técnicas verificadas; panel de dirección y forecasting basado en datos reales; conciliación del módulo de Ventas y Comisiones contra un mes real (sección 11.1).
+### 19.1 Orden de implementación del CRM (definido por Marketing, 09/09/2026 — reemplaza cualquier orden anterior)
+
+No se implementan las mejoras del CRM todas juntas. El primer bloque a ejecutar es **identidad única + persistencia + clasificación rápida** — sin eso, agregar más pantallas solo agranda un CRM todavía inconsistente.
+
+1. **Identidad única del cliente:** una empresa puede tener varios teléfonos, pero temperatura, familia, condición comercial e historial se registran una sola vez.
+2. **Clasificación rápida:** el copiloto precompleta familia, intención, temperatura y triage (sección 6); el vendedor solo confirma o corrige.
+3. **Persistencia verdadera:** tareas completadas, contactos no comerciales, archivos y eliminaciones no pueden reaparecer al recargar.
+4. **Historial útil:** cliente único, filtros por fecha/familia/temperatura, sin duplicación General/Penosil.
+5. **Seguimiento inteligente:** crear recordatorio solo cuando hay compromiso, urgencia o riesgo real — no una tarea por cada conversación.
+6. **Ventas y comisiones:** completar y validar el módulo (sección 11.1) con facturas reales.
+7. **Después:** alerta de tipo de cambio, botón "Armar seguimiento", mejoras del copiloto.
+
+### 19.2 Otros pendientes
+
+Biblioteca de objeciones ampliada con casos reales; matriz de mensajes y contenido por etapa; tablero de triage y conversión; rutas de cross-selling; programa de referidos; casos comerciales estandarizados; onboarding para nuevos vendedores; formación y certificación interna (ver `PROGRAMA_FORMACION_COMERCIAL_4_SEMANAS.md`); integración de Google Calendar; asistente de IA con fuentes técnicas verificadas; panel de dirección y forecasting basado en datos reales.
 
 ## 20. Criterio de éxito
 
@@ -628,7 +642,31 @@ Espacio vivo para que Codex documente, a medida que ocurre, el estado técnico y
 
 **Formato sugerido por entrada:** fecha, qué cambió técnicamente (con referencia a commit o archivo), qué decisión de negocio quedó confirmada, qué impacto tiene sobre este manual (qué sección debería actualizarse).
 
-*(Sin entradas todavía — se completa a partir del 09/09/2026.)*
+**07/09/2026 — Claude, vía `Auditoria_Sistema_Comercial.html` (panel ejecutivo visual, no canónico, resumen técnico con trazabilidad por fuente/fecha/responsable/confianza):**
+
+- CRM (Poliplast Sales Copilot): construido y desplegado en producción (Vercel + Supabase). Adopción real por Felipe/Ezequiel/Brenda: **sin evidencia suficiente** — no hay criterio de medición acordado todavía (pendiente que Felipe lo defina).
+- WhatsApp General y Juan: operativos 100% por Meta Cloud API oficial. WhatsApp Penosil: el puente/extensión de Chrome que mezclaba identidades fue **retirado definitivamente** el 04/09 (los ~482 eventos históricos contaminados se borraron); pasó al mismo canal oficial Meta Cloud API con webhook ya suscripto. Único paso pendiente: activar la coexistencia del número físico y confirmar un mensaje entrante real.
+- Trello sigue siendo el tablero maestro de proyectos — no fue migrado al CRM (el CRM registra operación comercial diaria, Trello registra proyectos e iniciativas).
+- El Plan Comercial no fue eliminado — sigue como dirección estratégica y rutina.
+- Inventario existe como desarrollo en curso: repo `eca-sistema`, branch `feature/inventario-conteo-fisico`, pendiente de validación antes de producción.
+- Catálogo Maestro v12 es la referencia conocida hoy, pero cantidad y alcance exacto siguen sin comprobar contra la fuente viva (versiones previas oscilaron entre ~1.749 y ~2.102 productos). Recomendación registrada: no importar 1.000+ registros de una — validar identidad, deduplicación, mapeo de campos y rollback con una muestra chica (20-50) antes de escalar.
+- Automatizaciones activas desde el 07/09: Catálogo WhatsApp completo (diaria), Marketplace lote 50 (diaria), Contenido Penosil (semanal, lunes) — las 4 tareas de prospección en la nube siguen pausadas. Tareas de escritorio (brief semanal, auditoría ML semanal) sin confirmar.
+- Impacto sobre este manual: ninguna decisión de las secciones 5-17 cambia por esta actualización — es información técnica complementaria, no una revisión del método. Actualiza el contexto de la sección 17 (dependencias técnicas) y dato pendiente de "capacidad real de contactos diarios" (sección 16) sigue abierto.
+
+*(Próxima entrada: cuando Codex confirme coexistencia de Penosil o valide Inventario.)*
+
+**09/09/2026 — Marketing, foco operativo hasta el 18/09 (reemplaza cualquier plan de tareas anterior):**
+
+- **Marketplace — catálogo completo hasta 18/09:** activo, 30-50 publicaciones diarias completas. Avanza sin interrumpir salvo al finalizar el lote o ante un bloqueo real.
+- **Shopify — miércoles y viernes:** activo, solo análisis y aprendizaje; no modifica la tienda.
+- **Catálogo WhatsApp completo:** pausado.
+- **Contenido Penosil:** pausado.
+- **CRM:** trabajo interactivo, sin automatización descontrolada — ver orden de implementación en sección 19.1.
+- Cohorte 1 continúa por Felipe; sus respuestas alimentan el triage (sección 6) y la biblioteca de objeciones (sección 7) a medida que llegan.
+- Codex tiene múltiples chats históricos repetidos — no se borran, se archivan; quedan visibles solo Marketplace, CRM, Shopify y continuidad comercial.
+- Cierre previsto 17-18/09: documentación y handoff completo a Claude.
+- Versionado: commit `4cfd48d` en GitHub (repo `poliplast-sales-copilot`). El `.git/index.lock` trabado que había quedado de una sesión anterior fue reubicado a un archivo recuperable, no borrado.
+- "Fase 6" confirmado como cerrado (Anexo A): costos, precios y rentabilidad del frente Catálogo — no es una fase del sistema comercial.
 
 ---
 

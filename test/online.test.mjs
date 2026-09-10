@@ -17,6 +17,21 @@ test('consolidates duplicate company cards and rewires their history to one comm
   assert.equal(result.tasks[0].clientId, 'new');
 });
 
+test('does not merge different client records by company name during synchronization', () => {
+  const merged = mergeWorkspaceState(
+    {
+      clients: [{ id: 'web', company: 'Carrocería Argentina', temperature: 'Caliente', updatedAt: '2026-09-09T10:00:00Z' }],
+      interactions: [], tasks: [], opportunities: [], inbox: [],
+    },
+    {
+      clients: [{ id: 'phone', company: 'CARROCERIA ARGENTINA', temperature: 'Tibio', updatedAt: '2026-09-09T11:00:00Z' }],
+      interactions: [], tasks: [], opportunities: [], inbox: [],
+    },
+  );
+  assert.deepEqual(merged.clients.map((item) => item.id), ['phone', 'web']);
+  assert.deepEqual(merged.clients.map((item) => item.temperature), ['Tibio', 'Caliente']);
+});
+
 test('identifies reactions, unsupported events and automatic away replies as low-signal', () => {
   assert.equal(isLowSignalWhatsAppEvent({ message_type: 'reaction', text_body: '[reaction]' }), true);
   assert.equal(isLowSignalWhatsAppEvent({ text_body: '[unsupported]' }), true);

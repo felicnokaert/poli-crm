@@ -80,6 +80,7 @@ import { readFileSmart } from "./text-decode.mjs";
 import { removeExplicitTestData, testDataCandidates } from "./data-hygiene.mjs";
 import {
   attachWhatsAppContact,
+  classifyClientContactByWhatsApp,
   clientContacts,
   clientSearchText,
   findClientByWhatsApp,
@@ -1085,6 +1086,7 @@ export default function App() {
     ];
     setData({
       ...data,
+      clients: data.clients.map((client) => classifyClientContactByWhatsApp(client, event, category)),
       ignoredWhatsAppContacts: rules,
       inbox: data.inbox.map((item) =>
         isIgnoredWhatsAppContact([rule], item)
@@ -1118,6 +1120,7 @@ export default function App() {
     const eventAsRule = { customerWaId: event.customer_wa_id, customerName: event.customer_name };
     setData({
       ...data,
+      clients: data.clients.map((client) => classifyClientContactByWhatsApp(client, event, "")),
       ignoredWhatsAppContacts: (data.ignoredWhatsAppContacts || []).filter(
         (item) => !isIgnoredWhatsAppContact([eventAsRule], { customer_wa_id: item.customerWaId, customer_name: item.customerName }),
       ),
@@ -1237,6 +1240,10 @@ export default function App() {
     }));
     setData({
       ...data,
+      clients: data.clients.map((client) => {
+        const matching = selected.find((event) => findClientByWhatsApp([client], event));
+        return matching ? classifyClientContactByWhatsApp(client, matching, category) : client;
+      }),
       ignoredWhatsAppContacts: [
         ...(data.ignoredWhatsAppContacts || []).filter(
           (item) => !isIgnoredWhatsAppContact(additions, { customer_wa_id: item.customerWaId, customer_name: item.customerName }),
@@ -1521,23 +1528,35 @@ export default function App() {
 
   function updateClient(updatedClient) {
     const stamp = new Date().toISOString();
-    setData((current) => ({
-      ...current,
-      clients: current.clients.map((client) =>
-        client.id === updatedClient.id
-          ? { ...client, ...updatedClient, updatedAt: stamp }
-          : client,
-      ),
-      tasks: current.tasks.map((task) =>
-        task.clientId === updatedClient.id
-          ? {
-              ...task,
-              company: updatedClient.company || task.company,
-              updatedAt: stamp,
-            }
-          : task,
-      ),
-    }));
+    setData((current) => {
+      const previous = current.clients.find((client) => client.id === updatedClient.id) || {};
+      const previousContacts = clientContacts(previous);
+      const previousIdentities = new Set(previousContacts.map((contact) =>
+        whatsappContactIdentity({ customer_wa_id: contact.whatsappId || contact.phone, customer_name: contact.name }),
+      ));
+      const belongsToEditedClient = (rule) => previousIdentities.has(
+        rule.contactIdentity || whatsappContactIdentity({ customer_wa_id: rule.customerWaId, customer_name: rule.customerName }),
+      );
+      const contactRules = clientContacts(updatedClient)
+        .filter((contact) => contact.commercialStatus === "non-commercial" && contact.nonCommercialCategory)
+        .map((contact) => ({
+          key: `contact:${whatsappContactIdentity({ customer_wa_id: contact.whatsappId || contact.phone, customer_name: contact.name })}`,
+          contactIdentity: whatsappContactIdentity({ customer_wa_id: contact.whatsappId || contact.phone, customer_name: contact.name }),
+          customerWaId: contact.whatsappId || contact.phone || "",
+          customerName: contact.name || "",
+          category: contact.nonCommercialCategory,
+          updatedAt: stamp,
+        }));
+      return {
+        ...current,
+        clients: current.clients.map((client) => client.id === updatedClient.id ? { ...client, ...updatedClient, updatedAt: stamp } : client),
+        tasks: current.tasks.map((task) => task.clientId === updatedClient.id ? { ...task, company: updatedClient.company || task.company, updatedAt: stamp } : task),
+        ignoredWhatsAppContacts: [
+          ...(current.ignoredWhatsAppContacts || []).filter((rule) => !belongsToEditedClient(rule)),
+          ...contactRules,
+        ],
+      };
+    });
   }
 
   function updateTask(updatedTask) {
@@ -4265,6 +4284,16 @@ function ClientDetail({
                       <input aria-label="Cargo del contacto" placeholder="Cargo / área" value={contact.role} onChange={(event) => changeContact(contact.id, "role", event.target.value)} />
                       <input aria-label="Teléfono del contacto" placeholder="Teléfono" value={contact.phone || contact.whatsappId} onChange={(event) => changeContact(contact.id, "phone", event.target.value)} />
                       <input aria-label="Email del contacto" placeholder="Email" type="email" value={contact.email} onChange={(event) => changeContact(contact.id, "email", event.target.value)} />
+                      <select aria-label="Clasificación comercial del contacto" value={contact.nonCommercialCategory || ""} onChange={(event) => {
+                        const category = event.target.value;
+                        setDraft((current) => updateClientContact(current, contact.id, { nonCommercialCategory: category, commercialStatus: category ? "non-commercial" : "commercial" }));
+                      }}>
+                        <option value="">Contacto comercial</option>
+                        <option>Equipo interno</option>
+                        <option>Familiar / personal</option>
+                        <option>Proveedor / colaborador</option>
+                        <option>Otro no comercial</option>
+                      </select>
                       <button className={contact.primary ? "primary contact-primary" : "secondary contact-primary"} type="button" onClick={() => setDraft((current) => setPrimaryClientContact(current, contact.id))}>
                         {contact.primary ? "Principal" : "Hacer principal"}
                       </button>
@@ -4276,6 +4305,7 @@ function ClientDetail({
                     <input aria-label="Cargo del contacto nuevo" placeholder="Cargo / área" value={newContact.role} onChange={(event) => setNewContact({ ...newContact, role: event.target.value })} />
                     <input aria-label="Teléfono del contacto nuevo" placeholder="Teléfono" value={newContact.phone} onChange={(event) => setNewContact({ ...newContact, phone: event.target.value })} />
                     <input aria-label="Email del contacto nuevo" placeholder="Email" type="email" value={newContact.email} onChange={(event) => setNewContact({ ...newContact, email: event.target.value })} />
+                    <span className="contact-classification-placeholder">Comercial</span>
                     <button className="secondary" type="button" onClick={addContact}>Agregar contacto</button>
                   </div>
                 </div>
@@ -4484,6 +4514,7 @@ function ClientDetail({
                     <div className="contact-summary" key={contact.id}>
                       <strong>{contact.name || "Persona sin nombre"}{contact.primary ? " · Principal" : ""}</strong>
                       <p>{[contact.role, contact.phone || contact.whatsappId, contact.email].filter(Boolean).join(" · ") || "Datos pendientes"}</p>
+                      {contact.nonCommercialCategory && <span className="contact-status">No comercial · {contact.nonCommercialCategory}</span>}
                     </div>
                   ))}
                 </div>

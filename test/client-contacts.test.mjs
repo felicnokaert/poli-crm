@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { attachWhatsAppContact, clientContacts, duplicatePhoneSignals, findClientByWhatsApp, removeClientContact, setPrimaryClientContact, updateClientContact, withClientContact } from '../src/client-contacts.mjs';
+import { attachWhatsAppContact, classifyClientContactByWhatsApp, clientContacts, duplicatePhoneSignals, findClientByWhatsApp, removeClientContact, setPrimaryClientContact, updateClientContact, withClientContact } from '../src/client-contacts.mjs';
 
 test('keeps several people and phone numbers under one company', () => {
   let client = { id: 'a', company: 'Empresa A' };
@@ -8,6 +8,17 @@ test('keeps several people and phone numbers under one company', () => {
   client = withClientContact(client, { name: 'Carlos', phone: '11 5555-0002' });
   assert.equal(clientContacts(client).length, 2);
   assert.equal(client.contact, 'Ana');
+});
+
+test('classifies only the matching person as non-commercial and can restore it', () => {
+  let client = withClientContact({ id: 'a', company: 'Empresa A' }, { name: 'Ana', phone: '11 5555-0001' });
+  client = withClientContact(client, { name: 'Carlos', phone: '11 5555-0002' });
+  client = classifyClientContactByWhatsApp(client, { customer_wa_id: '5491155550002' }, 'Proveedor / colaborador');
+  assert.equal(clientContacts(client).find((item) => item.name === 'Carlos').nonCommercialCategory, 'Proveedor / colaborador');
+  assert.equal(clientContacts(client).find((item) => item.name === 'Ana').commercialStatus, 'commercial');
+  client = classifyClientContactByWhatsApp(client, { customer_wa_id: '5491155550002' }, '');
+  assert.equal(clientContacts(client).find((item) => item.name === 'Carlos').commercialStatus, 'commercial');
+  assert.equal(clientContacts(client).find((item) => item.name === 'Carlos').nonCommercialCategory, '');
 });
 
 test('matches a WhatsApp id against any company contact', () => {

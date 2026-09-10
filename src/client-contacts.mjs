@@ -18,6 +18,9 @@ function normalizeContact(contact = {}) {
     whatsappId: String(contact.whatsappId || '').trim(),
     source: String(contact.source || '').trim(),
     primary: Boolean(contact.primary),
+    commercialStatus: contact.commercialStatus === 'non-commercial' ? 'non-commercial' : 'commercial',
+    nonCommercialCategory: String(contact.nonCommercialCategory || '').trim(),
+    classificationUpdatedAt: String(contact.classificationUpdatedAt || '').trim(),
   };
 }
 
@@ -116,6 +119,23 @@ export function attachWhatsAppContact(client = {}, event = {}) {
     name: event.customer_name || '', phone: event.customer_wa_id || '', whatsappId: event.customer_wa_id || '',
     source: event.channel ? `WhatsApp ${event.channel}` : 'WhatsApp',
   });
+}
+
+export function classifyClientContactByWhatsApp(client = {}, event = {}, category = '') {
+  const target = normalizePhone(event.customer_wa_id || '');
+  if (!target) return client;
+  const stamp = new Date().toISOString();
+  const contacts = clientContacts(client).map((contact) =>
+    normalizePhone(contact.whatsappId || contact.phone) === target
+      ? normalizeContact({
+          ...contact,
+          commercialStatus: category ? 'non-commercial' : 'commercial',
+          nonCommercialCategory: category,
+          classificationUpdatedAt: stamp,
+        })
+      : contact,
+  );
+  return syncPrimaryContact(client, contacts);
 }
 
 export function clientSearchText(client = {}) {

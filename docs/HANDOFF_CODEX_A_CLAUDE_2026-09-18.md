@@ -27,7 +27,8 @@ Permitir que Claude continúe el Sistema Comercial Grupo Poliplast y coordine el
 | Empresas | Operativo; rendimiento corregido | `adaa155`, prueba con 2.001 clientes | QA en producción |
 | Identidad única | Base utilizable | `c84cdcb`: varias personas/teléfonos y contacto principal | no comercial por persona; fusión diferida |
 | Posibles duplicados | Solo lectura | `2b31da0` | acciones y fusión/deshacer diferidas por Felipe |
-| Academia comercial | Contenedor unificado | `1e7c8f9` | conocimiento estructurado y ayuda contextual |
+| Academia comercial | Contenedor y conocimiento estructurado operativos | `1e7c8f9`, `c0b9688`: 12 etapas, 13 objeciones, 10 playbooks y E-C-E-R-A | validar contenido con casos reales de Cohorte 1 |
+| Ayuda contextual | v1 construida y publicada | `caa680f`: recomendación por empresa según etapa, familia, perfil, objeción y venta cruzada; 175 tests | QA visual/funcional en producción y triage rápido |
 | WhatsApp General | No modificar sin regresión específica | pruebas automatizadas | seguimiento operativo |
 | WhatsApp Penosil | Meta oficial; puente retirado | documentación y pruebas del webhook | coexistencia/validación real según estado vigente |
 | Mercado Libre | Integración oficial de lectura construida para POLIPLAST y FOAM | endpoints OAuth/sync + tests | autorización real y validación de paridad |
@@ -56,7 +57,7 @@ Permitir que Claude continúe el Sistema Comercial Grupo Poliplast y coordine el
 
 ## 6. Cronograma de cierre
 
-- **10-11/09:** Academia unificada; modelado de conocimiento comercial.
+- **10-11/09:** Academia unificada, conocimiento comercial y ayuda contextual v1 completados (`1e7c8f9`, `c0b9688`, `caa680f`; 175 tests y build verde).
 - **12-13/09:** ayuda contextual y clasificación/triage rápido sobre casos reales.
 - **14-15/09:** QA de persistencia, historial, tareas, identidad y canales; Mercado Libre si está habilitado.
 - **16/09:** documentación y Drive sincronizados; inventario final de automatizaciones y fuentes.

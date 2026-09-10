@@ -1,6 +1,6 @@
 # Catálogo y cotizador comercial unificado — Grupo Poliplast
 
-**Estado:** especificación funcional v2
+**Estado:** especificación funcional v3
 **Fecha:** 10/09/2026  
 **Alcance:** todos los productos, variantes, familias, subfamilias y marcas comercializadas por Grupo Poliplast.
 
@@ -62,10 +62,46 @@ La fuente canónica de identidad y taxonomía es `Catalogo_Maestro_v12_LIMPIO_FI
 - `product_documents`: vínculo documento-producto/variante/subfamilia.
 - `quotes` y `quote_items`: cliente, vendedor, vigencia, productos, precios y estado.
 - `brand_templates`: logos, colores y reglas de co-branding.
+- `inventory_locations`: depósitos y ubicaciones físicas.
+- `inventory_counts` y `inventory_count_lines`: sesiones y líneas del conteo físico.
+- `inventory_balances`: último stock aprobado por variante y depósito.
+- `import_jobs` e `import_rows`: lote importado, vista previa, errores y resultado por fila.
+- `audit_log`: cambios administrativos con usuario, fecha, origen y valores anterior/nuevo.
 
 Los identificadores deben ser estables. Una corrección de nombre no puede crear otro producto ni perder historial.
 
 Costo, precio, markup y margen son campos separados. El usuario autorizado podrá elegir si calcula desde markup sobre costo o desde margen sobre venta; el sistema siempre mostrará ambos resultados efectivos para evitar confundirlos. Todo cambio conservará responsable, fecha, fuente y valor anterior. Un precio mayorista pendiente permanece vacío hasta recibir una fuente o decisión explícita.
+
+## 4.1 Roles y alcance de edición
+
+- **Administrador:** importa/exporta, crea y corrige productos/variantes, administra costos, listas, márgenes, stock aprobado, usuarios y reglas.
+- **Responsable comercial autorizado:** edita listas y excepciones dentro de sus permisos; no administra usuarios ni borra historial.
+- **Vendedor:** consulta catálogo, precio vigente y disponibilidad; crea cotizaciones. No ve costo ni rentabilidad salvo autorización explícita.
+- **Consulta:** solo lectura.
+
+Ocultar botones no constituye seguridad. Los permisos se aplican también en Supabase mediante autenticación, RLS y operaciones de servidor. El PIN local del prototipo de inventario no habilita funciones administrativas en producción.
+
+## 4.2 Administración masiva
+
+La versión administrador ofrecerá dos formas equivalentes de mantener datos:
+
+1. edición directa en grilla, con filtros, selección múltiple y cambios por lote;
+2. importación CSV/XLSX mediante plantilla versionada.
+
+Cada importación seguirá este flujo obligatorio:
+
+1. cargar archivo;
+2. identificar tipo de importación: catálogo, costos, precios, stock o documentos;
+3. mapear columnas y validar moneda, números, fechas, SKU y unidades;
+4. mostrar una vista previa separando altas, modificaciones, filas sin cambios, conflictos, duplicados y errores;
+5. descargar el reporte de errores antes de aplicar;
+6. confirmar el lote completo;
+7. aplicar de forma atómica o registrar claramente las filas rechazadas;
+8. conservar un identificador de lote y permitir revertir todos sus cambios sin afectar modificaciones posteriores ajenas al lote.
+
+El SKU identifica la variante, pero no autoriza a crearla silenciosamente durante una actualización de costos o stock. Los SKU ausentes, repetidos o desconocidos quedan bloqueados para revisión.
+
+Las exportaciones permiten elegir campos, filtros y alcance. Habrá una plantilla administrativa completa y exportaciones restringidas para vendedores, sin costo ni margen confidencial.
 
 ## 5. Experiencia comercial
 
@@ -123,6 +159,9 @@ La primera versión no será “el cotizador de Resinplast”. Debe crear la bas
 7. asociación y sugerencia de fichas técnicas;
 8. cotización y lista de precios en PDF;
 9. identificadores estables para una futura vinculación con cliente e historial del CRM.
+10. panel administrador para edición individual y masiva;
+11. importación/exportación CSV/XLSX con vista previa, auditoría y reversión;
+12. lectura del stock aprobado por depósito desde la capa compartida de inventario.
 
 Las familias verificadas pueden habilitarse para cotizar primero, pero sin crear una arquitectura exclusiva que luego haya que rehacer.
 
@@ -134,6 +173,31 @@ Las familias verificadas pueden habilitarse para cotizar primero, pero sin crear
 - El PDF indica moneda, IVA, vigencia y condiciones.
 - Los documentos técnicos muestran fuente y fecha de verificación.
 - Ninguna importación sobrescribe datos en silencio: siempre hay vista previa de altas, cambios, conflictos y descartes.
+- Costos, márgenes y rentabilidad requieren rol administrativo tanto en la interfaz como en la base.
+- Cada importación registra archivo, hash, usuario, fecha, tipo, totales y resultado por fila.
+- El sistema conserva historial; una corrección revierte una revisión o lote, no borra evidencia.
+- La exportación respeta permisos y nunca incluye costos por defecto.
+
+## 10.1 Integración con el sistema de inventario
+
+El sistema existente de conteo físico se reutilizará como interfaz operativa, no como segunda fuente de catálogo. Su catálogo interno y sus `overrides` deben migrar o mapearse al catálogo canónico antes de una integración productiva.
+
+Flujo objetivo:
+
+1. el cotizador y el contador leen las mismas variantes canónicas;
+2. el operario cuenta por depósito y SKU;
+3. un responsable revisa y cierra la sesión;
+4. recién el conteo aprobado actualiza `inventory_balances`;
+5. el cotizador muestra stock total y por depósito, con fecha del último conteo;
+6. el vendedor puede cotizar sin prometer disponibilidad cuando el dato está vencido o sin aprobar.
+
+Se distinguirán tres conceptos:
+
+- **conteo físico:** lo observado durante una sesión;
+- **stock aprobado:** último saldo validado por depósito;
+- **stock disponible para prometer:** saldo aprobado menos reservas/compromisos, cuando exista esa integración.
+
+Hasta integrar movimientos, reservas y ventas, el sistema mostrará `stock contado al [fecha]`, no `stock disponible`.
 
 ## 11. Criterios de aceptación
 
@@ -147,6 +211,11 @@ Las familias verificadas pueden habilitarse para cotizar primero, pero sin crear
 8. Se sugieren las fichas correctas y se pueden seleccionar adjuntos.
 9. La cotización queda vinculada al cliente con snapshot histórico.
 10. Ninguna cifra o ficha sin fuente validada aparece como definitiva.
+11. Un administrador puede actualizar costos o precios en lote y revertir el lote.
+12. Un vendedor no puede leer costos ni márgenes desde UI ni API.
+13. Una importación con SKU desconocido o duplicado no altera producción.
+14. El stock mostrado indica depósito, estado de aprobación y fecha de corte.
+15. Cotizador e inventario resuelven el mismo SKU al mismo identificador de variante.
 
 ## 12. Orden recomendado
 
@@ -159,6 +228,7 @@ Las familias verificadas pueden habilitarse para cotizar primero, pero sin crear
 7. Generar cotización y lista de precios en PDF.
 8. Integrar con clientes, historial y seguimiento del CRM cuando el cotizador independiente esté validado.
 9. Evaluar lectura automática desde Contabilium y otras sincronizaciones.
+10. Migrar el prototipo de conteo a autenticación/RLS y catálogo compartido antes de conectarlo al cotizador.
 
 ## 13. Decisiones pendientes
 
@@ -167,6 +237,9 @@ Las familias verificadas pueden habilitarse para cotizar primero, pero sin crear
 - Condiciones fiscales y comerciales por unidad.
 - Logos originales y manuales de marca de Resinplast, PURMAC y futuras familias.
 - Si el primer PDF adjunta fichas completas o entrega enlaces controlados.
+- Qué roles concretos pueden ver costo/margen y aprobar stock.
+- Política para stock vencido y umbral de alerta por depósito.
+- Si las reservas comerciales se incorporan antes o después de Contabilium.
 
 Estas decisiones no bloquean la auditoría ni el diseño horizontal.
 

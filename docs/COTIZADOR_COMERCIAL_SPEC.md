@@ -1,132 +1,165 @@
-# Cotizador comercial Grupo Poliplast
+# Catálogo y cotizador comercial unificado — Grupo Poliplast
 
+**Estado:** especificación funcional v2
 **Fecha:** 10/09/2026  
-**Estado:** alcance inicial registrado; implementación pendiente.  
-**Prioridad:** backlog explícito. No desplaza identidad única, limpieza histórica ni validación de Ventas.  
-**Referencia funcional:** cotizador Resinplast 2026.
+**Alcance:** todos los productos, variantes, familias, subfamilias y marcas comercializadas por Grupo Poliplast.
 
-## 1. Decisión
+## 1. Decisión de producto
 
-Sí conviene construir un cotizador interno reutilizable dentro del CRM. Debe replicar la simpleza del cotizador Resinplast sin copiar datos estáticos ni crear otra fuente de precios paralela.
+No se construirán cotizadores separados para Resinplast, Penosil, PURMAC, PRFV o Baldes.
 
-El cotizador arma y exporta propuestas. No define por sí mismo costos, márgenes, stock ni vigencia comercial.
+Se construirá una única herramienta comercial interna, integrada al CRM, que funcione como:
 
-## 2. Fuentes relevadas
+- catálogo navegable de todo Grupo Poliplast;
+- buscador de productos y variantes;
+- cotizador para un cliente concreto;
+- generador de listas de precios por familia, subfamilia o selección;
+- punto de acceso a fichas técnicas vigentes;
+- memoria operativa de precios, presentaciones, reglas y condiciones.
 
-| Fuente | Alcance observado | Moneda / IVA | Estado |
-|---|---|---|---|
-| Catálogo Maestro en Drive | Catálogo amplio con SKU, costo interno, precio, IVA, rentabilidad, rubro, proveedor y presentaciones | Mixto; requiere normalización | Fuente de cruce, no asumir vigencia de todos los precios |
-| Resinplast · CF 2026 | 65 productos aproximados, escalas desde 0,1 / 1 / 5 / 10 / 25 y tambor-rollo | USD, IVA 21% incluido | Fuente comercial explícita, septiembre 2026 |
-| Resinplast · Mayorista 2026 | Precio único mayorista; aplica desde USD 1.815 | USD, IVA 21% incluido | Fuente comercial explícita, septiembre 2026 |
-| Penosil 2025-2026 | SKU, producto, descripción, color, presentación, caja y PVP | Moneda e interpretación comercial a confirmar antes de importar | Documento utilizable después de validación |
-| Baldes abril 2026 | 10 SKU; minorista, medio pallet y mayorista | ARS, precio de venta + IVA | Fuente utilizable; revisar vigencia |
-| PRFV agosto 2026 | Planchas/rollos por ancho, largo, espesor, m² y precio por m² | USD; Felipe informó precio sin IVA | Fuente utilizable; mínimo y dimensiones requieren confirmación |
-| Shopify / web | Precio minorista visible y productos nuevos en borrador | Según tienda | Referencia secundaria; nunca importar borradores o aplicar +10% automáticamente sin aprobación |
+La experiencia puede parecerse a Shopify por su facilidad para recorrer productos y variantes, pero Shopify no será la fuente canónica ni el cotizador será una tienda pública. El objetivo es que el vendedor encuentre y prepare una propuesta sin volver a preguntar dónde está cada precio, variante o ficha.
 
-## 3. Reglas de fuente
+## 2. Jerarquía única del catálogo
 
-1. Cada precio debe guardar fuente, fecha de lista, moneda, tratamiento de IVA y estado de validación.
-2. Una lista vencida puede consultarse, pero no cotizarse sin confirmación.
-3. No mezclar precio mayorista, consumidor final, web y Mercado Libre.
-4. Shopify no reemplaza el Catálogo Maestro y sus borradores no son precios aprobados.
-5. Precio técnico/comercial y stock son datos separados.
-6. Toda cotización debe mostrar fecha, validez, moneda, IVA y tipo de cambio usado.
-7. Los productos `consultar` o en cero requieren intervención humana.
+La navegación y el modelo deben respetar esta estructura:
 
-## 4. Experiencia objetivo
+1. Unidad de negocio o marca comercial.
+2. Familia.
+3. Subfamilia.
+4. Producto.
+5. Variante o SKU.
 
-1. Elegir unidad/lista: Resinplast CF, Resinplast Mayorista, Penosil, Baldes, PRFV u otra futura.
-2. Buscar o filtrar por categoría, producto o SKU.
-3. Ingresar cantidad en la unidad correcta: unidad, kg, litro, m², tambor, rollo o bulto.
-4. Aplicar automáticamente el tramo correspondiente.
-5. Mostrar moneda original y conversión informativa a ARS cuando corresponda.
-6. Agregar productos a una cotización.
-7. Completar cliente, CUIT opcional, contacto, nota, entrega, pago y vigencia.
-8. Revisar subtotal, IVA y total sin redondeos ocultos.
-9. Guardar la cotización en la ficha de la empresa.
-10. Exportar o imprimir PDF con identidad de la unidad comercial.
+Una variante puede cambiar presentación, tamaño, color, espesor, volumen, formato de venta, moneda, unidad de medida o cualquier otro atributo comercial. Producto y variante no deben confundirse.
 
-## 5. Modelo mínimo
+El sistema debe permitir buscar y filtrar por nombre, SKU, marca, familia, subfamilia, estado comercial, disponibilidad de precio, disponibilidad de ficha técnica y lista aplicable.
 
-### Lista de precios
+## 3. Fuentes y autoridad de los datos
 
-- `id`, `nombre`, `unidadNegocio`, `vigenteDesde`, `vigenteHasta`;
-- `moneda`, `ivaIncluido`, `tasaIva`, `tipoCambioFuente`;
-- `fuenteDocumento`, `fuenteFecha`, `estadoValidacion`;
-- `reglaGeneral` y observaciones.
+Cada tipo de dato tendrá una fuente explícita:
 
-### Ítem de lista
+- **Catálogo Maestro:** identidad, clasificación, familia, subfamilia, nombre y SKU canónico.
+- **Listas comerciales verificadas:** precios, moneda, IVA, vigencia, escalas y condiciones.
+- **Contabilium:** costos, stock o precios cuando la integración esté disponible y validada.
+- **Shopify:** referencia para títulos, descripciones, imágenes y variantes publicadas; no reemplaza al Catálogo Maestro.
+- **Drive/Base de conocimiento técnica:** fichas técnicas y documentos comerciales vigentes.
+- **Felipe/equipo autorizado:** validaciones y excepciones que no estén documentadas.
 
-- `sku`, `producto`, `familia`, `presentacion`, `unidad`;
-- `cantidadMinima`, `cantidadMaxima`, `precioUnitario`;
-- `bulto`, `tambor`, `rollo` o dimensión cuando aplique;
-- `requiereConsulta`, `vigente` y nota.
+Nunca se debe inferir un precio por similitud de nombre ni publicar como vigente un dato sin fuente y fecha.
 
-### Cotización
+## 4. Modelo mínimo
 
-- empresa/contacto, vendedor, fecha y validez;
-- lista y versión utilizadas;
-- tipo de cambio congelado al momento de cotizar;
-- ítems con cantidad, precio y unidad;
-- subtotal, IVA, total, condiciones y estado;
-- PDF generado y resultado comercial posterior.
+- `brands`: identidad visual y reglas por marca.
+- `families` y `subfamilies`: taxonomía comercial.
+- `products`: producto conceptual.
+- `variants`: SKU, presentación, unidad y atributos.
+- `price_lists`: nombre, moneda, IVA, vigencia, fuente y estado.
+- `price_tiers`: precio por variante, rango de cantidad o condición.
+- `technical_documents`: ficha, versión, vigencia, origen y alcance.
+- `product_documents`: vínculo documento-producto/variante/subfamilia.
+- `quotes` y `quote_items`: cliente, vendedor, vigencia, productos, precios y estado.
+- `brand_templates`: logos, colores y reglas de co-branding.
 
-## 6. Casos particulares
+Los identificadores deben ser estables. Una corrección de nombre no puede crear otro producto ni perder historial.
 
-### Resinplast
+## 5. Experiencia comercial
 
-- Consumidor final: tramo automático por cantidad.
-- Mayorista: precio mayorista únicamente cuando se cumpla la condición comercial indicada en la lista.
-- Rollo/tambor: respetar presentación completa.
+1. Buscar o navegar por familia y subfamilia.
+2. Ver imagen, usos, presentaciones, variantes, precios y fecha de vigencia.
+3. Elegir variante y cantidad.
+4. Aplicar la escala válida; una excepción manual exige motivo.
+5. Agregar productos de una o varias familias a una misma cotización.
+6. Elegir o crear el cliente desde el CRM.
+7. Sugerir las fichas técnicas correspondientes.
+8. Mostrar una vista previa antes de guardar o exportar.
+9. Emitir PDF de cotización o lista de precios.
+10. Guardar la operación en el historial comercial del cliente.
 
-### Baldes
+También existirá un modo **Lista de precios**, sin cliente obligatorio, para seleccionar una familia, subfamilia o conjunto de productos y generar un PDF comercial.
 
-- Tramos observados: minorista 1-111, medio pallet 112-224 y mayorista 225+.
-- Los precios del documento son `+ IVA`.
-- Respetar cantidades por bulto como dato informativo y posible validación futura.
+## 6. Identidad visual
 
-### PRFV
+El logo de **Grupo Poliplast debe aparecer siempre**.
 
-- Precio por m² en USD sin IVA, según indicación de Felipe.
-- El subtotal se calcula por m² totales del rollo o formato.
-- Antes de implementar debe resolverse si el mínimo comercial es siempre rollo cerrado o si existen cortes; la imagen contiene largos de 130 y 150 m, por lo que no se fija todavía un mínimo genérico de 100 m.
+- **Penosil:** colores y logo de Penosil + Grupo Poliplast.
+- **Resinplast:** colores y logo de Resinplast + Grupo Poliplast.
+- **PURMAC:** colores y logo de PURMAC + Grupo Poliplast.
+- **Otras familias:** identidad de Grupo Poliplast hasta que Felipe entregue una marca específica.
+- **Cotización mixta:** identidad principal de Grupo Poliplast; cada sección puede indicar su marca, sin convertirse en varias cotizaciones.
 
-### Penosil
+Esto se resolverá mediante configuración de marca, no con aplicaciones o código duplicado por familia.
 
-- La lista contiene PVP y presentaciones por caja.
-- Falta confirmar moneda, vigencia exacta y reglas mayorista/minorista.
-- La regla orientativa `web o 10%` no se automatiza hasta definir si significa descuento, recargo o tolerancia y quién puede aprobarlo.
+## 7. Fichas técnicas y adjuntos
 
-## 7. MVP recomendado
+Una ficha podrá asociarse a una subfamilia, producto, variante o combinación de productos. Al cotizar, el sistema sugerirá los documentos aplicables y el vendedor decidirá cuáles adjuntar.
 
-Primera versión: Resinplast solamente, porque ya tiene cotizador probado y listas CF/Mayorista estructuradas. Replicar comportamiento, incorporar guardado en empresa y PDF. Después agregar Baldes, PRFV y Penosil como adaptadores de listas, no como cotizadores separados.
+Solo se ofrecerán documentos vigentes y validados en la base de conocimiento. Si falta una ficha o existen versiones conflictivas, se mostrará la advertencia y no se inventará contenido.
 
-## 8. Criterios de aceptación
+La primera versión puede incluir enlaces controlados a Drive. Una posterior podrá anexar automáticamente las fichas al PDF o al mensaje de envío.
 
-- Una sola fuente de precio por cotización y versión visible.
-- Tramo correcto en todos los límites de cantidad.
-- IVA correcto para listas incluidas y no incluidas.
-- Conversión USD/ARS trazable.
-- Productos sin precio no pueden cotizarse silenciosamente.
-- PDF coincide con pantalla y conserva moneda, IVA y validez.
-- Cotización vinculada a una empresa sin crear duplicados.
-- Ningún precio se publica ni modifica en Shopify, ML o Contabilium.
+## 8. Reglas ya conocidas
 
-## 9. Orden dentro del roadmap
+- **Resinplast:** listas Mayorista y CF 2026, conservando condiciones y escalas documentadas.
+- **Baldes:** precios con IVA y escalas por cantidad/bulto según lista vigente.
+- **PRFV:** precio por m², dimensiones/espesor y rollo cerrado; mínimo inicial de 100 metros, sujeto a validación.
+- **Penosil:** mayorista según lista vigente; minorista desde fuente autorizada, sin asumir automáticamente un 10% si no fue validado.
+- **Resto:** se incorpora con identidad y variantes aunque no tenga precio cotizable; debe figurar como `precio pendiente`, no quedar excluido.
 
-1. Registrar y validar fuentes de precios.
-2. Conciliar el piloto Resinplast contra el cotizador actual.
-3. Construir motor genérico de tramos, unidades, monedas e IVA.
-4. Integrar carrito y PDF en el CRM.
-5. Guardar cotización en empresa e historial.
-6. Agregar Baldes y PRFV.
-7. Agregar Penosil cuando se validen sus reglas.
-8. Conectar Contabilium en modo lectura cuando esté disponible.
+## 9. Primera implementación
 
-## 10. Preguntas abiertas mínimas
+La primera versión no será “el cotizador de Resinplast”. Debe crear la base horizontal para todas las familias:
 
-1. Penosil: moneda real del PVP y regla exacta para mayorista/minorista.
-2. PRFV: mínimo real por formato y posibilidad de cortes.
-3. Vigencia y responsable de aprobación de cada lista.
-4. Condiciones de pago, entrega y duración estándar de una cotización.
-5. Quién puede aplicar descuentos extraordinarios y cómo quedan auditados.
+1. modelo unificado de catálogo y variantes;
+2. importación con vista previa y reporte de errores;
+3. navegador con filtros de familia/subfamilia/SKU;
+4. carga de todos los productos identificados, aunque algunos tengan precio pendiente;
+5. motor genérico de listas, escalas, IVA, moneda y vigencia;
+6. identidad visual configurable por marca;
+7. asociación y sugerencia de fichas técnicas;
+8. cotización y lista de precios en PDF;
+9. vínculo con cliente e historial del CRM.
+
+Las familias verificadas pueden habilitarse para cotizar primero, pero sin crear una arquitectura exclusiva que luego haya que rehacer.
+
+## 10. Seguridad y trazabilidad
+
+- Cada cotización guarda la lista, precio y vigencia utilizados.
+- Cambiar una lista futura no altera cotizaciones históricas.
+- El precio manual queda marcado como excepción, con usuario y motivo.
+- El PDF indica moneda, IVA, vigencia y condiciones.
+- Los documentos técnicos muestran fuente y fecha de verificación.
+- Ninguna importación sobrescribe datos en silencio: siempre hay vista previa de altas, cambios, conflictos y descartes.
+
+## 11. Criterios de aceptación
+
+1. Se encuentra cualquier producto o variante del Catálogo Maestro.
+2. Cada producto aparece una sola vez, con sus variantes debajo.
+3. Los productos sin precio siguen visibles y claramente marcados.
+4. Se cotiza una selección de una o varias familias.
+5. Escala, moneda e IVA se calculan y muestran correctamente.
+6. El PDF aplica la marca correcta y siempre incluye Grupo Poliplast.
+7. Una cotización mixta conserva una identidad coherente.
+8. Se sugieren las fichas correctas y se pueden seleccionar adjuntos.
+9. La cotización queda vinculada al cliente con snapshot histórico.
+10. Ninguna cifra o ficha sin fuente validada aparece como definitiva.
+
+## 12. Orden recomendado
+
+1. Auditar Catálogo Maestro, Shopify, listas y Drive; producir mapa de campos y conflictos.
+2. Cerrar taxonomía familia/subfamilia/producto/variante y normalización de SKU.
+3. Construir el catálogo interno completo con importador seguro.
+4. Implementar motor genérico de precios y habilitar primero las listas verificadas.
+5. Configurar marcas de Grupo Poliplast, Penosil, Resinplast y PURMAC.
+6. Vincular fichas técnicas gobernadas.
+7. Generar cotización y lista de precios en PDF.
+8. Vincular con clientes, historial y seguimiento del CRM.
+9. Evaluar lectura automática desde Contabilium y otras sincronizaciones.
+
+## 13. Decisiones pendientes
+
+- Fuente canónica y frecuencia de actualización de precios por familia.
+- Reglas de descuentos y quién puede autorizarlos.
+- Condiciones fiscales y comerciales por unidad.
+- Logos originales y manuales de marca de Resinplast, PURMAC y futuras familias.
+- Si el primer PDF adjunta fichas completas o entrega enlaces controlados.
+
+Estas decisiones no bloquean la auditoría ni el diseño horizontal.

@@ -163,3 +163,26 @@ Las familias verificadas pueden habilitarse para cotizar primero, pero sin crear
 - Si el primer PDF adjunta fichas completas o entrega enlaces controlados.
 
 Estas decisiones no bloquean la auditoría ni el diseño horizontal.
+
+## 14. Auditoría inicial de la semilla actual
+
+Verificación automática del 10/09/2026 sobre `src/product-catalog.mjs`:
+
+- 59 variantes.
+- 30 agrupaciones iniciales de producto.
+- 0 variantes sin SKU.
+- 1 SKU duplicado entre dos productos diferentes.
+- 9 variantes sin subfamilia definida.
+- Resultado: **la semilla todavía no es importable**; debe pasar por revisión humana.
+
+### Conflicto de SKU
+
+`PS-EMPU46MSP-1` aparece tanto en “Espuma Multiuso PU-46 - Manual X1” como en “Espuma Multiuso PU-46 - Pistola X1”. Los SKU X6/X12 sugieren patrones distintos, pero el valor correcto debe confirmarse contra una fuente comercial; no se corrige por inferencia.
+
+### Subfamilias pendientes
+
+- Baldes: `BLBL-10-1`, `BLBL-10-3`, `BLBL-20-1`, `BLBL-20-3`.
+- AGLUPLAST: `PU-A1150-2`, `PU-A1150-4`.
+- Pisos: `AF-PG-MONEDA-NEG-2.5MM-1M2`, `AF-100-RUL-GRIS-1M2`, `AF-100-ZZ-GRIS-5MM-1M2`.
+
+El motor que produce este informe está en `src/unified-commercial-catalog.mjs`. Bloquea una importación con SKU duplicado o ausente, agrupa variantes, filtra el catálogo, resuelve el co-branding y sugiere únicamente fichas técnicas vigentes.

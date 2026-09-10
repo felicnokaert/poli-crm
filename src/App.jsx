@@ -96,6 +96,14 @@ import { docTypeLabel } from "./technical-library.mjs";
 import { isLowSignalWhatsAppEvent } from "./whatsapp-events.mjs";
 import MercadoLibre from "./MercadoLibre";
 import { detectDuplicateClientCandidates } from "./duplicate-candidates.mjs";
+import {
+  COMMERCIAL_STAGES,
+  ECERA,
+  KNOWLEDGE_META,
+  OBJECTIONS,
+  PLAYBOOKS,
+  findObjections,
+} from "./commercial-knowledge.mjs";
 
 // El sufijo fuerza una única segunda pasada que también incluye las tareas
 // antiguas sin fecha de vencimiento, usando su fecha de creación.
@@ -4573,7 +4581,7 @@ function QuickReplies({ myChannels }) {
 }
 
 function Academy({ myChannels, interactions, data, setData }) {
-  const [section, setSection] = useState("library");
+  const [section, setSection] = useState("method");
   return (
     <div className="content-stack">
       <section className="panel academy-hero">
@@ -4583,17 +4591,47 @@ function Academy({ myChannels, interactions, data, setData }) {
           <p>Prepará conversaciones, practicá situaciones reales y convertí cada resultado en aprendizaje para el equipo.</p>
         </div>
         <div className="segmented">
+          <button className={section === "method" ? "selected" : ""} onClick={() => setSection("method")}>Método</button>
+          <button className={section === "objections" ? "selected" : ""} onClick={() => setSection("objections")}>Objeciones</button>
+          <button className={section === "profiles" ? "selected" : ""} onClick={() => setSection("profiles")}>Perfiles</button>
           <button className={section === "library" ? "selected" : ""} onClick={() => setSection("library")}>Biblioteca y práctica</button>
           <button className={section === "coach" ? "selected" : ""} onClick={() => setSection("coach")}>Evaluar conversaciones</button>
         </div>
       </section>
-      {section === "library" ? <QuickReplies myChannels={myChannels} /> : (
+      {["method", "objections", "profiles"].includes(section) && <CommercialKnowledge section={section} />}
+      {section === "library" && <QuickReplies myChannels={myChannels} />}
+      {section === "coach" && (
         <>
           <PriceMemory sales={data.sales || []} />
           <Coach interactions={interactions} data={data} setData={setData} />
         </>
       )}
     </div>
+  );
+}
+
+function CommercialKnowledge({ section }) {
+  const [search, setSearch] = useState("");
+  const objections = findObjections(search);
+  return (
+    <section className="panel commercial-knowledge">
+      <div className="panel-head">
+        <div>
+          <span className="eyebrow">Contenido {KNOWLEDGE_META.status} · {KNOWLEDGE_META.version}</span>
+          <h2>{section === "method" ? "Proceso y método E-C-E-R-A" : section === "objections" ? "Biblioteca única de objeciones" : "Perfiles y playbooks"}</h2>
+        </div>
+        {section === "objections" && <label className="search"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar objeción o respuesta…" /></label>}
+      </div>
+      {section === "method" && (
+        <>
+          <div className="ecera-strip">{ECERA.map((step, index) => <article key={step.id}><span>{index + 1}</span><strong>{step.label}</strong><p>{step.guidance}</p></article>)}</div>
+          <div className="knowledge-grid stages">{COMMERCIAL_STAGES.map((stage, index) => <article key={stage.id}><span>Etapa {index + 1}</span><h3>{stage.label}</h3><p>{stage.objective}</p><small>Avanza cuando: {stage.advanceWhen}</small></article>)}</div>
+        </>
+      )}
+      {section === "objections" && <div className="knowledge-grid objections">{objections.map((item) => <article key={item.id}><span>Objeción</span><h3>{item.label}</h3><p><strong>Puede significar:</strong> {item.meaning}</p><p><strong>Explorar:</strong> {item.explore}</p><small><strong>Respuesta a construir:</strong> {item.response}</small></article>)}{!objections.length && <Empty text="No encontramos una objeción con ese criterio." />}</div>}
+      {section === "profiles" && <div className="knowledge-grid profiles">{PLAYBOOKS.map((item) => <article key={item.id}><span>{item.families.join(" · ")}</span><h3>{item.label}</h3><p><strong>Busca:</strong> {item.motivation}</p><p><strong>Objeción típica:</strong> {item.typicalObjection}</p><small><strong>Próximo paso:</strong> {item.nextStep}</small></article>)}</div>}
+      <div className="quality-note"><CircleAlert size={19} /><p>Fuente: Sistema Comercial Grupo Poliplast. Los criterios orientan; precio, stock, condiciones y datos técnicos deben verificarse antes de responder.</p></div>
+    </section>
   );
 }
 

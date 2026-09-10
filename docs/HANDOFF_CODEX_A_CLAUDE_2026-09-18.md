@@ -30,6 +30,7 @@ Permitir que Claude continúe el Sistema Comercial Grupo Poliplast y coordine el
 | Academia comercial | Contenedor y conocimiento estructurado operativos | `1e7c8f9`, `c0b9688`: 12 etapas, 13 objeciones, 10 playbooks y E-C-E-R-A | validar contenido con casos reales de Cohorte 1 |
 | Ayuda contextual | v1 construida y publicada | `caa680f`: recomendación por empresa según etapa, familia, perfil, objeción y venta cruzada; 175 tests | QA visual/funcional en producción y triage rápido |
 | Triage comercial | v1 construida y publicada | `b105b2a`: seis variables 0-2, puntaje 0-12 y prellenado conservador; 179 tests | probar con 10 casos reales de Cohorte 1 y ajustar significado de Exposición/Ticket si corresponde |
+| Persistencia del workspace | Defecto de conciliación corregido | `1147b9b`: conserva tablero, metas, unidades de negocio y perfil al mezclar estado local/remoto; 180 tests | QA de recarga con sesión real |
 | WhatsApp General | No modificar sin regresión específica | pruebas automatizadas | seguimiento operativo |
 | WhatsApp Penosil | Meta oficial; puente retirado | documentación y pruebas del webhook | coexistencia/validación real según estado vigente |
 | Mercado Libre | Integración oficial de lectura construida para POLIPLAST y FOAM | endpoints OAuth/sync + tests | autorización real y validación de paridad |

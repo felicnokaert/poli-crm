@@ -334,7 +334,7 @@ Es esperable si son tareas de naturaleza distinta. Proyecto general: Trello. Com
 
 ## 21. Validación rápida para Felipe
 
-El manual queda aprobado cuando Felipe puede resolver sin ayuda estas siete acciones:
+El manual queda aprobado cuando Felipe puede resolver sin ayuda estas acciones:
 
 1. encontrar una empresa y agregarle otro teléfono;
 2. clasificar un mensaje y corregir una clasificación equivocada;
@@ -342,4 +342,19 @@ El manual queda aprobado cuando Felipe puede resolver sin ayuda estas siete acci
 4. crear y completar un seguimiento que persista al recargar;
 5. registrar una venta o importar una factura para revisión;
 6. encontrar una objeción y su criterio E-C-E-R-A;
-7. abrir el Trello maestro desde el CRM y ubicar la prioridad semanal.
+7. abrir el Trello maestro desde el CRM y ubicar la prioridad semanal;
+8. **(10/09/2026, Claude)** editar un objetivo de ventas ya creado (cambiar el tipo de cambio, por ejemplo) sin que se duplique ni se pierda el progreso acumulado;
+9. **(10/09/2026, Claude)** filtrar Historial por familia y temperatura, y pasar a la página siguiente con "Mostrar más" cuando hay más de 20 conversaciones;
+10. **(10/09/2026, Claude)** en Recursos → Base técnica, elegir una carpeta de Drive completa, revisar la vista previa (nuevos/modificados/duplicados exactos/posibles duplicados/errores), corregir la familia sugerida de un documento y guardar;
+11. **(10/09/2026, Claude)** en Base técnica, cambiar el estado de un documento (inventariado → pendiente de validación → vigente) y confirmar que la base bloquea marcarlo "vigente" sin fuente/responsable/fecha;
+12. **(10/09/2026, Claude)** abrir una conversación real en Por revisar y confirmar que el panel "Sugerencia del copiloto" recomienda una ficha técnica que existe de verdad en Base técnica (no una lista vieja desconectada).
+
+### Registro de avances (Claude, sesión 10/09/2026)
+
+- Bug de "Por revisar" resucitando chats ya eliminados: corregido un gap real en la suscripción en tiempo real que no respetaba `dismissedInboxEventIds` (commit `cf7071c`). No se pudo confirmar si era la única causa — pendiente que Felipe reporte el próximo caso con el nombre del contacto.
+- Botón "Guardar" de Base técnica que se desactivaba sin avisar: corregido (commit `d7ca7f2`).
+- Base técnica completa de punta a punta: importador con vista previa real (carpeta o archivos sueltos, familia editable por documento), persistencia en Supabase (`technical_documents` + `technical_document_history`, RLS por rol, solo Felipe puede marcar "vigente"), y pantalla de validación en Recursos → Base técnica (commits `9260f6b`, `a6cca90`, `41f01e0`, `d7ca7f2`).
+- Carga masiva real ejecutada: 68 fichas técnicas reales de Drive cargadas como "inventariado" (65 nuevas + 3 versiones alternativas de documentos que ya tenían un duplicado exacto). 10 duplicados exactos detectados y no re-importados (mismo archivo en dos carpetas de Drive — limpieza de Drive queda pendiente, no bloquea nada).
+- Panel de sugerencia del copiloto conectado al catálogo real de Supabase en vez del índice estático de 31 documentos (commit `1456db8`).
+- Migración de Catálogo/Precios/Inventario para el futuro Cotizador (`catalog_products`, `catalog_variants`, costos, listas de precios, inventario, auditoría de importaciones) aplicada en producción — este bloque es de Codex, no del CRM; Claude solo ejecutó la migración ya escrita porque requería acceso a la base compartida.
+- Objetivos de Ventas ahora se pueden editar sin duplicar (commit `d05b764`); envío/flete excluido de la comisión (commit `41d73bf`); Imperpur y otras unidades nuevas ya reconocen su punto de venta en la importación de facturas (commit `584c83a`).

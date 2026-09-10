@@ -2354,12 +2354,20 @@ function Dashboard({
   );
 }
 
+const CONVERSATIONS_PAGE_SIZE = 20;
+
 function Conversations({ items, clients, onOpen, onOpenClient }) {
   const [query, setQuery] = useState("");
   const [family, setFamily] = useState("all");
   const [temperature, setTemperature] = useState("all");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [visibleCount, setVisibleCount] = useState(CONVERSATIONS_PAGE_SIZE);
+  // Volver a la primera página cada vez que cambia un filtro - si no, con un
+  // filtro nuevo podés quedar mostrando "20 de 3" sin ver nada.
+  useEffect(() => {
+    setVisibleCount(CONVERSATIONS_PAGE_SIZE);
+  }, [query, family, temperature, fromDate, toDate]);
   const conversations = groupConversationHistory(filterInteractionsByDate(items, fromDate, toDate));
   const clientIds = new Set(clients.map((client) => client.id));
   const clientsById = new Map(clients.map((client) => [client.id, client]));
@@ -2414,7 +2422,7 @@ function Conversations({ items, clients, onOpen, onOpenClient }) {
       </div>
       {filtered.length ? (
         <div className="conversation-list">
-          {filtered.map((item) => {
+          {filtered.slice(0, visibleCount).map((item) => {
             const validClientIds = (item.clientIds || [item.clientId]).filter((id) => clientIds.has(id));
             const hasClient = validClientIds.length === 1;
             // La temperatura mostrada acá es la actual de la ficha del
@@ -2477,6 +2485,17 @@ function Conversations({ items, clients, onOpen, onOpenClient }) {
               : "Registrá la primera conversación para comenzar la memoria comercial."
           }
         />
+      )}
+      {filtered.length > visibleCount && (
+        <div className="conversation-list-more">
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => setVisibleCount((count) => count + CONVERSATIONS_PAGE_SIZE)}
+          >
+            Mostrar más ({filtered.length - visibleCount} restantes)
+          </button>
+        </div>
       )}
     </section>
   );

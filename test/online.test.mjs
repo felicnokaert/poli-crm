@@ -116,6 +116,29 @@ test('keeps non-commercial WhatsApp contact rules across workspace synchronizati
   assert.deepEqual(merged.ignoredWhatsAppContacts.map((item) => item.key), ['general:equipo', 'penosil:familia']);
 });
 
+test('workspace synchronization preserves board, sales configuration and profile data', () => {
+  const merged = mergeWorkspaceState(
+    {
+      boardLists: [{ id: 'list-local', title: 'Prioridad semanal', updatedAt: '2026-09-10T10:00:00Z' }],
+      boardCards: [{ id: 'card-local', listId: 'list-local', title: 'Llamar', updatedAt: '2026-09-10T10:00:00Z' }],
+      salesGoals: [{ id: 'goal-local', target: 10, updatedAt: '2026-09-10T10:00:00Z' }],
+      businessUnits: [{ id: 'poliplast', name: 'Poliplast', updatedAt: '2026-09-10T10:00:00Z' }],
+      primaryChannel: 'penosil',
+      profileName: 'Felipe',
+    },
+    {
+      boardLists: [{ id: 'list-remote', title: 'Backlog', updatedAt: '2026-09-10T09:00:00Z' }],
+      boardCards: [], salesGoals: [], businessUnits: [], primaryChannel: '', profileName: '',
+    },
+  );
+  assert.deepEqual(merged.boardLists.map((item) => item.id), ['list-local', 'list-remote']);
+  assert.equal(merged.boardCards[0].id, 'card-local');
+  assert.equal(merged.salesGoals[0].id, 'goal-local');
+  assert.equal(merged.businessUnits[0].id, 'poliplast');
+  assert.equal(merged.primaryChannel, 'penosil');
+  assert.equal(merged.profileName, 'Felipe');
+});
+
 test('merges concurrent workspace changes without dropping records', () => {
   const local = {
     clients: [{ id: 'a', company: 'Local', updatedAt: '2026-08-31T10:00:00Z' }],

@@ -1,4 +1,4 @@
-const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '', tasksClosedThrough: '' };
+const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], boardLists: [], boardCards: [], salesGoals: [], businessUnits: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '', tasksClosedThrough: '', primaryChannel: 'general', profileName: '' };
 const OBSOLETE_PREVIEW_TYPES = new Set(['unread_preview', 'unread_notice', 'verified_unread_preview']);
 
 function normalizedCompany(value = '') {
@@ -97,12 +97,18 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
       .sort((a, b) => (b.occurred_at || '').localeCompare(a.occurred_at || '')),
     opportunities: mergeRecords(local.opportunities, remote.opportunities),
     sales: mergeRecords(local.sales, remote.sales),
+    boardLists: mergeRecords(local.boardLists, remote.boardLists),
+    boardCards: mergeRecords(local.boardCards, remote.boardCards),
+    salesGoals: mergeRecords(local.salesGoals, remote.salesGoals),
+    businessUnits: mergeRecords(local.businessUnits, remote.businessUnits),
     dismissedInboxEventIds,
     ignoredWhatsAppContacts: mergeRecords(local.ignoredWhatsAppContacts, remote.ignoredWhatsAppContacts, 'key'),
     planChecks: { ...(remote.planChecks || {}), ...(local.planChecks || {}) },
     commercialMasterVersion: local.commercialMasterVersion || remote.commercialMasterVersion || '',
     historyResetVersion: [localHistoryReset, remoteHistoryReset].sort().at(-1) || '',
     tasksClosedThrough: [local.tasksClosedThrough || '', remote.tasksClosedThrough || ''].sort().at(-1) || '',
+    primaryChannel: local.primaryChannel || remote.primaryChannel || 'general',
+    profileName: local.profileName || remote.profileName || '',
   };
 }
 

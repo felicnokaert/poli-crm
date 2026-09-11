@@ -5343,24 +5343,37 @@ function TechnicalDocumentsAdmin({ session }) {
   }
 
   // Backfill para las fichas que ya estaban cargadas antes de que existiera
-  // extracted_text (68 al día de hoy): Felipe vuelve a elegir el mismo
-  // archivo puntual, se extrae el texto y se guarda - no reimporta ni
-  // duplica el documento, solo le agrega el contenido que le faltaba.
-  async function uploadExtractedText(doc, file) {
+  // el adjunto real (68 al día de hoy, importadas cuando el CRM solo
+  // guardaba el nombre del archivo): Felipe vuelve a elegir el mismo PDF, y
+  // ahora sí queda guardado de verdad en el CRM (no solo su nombre), con el
+  // texto extraído en el mismo paso.
+  async function attachFile(doc, file) {
     if (!file) return;
-    setMessage(`Extrayendo texto de "${doc.title}"…`);
+    setMessage(`Adjuntando "${doc.title}"…`);
     try {
-      const [{ extractPdfText }, { updateTechnicalDocumentExtractedText }] = await Promise.all([
-        import("./pdf-text.js"),
-        import("./technical-documents-repo.mjs"),
-      ]);
-      const text = await extractPdfText(file);
-      if (!text.trim()) throw new Error("No se pudo extraer texto de ese archivo (¿es un PDF escaneado como imagen?).");
-      const updated = await updateTechnicalDocumentExtractedText(doc.id, text);
+      const { attachTechnicalDocumentFile } = await import("./technical-documents-repo.mjs");
+      const updated = await attachTechnicalDocumentFile(doc.id, file);
       setDocuments((current) => current.map((item) => (item.id === doc.id ? updated : item)));
-      setMessage(`Texto cargado para "${doc.title}". El copiloto ya puede citarlo si está vigente y validado.`);
+      setMessage(
+        updated.extractedText
+          ? `"${doc.title}" quedó adjunta. El copiloto ya puede citarla si está vigente y validada.`
+          : `"${doc.title}" quedó adjunta, pero no se pudo leer el texto (¿es un PDF escaneado como imagen?). El archivo igual se puede ver.`,
+      );
     } catch (error) {
-      setMessage(error.message || "No se pudo extraer el texto de ese archivo.");
+      setMessage(error.message || "No se pudo adjuntar ese archivo.");
+    }
+  }
+
+  async function viewFile(doc) {
+    setMessage(`Abriendo "${doc.title}"…`);
+    try {
+      const { getTechnicalDocumentFileUrl } = await import("./technical-documents-repo.mjs");
+      const url = await getTechnicalDocumentFileUrl(doc.storagePath);
+      if (!url) throw new Error("Esta ficha todavía no tiene un PDF adjunto.");
+      window.open(url, "_blank", "noopener,noreferrer");
+      setMessage("");
+    } catch (error) {
+      setMessage(error.message || "No se pudo abrir el archivo.");
     }
   }
 
@@ -5418,7 +5431,8 @@ function TechnicalDocumentsAdmin({ session }) {
             updateDraft={updateDraft}
             saveStatus={saveStatus}
             isAdmin={isAdmin}
-            uploadExtractedText={uploadExtractedText}
+            attachFile={attachFile}
+            viewFile={viewFile}
           />
         ) : (
           <Empty text="No hay documentos importados todavía. Subí fichas desde Datos → Importar fichas técnicas." />
@@ -5428,7 +5442,7 @@ function TechnicalDocumentsAdmin({ session }) {
   );
 }
 
-function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, uploadExtractedText }) {
+function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile }) {
   const draft = draftFor(doc);
   return (
     <article className="technical-document-row">
@@ -5455,18 +5469,24 @@ function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleDrafts, 
             Reemplazada por: {allDocuments.find((item) => item.id === doc.replacedBy)?.title || "documento eliminado"}
           </span>
         )}
-        <span className={doc.extractedText ? "technical-document-text-ok" : "technical-document-text-missing"}>
-          {doc.extractedText
-            ? "Texto cargado · el copiloto puede citarlo si está vigente"
-            : "Sin texto cargado · el copiloto no puede citar datos de esta ficha todavía"}
+        <span className={doc.storagePath ? "technical-document-text-ok" : "technical-document-text-missing"}>
+          {doc.storagePath
+            ? `Ficha adjunta (PDF)${doc.extractedText ? " · el copiloto puede citarla si está vigente" : " · no se pudo leer el texto todavía"}`
+            : "Sin PDF adjunto todavía · el copiloto no puede citar datos de esta ficha"}
           {" "}
-          <label className="technical-document-upload-text-link">
-            {doc.extractedText ? "Reemplazar" : "Cargar texto"}
+          {doc.storagePath && (
+            <button type="button" className="technical-document-file-link" onClick={() => viewFile(doc)}>
+              Ver ficha
+            </button>
+          )}
+          {" "}
+          <label className="technical-document-file-link">
+            {doc.storagePath ? "Reemplazar" : "Adjuntar PDF"}
             <input
               type="file"
               accept="application/pdf"
               hidden
-              onChange={(event) => uploadExtractedText(doc, event.target.files?.[0])}
+              onChange={(event) => attachFile(doc, event.target.files?.[0])}
             />
           </label>
         </span>
@@ -5549,12 +5569,12 @@ function TechnicalDocumentFolderNode({ node, depth, rowProps }) {
   );
 }
 
-function TechnicalDocumentGroups({ documents, groupByFolder, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, uploadExtractedText }) {
+function TechnicalDocumentGroups({ documents, groupByFolder, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile }) {
   const [buildFolderTree, setBuildFolderTree] = useState(null);
   useEffect(() => {
     import("./technical-documents-mapping.mjs").then(({ buildFolderTree: fn }) => setBuildFolderTree(() => fn));
   }, []);
-  const rowProps = { allDocuments: documents, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, uploadExtractedText };
+  const rowProps = { allDocuments: documents, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile };
   if (!groupByFolder || !buildFolderTree) {
     return (
       <div className="conversation-list">
@@ -5581,6 +5601,7 @@ function DataSettings({ data, setData, session, syncStatus }) {
   const [technicalImportPreview, setTechnicalImportPreview] = useState(null);
   const [technicalImportBusy, setTechnicalImportBusy] = useState(false);
   const [technicalImportFamilyOverrides, setTechnicalImportFamilyOverrides] = useState({});
+  const [technicalImportFiles, setTechnicalImportFiles] = useState({});
 
   async function importTechnicalDocuments(event) {
     const files = [...(event.target.files || [])];
@@ -5605,19 +5626,6 @@ function DataSettings({ data, setData, session, syncStatus }) {
           // Con archivos sueltos, cae en el nombre nomás.
           const relativePath = file.webkitRelativePath || file.name;
           const hints = parsePathHints(relativePath);
-          // Extraer el texto es "mejor esfuerzo": si el archivo no es un PDF
-          // legible o pdf.js falla, el documento igual se importa - solo
-          // queda sin texto, como estaba antes, y el copiloto sigue sin citar
-          // nada de él hasta que alguien lo cargue a mano.
-          let extractedText = null;
-          if (/\.pdf$/i.test(file.name)) {
-            try {
-              const { extractPdfText } = await import("./pdf-text.js");
-              extractedText = await extractPdfText(file);
-            } catch {
-              extractedText = null;
-            }
-          }
           return {
             title: hints.title,
             family: hints.family,
@@ -5627,10 +5635,13 @@ function DataSettings({ data, setData, session, syncStatus }) {
             sourceFile: relativePath,
             sizeBytes: file.size,
             sha256: await sha256Hex(file),
-            extractedText,
           };
         }),
       );
+      // El File real se guarda aparte (no es serializable en el estado de
+      // vista previa) para poder adjuntarlo recién al confirmar - Felipe
+      // quiere la ficha adjunta de verdad, no solo indexada por nombre.
+      setTechnicalImportFiles(Object.fromEntries(files.map((file) => [file.webkitRelativePath || file.name, file])));
       const preview = classifyInventoryImport(candidates, existing);
       setTechnicalImportPreview(preview);
       setMessage(
@@ -5652,12 +5663,14 @@ function DataSettings({ data, setData, session, syncStatus }) {
         ...doc,
         family: technicalImportFamilyOverrides[doc.sourceFile] || doc.family,
       }));
-      const saved = await saveInventoryImport(withFamily);
+      const saved = await saveInventoryImport(withFamily, technicalImportFiles);
+      const attached = saved.filter((doc) => doc.storagePath).length;
       setMessage(
-        `${saved.length} documentos guardados como "inventariado". Ningún documento quedó "vigente" automáticamente - falta la validación humana.`,
+        `${saved.length} documentos guardados como "inventariado" (${attached} con su PDF adjunto y listo para que el copiloto lo lea). Ningún documento quedó "vigente" automáticamente - falta la validación humana.`,
       );
       setTechnicalImportPreview(null);
       setTechnicalImportFamilyOverrides({});
+      setTechnicalImportFiles({});
     } catch (error) {
       setMessage(error.message || "No se pudo guardar el inventario.");
     } finally {

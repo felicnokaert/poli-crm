@@ -4,7 +4,10 @@
 // no este archivo: cualquier intento de guardar algo "vigente" sin validar,
 // o de borrar un documento, es rechazado por la base, no solo por la UI.
 import { supabase } from './online.js';
+import { extractPdfText } from './pdf-text.js';
 import { fromRow, historyFromRow, toRow } from './technical-documents-mapping.mjs';
+
+const STORAGE_BUCKET = 'technical-documents';
 
 // Catálogo completo, compartido a nivel Grupo Poliplast (no filtra por
 // canal - General/Penosil/Juan ven lo mismo, ver ADR-001).
@@ -21,12 +24,28 @@ export async function fetchTechnicalDocuments() {
 // Guarda solo los candidatos "nuevos" de la vista previa (classifyInventoryImport).
 // Nunca se llama con "modificados"/"duplicados" - esos quedan para que una
 // persona decida a mano, la vista previa nunca se auto-confirma.
-export async function saveInventoryImport(newDocuments = []) {
+//
+// filesBySourceFile (opcional): el File real de cada candidato, keyed por su
+// sourceFile - si viene, el PDF queda adjunto en Storage y su texto
+// extraído automáticamente, todo en el mismo paso de importar (Felipe:
+// "quiero... tenerla adjunta en pdf... a raíz de ello va aprendiendo"). Si
+// un archivo puntual falla al subirse, el documento igual queda guardado -
+// se puede adjuntar después a mano desde Base técnica, no bloquea el resto.
+export async function saveInventoryImport(newDocuments = [], filesBySourceFile = {}) {
   if (!newDocuments.length) return [];
   const rows = newDocuments.map(toRow);
   const { data, error } = await supabase.from('technical_documents').insert(rows).select();
   if (error) throw error;
-  return (data || []).map(fromRow);
+  const saved = (data || []).map(fromRow);
+  return Promise.all(saved.map(async (doc) => {
+    const file = filesBySourceFile[doc.sourceFile];
+    if (!file) return doc;
+    try {
+      return await attachTechnicalDocumentFile(doc.id, file);
+    } catch {
+      return doc;
+    }
+  }));
 }
 
 // Cambiar de estado (incluye marcar "vigente", solo permitido por RLS a
@@ -59,15 +78,45 @@ export async function updateTechnicalDocumentTitle(id, title) {
   return data ? fromRow(data) : null;
 }
 
-// Guarda el texto real extraído del archivo (ver src/pdf-text.js) para que
-// el copiloto pueda citar una línea literal de una ficha vigente en vez de
-// depender solo del nombre (technical-document-governance.mjs
-// citableExcerpt). No cambia el estado ni dispara historial de validación -
-// es contenido, no una decisión de gobernanza.
-export async function updateTechnicalDocumentExtractedText(id, extractedText) {
-  const { data, error } = await supabase.from('technical_documents').update({ extracted_text: extractedText || null }).eq('id', id).select().maybeSingle();
+// Sube el PDF real al bucket privado technical-documents y extrae su texto
+// en el mismo paso - la ficha queda adjunta de verdad (no solo su nombre) y
+// el copiloto puede citar una línea literal de ella una vez vigente y
+// validada (technical-document-governance.mjs citableExcerpt). No cambia el
+// estado ni dispara historial de validación - es contenido, no una decisión
+// de gobernanza. Se usa tanto al importar como para adjuntar/reemplazar el
+// PDF de una ficha que ya existía sin archivo.
+export async function attachTechnicalDocumentFile(id, file) {
+  const path = `${id}/${Date.now()}-${file.name}`;
+  const { error: uploadError } = await supabase.storage
+    .from(STORAGE_BUCKET)
+    .upload(path, file, { upsert: true, contentType: file.type || 'application/pdf' });
+  if (uploadError) throw uploadError;
+  let extractedText = null;
+  try {
+    extractedText = await extractPdfText(file);
+  } catch {
+    extractedText = null;
+  }
+  const { data, error } = await supabase
+    .from('technical_documents')
+    .update({ storage_path: path, extracted_text: extractedText })
+    .eq('id', id)
+    .select()
+    .maybeSingle();
   if (error) throw error;
   return data ? fromRow(data) : null;
+}
+
+// URL firmada y temporal para ver/descargar el PDF adjunto - el bucket es
+// privado (solo equipo Poliplast, misma regla que el resto del CRM), no se
+// puede armar una URL pública fija.
+export async function getTechnicalDocumentFileUrl(storagePath) {
+  if (!storagePath) return null;
+  const { data, error } = await supabase.storage
+    .from(STORAGE_BUCKET)
+    .createSignedUrl(storagePath, 60 * 10);
+  if (error) throw error;
+  return data?.signedUrl || null;
 }
 
 export async function fetchTechnicalDocumentHistory(documentId) {

@@ -77,6 +77,7 @@ export function buildTechnicalDocument(input = {}) {
     replacedBy: input.replacedBy || null,
     notes: String(input.notes || '').trim(),
     extractedText: input.extractedText || null,
+    storagePath: input.storagePath || null,
   };
 }
 

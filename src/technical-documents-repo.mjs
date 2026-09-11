@@ -87,7 +87,13 @@ export async function updateTechnicalDocumentTitle(id, title) {
 // PDF de una ficha que ya existía sin archivo.
 export async function attachTechnicalDocumentFile(id, file) {
   if (!/\.pdf$/i.test(file.name)) throw new Error(`"${file.name}" no es un PDF - el bucket solo acepta PDF.`);
-  const path = `${id}/${Date.now()}-${file.name}`;
+  // Storage rechaza cualquier tilde/ñ en la ruta del objeto (InvalidKey) -
+  // confirmado contra el proyecto real: "absorción" y "acústica" tiraban
+  // ese error en cada intento, silencioso hasta este fix, y casi todos los
+  // nombres de fichas tienen acentos. Espacios y paréntesis sí están bien,
+  // no hace falta tocarlos.
+  const safeName = file.name.normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const path = `${id}/${Date.now()}-${safeName}`;
   // Forzamos 'application/pdf' siempre, sin mirar file.type: eligiendo una
   // carpeta entera (vs. un archivo suelto) algunos navegadores/SO reportan
   // un MIME genérico (ej. application/octet-stream) en vez de application/pdf

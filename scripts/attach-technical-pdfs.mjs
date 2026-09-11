@@ -125,7 +125,11 @@ async function main() {
     const localPath = bySourceFile.get(doc.source_file);
     try {
       const buffer = fs.readFileSync(localPath);
-      const storagePath = `${doc.id}/${Date.now()}-${path.basename(localPath)}`;
+      // Storage rechaza tildes/ñ en la ruta del objeto (InvalidKey) - casi
+      // todos los nombres de fichas las tienen. Espacios y paréntesis sí
+      // están permitidos, no hace falta tocarlos.
+      const safeName = path.basename(localPath).normalize('NFD').replace(/[̀-ͯ]/g, '');
+      const storagePath = `${doc.id}/${Date.now()}-${safeName}`;
       const { error: uploadError } = await supabase.storage
         .from('technical-documents')
         .upload(storagePath, buffer, { upsert: true, contentType: 'application/pdf' });

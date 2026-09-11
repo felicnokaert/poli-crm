@@ -207,6 +207,31 @@ export function moveDocumentToFolder(sourceFile = '', newFolderPath = '') {
   return folderSegments.length ? [...folderSegments, fileName].join('/') : fileName;
 }
 
+// Nombre de archivo seguro para la ruta de un objeto en Supabase Storage -
+// confirmado contra el proyecto real (query_logs + curl) que el bucket
+// rechaza con "InvalidKey" cualquier caracter fuera de ASCII en la ruta, no
+// solo tildes/ñ: también símbolos como ® o variation selectors de emoji
+// ("Magic Coat® Imprimante-W.pdf", "Magic-Coat®️4035-HSR-1.pdf") lo tiran.
+// Sacar los acentos con NFD no alcanza para esos casos - hay que sacar
+// cualquier resto no-ASCII después.
+export function safeStorageFileName(fileName = '') {
+  return String(fileName)
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^\x00-\x7F]/g, '');
+}
+
+// El texto que pdf.js extrae de un PDF con una fuente/encoding rota puede
+// traer un surrogate UTF-16 sin su par (glifo mal mapeado) - Postgres
+// rechaza guardarlo con "unsupported Unicode escape sequence", y como eso
+// rompe el UPDATE entero, la ficha se queda sin adjuntar aunque el PDF ya
+// se haya subido a Storage (confirmado con un caso real: "MANUAL BOMBA DE
+// TRANSFERENCIA - PURMAC_"). Sacar los surrogates sueltos antes de guardar.
+export function sanitizeExtractedText(text) {
+  if (!text) return text;
+  return text.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '');
+}
+
 export function groupDocumentsByFolder(documents = []) {
   const groups = new Map();
   for (const doc of documents) {

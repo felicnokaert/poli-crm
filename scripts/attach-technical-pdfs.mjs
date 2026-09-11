@@ -22,6 +22,7 @@ import path from 'node:path';
 import readline from 'node:readline';
 import { createClient } from '@supabase/supabase-js';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+import { safeStorageFileName, sanitizeExtractedText } from '../src/technical-documents-mapping.mjs';
 
 function loadDotEnvLocal() {
   const file = path.join(process.cwd(), '.env.local');
@@ -83,7 +84,10 @@ function listPdfsRecursive(dir, base = dir) {
 // Mismo criterio que src/pdf-text.js (usado en el navegador) - acá corre
 // sobre el build "legacy" de pdfjs-dist, pensado para Node sin DOM/worker.
 async function extractPdfText(buffer) {
-  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer), isEvalSupported: false }).promise;
+  // verbosity: 0 - los PDFs reales tiran avisos benignos de fuentes no
+  // embebidas ("standardFontDataUrl", "TT: undefined function") en cada
+  // página; no afectan el texto extraído, solo ensucian la consola.
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer), isEvalSupported: false, verbosity: 0 }).promise;
   const pages = [];
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
     const page = await pdf.getPage(pageNumber);
@@ -125,18 +129,14 @@ async function main() {
     const localPath = bySourceFile.get(doc.source_file);
     try {
       const buffer = fs.readFileSync(localPath);
-      // Storage rechaza tildes/ñ en la ruta del objeto (InvalidKey) - casi
-      // todos los nombres de fichas las tienen. Espacios y paréntesis sí
-      // están permitidos, no hace falta tocarlos.
-      const safeName = path.basename(localPath).normalize('NFD').replace(/[̀-ͯ]/g, '');
-      const storagePath = `${doc.id}/${Date.now()}-${safeName}`;
+      const storagePath = `${doc.id}/${Date.now()}-${safeStorageFileName(path.basename(localPath))}`;
       const { error: uploadError } = await supabase.storage
         .from('technical-documents')
         .upload(storagePath, buffer, { upsert: true, contentType: 'application/pdf' });
       if (uploadError) throw uploadError;
       let extractedText = null;
       try {
-        extractedText = await extractPdfText(buffer);
+        extractedText = sanitizeExtractedText(await extractPdfText(buffer));
       } catch {
         extractedText = null;
       }

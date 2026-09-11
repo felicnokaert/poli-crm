@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildTechnicalDocument } from '../src/technical-document-governance.mjs';
-import { buildFolderTree, folderFromSourceFile, fromRow, groupDocumentsByFolder, guessFamilyFromPath, historyFromRow, isTechnicalDocumentAdmin, moveDocumentToFolder, parsePathHints, renameFolder, toRow } from '../src/technical-documents-mapping.mjs';
+import { buildFolderTree, folderFromSourceFile, fromRow, groupDocumentsByFolder, guessFamilyFromPath, historyFromRow, isTechnicalDocumentAdmin, moveDocumentToFolder, parsePathHints, renameFolder, safeStorageFileName, sanitizeExtractedText, toRow } from '../src/technical-documents-mapping.mjs';
 
 test('toRow maps a built document to snake_case columns, defaulting to inventariado', () => {
   const document = buildTechnicalDocument({ title: 'isoBUNKER 619-SP', family: 'Poliuretano', product: 'isoBUNKER 619-SP', sourceFile: 'a.pdf', sha256: 'abc', sizeBytes: 100 });
@@ -135,6 +135,21 @@ test('renameFolder returns nothing for an empty/missing name, never leaves a fol
   const documents = [{ id: '1', sourceFile: 'MAQUINAS/manual.pdf' }];
   assert.deepEqual(renameFolder(documents, 'MAQUINAS', ''), []);
   assert.deepEqual(renameFolder(documents, 'MAQUINAS', '   '), []);
+});
+
+test('safeStorageFileName strips accents and any other non-ASCII symbol Storage rejects (®, emoji, variation selectors)', () => {
+  assert.equal(safeStorageFileName('Informe de absorción acústica.pdf'), 'Informe de absorcion acustica.pdf');
+  assert.equal(safeStorageFileName('Magic Coat® Imprimante-W.pdf'), 'Magic Coat Imprimante-W.pdf');
+  assert.equal(safeStorageFileName('Magic-Coat®️4035-HSR-1.pdf'), 'Magic-Coat4035-HSR-1.pdf');
+  assert.equal(safeStorageFileName('plain.pdf'), 'plain.pdf');
+});
+
+test('sanitizeExtractedText removes a lone UTF-16 surrogate that Postgres would reject, keeps well-formed text intact', () => {
+  assert.equal(sanitizeExtractedText('Rendimiento: 30 litros'), 'Rendimiento: 30 litros');
+  assert.equal(sanitizeExtractedText('texto \uD83D roto'), 'texto  roto');
+  assert.equal(sanitizeExtractedText('emoji real 😀 ok'), 'emoji real 😀 ok');
+  assert.equal(sanitizeExtractedText(''), '');
+  assert.equal(sanitizeExtractedText(null), null);
 });
 
 test('moveDocumentToFolder builds a new source_file under any folder path, existing or brand new', () => {

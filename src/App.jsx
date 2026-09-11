@@ -5686,6 +5686,7 @@ function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleDrafts, 
   const currentFolder = folderFromSourceFile ? folderFromSourceFile(doc.sourceFile) : "";
   const [folderDraft, setFolderDraft] = useState(currentFolder);
   useEffect(() => setFolderDraft(currentFolder), [currentFolder]);
+  const [optionsOpen, setOptionsOpen] = useState(false);
   return (
     <article className="technical-document-row">
       <div>
@@ -5744,50 +5745,61 @@ function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleDrafts, 
           </label>
         </span>
       </div>
-      <div className="technical-document-actions">
-        <select
-          value={draft.status}
-          onChange={(event) => updateDraft(doc.id, { status: event.target.value })}
-        >
-          {Object.entries(TECHNICAL_DOCUMENT_STATUS_LABELS)
-            .filter(([key]) => key !== "vigente" || isAdmin)
-            .map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
-            ))}
-        </select>
-        {draft.status === "desactualizado" && (
-          <select
-            value={draft.replacedBy || ""}
-            onChange={(event) => updateDraft(doc.id, { replacedBy: event.target.value })}
-          >
-            <option value="">Reemplazada por (opcional)</option>
-            {allDocuments
-              .filter((item) => item.id !== doc.id)
-              .map((item) => (
-                <option key={item.id} value={item.id}>{item.title}</option>
-              ))}
-          </select>
-        )}
-        <input
-          placeholder="Observación (queda en el historial)"
-          value={draft.notes}
-          onChange={(event) => updateDraft(doc.id, { notes: event.target.value })}
-        />
+      <div className="technical-document-options">
         <button
           type="button"
-          className="secondary"
-          onClick={() => saveStatus(doc)}
+          className="technical-document-options-toggle"
+          onClick={() => setOptionsOpen((current) => !current)}
         >
-          Guardar
+          ⋯ Opciones
         </button>
-        {isAdmin && (
-          <button
-            type="button"
-            className="danger-link"
-            onClick={() => deleteDocument(doc)}
-          >
-            Eliminar
-          </button>
+        {optionsOpen && (
+          <div className="technical-document-actions">
+            <select
+              value={draft.status}
+              onChange={(event) => updateDraft(doc.id, { status: event.target.value })}
+            >
+              {Object.entries(TECHNICAL_DOCUMENT_STATUS_LABELS)
+                .filter(([key]) => key !== "vigente" || isAdmin)
+                .map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
+            </select>
+            {draft.status === "desactualizado" && (
+              <select
+                value={draft.replacedBy || ""}
+                onChange={(event) => updateDraft(doc.id, { replacedBy: event.target.value })}
+              >
+                <option value="">Reemplazada por (opcional)</option>
+                {allDocuments
+                  .filter((item) => item.id !== doc.id)
+                  .map((item) => (
+                    <option key={item.id} value={item.id}>{item.title}</option>
+                  ))}
+              </select>
+            )}
+            <input
+              placeholder="Observación (queda en el historial)"
+              value={draft.notes}
+              onChange={(event) => updateDraft(doc.id, { notes: event.target.value })}
+            />
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => saveStatus(doc)}
+            >
+              Guardar
+            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                className="danger-link"
+                onClick={() => deleteDocument(doc)}
+              >
+                Eliminar
+              </button>
+            )}
+          </div>
         )}
       </div>
     </article>

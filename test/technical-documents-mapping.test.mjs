@@ -152,6 +152,10 @@ test('sanitizeExtractedText removes a lone UTF-16 surrogate that Postgres would 
   assert.equal(sanitizeExtractedText(null), null);
 });
 
+test('sanitizeExtractedText also removes an embedded NUL byte - the real cause found on a live retry, distinct from a lone surrogate', () => {
+  assert.equal(sanitizeExtractedText('Rendimiento:   30 litros'), 'Rendimiento:  30 litros');
+});
+
 test('moveDocumentToFolder builds a new source_file under any folder path, existing or brand new', () => {
   assert.equal(moveDocumentToFolder('MAQUINAS/manual.pdf', 'PRODUCTOS / Nueva Carpeta'), 'PRODUCTOS/Nueva Carpeta/manual.pdf');
   assert.equal(moveDocumentToFolder('MAQUINAS/BOMBA/manual.pdf', ''), 'manual.pdf');

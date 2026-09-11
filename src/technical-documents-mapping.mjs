@@ -222,14 +222,19 @@ export function safeStorageFileName(fileName = '') {
 }
 
 // El texto que pdf.js extrae de un PDF con una fuente/encoding rota puede
-// traer un surrogate UTF-16 sin su par (glifo mal mapeado) - Postgres
-// rechaza guardarlo con "unsupported Unicode escape sequence", y como eso
-// rompe el UPDATE entero, la ficha se queda sin adjuntar aunque el PDF ya
-// se haya subido a Storage (confirmado con un caso real: "MANUAL BOMBA DE
-// TRANSFERENCIA - PURMAC_"). Sacar los surrogates sueltos antes de guardar.
+// traer basura que Postgres se niega a guardar como texto - un surrogate
+// UTF-16 sin su par (glifo mal mapeado), o directamente un byte nulo
+// ( , distinto caso: Postgres nunca acepta un NUL adentro de un texto,
+// da el mismo error "unsupported Unicode escape sequence"). Cualquiera de
+// los dos rompe el UPDATE entero, dejando la ficha sin adjuntar aunque el
+// PDF ya se haya subido a Storage (confirmado con un caso real: "MANUAL
+// BOMBA DE TRANSFERENCIA - PURMAC_" - el primer intento solo sacaba
+// surrogates sueltos y no alcanzó, el problema real acá era un NUL).
 export function sanitizeExtractedText(text) {
   if (!text) return text;
-  return text.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '');
+  return text
+    .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '')
+    .replace(/ /g, '');
 }
 
 export function groupDocumentsByFolder(documents = []) {

@@ -3711,36 +3711,43 @@ function TaskList({
   emptyText = "No hay tareas pendientes.",
 }) {
   if (!items.length) return <Empty text={emptyText} />;
-  return items.map((task) => (
-    <article className={`task-row ${task.done ? "done" : ""}`} key={task.id}>
-      <button
-        className="task-check"
-        type="button"
-        aria-label={
-          task.done
-            ? `Marcar ${task.title} como pendiente`
-            : `Completar ${task.title}`
-        }
-        onClick={() => onToggle(task.id)}
-      >
-        {task.done && <CheckCircle2 size={18} />}
-      </button>
-      <button
-        className="task-main"
-        type="button"
-        onClick={() => onOpen?.(task.id)}
-      >
-        <strong>{task.title}</strong>
-        <span>
-          {task.company} · {formatDate(task.dueDate)}
-          {task.trigger ? ` · ${task.trigger}` : ""}
+  const now = today();
+  return items.map((task) => {
+    const overdue = !task.done && task.dueDate && task.dueDate < now;
+    return (
+      <article className={`task-row ${task.done ? "done" : ""} ${overdue ? "overdue" : ""}`} key={task.id}>
+        <button
+          className="task-check"
+          type="button"
+          aria-label={
+            task.done
+              ? `Marcar ${task.title} como pendiente`
+              : `Completar ${task.title}`
+          }
+          onClick={() => onToggle(task.id)}
+        >
+          {task.done && <CheckCircle2 size={18} />}
+        </button>
+        <button
+          className="task-main"
+          type="button"
+          onClick={() => onOpen?.(task.id)}
+        >
+          <strong>{task.title}</strong>
+          <span>
+            {task.company} ·{" "}
+            <span className={overdue ? "task-due-overdue" : undefined}>
+              {overdue ? `Vencida · ${formatDate(task.dueDate)}` : formatDate(task.dueDate)}
+            </span>
+            {task.trigger ? ` · ${task.trigger}` : ""}
+          </span>
+        </button>
+        <span className={`priority ${(task.priority || "Media").toLowerCase()}`}>
+          {task.priority || "Media"}
         </span>
-      </button>
-      <span className={`priority ${(task.priority || "Media").toLowerCase()}`}>
-        {task.priority || "Media"}
-      </span>
-    </article>
-  ));
+      </article>
+    );
+  });
 }
 
 function TaskDetail({ task, client, onClose, onToggle, onSave, onOpenClient, onDelete }) {

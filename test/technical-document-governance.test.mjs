@@ -76,6 +76,13 @@ test('extractFactExcerpt solo cita una linea que existe literalmente en el texto
   assert.equal(extractFactExcerpt(text, 'tipo_inventado'), null);
 });
 
+test('extractFactExcerpt no confunde una frase de rendimiento con un dato de dosificacion solo porque menciona "mezcla"', () => {
+  const text = 'Rendimiento: 1 kg de mezcla rinde 30 litros de espuma expandida';
+  assert.match(extractFactExcerpt(text, 'rendimiento'), /Rendimiento: 1 kg/);
+  assert.equal(extractFactExcerpt(text, 'dosificacion'), null);
+  assert.match(extractFactExcerpt('Relación de mezcla: 1 a 1 en volumen', 'dosificacion'), /Relación de mezcla: 1 a 1/);
+});
+
 test('citableExcerpt nunca cita de un documento no vigente/no validado, aunque el texto tenga la palabra clave', () => {
   const text = 'Rendimiento: 30 litros por kg';
   const notVerified = buildTechnicalDocument({ id: 'a', title: 'Ficha A', status: 'inventariado', extractedText: text });

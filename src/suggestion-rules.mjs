@@ -58,7 +58,7 @@ function isClosingMessage(text) {
 
 // Campos técnicos que este motor jamás completa con un valor inventado.
 export const PENDING_TECHNICAL_FIELDS = ['rendimiento', 'compatibilidad', 'aplicación', 'dosificación', 'seguridad', 'precio', 'stock'];
-const PENDING_LABEL = 'Pendiente de verificar (sin ficha validada)';
+export const PENDING_LABEL = 'Pendiente de verificar (sin ficha validada)';
 
 // Preguntas base por familia — para completar el diagnóstico comercial, no
 // afirman ningún dato técnico, solo piden la información que falta.
@@ -218,6 +218,7 @@ function fromLiveCatalog(doc) {
     verifiedBy: doc.verifiedBy,
     verifiedAt: doc.verifiedAt,
     extractedText: doc.extractedText,
+    storagePath: doc.storagePath,
   };
 }
 

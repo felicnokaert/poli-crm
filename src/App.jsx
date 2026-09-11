@@ -93,7 +93,7 @@ import {
 import { FAMILIES } from "./families.mjs";
 import { defaultBusinessUnits } from "./sales-model.mjs";
 import { channelsForEmail } from "./user-channels.mjs";
-import { buildSuggestion } from "./suggestion-rules.mjs";
+import { buildSuggestion, PENDING_LABEL } from "./suggestion-rules.mjs";
 import { prepareManualQuery } from "./ai-provider.mjs";
 import { docTypeLabel } from "./technical-library.mjs";
 import { isLowSignalWhatsAppEvent } from "./whatsapp-events.mjs";
@@ -3162,9 +3162,20 @@ function InboxRow({
   );
 }
 
+const TECHNICAL_FIELD_LABELS = {
+  rendimiento: "Rendimiento",
+  compatibilidad: "Compatibilidad",
+  aplicación: "Aplicación",
+  dosificación: "Dosificación",
+  seguridad: "Seguridad",
+  precio: "Precio",
+  stock: "Stock",
+};
+
 function CopilotSuggestionPanel({ event }) {
   const [copied, setCopied] = useState(false);
   const [liveCatalog, setLiveCatalog] = useState(null);
+  const [fileMessage, setFileMessage] = useState("");
   useEffect(() => {
     let active = true;
     // La base técnica real (Supabase) tiene 68 fichas y crece; el índice
@@ -3198,6 +3209,21 @@ function CopilotSuggestionPanel({ event }) {
       setCopied(false);
     }
   }
+  async function openDocFile(doc) {
+    if (!doc.storagePath) return;
+    setFileMessage("Abriendo…");
+    try {
+      const { getTechnicalDocumentFileUrl } = await import("./technical-documents-repo.mjs");
+      const url = await getTechnicalDocumentFileUrl(doc.storagePath);
+      if (!url) throw new Error("No se pudo abrir el archivo.");
+      window.open(url, "_blank", "noopener,noreferrer");
+      setFileMessage("");
+    } catch (error) {
+      setFileMessage(error.message || "No se pudo abrir el archivo.");
+    }
+  }
+  const citedFields = Object.entries(suggestion.technicalFields).filter(([, value]) => value !== PENDING_LABEL);
+  const pendingFields = Object.entries(suggestion.technicalFields).filter(([, value]) => value === PENDING_LABEL);
   return (
     <div className="copilot-suggestion">
       <div className="copilot-suggestion-head">
@@ -3233,20 +3259,39 @@ function CopilotSuggestionPanel({ event }) {
           )}
           {suggestion.recommendedDocs.length > 0 && (
             <div>
-              <span className="copilot-suggestion-label">Fichas técnicas a consultar (sin validar todavía)</span>
+              <span className="copilot-suggestion-label">
+                {suggestion.recommendedDocs.some((doc) => doc.verified) ? "Fichas técnicas a consultar" : "Fichas técnicas a consultar (sin validar todavía)"}
+              </span>
               <ul>
                 {suggestion.recommendedDocs.map((doc) => (
                   <li key={doc.id}>
                     {doc.product} — {docTypeLabel(doc.docType)}
+                    {doc.storagePath && (
+                      <>
+                        {" "}
+                        <button type="button" className="technical-document-file-link" onClick={() => openDocFile(doc)}>Ver PDF</button>
+                      </>
+                    )}
                   </li>
                 ))}
               </ul>
+              {fileMessage && <p className="copilot-suggestion-pending">{fileMessage}</p>}
             </div>
           )}
-          <p className="copilot-suggestion-pending">
-            Rendimiento, compatibilidad, aplicación, dosificación, seguridad,
-            precio y stock: pendiente de verificar contra ficha validada.
-          </p>
+          {citedFields.length > 0 && (
+            <div className="copilot-suggestion-cited">
+              <span className="copilot-suggestion-label">Citado de una ficha vigente y validada</span>
+              {citedFields.map(([field, value]) => (
+                <p key={field}><b>{TECHNICAL_FIELD_LABELS[field] || field}:</b> {value}</p>
+              ))}
+            </div>
+          )}
+          {pendingFields.length > 0 && (
+            <p className="copilot-suggestion-pending">
+              {pendingFields.map(([field]) => TECHNICAL_FIELD_LABELS[field] || field).join(", ")}: pendiente de
+              verificar contra ficha validada.
+            </p>
+          )}
         </>
       )}
       <button type="button" className="secondary" onClick={copyForAI}>

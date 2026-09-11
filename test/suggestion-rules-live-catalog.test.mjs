@@ -12,6 +12,7 @@ test('uses the live catalog (technical-documents-repo shape) when provided, inst
   assert.deepEqual(suggestion.recommendedDocs, [{
     id: 'live-1', product: 'isoBUNKER 619-SP', docType: 'ficha_tecnica', sourceFile: 'x.pdf', verified: false,
     status: 'inventariado', sourceUrl: undefined, verifiedBy: undefined, verifiedAt: undefined, extractedText: undefined,
+    storagePath: undefined,
   }]);
 });
 

@@ -108,7 +108,10 @@ export function citationDecision(document = {}, factType = '') {
 const FACT_KEYWORD_PATTERNS = {
   rendimiento: [/rendimiento/i, /kg\s*\/?\s*m[²2]/i, /cobertura/i, /m[²2]\s*por/i, /litros?\s*por/i],
   compatibilidad: [/compatib/i, /no (debe|se debe) (usarse|aplicarse|mezclarse)/i, /sustrato/i],
-  dosificacion: [/dosifi/i, /proporci[oó]n/i, /relaci[oó]n\s*\d/i, /mezcla/i, /partes? (a|de) \d/i],
+  // "mezcla" solo no alcanza - aparece en frases de rendimiento ("1 kg de
+  // mezcla rinde...") sin ser realmente un dato de dosificación. Exige un
+  // contexto más específico (proporción/relación de mezcla, partes de X).
+  dosificacion: [/dosifi/i, /proporci[oó]n/i, /relaci[oó]n\s*\d/i, /relaci[oó]n de mezcla/i, /partes? (a|de) \d/i],
   aplicacion: [/modo de (uso|aplicaci[oó]n)/i, /aplicaci[oó]n/i, /c[oó]mo aplicar/i, /forma de (uso|aplicar)/i],
   seguridad: [/seguridad/i, /precauci[oó]n/i, /\bepp\b/i, /ventilaci[oó]n/i, /inflamable/i, /riesgo/i, /manipuleo/i],
 };

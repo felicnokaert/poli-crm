@@ -1718,7 +1718,12 @@ export default function App() {
         </div>
         <nav>
           {navGroups.map(([group, items]) => {
-            const collapsed = collapsedNavGroups.includes(group);
+            // La sección donde estás parado se ve abierta sola, sin importar
+            // si la habías colapsado antes - así nunca "desaparece" de
+            // adentro tuyo la pantalla en la que estás. El resto respeta lo
+            // que el usuario eligió.
+            const isActiveGroup = items.some(([id]) => id === view);
+            const collapsed = collapsedNavGroups.includes(group) && !isActiveGroup;
             return (
               <div className={`nav-group ${collapsed ? "collapsed" : ""}`} key={group}>
                 <button
@@ -1734,6 +1739,7 @@ export default function App() {
                 >
                   <ChevronRight size={12} className="nav-group-caret" />
                   {group}
+                  {collapsed && <span className="nav-group-count">{items.length}</span>}
                 </button>
                 {!collapsed &&
                   items.map(([id, label, Icon]) => (

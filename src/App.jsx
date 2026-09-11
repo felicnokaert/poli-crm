@@ -193,6 +193,10 @@ const INTENTS = [
 ];
 const STORAGE_KEY = "poliplast-sales-copilot-v1";
 const NAV_COLLAPSE_KEY = "poliplast-sales-copilot-nav-collapsed";
+// Mismos 6 grupos que arma navGroups más abajo - repetidos acá porque hacen
+// falta antes de que el componente pueda armar navGroups (son el estado
+// inicial "todo colapsado").
+const NAV_GROUP_NAMES = ["Ventas", "Organización", "Canales", "Cartera", "Recursos", "Sistema"];
 const HISTORY_RESET_VERSION = "2026-09-03T16:00:00.000Z";
 
 const initialState = {
@@ -387,12 +391,23 @@ export default function App() {
   );
   const [readiness, setReadiness] = useState(null);
   const [view, setView] = useState("dashboard");
+  // Arranca con todos los grupos colapsados - Felipe: "así está más
+  // limpio", que se vean los 6 títulos primero y cada uno se abra al
+  // tocarlo, no todo desglosado de entrada. Una vez que el usuario toca
+  // algún grupo, lo que haya en localStorage manda (se respeta su elección).
   const [collapsedNavGroups, setCollapsedNavGroups] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem(NAV_COLLAPSE_KEY) || "[]");
+      const stored = JSON.parse(localStorage.getItem(NAV_COLLAPSE_KEY) || "[]");
+      // Un array vacío guardado no distingue "el usuario abrió todo a
+      // propósito" de "nunca tocó nada" (que es lo que pasaba antes de este
+      // cambio - el efecto de abajo ya guardaba [] solo). Se trata igual que
+      // "nada guardado todavía" para no dejar a nadie con el sidebar
+      // desplegado por un valor viejo que nadie eligió a mano.
+      if (Array.isArray(stored) && stored.length > 0) return stored;
     } catch {
-      return [];
+      // sigue al default de abajo
     }
+    return NAV_GROUP_NAMES;
   });
   useEffect(() => {
     localStorage.setItem(NAV_COLLAPSE_KEY, JSON.stringify(collapsedNavGroups));

@@ -3588,7 +3588,7 @@ function InteractionDetail({
           <Fact label="Canal" value={CHANNELS[interaction.channel]?.name} />
           <Fact label="Familia" value={client?.family || interaction.family} />
           <Fact label="Temperatura" value={client?.temperature || interaction.temperature} />
-          <Fact label="Etapa" value={interaction.stage} />
+          <Fact label="Etapa" value={client?.stage ? commercialStage(client.stage) : interaction.stage} />
         </div>
         <div className="detail-block">
           <span>Qué hablaron</span>

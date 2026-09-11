@@ -4967,6 +4967,7 @@ function CommercialKnowledge({ section }) {
 function Coach({ interactions, data, setData }) {
   const [selected, setSelected] = useState(interactions[0]?.id || "");
   const interaction = interactions.find((item) => item.id === selected);
+  const interactionClient = interaction && data.clients.find((client) => client.id === interaction.clientId);
   const [scores, setScores] = useState(
     Object.fromEntries(RUBRIC.map(([id]) => [id, 0])),
   );
@@ -5051,7 +5052,7 @@ function Coach({ interactions, data, setData }) {
             <strong>{interaction.company}</strong>
             <span>
               {interaction.contact || "Contacto sin identificar"} ·{" "}
-              {interaction.family}
+              {interactionClient?.family || interaction.family}
             </span>
             <p>{interaction.summary || interaction.need || "Sin resumen"}</p>
           </div>

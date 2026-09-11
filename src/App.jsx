@@ -5543,6 +5543,34 @@ function TechnicalDocumentsAdmin({ session }) {
     }
   }
 
+  // Reclasificar en bloque solo toca family - nunca el estado. Felipe pidió
+  // explícitamente que "vigente" siga siendo ficha por ficha, para no perder
+  // la validación humana que el copiloto necesita antes de poder citar algo.
+  async function reclassifyFolder(folderPath, docsInFolder, family) {
+    if (!family) return;
+    const toUpdate = docsInFolder.filter((doc) => doc.family !== family);
+    if (!toUpdate.length) {
+      setMessage(`Todas las fichas de "${folderPath}" ya eran ${family}.`);
+      return;
+    }
+    try {
+      const { updateTechnicalDocumentFamily } = await import("./technical-documents-repo.mjs");
+      const results = await Promise.all(toUpdate.map(async (doc) => {
+        try {
+          return await updateTechnicalDocumentFamily(doc.id, family);
+        } catch {
+          return null;
+        }
+      }));
+      const succeeded = results.filter(Boolean);
+      setDocuments((current) => current.map((item) => succeeded.find((updated) => updated.id === item.id) || item));
+      const failed = toUpdate.length - succeeded.length;
+      setMessage(`${succeeded.length} ficha${succeeded.length === 1 ? "" : "s"} de "${folderPath}" reclasificada${succeeded.length === 1 ? "" : "s"} como ${family}.${failed > 0 ? ` ${failed} no se pudieron cambiar.` : ""}`);
+    } catch (error) {
+      setMessage(error.message || "No se pudo reclasificar la carpeta.");
+    }
+  }
+
   const families = [...new Set(documents.map((doc) => doc.family))].sort();
   const missingFilesCount = documents.filter((doc) => !doc.storagePath).length;
   const filtered = documents.filter(
@@ -5620,6 +5648,7 @@ function TechnicalDocumentsAdmin({ session }) {
             viewFile={viewFile}
             deleteDocument={deleteDocument}
             deleteFolder={deleteFolder}
+            reclassifyFolder={reclassifyFolder}
           />
         ) : (
           <Empty text="No hay documentos importados todavía. Subí fichas desde Datos → Importar fichas técnicas." />
@@ -5739,6 +5768,7 @@ function collectNodeDocuments(node) {
 // Técnica 619 SP son tres carpetas anidadas, cada una colapsable, y los
 // documentos solo cuelgan de la carpeta hoja a la que pertenecen.
 function TechnicalDocumentFolderNode({ node, depth, rowProps }) {
+  const [reclassifyValue, setReclassifyValue] = useState("");
   if (node.name === null) {
     return (
       <>
@@ -5758,6 +5788,22 @@ function TechnicalDocumentFolderNode({ node, depth, rowProps }) {
         <span className="technical-document-folder-icon" aria-hidden="true">📁</span>
         <span className="technical-document-folder-name">{node.name}</span>
         <span className="technical-document-folder-count">{node.count}</span>
+        <select
+          className="technical-document-folder-reclassify"
+          value={reclassifyValue}
+          onClick={(event) => event.stopPropagation()}
+          onMouseDown={(event) => event.stopPropagation()}
+          onChange={(event) => {
+            const family = event.target.value;
+            setReclassifyValue("");
+            if (family) rowProps.reclassifyFolder(node.path, collectNodeDocuments(node), family);
+          }}
+        >
+          <option value="">Reclasificar carpeta a…</option>
+          {FAMILIES.map((item) => (
+            <option key={item} value={item}>{item}</option>
+          ))}
+        </select>
         {rowProps.isAdmin && (
           <button
             type="button"
@@ -5784,12 +5830,12 @@ function TechnicalDocumentFolderNode({ node, depth, rowProps }) {
   );
 }
 
-function TechnicalDocumentGroups({ documents, groupByFolder, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile, deleteDocument, deleteFolder }) {
+function TechnicalDocumentGroups({ documents, groupByFolder, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile, deleteDocument, deleteFolder, reclassifyFolder }) {
   const [buildFolderTree, setBuildFolderTree] = useState(null);
   useEffect(() => {
     import("./technical-documents-mapping.mjs").then(({ buildFolderTree: fn }) => setBuildFolderTree(() => fn));
   }, []);
-  const rowProps = { allDocuments: documents, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile, deleteDocument, deleteFolder };
+  const rowProps = { allDocuments: documents, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile, deleteDocument, deleteFolder, reclassifyFolder };
   if (!groupByFolder || !buildFolderTree) {
     return (
       <div className="conversation-list">

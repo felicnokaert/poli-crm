@@ -78,6 +78,18 @@ export async function updateTechnicalDocumentTitle(id, title) {
   return data ? fromRow(data) : null;
 }
 
+// Reclasificar la familia de un documento. Nunca toca el estado - Felipe
+// pidió explícitamente que "vigente" siga siendo ficha por ficha, nunca en
+// bloque, para no perder la validación humana que el copiloto necesita
+// antes de poder citar algo.
+export async function updateTechnicalDocumentFamily(id, family) {
+  const clean = String(family || '').trim();
+  if (!clean) throw new Error('La familia no puede quedar vacía.');
+  const { data, error } = await supabase.from('technical_documents').update({ family: clean }).eq('id', id).select().maybeSingle();
+  if (error) throw error;
+  return data ? fromRow(data) : null;
+}
+
 // Sube el PDF real al bucket privado technical-documents y extrae su texto
 // en el mismo paso - la ficha queda adjunta de verdad (no solo su nombre) y
 // el copiloto puede citar una línea literal de ella una vez vigente y

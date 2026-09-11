@@ -3586,7 +3586,7 @@ function InteractionDetail({
         </div>
         <div className="conversation-detail-grid">
           <Fact label="Canal" value={CHANNELS[interaction.channel]?.name} />
-          <Fact label="Familia" value={interaction.family} />
+          <Fact label="Familia" value={client?.family || interaction.family} />
           <Fact label="Temperatura" value={client?.temperature || interaction.temperature} />
           <Fact label="Etapa" value={interaction.stage} />
         </div>

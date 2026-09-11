@@ -5443,12 +5443,21 @@ function TechnicalDocumentsAdmin({ session }) {
       const relative = (file.webkitRelativePath || "").split("/").slice(1).join("/");
       if (relative) bySourceFile.set(relative, file);
     }
-    const pending = documents.filter((doc) => !doc.storagePath && bySourceFile.has(doc.sourceFile));
+    const missingBefore = documents.filter((doc) => !doc.storagePath);
+    // Las fichas cuyo archivo original es .docx/.doc nunca van a matchear
+    // acá - el bucket solo acepta PDF (Felipe: "los .doc puedo verlos yo y
+    // voy subiendo luego los pdf"). Avisarlo de entrada evita que parezca
+    // un error cuando en realidad es esperado.
+    const nonPdfCount = missingBefore.filter((doc) => !/\.pdf$/i.test(doc.sourceFile || "")).length;
+    const pending = missingBefore.filter((doc) => bySourceFile.has(doc.sourceFile));
     if (!pending.length) {
-      setMessage("Ningún archivo de esa carpeta coincide con una ficha sin PDF adjunto (¿elegiste la carpeta correcta?).");
+      setMessage(
+        `Ningún archivo de esa carpeta coincide con una ficha sin PDF adjunto. Revisá que hayas elegido la carpeta "FICHAS TÉCNICAS" completa (no una de adentro).` +
+        (nonPdfCount > 0 ? ` (${nonPdfCount} fichas pendientes son Word, no PDF - esas nunca van a matchear acá, hay que convertirlas primero.)` : ""),
+      );
       return;
     }
-    setMessage(`Adjuntando ${pending.length} de ${documents.filter((doc) => !doc.storagePath).length} fichas pendientes…`);
+    setMessage(`Adjuntando ${pending.length} de ${missingBefore.length} fichas pendientes…`);
     try {
       const { attachTechnicalDocumentFile } = await import("./technical-documents-repo.mjs");
       const results = await Promise.all(pending.map(async (doc) => {
@@ -5460,8 +5469,15 @@ function TechnicalDocumentsAdmin({ session }) {
       }));
       const succeeded = results.filter(Boolean);
       setDocuments((current) => current.map((item) => succeeded.find((updated) => updated.id === item.id) || item));
-      const stillMissing = documents.filter((doc) => !doc.storagePath).length - succeeded.length;
-      setMessage(`${succeeded.length} fichas quedaron con su PDF adjunto.${stillMissing > 0 ? ` Quedan ${stillMissing} sin coincidencia en lo que elegiste.` : " No queda ninguna pendiente."}`);
+      const stillMissing = missingBefore.length - succeeded.length;
+      const stillMissingNonPdf = Math.min(nonPdfCount, stillMissing);
+      const stillMissingOther = stillMissing - stillMissingNonPdf;
+      setMessage(
+        `${succeeded.length} fichas quedaron con su PDF adjunto.` +
+        (stillMissingNonPdf > 0 ? ` ${stillMissingNonPdf} son Word, no PDF - convertilas y volvé a adjuntar.` : "") +
+        (stillMissingOther > 0 ? ` ${stillMissingOther} no tenían un archivo con ese mismo nombre/carpeta en lo que elegiste.` : "") +
+        (stillMissing === 0 ? " No queda ninguna pendiente." : ""),
+      );
     } catch (error) {
       setMessage(error.message || "No se pudo adjuntar los archivos.");
     }

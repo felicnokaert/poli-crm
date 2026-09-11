@@ -78,14 +78,14 @@ export async function updateTechnicalDocumentTitle(id, title) {
   return data ? fromRow(data) : null;
 }
 
-// Reclasificar la familia de un documento. Nunca toca el estado - Felipe
-// pidió explícitamente que "vigente" siga siendo ficha por ficha, nunca en
-// bloque, para no perder la validación humana que el copiloto necesita
-// antes de poder citar algo.
-export async function updateTechnicalDocumentFamily(id, family) {
-  const clean = String(family || '').trim();
-  if (!clean) throw new Error('La familia no puede quedar vacía.');
-  const { data, error } = await supabase.from('technical_documents').update({ family: clean }).eq('id', id).select().maybeSingle();
+// Mueve un documento a otra carpeta (o lo renombra en bloque - ver
+// renameFolder/moveDocumentToFolder en technical-documents-mapping.mjs).
+// Solo toca source_file, que es de donde se deriva la carpeta - no hay una
+// tabla de carpetas separada que pueda desincronizarse.
+export async function updateTechnicalDocumentSourceFile(id, sourceFile) {
+  const clean = String(sourceFile || '').trim();
+  if (!clean) throw new Error('La ruta no puede quedar vacía.');
+  const { data, error } = await supabase.from('technical_documents').update({ source_file: clean }).eq('id', id).select().maybeSingle();
   if (error) throw error;
   return data ? fromRow(data) : null;
 }

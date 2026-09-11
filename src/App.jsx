@@ -5543,31 +5543,49 @@ function TechnicalDocumentsAdmin({ session }) {
     }
   }
 
-  // Reclasificar en bloque solo toca family - nunca el estado. Felipe pidió
-  // explícitamente que "vigente" siga siendo ficha por ficha, para no perder
-  // la validación humana que el copiloto necesita antes de poder citar algo.
-  async function reclassifyFolder(folderPath, docsInFolder, family) {
-    if (!family) return;
-    const toUpdate = docsInFolder.filter((doc) => doc.family !== family);
-    if (!toUpdate.length) {
-      setMessage(`Todas las fichas de "${folderPath}" ya eran ${family}.`);
-      return;
-    }
+  // Renombrar una carpeta de verdad, como en el explorador de Windows o
+  // Drive (Felipe: "poder cambiar nombre... igual que en la compu") - no
+  // toca family ni ningún otro dato, solo la ruta (source_file) de cada
+  // ficha que cuelga de esa carpeta, subcarpetas incluidas.
+  async function renameFolderTo(folderPath, newName) {
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === folderPath.split(" / ").at(-1)) return;
     try {
-      const { updateTechnicalDocumentFamily } = await import("./technical-documents-repo.mjs");
-      const results = await Promise.all(toUpdate.map(async (doc) => {
+      const { renameFolder } = await import("./technical-documents-mapping.mjs");
+      const { updateTechnicalDocumentSourceFile } = await import("./technical-documents-repo.mjs");
+      const changes = renameFolder(documents, folderPath, trimmed);
+      if (!changes.length) return;
+      const results = await Promise.all(changes.map(async (doc) => {
         try {
-          return await updateTechnicalDocumentFamily(doc.id, family);
+          return await updateTechnicalDocumentSourceFile(doc.id, doc.sourceFile);
         } catch {
           return null;
         }
       }));
       const succeeded = results.filter(Boolean);
       setDocuments((current) => current.map((item) => succeeded.find((updated) => updated.id === item.id) || item));
-      const failed = toUpdate.length - succeeded.length;
-      setMessage(`${succeeded.length} ficha${succeeded.length === 1 ? "" : "s"} de "${folderPath}" reclasificada${succeeded.length === 1 ? "" : "s"} como ${family}.${failed > 0 ? ` ${failed} no se pudieron cambiar.` : ""}`);
+      const failed = changes.length - succeeded.length;
+      setMessage(`Carpeta renombrada a "${trimmed}" (${succeeded.length} ficha${succeeded.length === 1 ? "" : "s"}).${failed > 0 ? ` ${failed} no se pudieron actualizar.` : ""}`);
     } catch (error) {
-      setMessage(error.message || "No se pudo reclasificar la carpeta.");
+      setMessage(error.message || "No se pudo renombrar la carpeta.");
+    }
+  }
+
+  // Mover una ficha puntual a otra carpeta - escribiendo el nombre de una
+  // carpeta que todavía no existe, "se crea" al guardar (no hay una carpeta
+  // vacía sin documentos: se deriva de source_file, ver
+  // technical-documents-mapping.mjs).
+  async function moveDocumentToFolder(doc, newFolderPath) {
+    try {
+      const { moveDocumentToFolder: computeNewPath, folderFromSourceFile } = await import("./technical-documents-mapping.mjs");
+      if (folderFromSourceFile(doc.sourceFile) === (newFolderPath || "Sin carpeta")) return;
+      const newSourceFile = computeNewPath(doc.sourceFile, newFolderPath);
+      const { updateTechnicalDocumentSourceFile } = await import("./technical-documents-repo.mjs");
+      const updated = await updateTechnicalDocumentSourceFile(doc.id, newSourceFile);
+      setDocuments((current) => current.map((item) => (item.id === doc.id ? updated : item)));
+      setMessage(`"${doc.title}" se movió a ${newFolderPath || "la raíz"}.`);
+    } catch (error) {
+      setMessage(error.message || "No se pudo mover la ficha.");
     }
   }
 
@@ -5648,7 +5666,8 @@ function TechnicalDocumentsAdmin({ session }) {
             viewFile={viewFile}
             deleteDocument={deleteDocument}
             deleteFolder={deleteFolder}
-            reclassifyFolder={reclassifyFolder}
+            renameFolderTo={renameFolderTo}
+            moveDocumentToFolder={moveDocumentToFolder}
           />
         ) : (
           <Empty text="No hay documentos importados todavía. Subí fichas desde Datos → Importar fichas técnicas." />
@@ -5658,8 +5677,15 @@ function TechnicalDocumentsAdmin({ session }) {
   );
 }
 
-function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile, deleteDocument }) {
+function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile, deleteDocument, moveDocumentToFolder }) {
   const draft = draftFor(doc);
+  const [folderFromSourceFile, setFolderFromSourceFile] = useState(null);
+  useEffect(() => {
+    import("./technical-documents-mapping.mjs").then(({ folderFromSourceFile: fn }) => setFolderFromSourceFile(() => fn));
+  }, []);
+  const currentFolder = folderFromSourceFile ? folderFromSourceFile(doc.sourceFile) : "";
+  const [folderDraft, setFolderDraft] = useState(currentFolder);
+  useEffect(() => setFolderDraft(currentFolder), [currentFolder]);
   return (
     <article className="technical-document-row">
       <div>
@@ -5668,6 +5694,17 @@ function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleDrafts, 
           value={titleDrafts[doc.id] ?? doc.title}
           onChange={(event) => setTitleDrafts((current) => ({ ...current, [doc.id]: event.target.value }))}
           onBlur={() => saveTitle(doc)}
+        />
+        <input
+          className="technical-document-folder-move-input"
+          title="Carpeta - editá para mover la ficha (una carpeta nueva se crea sola al escribirla)"
+          value={folderDraft}
+          onChange={(event) => setFolderDraft(event.target.value)}
+          onBlur={() => {
+            if (folderDraft.trim() !== currentFolder) {
+              moveDocumentToFolder(doc, folderDraft.trim() === "Sin carpeta" ? "" : folderDraft.trim());
+            }
+          }}
         />
         <span>
           {doc.family}
@@ -5768,7 +5805,7 @@ function collectNodeDocuments(node) {
 // Técnica 619 SP son tres carpetas anidadas, cada una colapsable, y los
 // documentos solo cuelgan de la carpeta hoja a la que pertenecen.
 function TechnicalDocumentFolderNode({ node, depth, rowProps }) {
-  const [reclassifyValue, setReclassifyValue] = useState("");
+  const [nameDraft, setNameDraft] = useState(node.name || "");
   if (node.name === null) {
     return (
       <>
@@ -5786,24 +5823,18 @@ function TechnicalDocumentFolderNode({ node, depth, rowProps }) {
       <summary className="technical-document-folder-heading">
         <span className="technical-document-folder-arrow" aria-hidden="true" />
         <span className="technical-document-folder-icon" aria-hidden="true">📁</span>
-        <span className="technical-document-folder-name">{node.name}</span>
-        <span className="technical-document-folder-count">{node.count}</span>
-        <select
-          className="technical-document-folder-reclassify"
-          value={reclassifyValue}
+        <input
+          className="technical-document-folder-name-input"
+          value={nameDraft}
+          onChange={(event) => setNameDraft(event.target.value)}
           onClick={(event) => event.stopPropagation()}
           onMouseDown={(event) => event.stopPropagation()}
-          onChange={(event) => {
-            const family = event.target.value;
-            setReclassifyValue("");
-            if (family) rowProps.reclassifyFolder(node.path, collectNodeDocuments(node), family);
+          onBlur={() => rowProps.renameFolderTo(node.path, nameDraft)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") event.currentTarget.blur();
           }}
-        >
-          <option value="">Reclasificar carpeta a…</option>
-          {FAMILIES.map((item) => (
-            <option key={item} value={item}>{item}</option>
-          ))}
-        </select>
+        />
+        <span className="technical-document-folder-count">{node.count}</span>
         {rowProps.isAdmin && (
           <button
             type="button"
@@ -5830,12 +5861,12 @@ function TechnicalDocumentFolderNode({ node, depth, rowProps }) {
   );
 }
 
-function TechnicalDocumentGroups({ documents, groupByFolder, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile, deleteDocument, deleteFolder, reclassifyFolder }) {
+function TechnicalDocumentGroups({ documents, groupByFolder, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile, deleteDocument, deleteFolder, renameFolderTo, moveDocumentToFolder }) {
   const [buildFolderTree, setBuildFolderTree] = useState(null);
   useEffect(() => {
     import("./technical-documents-mapping.mjs").then(({ buildFolderTree: fn }) => setBuildFolderTree(() => fn));
   }, []);
-  const rowProps = { allDocuments: documents, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile, deleteDocument, deleteFolder, reclassifyFolder };
+  const rowProps = { allDocuments: documents, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile, deleteDocument, deleteFolder, renameFolderTo, moveDocumentToFolder };
   if (!groupByFolder || !buildFolderTree) {
     return (
       <div className="conversation-list">

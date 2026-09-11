@@ -174,6 +174,39 @@ function serializeFolderNode(node) {
   };
 }
 
+// Renombra una carpeta de verdad (Felipe: "poder cambiar nombre... igual
+// que en la compu o en Drive") - reescribe el tramo de source_file que
+// corresponde a esa carpeta puntual en todos los documentos que cuelgan de
+// ella, subcarpetas incluidas, preservando el resto de la ruta. folderPath
+// es el mismo string " / " que ya usa folderFromSourceFile/buildFolderTree
+// (ej. "MAQUINAS / BOMBA DE TRANSFERENCIA"). Devuelve solo los documentos
+// que cambiaron, con su sourceFile nuevo - el resto de los campos intactos.
+export function renameFolder(documents = [], folderPath, newName) {
+  const clean = String(newName || '').trim();
+  if (!folderPath || !clean) return [];
+  const segments = folderPath.split(' / ');
+  const oldPrefix = `${segments.join('/')}/`;
+  const newPrefix = `${[...segments.slice(0, -1), clean].join('/')}/`;
+  return documents
+    .filter((doc) => doc.sourceFile && doc.sourceFile.startsWith(oldPrefix))
+    .map((doc) => ({ ...doc, sourceFile: newPrefix + doc.sourceFile.slice(oldPrefix.length) }));
+}
+
+// Mueve un documento a otra carpeta, exista o no todavía - escribirla por
+// primera vez es cómo "se crea" una carpeta nueva en este sistema (no hay
+// una carpeta vacía sin documentos, folderPath se deriva del archivo).
+// newFolderPath vacío = mover a la raíz ("Sin carpeta").
+export function moveDocumentToFolder(sourceFile = '', newFolderPath = '') {
+  const clean = String(sourceFile || '').replace(/^\.?\//, '');
+  const parts = clean.split('/').filter(Boolean);
+  const fileName = parts.at(-1) || clean;
+  const folderSegments = String(newFolderPath || '')
+    .split(' / ')
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  return folderSegments.length ? [...folderSegments, fileName].join('/') : fileName;
+}
+
 export function groupDocumentsByFolder(documents = []) {
   const groups = new Map();
   for (const doc of documents) {

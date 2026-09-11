@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildTechnicalDocument } from '../src/technical-document-governance.mjs';
-import { buildFolderTree, folderFromSourceFile, fromRow, groupDocumentsByFolder, guessFamilyFromPath, historyFromRow, isTechnicalDocumentAdmin, parsePathHints, toRow } from '../src/technical-documents-mapping.mjs';
+import { buildFolderTree, folderFromSourceFile, fromRow, groupDocumentsByFolder, guessFamilyFromPath, historyFromRow, isTechnicalDocumentAdmin, moveDocumentToFolder, parsePathHints, renameFolder, toRow } from '../src/technical-documents-mapping.mjs';
 
 test('toRow maps a built document to snake_case columns, defaulting to inventariado', () => {
   const document = buildTechnicalDocument({ title: 'isoBUNKER 619-SP', family: 'Poliuretano', product: 'isoBUNKER 619-SP', sourceFile: 'a.pdf', sha256: 'abc', sizeBytes: 100 });
@@ -114,6 +114,32 @@ test('buildFolderTree builds real nested folders, like Drive or a file explorer,
   const fichaLeaf = poliuretanos.children[0];
   assert.equal(fichaLeaf.path, 'PRODUCTOS / POLIURETANOS RIGIDOS / Ficha Técnica 619 SP');
   assert.deepEqual(fichaLeaf.documents.map((d) => d.title), ['MSDS isoBUNKER 619-SP', 'PDS isoBUNKER 619-SP']);
+});
+
+test('renameFolder rewrites source_file for every document in that folder, subfolders included, keeping the rest of the path', () => {
+  const documents = [
+    { id: '1', sourceFile: 'MAQUINAS/BOMBA DE TRANSFERENCIA/manual.pdf' },
+    { id: '2', sourceFile: 'MAQUINAS/BOMBA DE TRANSFERENCIA/PISTOLA/detalle.pdf' },
+    { id: '3', sourceFile: 'MAQUINAS/Airless 390.pdf' }, // otra carpeta, no debe tocarse
+    { id: '4', sourceFile: 'PRODUCTOS/otro.pdf' }, // otra rama, no debe tocarse
+  ];
+  const updated = renameFolder(documents, 'MAQUINAS / BOMBA DE TRANSFERENCIA', 'Bombas');
+  assert.equal(updated.length, 2);
+  assert.deepEqual(updated.map((d) => d.sourceFile).sort(), [
+    'MAQUINAS/Bombas/PISTOLA/detalle.pdf',
+    'MAQUINAS/Bombas/manual.pdf',
+  ]);
+});
+
+test('renameFolder returns nothing for an empty/missing name, never leaves a folder without a name', () => {
+  const documents = [{ id: '1', sourceFile: 'MAQUINAS/manual.pdf' }];
+  assert.deepEqual(renameFolder(documents, 'MAQUINAS', ''), []);
+  assert.deepEqual(renameFolder(documents, 'MAQUINAS', '   '), []);
+});
+
+test('moveDocumentToFolder builds a new source_file under any folder path, existing or brand new', () => {
+  assert.equal(moveDocumentToFolder('MAQUINAS/manual.pdf', 'PRODUCTOS / Nueva Carpeta'), 'PRODUCTOS/Nueva Carpeta/manual.pdf');
+  assert.equal(moveDocumentToFolder('MAQUINAS/BOMBA/manual.pdf', ''), 'manual.pdf');
 });
 
 test('toRow/fromRow round-trip preserves the fields that matter for the preview', () => {

@@ -1,8 +1,12 @@
 // Adjunta en bloque los PDFs que ya viven en la carpeta local de Drive a las
 // fichas de Base técnica que todavía no tienen su archivo. Corre fuera del
-// navegador, con la service role key (nunca la anon key), para no tener que
-// loguearse en el CRM ni hacer 44 clicks: Felipe pidió expresamente no subir
-// las fichas una por una ahora que son muchas.
+// navegador para no tener que hacer 44 clicks: Felipe pidió expresamente no
+// subir las fichas una por una ahora que son muchas.
+//
+// Usa tu mismo usuario y contraseña del CRM (te los pide acá, en tu propia
+// terminal) - nunca un service_role key ni ninguna otra clave especial de
+// Supabase. El login sirve solo para que RLS te reconozca como
+// is_poliplast_crm_user(), igual que cuando entrás por el navegador.
 //
 // Nunca crea fichas nuevas ni reemplaza fichas ya adjuntas - solo completa
 // las que están vacías, emparejando por source_file (la misma ruta relativa
@@ -10,15 +14,12 @@
 // bucket solo acepta PDF.
 //
 // Uso:
-//   1. Crear poliplast-sales-copilot/.env.local (nunca se commitea - ver
-//      .gitignore) con dos líneas:
-//        SUPABASE_URL=https://nghwmtccpovrdtzvllwe.supabase.co
-//        SUPABASE_SERVICE_ROLE_KEY=<Supabase -> Project Settings -> API -> service_role>
-//   2. Desde la carpeta del proyecto: node scripts/attach-technical-pdfs.mjs
-//      (opcional, si la carpeta de fichas está en otro lado:
-//       node scripts/attach-technical-pdfs.mjs "C:\ruta\a\FICHAS TECNICAS")
+//   node scripts/attach-technical-pdfs.mjs
+//   (opcional, si la carpeta de fichas está en otro lado:
+//    node scripts/attach-technical-pdfs.mjs "C:\ruta\a\FICHAS TECNICAS")
 import fs from 'node:fs';
 import path from 'node:path';
+import readline from 'node:readline';
 import { createClient } from '@supabase/supabase-js';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 
@@ -32,12 +33,33 @@ function loadDotEnvLocal() {
 }
 loadDotEnvLocal();
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!SUPABASE_URL || !SERVICE_KEY) {
-  console.error('Falta SUPABASE_URL y/o SUPABASE_SERVICE_ROLE_KEY.');
-  console.error('Creá poliplast-sales-copilot/.env.local con esas dos variables (ver el comentario al inicio de este archivo) y volvé a correr el script.');
-  process.exit(1);
+// La anon key es pública por diseño (RLS es lo que protege los datos) - es
+// la misma que ya usa la app en el navegador, por eso viene con un default
+// y no hace falta ir a buscarla a ningún lado.
+const DEFAULT_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5naHdtdGNjcG92cmR0enZsbHdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5NDA2ODcsImV4cCI6MjEwMzUxNjY4N30.Q3_alw1wsDmXeb_MLeaiCVhVq7oNk521GwICiWbtaQo';
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://nghwmtccpovrdtzvllwe.supabase.co';
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || DEFAULT_ANON_KEY;
+
+// Itera las líneas de a una en vez de encadenar dos rl.question() - con
+// question() encadenado, si las dos respuestas llegan juntas (pasa con
+// entrada no interactiva, y no está probado que nunca pase en Windows) la
+// segunda se pierde porque todavía no hay nadie escuchando ese evento.
+// Iterando así no depende de ese timing. Sin ocultar la contraseña a
+// propósito: enmascarar el tipeo depende del modo "raw" de la terminal, que
+// se comporta distinto entre PowerShell/cmd/Git Bash - es un script
+// personal, una sola corrida, que se vea mientras la tipeás es un costo
+// aceptable a cambio de que funcione siempre.
+async function askEmailAndPassword() {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const answers = [];
+  process.stdout.write('Email del CRM: ');
+  for await (const line of rl) {
+    answers.push(line.trim());
+    if (answers.length === 1) process.stdout.write('Contraseña: ');
+    else break;
+  }
+  rl.close();
+  return { email: answers[0] || '', password: answers[1] || '' };
 }
 
 const DEFAULT_ROOT = 'C:\\Users\\felip\\OneDrive\\Desktop\\Poliplast\\GRUPO POLIPLAST\\FICHAS TÉCNICAS';
@@ -72,7 +94,21 @@ async function extractPdfText(buffer) {
 }
 
 async function main() {
-  const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+  const { email, password } = await askEmailAndPassword();
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+  if (authError) {
+    console.error('No se pudo iniciar sesión:', authError.message);
+    // process.exitCode (no process.exit) - llamar a exit() justo después de
+    // cerrar el readline puede tirar un crash de libuv cosmético
+    // (UV_HANDLE_CLOSING) en Windows mientras el handle todavía está
+    // terminando de cerrarse. Dejar que Node salga solo evita eso.
+    process.exitCode = 1;
+    return;
+  }
+  console.log('Sesión iniciada.\n');
+
   const relativePaths = listPdfsRecursive(root);
   const bySourceFile = new Map(relativePaths.map((rel) => [rel, path.join(root, ...rel.split('/'))]));
 

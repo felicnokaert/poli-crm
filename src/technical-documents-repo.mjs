@@ -86,10 +86,16 @@ export async function updateTechnicalDocumentTitle(id, title) {
 // de gobernanza. Se usa tanto al importar como para adjuntar/reemplazar el
 // PDF de una ficha que ya existía sin archivo.
 export async function attachTechnicalDocumentFile(id, file) {
+  if (!/\.pdf$/i.test(file.name)) throw new Error(`"${file.name}" no es un PDF - el bucket solo acepta PDF.`);
   const path = `${id}/${Date.now()}-${file.name}`;
+  // Forzamos 'application/pdf' siempre, sin mirar file.type: eligiendo una
+  // carpeta entera (vs. un archivo suelto) algunos navegadores/SO reportan
+  // un MIME genérico (ej. application/octet-stream) en vez de application/pdf
+  // - el bucket lo rechaza (allowed_mime_types) y la ficha queda "sin
+  // adjuntar" en silencio, sin ningún aviso claro de por qué.
   const { error: uploadError } = await supabase.storage
     .from(STORAGE_BUCKET)
-    .upload(path, file, { upsert: true, contentType: file.type || 'application/pdf' });
+    .upload(path, file, { upsert: true, contentType: 'application/pdf' });
   if (uploadError) throw uploadError;
   let extractedText = null;
   try {

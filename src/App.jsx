@@ -5461,10 +5461,12 @@ function TechnicalDocumentsAdmin({ session }) {
     setMessage(`Adjuntando ${pending.length} de ${missingBefore.length} fichas pendientes…`);
     try {
       const { attachTechnicalDocumentFile } = await import("./technical-documents-repo.mjs");
+      let firstError = "";
       const results = await Promise.all(pending.map(async (doc) => {
         try {
           return await attachTechnicalDocumentFile(doc.id, bySourceFile.get(doc.sourceFile));
-        } catch {
+        } catch (error) {
+          if (!firstError) firstError = error.message || String(error);
           return null;
         }
       }));
@@ -5477,7 +5479,8 @@ function TechnicalDocumentsAdmin({ session }) {
         `${succeeded.length} fichas quedaron con su PDF adjunto.` +
         (stillMissingNonPdf > 0 ? ` ${stillMissingNonPdf} son Word, no PDF - convertilas y volvé a adjuntar.` : "") +
         (stillMissingOther > 0 ? ` ${stillMissingOther} no tenían un archivo con ese mismo nombre/carpeta en lo que elegiste.` : "") +
-        (stillMissing === 0 ? " No queda ninguna pendiente." : ""),
+        (stillMissing === 0 ? " No queda ninguna pendiente." : "") +
+        (succeeded.length === 0 && firstError ? ` Error: ${firstError}` : ""),
       );
     } catch (error) {
       setMessage(error.message || "No se pudo adjuntar los archivos.");

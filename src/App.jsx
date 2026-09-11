@@ -94,6 +94,7 @@ import { FAMILIES } from "./families.mjs";
 import { defaultBusinessUnits } from "./sales-model.mjs";
 import { channelsForEmail } from "./user-channels.mjs";
 import { buildSuggestion, PENDING_LABEL } from "./suggestion-rules.mjs";
+import { lastPurchaseForClient } from "./client-purchase-history.mjs";
 import { prepareManualQuery } from "./ai-provider.mjs";
 import { docTypeLabel } from "./technical-library.mjs";
 import { isLowSignalWhatsAppEvent } from "./whatsapp-events.mjs";
@@ -1981,6 +1982,7 @@ export default function App() {
           tasks={data.tasks.filter(
             (item) => item.clientId === selectedClientId,
           )}
+          sales={data.sales}
           onClose={() => setSelectedClientId(null)}
           onOpenInteraction={setSelectedInteractionId}
           onNewInteraction={startClientInteraction}
@@ -4363,6 +4365,7 @@ function ClientDetail({
   client,
   interactions,
   tasks,
+  sales,
   onClose,
   onOpenInteraction,
   onNewInteraction,
@@ -4377,6 +4380,7 @@ function ClientDetail({
   useEffect(() => setDraft(client || {}), [client?.id]);
   if (!client) return null;
   const latest = interactions[0];
+  const detectedPurchase = lastPurchaseForClient(client, sales || []);
   const nextTask = tasks
     .filter((item) => !item.done)
     .sort((a, b) => (a.dueDate || "").localeCompare(b.dueDate || ""))[0];
@@ -4614,8 +4618,8 @@ function ClientDetail({
                 <input {...field("systemsPerMonth")} placeholder="Conjuntos de 470kg poliol+isocianato" />
               </label>
               <label>
-                Última compra
-                <input {...field("lastPurchase")} />
+                Última compra (manual, no se toca sola)
+                <input {...field("lastPurchase")} placeholder="Ej: en efectivo en el local, sin factura" />
               </label>
               <label>
                 Total de compras
@@ -4692,7 +4696,15 @@ function ClientDetail({
                   .filter(Boolean)
                   .join(", ")}
               />
-              <Fact label="Última compra" value={client.lastPurchase} />
+              <Fact label="Última compra (manual)" value={client.lastPurchase} />
+              <Fact
+                label="Última compra según facturas"
+                value={
+                  detectedPurchase
+                    ? `${formatDate(detectedPurchase.date)} · ${detectedPurchase.products.join(", ") || "sin producto legible"}${detectedPurchase.unit ? ` · ${detectedPurchase.unit}` : ""}`
+                    : "Sin facturas cargadas a nombre de este cliente"
+                }
+              />
               <Fact label="Compras" value={client.totalPurchases} />
               <Fact label="Producto principal" value={client.mainProduct} />
               <Fact

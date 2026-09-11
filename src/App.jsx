@@ -596,6 +596,22 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [data, remoteReady, session?.user?.id]);
 
+  // El guardado tiene un margen de 700ms (de arriba) antes de escribir a
+  // Supabase - si alguien recarga o cierra la pestaña justo en ese margen
+  // (ej. después de borrar varias conversaciones de "Por revisar"), ese
+  // cambio nunca llega a guardarse y la próxima carga trae los datos viejos
+  // sin ningún aviso. Esto avisa antes de irse mientras "Guardando…" está
+  // en pantalla, para no perder ese cambio en silencio.
+  useEffect(() => {
+    function handleBeforeUnload(event) {
+      if (syncStatus !== "Guardando…") return;
+      event.preventDefault();
+      event.returnValue = "";
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [syncStatus]);
+
   const metrics = useMemo(() => {
     const now = today();
     const weekAgo = new Date();

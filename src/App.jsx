@@ -1801,6 +1801,7 @@ export default function App() {
             metrics={metrics}
             tasks={data.tasks}
             interactions={data.interactions}
+            clients={data.clients}
             sales={data.sales || []}
             inbox={data.inbox || []}
             myChannels={myChannels}
@@ -2202,6 +2203,7 @@ function Dashboard({
   metrics,
   tasks,
   interactions,
+  clients,
   sales,
   inbox,
   myChannels,
@@ -2210,6 +2212,7 @@ function Dashboard({
   onOpenInteraction,
   onNavigate,
 }) {
+  const clientsById = new Map(clients.map((client) => [client.id, client]));
   const repurchaseRadar = buildRepurchaseRadar(sales).slice(0, 6);
   const coldQuotes = findColdQuotes(inbox, sales).slice(0, 6);
   const hotLeads = findStaleHotLeads(inbox).slice(0, 6);
@@ -2304,6 +2307,7 @@ function Dashboard({
                   item={item}
                   key={item.id}
                   onOpen={onOpenInteraction}
+                  liveTemperature={clientsById.get(item.clientId)?.temperature}
                 />
               ))
           ) : (

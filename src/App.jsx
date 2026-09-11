@@ -5377,7 +5377,46 @@ function TechnicalDocumentsAdmin({ session }) {
     }
   }
 
+  // Adjuntar de a una lleva 68 clicks - esto lo hace en un solo paso: Felipe
+  // elige la carpeta local de Drive una sola vez, y cada archivo se empareja
+  // con la ficha que ya tiene ese mismo camino relativo guardado en
+  // source_file (mismo criterio que usó el import original). Nada se
+  // reimporta ni se duplica - solo se completa lo que le faltaba.
+  async function bulkAttachFiles(event) {
+    const files = [...(event.target.files || [])];
+    event.target.value = "";
+    if (!files.length) return;
+    const bySourceFile = new Map();
+    for (const file of files) {
+      const relative = (file.webkitRelativePath || "").split("/").slice(1).join("/");
+      if (relative) bySourceFile.set(relative, file);
+    }
+    const pending = documents.filter((doc) => !doc.storagePath && bySourceFile.has(doc.sourceFile));
+    if (!pending.length) {
+      setMessage("Ningún archivo de esa carpeta coincide con una ficha sin PDF adjunto (¿elegiste la carpeta correcta?).");
+      return;
+    }
+    setMessage(`Adjuntando ${pending.length} de ${documents.filter((doc) => !doc.storagePath).length} fichas pendientes…`);
+    try {
+      const { attachTechnicalDocumentFile } = await import("./technical-documents-repo.mjs");
+      const results = await Promise.all(pending.map(async (doc) => {
+        try {
+          return await attachTechnicalDocumentFile(doc.id, bySourceFile.get(doc.sourceFile));
+        } catch {
+          return null;
+        }
+      }));
+      const succeeded = results.filter(Boolean);
+      setDocuments((current) => current.map((item) => succeeded.find((updated) => updated.id === item.id) || item));
+      const stillMissing = documents.filter((doc) => !doc.storagePath).length - succeeded.length;
+      setMessage(`${succeeded.length} fichas quedaron con su PDF adjunto.${stillMissing > 0 ? ` Quedan ${stillMissing} sin coincidencia en lo que elegiste.` : " No queda ninguna pendiente."}`);
+    } catch (error) {
+      setMessage(error.message || "No se pudo adjuntar los archivos.");
+    }
+  }
+
   const families = [...new Set(documents.map((doc) => doc.family))].sort();
+  const missingFilesCount = documents.filter((doc) => !doc.storagePath).length;
   const filtered = documents.filter(
     (doc) =>
       (statusFilter === "all" || doc.status === statusFilter) &&
@@ -5389,16 +5428,34 @@ function TechnicalDocumentsAdmin({ session }) {
       <section className="panel">
         <div className="panel-head">
           <div>
-            <span className="eyebrow">Catálogo compartido, sin copiar el archivo</span>
+            <span className="eyebrow">Catálogo compartido con el PDF adjunto</span>
             <h2>Base técnica</h2>
             <p>
-              Documentos importados desde Drive, indexados acá. Solo Felipe
-              puede marcar un documento "vigente" - hasta entonces, ninguna
-              sugerencia del copiloto puede citarlo.
+              Documentos importados desde Drive, con su PDF real guardado acá
+              adentro. Solo Felipe puede marcar un documento "vigente" - hasta
+              entonces, ninguna sugerencia del copiloto puede citarlo.
             </p>
           </div>
           <FileCheck2 size={22} />
         </div>
+        {missingFilesCount > 0 && (
+          <div className="technical-document-bulk-attach">
+            <span>
+              {missingFilesCount} {missingFilesCount === 1 ? "ficha todavía no tiene" : "fichas todavía no tienen"} su PDF adjunto.
+            </span>
+            <label className="secondary">
+              Adjuntar PDFs faltantes (elegí la carpeta completa de Drive)
+              <input
+                type="file"
+                webkitdirectory=""
+                directory=""
+                multiple
+                hidden
+                onChange={bulkAttachFiles}
+              />
+            </label>
+          </div>
+        )}
         <div className="list-toolbar inbox-filters">
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
             <option value="all">Todos los estados</option>

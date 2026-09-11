@@ -5314,6 +5314,7 @@ const TECHNICAL_DOCUMENT_STATUS_LABELS = {
 };
 
 function TechnicalDocumentsAdmin({ session }) {
+  const confirm = useConfirm();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -5483,6 +5484,45 @@ function TechnicalDocumentsAdmin({ session }) {
     }
   }
 
+  // Solo Felipe (RLS: "Admin elimina documentos tecnicos" - cualquier otro
+  // intento lo rechaza la base, no solo esta pantalla). Es una ficha de
+  // referencia compartida por todo el equipo, no algo para borrar por error.
+  async function deleteDocument(doc) {
+    if (!(await confirm(`¿Eliminar "${doc.title}" de Base técnica? Esto no se puede deshacer.`, { danger: true, confirmLabel: "Eliminar" }))) return;
+    try {
+      const { deleteTechnicalDocument } = await import("./technical-documents-repo.mjs");
+      await deleteTechnicalDocument(doc.id, doc.storagePath);
+      setDocuments((current) => current.filter((item) => item.id !== doc.id));
+      setMessage(`"${doc.title}" se eliminó.`);
+    } catch (error) {
+      setMessage(error.message || "No se pudo eliminar el documento.");
+    }
+  }
+
+  // Borra todas las fichas cuya carpeta (folderFromSourceFile) sea justo
+  // esta - no un prefijo, para no arrastrarse una subcarpeta con nombre
+  // parecido por accidente.
+  async function deleteFolder(folderPath, docsInFolder) {
+    if (!(await confirm(`¿Eliminar la carpeta "${folderPath}" y sus ${docsInFolder.length} ficha${docsInFolder.length === 1 ? "" : "s"}? Esto no se puede deshacer.`, { danger: true, confirmLabel: "Eliminar carpeta" }))) return;
+    try {
+      const { deleteTechnicalDocument } = await import("./technical-documents-repo.mjs");
+      const ids = new Set();
+      for (const doc of docsInFolder) {
+        try {
+          await deleteTechnicalDocument(doc.id, doc.storagePath);
+          ids.add(doc.id);
+        } catch {
+          // sigue con el resto - un error puntual no debe dejar la carpeta a medio borrar sin aviso
+        }
+      }
+      setDocuments((current) => current.filter((item) => !ids.has(item.id)));
+      const failed = docsInFolder.length - ids.size;
+      setMessage(`${ids.size} ficha${ids.size === 1 ? "" : "s"} eliminada${ids.size === 1 ? "" : "s"} de "${folderPath}".${failed > 0 ? ` ${failed} no se pudieron eliminar.` : ""}`);
+    } catch (error) {
+      setMessage(error.message || "No se pudo eliminar la carpeta.");
+    }
+  }
+
   const families = [...new Set(documents.map((doc) => doc.family))].sort();
   const missingFilesCount = documents.filter((doc) => !doc.storagePath).length;
   const filtered = documents.filter(
@@ -5558,6 +5598,8 @@ function TechnicalDocumentsAdmin({ session }) {
             isAdmin={isAdmin}
             attachFile={attachFile}
             viewFile={viewFile}
+            deleteDocument={deleteDocument}
+            deleteFolder={deleteFolder}
           />
         ) : (
           <Empty text="No hay documentos importados todavía. Subí fichas desde Datos → Importar fichas técnicas." />
@@ -5567,7 +5609,7 @@ function TechnicalDocumentsAdmin({ session }) {
   );
 }
 
-function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile }) {
+function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile, deleteDocument }) {
   const draft = draftFor(doc);
   return (
     <article className="technical-document-row">
@@ -5652,9 +5694,24 @@ function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleDrafts, 
         >
           Guardar
         </button>
+        {isAdmin && (
+          <button
+            type="button"
+            className="danger-link"
+            onClick={() => deleteDocument(doc)}
+          >
+            Eliminar
+          </button>
+        )}
       </div>
     </article>
   );
+}
+
+// Todas las fichas de un nodo, incluidas las de sus subcarpetas - lo que
+// "eliminar carpeta" necesita borrar de un saque.
+function collectNodeDocuments(node) {
+  return [...node.documents, ...node.children.flatMap(collectNodeDocuments)];
 }
 
 // Una carpeta real por nivel (Drive/Explorador de archivos), no una fila con
@@ -5681,6 +5738,19 @@ function TechnicalDocumentFolderNode({ node, depth, rowProps }) {
         <span className="technical-document-folder-icon" aria-hidden="true">📁</span>
         <span className="technical-document-folder-name">{node.name}</span>
         <span className="technical-document-folder-count">{node.count}</span>
+        {rowProps.isAdmin && (
+          <button
+            type="button"
+            className="danger-link technical-document-folder-delete"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              rowProps.deleteFolder(node.path, collectNodeDocuments(node));
+            }}
+          >
+            Eliminar carpeta
+          </button>
+        )}
       </summary>
       <div className="technical-document-folder-body">
         {node.children.map((child) => (
@@ -5694,12 +5764,12 @@ function TechnicalDocumentFolderNode({ node, depth, rowProps }) {
   );
 }
 
-function TechnicalDocumentGroups({ documents, groupByFolder, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile }) {
+function TechnicalDocumentGroups({ documents, groupByFolder, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile, deleteDocument, deleteFolder }) {
   const [buildFolderTree, setBuildFolderTree] = useState(null);
   useEffect(() => {
     import("./technical-documents-mapping.mjs").then(({ buildFolderTree: fn }) => setBuildFolderTree(() => fn));
   }, []);
-  const rowProps = { allDocuments: documents, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile };
+  const rowProps = { allDocuments: documents, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile, deleteDocument, deleteFolder };
   if (!groupByFolder || !buildFolderTree) {
     return (
       <div className="conversation-list">

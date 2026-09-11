@@ -119,6 +119,24 @@ export async function getTechnicalDocumentFileUrl(storagePath) {
   return data?.signedUrl || null;
 }
 
+// Solo Felipe puede borrar (RLS: "Admin elimina documentos tecnicos") - es
+// una ficha de referencia técnica compartida por todo el equipo, no algo
+// que cualquiera pueda hacer desaparecer sin querer. Si tenía un PDF
+// adjunto, se intenta borrar también del bucket - "mejor esfuerzo": si el
+// archivo ya no estaba (o falla el borrado en Storage), la fila igual se
+// borra, no queda una ficha fantasma bloqueando el intento.
+export async function deleteTechnicalDocument(id, storagePath) {
+  if (storagePath) {
+    try {
+      await supabase.storage.from(STORAGE_BUCKET).remove([storagePath]);
+    } catch {
+      // best-effort, ver comentario de arriba
+    }
+  }
+  const { error } = await supabase.from('technical_documents').delete().eq('id', id);
+  if (error) throw error;
+}
+
 export async function fetchTechnicalDocumentHistory(documentId) {
   const { data, error } = await supabase
     .from('technical_document_history')

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Building2,
   CheckCircle2,
@@ -58,17 +58,11 @@ import { WhatsAppInbox } from "./WhatsAppInbox";
 import { ClientDetail } from "./ClientDetail";
 import { CLASSIFICATIONS } from "./knowledge";
 import {
-  completeTasksThrough,
-  loadOnlineState,
   mergeClients,
-  mergeWorkspaceState,
   onlineConfigured,
   recordDeletions,
   recordDuplicateReviewDecision,
-  saveOnlineState,
-  supabase,
   undoClientMerge,
-  workspaceStatesEqual,
 } from "./online";
 import { inferIntent } from "./commercial-intelligence.mjs";
 import Sales from "./Sales";
@@ -87,26 +81,22 @@ import {
   findClientByWhatsApp,
 } from "./client-contacts.mjs";
 import { defaultBusinessUnits } from "./sales-model.mjs";
-import { channelsForEmail } from "./user-channels.mjs";
 import MercadoLibre from "./MercadoLibre";
 import { scoreTriage, suggestTriage } from "./commercial-triage.mjs";
 import { shouldCreateFollowup } from "./followup-policy.mjs";
-
-// El sufijo fuerza una única segunda pasada que también incluye las tareas
-// antiguas sin fecha de vencimiento, usando su fecha de creación.
-const TASKS_CLOSED_THROUGH = "2026-09-09.1";
+import { useWorkspaceSync } from "./hooks/useWorkspaceSync";
+import { useSelectedRecords } from "./hooks/useSelectedRecords";
+import { useNavGroups } from "./hooks/useNavGroups";
 
 // "Registrar conversación" solo tiene sentido donde se sigue a un cliente
 // puntual, no en todos los módulos.
 const LOG_CONVERSATION_VIEWS = ["conversations"];
 
 const STORAGE_KEY = "poliplast-sales-copilot-v1";
-const NAV_COLLAPSE_KEY = "poliplast-sales-copilot-nav-collapsed";
 // Mismos 6 grupos que arma navGroups más abajo - repetidos acá porque hacen
 // falta antes de que el componente pueda armar navGroups (son el estado
 // inicial "todo colapsado").
 const NAV_GROUP_NAMES = ["Ventas", "Organización", "Canales", "Cartera", "Recursos", "Sistema"];
-const HISTORY_RESET_VERSION = "2026-09-03T16:00:00.000Z";
 
 function addDays(days) {
   const date = new Date();
@@ -199,42 +189,19 @@ function loadState() {
 export default function App() {
   const confirm = useConfirm();
   const [data, setData] = useState(loadState);
-  const [session, setSession] = useState(null);
-  const myChannels = channelsForEmail(session?.user?.email);
-  const [authReady, setAuthReady] = useState(!onlineConfigured);
-  const [remoteReady, setRemoteReady] = useState(false);
-  const [syncStatus, setSyncStatus] = useState(
-    onlineConfigured ? "Conectando…" : "Modo local",
-  );
-  const [readiness, setReadiness] = useState(null);
-  // Contadores que solo existen para poder reintentar a mano: incrementarlos
-  // re-dispara el efecto de carga/guardado correspondiente sin duplicar la
-  // lógica de arriba. Antes, si "Error de sincronización" aparecía, no había
-  // ninguna forma de reintentar sin recargar toda la página.
-  const [loadAttempt, setLoadAttempt] = useState(0);
-  const [saveAttempt, setSaveAttempt] = useState(0);
+  const {
+    session,
+    myChannels,
+    authReady,
+    remoteReady,
+    syncStatus,
+    readiness,
+    outboundStatusEvents,
+    retryLoad,
+    retrySave,
+  } = useWorkspaceSync(data, setData);
   const [view, setView] = useState("dashboard");
-  // Arranca con todos los grupos colapsados - Felipe: "así está más
-  // limpio", que se vean los 6 títulos primero y cada uno se abra al
-  // tocarlo, no todo desglosado de entrada. Una vez que el usuario toca
-  // algún grupo, lo que haya en localStorage manda (se respeta su elección).
-  const [collapsedNavGroups, setCollapsedNavGroups] = useState(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem(NAV_COLLAPSE_KEY) || "[]");
-      // Un array vacío guardado no distingue "el usuario abrió todo a
-      // propósito" de "nunca tocó nada" (que es lo que pasaba antes de este
-      // cambio - el efecto de abajo ya guardaba [] solo). Se trata igual que
-      // "nada guardado todavía" para no dejar a nadie con el sidebar
-      // desplegado por un valor viejo que nadie eligió a mano.
-      if (Array.isArray(stored) && stored.length > 0) return stored;
-    } catch {
-      // sigue al default de abajo
-    }
-    return NAV_GROUP_NAMES;
-  });
-  useEffect(() => {
-    localStorage.setItem(NAV_COLLAPSE_KEY, JSON.stringify(collapsedNavGroups));
-  }, [collapsedNavGroups]);
+  const [collapsedNavGroups, setCollapsedNavGroups] = useNavGroups(NAV_GROUP_NAMES);
   const [showForm, setShowForm] = useState(false);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [taskForm, setTaskForm] = useState(blankTask);
@@ -242,198 +209,19 @@ export default function App() {
   const [form, setForm] = useState(blankInteraction);
   const [inboxDraft, setInboxDraft] = useState(null);
   const [query, setQuery] = useState("");
-  const [selectedInteractionId, setSelectedInteractionId] = useState(null);
-  const [selectedClientId, setSelectedClientId] = useState(null);
-  const [selectedTaskId, setSelectedTaskId] = useState(null);
-  const [outboundStatusEvents, setOutboundStatusEvents] = useState([]);
+  const {
+    selectedInteractionId,
+    setSelectedInteractionId,
+    selectedClientId,
+    setSelectedClientId,
+    selectedTaskId,
+    setSelectedTaskId,
+  } = useSelectedRecords();
+  const openTaskForm = useCallback(() => setShowTaskForm(true), []);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }, [data]);
-
-  useEffect(() => {
-    if (!onlineConfigured) return undefined;
-    supabase.auth.getSession().then(({ data: authData }) => {
-      setSession(authData.session);
-      setAuthReady(true);
-    });
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, nextSession) => {
-        setSession(nextSession);
-        setAuthReady(true);
-      },
-    );
-    return () => listener.subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!onlineConfigured || !session?.user?.id) {
-      setRemoteReady(false);
-      return undefined;
-    }
-    let active = true;
-    setSyncStatus("Sincronizando…");
-    loadOnlineState(session.user.id, myChannels)
-      .then(({ state, statusEvents }) => {
-        if (!active) return;
-        let nextState = { ...initialState, ...state, inbox: state.inbox || [] };
-        if (nextState.historyResetVersion !== HISTORY_RESET_VERSION) {
-          nextState.interactions = [];
-          nextState.historyResetVersion = HISTORY_RESET_VERSION;
-          saveOnlineState(session.user.id, session.user.email, nextState).catch(() => {});
-        }
-        if ((nextState.tasksClosedThrough || "") < TASKS_CLOSED_THROUGH) {
-          nextState = completeTasksThrough(nextState, TASKS_CLOSED_THROUGH);
-          saveOnlineState(session.user.id, session.user.email, nextState).catch(() => {});
-        }
-        setData(nextState);
-        setOutboundStatusEvents(statusEvents || []);
-        setRemoteReady(true);
-        setSyncStatus("Sincronizado");
-      })
-      .catch(() => active && setSyncStatus("Error al cargar"));
-
-    const channel = supabase
-      .channel("whatsapp-inbox")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "whatsapp_events" },
-        ({ new: event }) => {
-          if (
-            event.direction !== "inbound" ||
-            !myChannels.includes(event.channel) ||
-            ["unread_preview", "unread_notice"].includes(event.message_type)
-          )
-            return;
-          setData((current) => {
-            if (current.inbox.some((item) => item.event_id === event.event_id))
-              return current;
-            // Un mensaje que ya se eliminó del CRM no debe resucitar solo
-            // porque llega por el canal de tiempo real - este chequeo faltaba
-            // acá aunque sí se aplica al cargar la bandeja completa.
-            if ((current.dismissedInboxEventIds || []).includes(event.event_id))
-              return current;
-            const ignoredRule = isIgnoredWhatsAppContact(current.ignoredWhatsAppContacts || [], event);
-            const client =
-              findClientByWhatsApp(current.clients, event) ||
-              current.clients.find(
-                (item) =>
-                  event.customer_name &&
-                  item.company?.toLowerCase() ===
-                    event.customer_name.toLowerCase(),
-              );
-            const taskTitle = "Revisar nuevo mensaje de WhatsApp";
-            const hasReminder =
-              client &&
-              current.tasks.some(
-                (item) =>
-                  item.clientId === client.id &&
-                  !item.done &&
-                  item.title === taskTitle,
-              );
-            const reminder =
-              !ignoredRule &&
-              event.direction === "inbound" &&
-              client &&
-              !hasReminder
-                ? {
-                    id: crypto.randomUUID(),
-                    clientId: client.id,
-                    company: client.company,
-                    title: taskTitle,
-                    dueDate: today(),
-                    cadence: "Diaria",
-                    priority: "Media",
-                    done: false,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                    trigger: `Nuevo mensaje recibido por ${CHANNELS[event.channel]?.name || "WhatsApp"}`,
-                  }
-                : null;
-            return {
-              ...current,
-              inbox: [
-                {
-                  ...event,
-                  classification_status: ignoredRule
-                    ? "excluded"
-                    : event.classification_status || "pending",
-                  excludedCategory: ignoredRule?.category,
-                },
-                ...current.inbox,
-              ],
-              tasks: reminder ? [...current.tasks, reminder] : current.tasks,
-            };
-          });
-        },
-      )
-      .subscribe();
-    const workspaceChannel = supabase
-      .channel("workspace-state")
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "workspace_states",
-          filter: `workspace_key=eq.${session.user.id}`,
-        },
-        ({ new: row }) => {
-          if (!row?.data) return;
-          setData((current) => {
-            const merged = mergeWorkspaceState(current, row.data);
-            return workspaceStatesEqual(current, merged) ? current : merged;
-          });
-          setSyncStatus(
-            `Actualizado por ${row.updated_by_email || "el equipo"}`,
-          );
-        },
-      )
-      .subscribe();
-    return () => {
-      active = false;
-      supabase.removeChannel(channel);
-      supabase.removeChannel(workspaceChannel);
-    };
-  }, [session?.user?.id, loadAttempt]);
-
-  useEffect(() => {
-    if (!session?.access_token || syncStatus !== "Sincronizado") return;
-    fetch("/api/readiness", {
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((result) => result && setReadiness(result))
-      .catch(() => setReadiness(null));
-  }, [session?.access_token, syncStatus]);
-
-  useEffect(() => {
-    if (!onlineConfigured || !remoteReady || !session?.user?.id)
-      return undefined;
-    setSyncStatus("Guardando…");
-    const timer = setTimeout(() => {
-      saveOnlineState(session.user.id, session.user.email, data)
-        .then(() => setSyncStatus("Sincronizado"))
-        .catch(() => setSyncStatus("Error de sincronización"));
-    }, 700);
-    return () => clearTimeout(timer);
-  }, [data, remoteReady, session?.user?.id, saveAttempt]);
-
-  // El guardado tiene un margen de 700ms (de arriba) antes de escribir a
-  // Supabase - si alguien recarga o cierra la pestaña justo en ese margen
-  // (ej. después de borrar varias conversaciones de "Por revisar"), ese
-  // cambio nunca llega a guardarse y la próxima carga trae los datos viejos
-  // sin ningún aviso. Esto avisa antes de irse mientras "Guardando…" está
-  // en pantalla, para no perder ese cambio en silencio.
-  useEffect(() => {
-    function handleBeforeUnload(event) {
-      if (syncStatus !== "Guardando…") return;
-      event.preventDefault();
-      event.returnValue = "";
-    }
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [syncStatus]);
 
   const metrics = useMemo(() => {
     const now = today();
@@ -472,7 +260,7 @@ export default function App() {
             <div className="brand-mark">P</div>
             <h1>No se pudo cargar tu información</h1>
             <p>Revisá tu conexión e intentá de nuevo.</p>
-            <button className="primary" onClick={() => setLoadAttempt((n) => n + 1)}>
+            <button className="primary" onClick={retryLoad}>
               Reintentar
             </button>
           </section>
@@ -616,7 +404,7 @@ export default function App() {
     setShowTaskForm(true);
   }
 
-  function toggleTask(id) {
+  const toggleTask = useCallback((id) => {
     const stamp = new Date().toISOString();
     setData((current) => ({
       ...current,
@@ -626,7 +414,7 @@ export default function App() {
           : task,
       ),
     }));
-  }
+  }, []);
 
   function saveOpportunity(opportunity) {
     const stamp = new Date().toISOString();
@@ -847,7 +635,7 @@ export default function App() {
     });
   }
 
-  function classifyInbox(eventId, decision) {
+  const classifyInbox = useCallback((eventId, decision) => {
     const event = data.inbox.find((item) => item.event_id === eventId);
     if (!event) return;
     const stamp = new Date().toISOString();
@@ -944,9 +732,9 @@ export default function App() {
           : item,
       ),
     });
-  }
+  }, [data]);
 
-  function archiveInbox(eventId) {
+  const archiveInbox = useCallback((eventId) => {
     const event = data.inbox.find((item) => item.event_id === eventId);
     if (!event) return;
     const stamp = new Date().toISOString();
@@ -958,9 +746,9 @@ export default function App() {
           : item,
       ),
     });
-  }
+  }, [data]);
 
-  function excludeInboxContact(eventId, category) {
+  const excludeInboxContact = useCallback((eventId, category) => {
     if (!category) return;
     const event = data.inbox.find((item) => item.event_id === eventId);
     if (!event) return;
@@ -1008,9 +796,9 @@ export default function App() {
         );
       }),
     });
-  }
+  }, [data]);
 
-  function restoreCommercialContact(eventId) {
+  const restoreCommercialContact = useCallback((eventId) => {
     const event = data.inbox.find((item) => item.event_id === eventId);
     if (!event) return;
     const key = whatsappThreadKey(event);
@@ -1032,9 +820,9 @@ export default function App() {
           : item,
       ),
     });
-  }
+  }, [data]);
 
-  function restoreInbox(eventId) {
+  const restoreInbox = useCallback((eventId) => {
     const event = data.inbox.find((item) => item.event_id === eventId);
     if (!event) return;
     setData({
@@ -1045,9 +833,9 @@ export default function App() {
           : item,
       ),
     });
-  }
+  }, [data]);
 
-  async function deleteInbox(eventId) {
+  const deleteInbox = useCallback(async (eventId) => {
     const event = data.inbox.find((item) => item.event_id === eventId);
     if (!event) return;
     const name = event.customer_name || event.customer_wa_id || "este contacto";
@@ -1077,9 +865,9 @@ export default function App() {
         },
         body: JSON.stringify({ eventIds: deletedIds }),
       }).catch(() => {});
-  }
+  }, [data, confirm, session]);
 
-  function batchClassifyInbox(eventIds, decision) {
+  const batchClassifyInbox = useCallback((eventIds, decision) => {
     const keys = new Set(
       data.inbox
         .filter((item) => eventIds.includes(item.event_id))
@@ -1098,9 +886,9 @@ export default function App() {
           : item,
       ),
     });
-  }
+  }, [data]);
 
-  function batchArchiveInbox(eventIds) {
+  const batchArchiveInbox = useCallback((eventIds) => {
     const keys = new Set(
       data.inbox
         .filter((item) => eventIds.includes(item.event_id))
@@ -1116,9 +904,9 @@ export default function App() {
           : item,
       ),
     });
-  }
+  }, [data]);
 
-  function batchExcludeInbox(eventIds, category) {
+  const batchExcludeInbox = useCallback((eventIds, category) => {
     if (!category) return;
     const selected = data.inbox.filter((item) =>
       eventIds.includes(item.event_id),
@@ -1158,9 +946,9 @@ export default function App() {
           : item,
       ),
     });
-  }
+  }, [data]);
 
-  async function batchDeleteInbox(eventIds) {
+  const batchDeleteInbox = useCallback(async (eventIds) => {
     const keys = new Set(
       data.inbox
         .filter((item) => eventIds.includes(item.event_id))
@@ -1193,9 +981,9 @@ export default function App() {
         },
         body: JSON.stringify({ eventIds: deletedIds }),
       }).catch(() => {});
-  }
+  }, [data, confirm, session]);
 
-  async function deleteLegacyInbox(eventId) {
+  const deleteLegacyInbox = useCallback(async (eventId) => {
     const event = data.inbox.find((item) => item.event_id === eventId);
     if (!event) return;
     if (
@@ -1219,9 +1007,9 @@ export default function App() {
         ...new Set([...(data.dismissedInboxEventIds || []), ...deletedIds]),
       ],
     });
-  }
+  }, [data, confirm]);
 
-  async function deleteAllLegacyInbox(items) {
+  const deleteAllLegacyInbox = useCallback(async (items) => {
     if (!items.length) return;
     if (
       !(await confirm(
@@ -1241,9 +1029,9 @@ export default function App() {
         ...new Set([...(data.dismissedInboxEventIds || []), ...deletedIds]),
       ],
     });
-  }
+  }, [data, confirm]);
 
-  function openInboxDraft(eventId) {
+  const openInboxDraft = useCallback((eventId) => {
     const event = data.inbox.find((item) => item.event_id === eventId);
     if (!event) return;
     const events = data.inbox
@@ -1260,9 +1048,9 @@ export default function App() {
       event: { ...event, transcript, messageCount: events.length },
       form: { ...draftFromWhatsApp(event), summary: transcript },
     });
-  }
+  }, [data]);
 
-  function openInboxContact(eventId) {
+  const openInboxContact = useCallback((eventId) => {
     const event = data.inbox.find((item) => item.event_id === eventId);
     if (!event) return;
     const client =
@@ -1277,7 +1065,7 @@ export default function App() {
       return;
     }
     openInboxDraft(eventId);
-  }
+  }, [data, openInboxDraft, setSelectedClientId]);
 
   function confirmInboxDraft(event) {
     event.preventDefault();
@@ -1392,7 +1180,7 @@ export default function App() {
     setInboxDraft(null);
   }
 
-  async function deleteClient(id) {
+  const deleteClient = useCallback(async (id) => {
     const client = data.clients.find((item) => item.id === id);
     if (!client) return false;
     if (!(await confirm(`¿Eliminar "${client.company}" del CRM? Esto no se puede deshacer.`, { danger: true, confirmLabel: "Eliminar" }))) return false;
@@ -1411,11 +1199,11 @@ export default function App() {
       }, { clients: [id], tasks: taskIds, interactions: interactionIds });
     });
     return true;
-  }
+  }, [data, confirm]);
 
   const CLIENT_MERGE_FIELDS = ["company", "legalName", "cuit", "temperature", "family", "stage", "sourceType", "clientType", "industry"];
 
-  async function mergeClient(survivorId, mergedId) {
+  const mergeClient = useCallback(async (survivorId, mergedId) => {
     const survivor = data.clients.find((item) => item.id === survivorId);
     const merged = data.clients.find((item) => item.id === mergedId);
     if (!survivor || !merged) return false;
@@ -1441,30 +1229,30 @@ export default function App() {
       }),
     );
     return true;
-  }
+  }, [data, confirm, session]);
 
-  async function undoMerge(mergeLogId) {
+  const undoMerge = useCallback(async (mergeLogId) => {
     const log = (data.mergeLogs || []).find((item) => item.id === mergeLogId);
     if (!log) return false;
     const mergedName = log.snapshotAntes?.merged?.company || "la ficha fusionada";
     if (!(await confirm(`¿Deshacer esta fusión y volver a separar "${mergedName}"?`, { confirmLabel: "Deshacer" }))) return false;
     setData((current) => undoClientMerge(current, mergeLogId));
     return true;
-  }
+  }, [data, confirm]);
 
-  function markNotDuplicate(candidate) {
+  const markNotDuplicate = useCallback((candidate) => {
     setData((current) => recordDuplicateReviewDecision(current, candidate.id, "not_duplicate", {
       actor: session?.user?.email || "",
       signalsAtDecision: candidate.signals.map((signal) => signal.type),
     }));
-  }
+  }, [session]);
 
-  function postponeDuplicate(candidate) {
+  const postponeDuplicate = useCallback((candidate) => {
     setData((current) => recordDuplicateReviewDecision(current, candidate.id, "postponed", {
       actor: session?.user?.email || "",
       signalsAtDecision: candidate.signals.map((signal) => signal.type),
     }));
-  }
+  }, [session]);
 
   async function deleteInteraction(id) {
     const interaction = data.interactions.find((item) => item.id === id);
@@ -1724,7 +1512,7 @@ export default function App() {
                 <button
                   type="button"
                   className="sync-retry"
-                  onClick={() => setSaveAttempt((n) => n + 1)}
+                  onClick={retrySave}
                 >
                   Reintentar
                 </button>
@@ -1795,7 +1583,7 @@ export default function App() {
             items={data.tasks}
             onToggle={toggleTask}
             onOpen={setSelectedTaskId}
-            onNew={() => setShowTaskForm(true)}
+            onNew={openTaskForm}
           />
         )}
         {view === "pipeline" && (

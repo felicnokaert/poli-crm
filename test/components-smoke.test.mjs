@@ -77,7 +77,10 @@ describe("Clients.jsx", () => {
 
   test("carga el módulo", async () => {
     mod = await loadJsxModule("src/Clients.jsx");
-    assert.equal(typeof mod.Clients, "function");
+    // Clients está envuelto en React.memo (optimización de renders), así que
+    // el export es un objeto memo, no una función plana - lo que importa acá
+    // es que sea un tipo de componente React válido.
+    assert.ok(React.isValidElement(React.createElement(mod.Clients, {})));
   });
 
   test("Clients renderiza la lista y el contador de duplicados sin excepción", () => {
@@ -104,7 +107,9 @@ describe("Tasks.jsx", () => {
 
   test("carga el módulo", async () => {
     mod = await loadJsxModule("src/Tasks.jsx");
-    assert.equal(typeof mod.Tasks, "function");
+    // Tasks está envuelto en React.memo (optimización de renders), así que
+    // el export es un objeto memo, no una función plana.
+    assert.ok(React.isValidElement(React.createElement(mod.Tasks, {})));
     assert.equal(typeof mod.TaskList, "function");
   });
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CHANNELS, initialState, today } from "../app-shared";
 import {
   completeTasksThrough,
@@ -99,7 +99,11 @@ export function applyInboundWhatsAppEvent(current, event) {
 // no cargue con las 21 piezas de estado sueltas.
 export function useWorkspaceSync(data, setData) {
   const [session, setSession] = useState(null);
-  const myChannels = channelsForEmail(session?.user?.email);
+  // channelsForEmail siempre devuelve un array nuevo: memoizarlo por email
+  // evita que Dashboard/Clients/Academy (que reciben myChannels como prop)
+  // pierdan su React.memo cada vez que App() re-renderiza por otro motivo.
+  const email = session?.user?.email;
+  const myChannels = useMemo(() => channelsForEmail(email), [email]);
   const [authReady, setAuthReady] = useState(!onlineConfigured);
   const [remoteReady, setRemoteReady] = useState(false);
   const [syncStatus, setSyncStatus] = useState(

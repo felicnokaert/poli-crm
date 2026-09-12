@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { formatDate } from "./utils.mjs";
 import { Empty } from "./ui-primitives";
@@ -6,7 +6,7 @@ import { clientContacts } from "./client-contacts.mjs";
 import { applyDuplicateReviewDecisions, detectDuplicateClientCandidates } from "./duplicate-candidates.mjs";
 import { canonicalFamily } from "./families.mjs";
 
-export function Clients({ clients, query, setQuery, onOpenClient, onMergeClients, mergeLogs = [], onUndoMerge, duplicateReviewDecisions = [], onMarkNotDuplicate, onPostponeDuplicate }) {
+function ClientsBase({ clients, query, setQuery, onOpenClient, onMergeClients, mergeLogs = [], onUndoMerge, duplicateReviewDecisions = [], onMarkNotDuplicate, onPostponeDuplicate }) {
   const [family, setFamily] = useState("Todas");
   const [portfolio, setPortfolio] = useState("Todos");
   const [contact, setContact] = useState("Todos");
@@ -252,6 +252,10 @@ export function Clients({ clients, query, setQuery, onOpenClient, onMergeClients
     </section>
   );
 }
+
+// Memoizado: App() re-renderiza seguido por motivos ajenos a esta vista
+// (sync, otras pantallas), y detectar duplicados/candidatos es trabajo real.
+export const Clients = memo(ClientsBase);
 
 export function Contacts({ clients, query, setQuery, onOpenClient }) {
   const rows = clients.flatMap((client) =>

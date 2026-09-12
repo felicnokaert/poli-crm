@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { Search } from "lucide-react";
 import {
   groupWhatsAppThreads,
@@ -9,7 +9,7 @@ import { FAMILIES } from "./families.mjs";
 import { Empty } from "./ui-primitives";
 import { InboxRow, LegacyInboxRow } from "./InboxComponents";
 
-export function WhatsAppInbox({
+function WhatsAppInboxBase({
   items,
   statusEvents,
   clients,
@@ -449,3 +449,7 @@ export function WhatsAppInbox({
     </div>
   );
 }
+
+// Memoizado: esta vista agrupa/filtra threads con trabajo no trivial, y
+// App() re-renderiza seguido por motivos ajenos (sync, otras pantallas).
+export const WhatsAppInbox = memo(WhatsAppInboxBase);

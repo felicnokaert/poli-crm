@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { CheckCircle2, Plus, Search, X } from "lucide-react";
 import { formatDate } from "./utils.mjs";
 import { Empty, Fact } from "./ui-primitives";
@@ -34,7 +34,7 @@ function DueDateShortcuts({ value, onPick }) {
   );
 }
 
-export function Tasks({ items, onToggle, onOpen, onNew }) {
+function TasksBase({ items, onToggle, onOpen, onNew }) {
   const [filter, setFilter] = useState("pending");
   const [query, setQuery] = useState("");
   const ordered = [...items].sort(
@@ -103,6 +103,11 @@ export function Tasks({ items, onToggle, onOpen, onNew }) {
     </section>
   );
 }
+
+// Memoizado por el mismo motivo que Dashboard: App() re-renderiza seguido
+// por estado ajeno a esta vista (sync, otras pantallas) y sus 4 props ya
+// llegan estables via useCallback en App.jsx.
+export const Tasks = memo(TasksBase);
 
 export function TaskList({
   items,

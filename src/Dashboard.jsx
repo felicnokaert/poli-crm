@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import {
   BarChart3,
   CalendarCheck,
@@ -256,7 +256,7 @@ export function DayMode({
   );
 }
 
-export function Dashboard({
+function DashboardBase({
   metrics,
   tasks,
   interactions,
@@ -468,3 +468,9 @@ export function Dashboard({
     </div>
   );
 }
+
+// Memoizado: App() re-renderiza seguido por motivos ajenos al dashboard
+// (sync status, edición de otras vistas, etc.) y este componente hace un
+// trabajo de armado de radares/listas nada gratis, así que conviene evitar
+// re-renderizarlo cuando ninguna de sus props cambió realmente.
+export const Dashboard = memo(DashboardBase);

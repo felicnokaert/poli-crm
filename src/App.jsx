@@ -90,6 +90,12 @@ import { useNavGroups } from "./hooks/useNavGroups";
 
 // "Registrar conversación" solo tiene sentido donde se sigue a un cliente
 // puntual, no en todos los módulos.
+// Referencia estable para props tipo array que suelen venir undefined (ej.
+// data.mergeLogs / data.duplicateReviewDecisions antes de la primera fusión):
+// usar "|| []" inline crearía un array nuevo en cada render de App() y
+// rompería el React.memo de <Clients>, que recibe estas props.
+const EMPTY_ARRAY = [];
+
 const LOG_CONVERSATION_VIEWS = ["conversations"];
 
 const STORAGE_KEY = "poliplast-sales-copilot-v1";
@@ -246,6 +252,19 @@ export default function App() {
     };
   }, [data]);
 
+  // Memoizado: es la prop `clients` de <Clients>, que ahora está envuelto en
+  // React.memo - sin esto se calculaba un array nuevo en cada render de
+  // App() (ej. al tipear en el buscador de otra pantalla, o al tick de
+  // syncStatus) y el memo nunca evitaba nada. Se calcula acá (antes de los
+  // early return de abajo) para no violar las reglas de hooks.
+  const filteredClients = useMemo(
+    () =>
+      data.clients.filter((client) =>
+        clientSearchText(client).toLowerCase().includes(query.toLowerCase()),
+      ),
+    [data.clients, query],
+  );
+
   if (!authReady) return <Splash text="Preparando acceso seguro…" />;
   if (onlineConfigured && !session) return <LoginScreen />;
   // Mientras se descarga el workspace inicial de Supabase no había ningún
@@ -269,10 +288,6 @@ export default function App() {
     }
     return <Splash text="Cargando tu información…" />;
   }
-
-  const filteredClients = data.clients.filter((client) =>
-    clientSearchText(client).toLowerCase().includes(query.toLowerCase()),
-  );
 
   function saveInteraction(event) {
     event.preventDefault();
@@ -1538,8 +1553,8 @@ export default function App() {
             tasks={data.tasks}
             interactions={data.interactions}
             clients={data.clients}
-            sales={data.sales || []}
-            inbox={data.inbox || []}
+            sales={data.sales || EMPTY_ARRAY}
+            inbox={data.inbox || EMPTY_ARRAY}
             myChannels={myChannels}
             dailySignals={data.dailySignals}
             onToggle={toggleTask}
@@ -1623,9 +1638,9 @@ export default function App() {
             setQuery={setQuery}
             onOpenClient={setSelectedClientId}
             onMergeClients={mergeClient}
-            mergeLogs={data.mergeLogs || []}
+            mergeLogs={data.mergeLogs || EMPTY_ARRAY}
             onUndoMerge={undoMerge}
-            duplicateReviewDecisions={data.duplicateReviewDecisions || []}
+            duplicateReviewDecisions={data.duplicateReviewDecisions || EMPTY_ARRAY}
             onMarkNotDuplicate={markNotDuplicate}
             onPostponeDuplicate={postponeDuplicate}
           />

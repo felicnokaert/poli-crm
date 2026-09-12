@@ -14,11 +14,25 @@
 // en un módulo ESM necesita poder caminar hacia arriba por el filesystem
 // buscando node_modules, y eso requiere que el módulo tenga una URL de
 // archivo real dentro del proyecto.
-import { rolldown } from "rolldown";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
+
+// `rolldown` es una dependencia transitiva de `vite` (no está en
+// package.json a propósito, no la agregamos nosotros). En un layout plano
+// (npm) eso alcanza para poder hacer `import "rolldown"` directo porque todo
+// termina en el mismo node_modules de arriba. Pero el repo usa pnpm, que NO
+// hoistea dependencias transitivas — bajo pnpm, "rolldown" no existe en el
+// node_modules de nivel superior, solo dentro del node_modules privado de
+// `vite` (node_modules/.pnpm/vite@.../node_modules/rolldown). Por eso se
+// resuelve manualmente a partir de dónde vive `vite`, igual que Node
+// resolvería un `import` normal desde dentro del propio paquete `vite`.
+const require = createRequire(import.meta.url);
+const viteDir = path.dirname(require.resolve("vite/package.json"));
+const rolldownEntry = require.resolve("rolldown", { paths: [viteDir] });
+const { rolldown } = await import(pathToFileURL(rolldownEntry).href);
 
 const CACHE_DIR = path.resolve(import.meta.dirname, "..", ".jsx-cache");
 mkdirSync(CACHE_DIR, { recursive: true });

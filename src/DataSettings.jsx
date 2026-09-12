@@ -27,6 +27,7 @@ import { CHANNELS, initialState, today } from "./app-shared";
 export function DataSettings({ data, setData, session, syncStatus }) {
   const myChannels = channelsForEmail(session?.user?.email);
   const [message, setMessage] = useState("");
+  const [messageIsError, setMessageIsError] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [exportFamily, setExportFamily] = useState("Todas");
   const [pendingClientImport, setPendingClientImport] = useState(null);
@@ -34,6 +35,19 @@ export function DataSettings({ data, setData, session, syncStatus }) {
   const [technicalImportBusy, setTechnicalImportBusy] = useState(false);
   const [technicalImportFamilyOverrides, setTechnicalImportFamilyOverrides] = useState({});
   const [technicalImportFiles, setTechnicalImportFiles] = useState({});
+
+  // Un solo estado `message` servía tanto para avisos de éxito como de error,
+  // sin distinción visual (todos se veían iguales) - con esto los errores se
+  // resaltan con el mismo estilo `.system-message.error` que ya existe en el
+  // resto de la app, en vez de perderse en un aviso neutro.
+  function showMessage(text) {
+    setMessageIsError(false);
+    setMessage(text);
+  }
+  function showError(text) {
+    setMessageIsError(true);
+    setMessage(text);
+  }
 
   async function importTechnicalDocuments(event) {
     const files = [...(event.target.files || [])];
@@ -76,11 +90,11 @@ export function DataSettings({ data, setData, session, syncStatus }) {
       setTechnicalImportFiles(Object.fromEntries(files.map((file) => [file.webkitRelativePath || file.name, file])));
       const preview = classifyInventoryImport(candidates, existing);
       setTechnicalImportPreview(preview);
-      setMessage(
+      showMessage(
         `Vista previa lista: ${preview.new.length} nuevos, ${preview.modified.length} modificados, ${preview.exactDuplicates.length} duplicados exactos, ${preview.possibleDuplicates.length} posibles duplicados, ${preview.errors.length} errores. Nada se guardó todavía. Revisá la familia sugerida de cada uno antes de guardar.`,
       );
     } catch (error) {
-      setMessage(error.message || "No se pudo analizar los archivos.");
+      showError(error.message || "No se pudo analizar los archivos.");
     } finally {
       setTechnicalImportBusy(false);
     }
@@ -97,14 +111,14 @@ export function DataSettings({ data, setData, session, syncStatus }) {
       }));
       const saved = await saveInventoryImport(withFamily, technicalImportFiles);
       const attached = saved.filter((doc) => doc.storagePath).length;
-      setMessage(
+      showMessage(
         `${saved.length} documentos guardados como "inventariado" (${attached} con su PDF adjunto y listo para que el copiloto lo lea). Ningún documento quedó "vigente" automáticamente - falta la validación humana.`,
       );
       setTechnicalImportPreview(null);
       setTechnicalImportFamilyOverrides({});
       setTechnicalImportFiles({});
     } catch (error) {
-      setMessage(error.message || "No se pudo guardar el inventario.");
+      showError(error.message || "No se pudo guardar el inventario.");
     } finally {
       setTechnicalImportBusy(false);
     }
@@ -112,14 +126,14 @@ export function DataSettings({ data, setData, session, syncStatus }) {
 
   async function startWhatsAppConnection() {
     setConnecting(true);
-    setMessage("Abriendo conexión segura con Meta…");
+    showMessage("Abriendo conexión segura con Meta…");
     try {
       const result = await connectWhatsApp(session);
-      setMessage(
+      showMessage(
         `WhatsApp conectado${result.phoneNumberId ? ` · Phone ID ${result.phoneNumberId}` : ""}. El CRM ya puede recibir eventos del número autorizado.`,
       );
     } catch (error) {
-      setMessage(error.message || "No se pudo completar la conexión con Meta.");
+      showError(error.message || "No se pudo completar la conexión con Meta.");
     } finally {
       setConnecting(false);
     }
@@ -128,7 +142,7 @@ export function DataSettings({ data, setData, session, syncStatus }) {
   async function activateOfficialChannels() {
     if (!session?.access_token) return;
     setConnecting(true);
-    setMessage(myChannels.length > 1 ? "Sincronizando tus canales…" : "Sincronizando tu WhatsApp…");
+    showMessage(myChannels.length > 1 ? "Sincronizando tus canales…" : "Sincronizando tu WhatsApp…");
     try {
       await Promise.all(
         myChannels.map(async (channel) => {
@@ -146,9 +160,9 @@ export function DataSettings({ data, setData, session, syncStatus }) {
           return payload.channel;
         }),
       );
-      setMessage("Listo. Si igual no te llegan mensajes, revisá en el Business Manager de Meta que el número tenga activada la coexistencia.");
+      showMessage("Listo. Si igual no te llegan mensajes, revisá en el Business Manager de Meta que el número tenga activada la coexistencia.");
     } catch (error) {
-      setMessage(
+      showError(
         error.message || "No se pudo sincronizar. Probá de nuevo en un momento.",
       );
     } finally {
@@ -165,7 +179,7 @@ export function DataSettings({ data, setData, session, syncStatus }) {
     const cohort = buildCommercialCohort();
     const result = mergeCommercialCohort(data);
     setData(result.state);
-    setMessage(
+    showMessage(
       `Cohorte comercial verificada: ${result.addedClients} clientes y ${result.addedTasks} tareas nuevas. ${cohort.clients.length - result.addedClients} cuentas existentes fueron preservadas sin cambios.`,
     );
   }
@@ -177,13 +191,13 @@ export function DataSettings({ data, setData, session, syncStatus }) {
       const clients = await fetchCommercialMaster(session);
       const result = mergeCommercialMaster(data, clients);
       setData(result.state);
-      setMessage(
+      showMessage(
         result.skipped
           ? "La cartera maestra ya está incorporada. Tus ediciones quedan preservadas."
           : `Cartera consolidada: ${result.addedClients} fichas nuevas y ${result.enrichedClients} fichas enriquecidas, sin crear tareas masivas.`,
       );
     } catch (error) {
-      setMessage(error.message || "No se pudo cargar la cartera protegida.");
+      showError(error.message || "No se pudo cargar la cartera protegida.");
     } finally {
       setConnecting(false);
     }
@@ -205,7 +219,7 @@ export function DataSettings({ data, setData, session, syncStatus }) {
     anchor.download = `poliplast-sales-copilot-${today()}.json`;
     anchor.click();
     URL.revokeObjectURL(url);
-    setMessage("Respaldo exportado correctamente.");
+    showMessage("Respaldo exportado correctamente.");
   }
 
   function exportClients() {
@@ -224,7 +238,7 @@ export function DataSettings({ data, setData, session, syncStatus }) {
     anchor.download = `clientes-${exportFamily === "Todas" ? "todos" : exportFamily.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")}-${today()}.csv`;
     anchor.click();
     URL.revokeObjectURL(url);
-    setMessage(
+    showMessage(
       `CSV exportado: ${clients.length} fichas${exportFamily === "Todas" ? "" : ` de ${exportFamily}`}.`,
     );
   }
@@ -235,11 +249,11 @@ export function DataSettings({ data, setData, session, syncStatus }) {
     try {
       const result = mergeClientsCsv(data.clients, await readFileSmart(file));
       setPendingClientImport({ ...result, fileName: file.name });
-      setMessage(
+      showMessage(
         `Vista previa lista: ${result.added} empresas nuevas, ${result.updated} actualizadas y ${result.skipped} filas omitidas. Todavía no se guardó nada.`,
       );
     } catch (error) {
-      setMessage(error.message || "No se pudo importar el CSV.");
+      showError(error.message || "No se pudo importar el CSV.");
     } finally {
       event.target.value = "";
     }
@@ -251,7 +265,7 @@ export function DataSettings({ data, setData, session, syncStatus }) {
     const duplicateNote = pendingClientImport.duplicatePhones?.length
       ? ` ${pendingClientImport.duplicatePhones.length} teléfonos compartidos quedaron señalados para revisión, sin fusionarse.`
       : "";
-    setMessage(
+    showMessage(
       `CSV incorporado: ${pendingClientImport.added} empresas nuevas, ${pendingClientImport.updated} actualizadas y ${pendingClientImport.skipped} filas omitidas.${duplicateNote}`,
     );
     setPendingClientImport(null);
@@ -274,11 +288,11 @@ export function DataSettings({ data, setData, session, syncStatus }) {
         ...payload.data,
         inbox: payload.data.inbox || [],
       });
-      setMessage(
+      showMessage(
         `Respaldo importado: ${payload.data.clients.length} clientes y ${payload.data.interactions.length} conversaciones.`,
       );
     } catch {
-      setMessage(
+      showError(
         "No se pudo importar: el archivo no corresponde a un respaldo válido.",
       );
     } finally {
@@ -310,11 +324,11 @@ export function DataSettings({ data, setData, session, syncStatus }) {
           ...data.inbox,
         ],
       });
-      setMessage(
+      showMessage(
         `${valid.length} mensajes nuevos incorporados a la bandeja; ${incoming.length - valid.length} duplicados o eventos de sistema omitidos.`,
       );
     } catch {
-      setMessage(
+      showError(
         "No se pudo importar: se esperaba un arreglo de eventos normalizados del webhook.",
       );
     } finally {
@@ -358,7 +372,11 @@ export function DataSettings({ data, setData, session, syncStatus }) {
             </button>
           </p>
         )}
-        {message && <div className="system-message">{message}</div>}
+        {message && (
+          <div className={`system-message${messageIsError ? " error" : ""}`}>
+            {message}
+          </div>
+        )}
         {myChannels.length > 1 && (
           <button type="button" className="link-button" disabled={connecting} onClick={startWhatsAppConnection}>
             + Conectar un número nuevo

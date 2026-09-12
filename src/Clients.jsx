@@ -3,9 +3,9 @@ import { Search } from "lucide-react";
 import { formatDate } from "./utils.mjs";
 import { Empty } from "./ui-primitives";
 import { clientContacts } from "./client-contacts.mjs";
-import { detectDuplicateClientCandidates } from "./duplicate-candidates.mjs";
+import { applyDuplicateReviewDecisions, detectDuplicateClientCandidates } from "./duplicate-candidates.mjs";
 
-export function Clients({ clients, query, setQuery, onOpenClient, onMergeClients, mergeLogs = [], onUndoMerge }) {
+export function Clients({ clients, query, setQuery, onOpenClient, onMergeClients, mergeLogs = [], onUndoMerge, duplicateReviewDecisions = [], onMarkNotDuplicate, onPostponeDuplicate }) {
   const [family, setFamily] = useState("Todas");
   const [portfolio, setPortfolio] = useState("Todos");
   const [contact, setContact] = useState("Todos");
@@ -14,8 +14,8 @@ export function Clients({ clients, query, setQuery, onOpenClient, onMergeClients
   const [page, setPage] = useState(1);
   const pageSize = 50;
   const duplicateCandidates = useMemo(
-    () => detectDuplicateClientCandidates(clients),
-    [clients],
+    () => applyDuplicateReviewDecisions(detectDuplicateClientCandidates(clients), duplicateReviewDecisions),
+    [clients, duplicateReviewDecisions],
   );
   const duplicateCounts = duplicateCandidates.reduce(
     (counts, candidate) => ({ ...counts, [candidate.confidence]: counts[candidate.confidence] + 1 }),
@@ -149,6 +149,20 @@ export function Clients({ clients, query, setQuery, onOpenClient, onMergeClients
                     </button>
                     <button type="button" onClick={() => onMergeClients(right.id, left.id)}>
                       Fusionar, quedarse con "{right.company}"
+                    </button>
+                    <button
+                      type="button"
+                      className="duplicate-action-secondary"
+                      onClick={() => onMarkNotDuplicate?.(candidate)}
+                    >
+                      No son duplicados
+                    </button>
+                    <button
+                      type="button"
+                      className="duplicate-action-secondary"
+                      onClick={() => onPostponeDuplicate?.(candidate)}
+                    >
+                      Postergar
                     </button>
                   </div>
                 </article>

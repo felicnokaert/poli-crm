@@ -92,3 +92,26 @@ export function detectDuplicateClientCandidates(clients = []) {
   const order = { high: 0, medium: 1, low: 2 };
   return candidates.sort((a, b) => order[a.confidence] - order[b.confidence] || a.id.localeCompare(b.id));
 }
+
+// Aplica las decisiones de revisión de la bandeja (Sección 3.4/5 de
+// docs/IDENTIDAD_UNICA_CLIENTE_SPEC.md) sobre la lista recién detectada:
+// - "not_duplicate" es permanente: el par nunca vuelve a aparecer, sin
+//   importar qué señales tenga en el futuro.
+// - "postponed" es temporal: se oculta mientras el conjunto de señales
+//   (comparado por `type`) sea el mismo que tenía al postergarlo. Si surge
+//   una señal nueva (o desaparece una que tenía), es información que Felipe
+//   no vio al postergar, así que vuelve a aparecer.
+export function applyDuplicateReviewDecisions(candidates = [], decisions = []) {
+  const byId = new Map(decisions.map((decision) => [decision.id, decision]));
+  return candidates.filter((candidate) => {
+    const decision = byId.get(candidate.id);
+    if (!decision) return true;
+    if (decision.decision === 'not_duplicate') return false;
+    if (decision.decision === 'postponed') {
+      const before = [...new Set(decision.signalsAtDecision || [])].sort();
+      const now = [...new Set(candidate.signals.map((signal) => signal.type))].sort();
+      return JSON.stringify(before) !== JSON.stringify(now);
+    }
+    return true;
+  });
+}

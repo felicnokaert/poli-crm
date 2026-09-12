@@ -1,4 +1,4 @@
-const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], boardLists: [], boardCards: [], salesGoals: [], businessUnits: [], deletedRecordIds: {}, dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '', tasksClosedThrough: '', primaryChannel: 'general', profileName: '', mergeLogs: [] };
+const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], boardLists: [], boardCards: [], salesGoals: [], businessUnits: [], deletedRecordIds: {}, dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '', tasksClosedThrough: '', primaryChannel: 'general', profileName: '', mergeLogs: [], duplicateReviewDecisions: [] };
 const RECORD_COLLECTIONS = ['clients', 'interactions', 'tasks', 'opportunities', 'sales', 'boardLists', 'boardCards', 'salesGoals', 'businessUnits'];
 const OBSOLETE_PREVIEW_TYPES = new Set(['unread_preview', 'unread_notice', 'verified_unread_preview']);
 
@@ -142,6 +142,7 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
     primaryChannel: local.primaryChannel || remote.primaryChannel || 'general',
     profileName: local.profileName || remote.profileName || '',
     mergeLogs: mergeRecords(local.mergeLogs, remote.mergeLogs),
+    duplicateReviewDecisions: mergeRecords(local.duplicateReviewDecisions, remote.duplicateReviewDecisions),
   };
 }
 
@@ -227,6 +228,28 @@ export function undoClientMerge(state = EMPTY_STATE, mergeLogId) {
     mergeLogs: logs.map((entry) => (entry.id === mergeLogId ? { ...entry, deshecho: true, deshechoEn: stamp } : entry)),
   };
   return restoreRecordId(nextState, 'clients', merged.id);
+}
+
+// Registra la decisión de revisión de un par de posibles duplicados
+// (Sección 3.4/5 de docs/IDENTIDAD_UNICA_CLIENTE_SPEC.md): "no son
+// duplicados" (permanente, el par nunca vuelve a aparecer aunque cambien
+// las señales) o "postergar" (temporal, vuelve a aparecer si las señales
+// que tenía el candidato al postergarlo cambian). `signalsAtDecision` guarda
+// los `type` de las señales del candidato en el momento de decidir, para
+// poder comparar después (ver duplicate-candidates.mjs).
+export function recordDuplicateReviewDecision(state = EMPTY_STATE, pairId, decision, options = {}) {
+  if (!pairId || !['not_duplicate', 'postponed'].includes(decision)) return state;
+  const stamp = new Date().toISOString();
+  const entry = {
+    id: pairId,
+    decision,
+    decidedBy: options.actor || '',
+    decidedAt: stamp,
+    updatedAt: stamp,
+    signalsAtDecision: options.signalsAtDecision || [],
+  };
+  const rest = (state.duplicateReviewDecisions || []).filter((item) => item.id !== pairId);
+  return { ...state, duplicateReviewDecisions: [...rest, entry] };
 }
 
 export function workspaceStatesEqual(left = EMPTY_STATE, right = EMPTY_STATE) {

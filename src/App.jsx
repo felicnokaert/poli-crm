@@ -64,6 +64,7 @@ import {
   mergeWorkspaceState,
   onlineConfigured,
   recordDeletions,
+  recordDuplicateReviewDecision,
   saveOnlineState,
   supabase,
   undoClientMerge,
@@ -1451,6 +1452,20 @@ export default function App() {
     return true;
   }
 
+  function markNotDuplicate(candidate) {
+    setData((current) => recordDuplicateReviewDecision(current, candidate.id, "not_duplicate", {
+      actor: session?.user?.email || "",
+      signalsAtDecision: candidate.signals.map((signal) => signal.type),
+    }));
+  }
+
+  function postponeDuplicate(candidate) {
+    setData((current) => recordDuplicateReviewDecision(current, candidate.id, "postponed", {
+      actor: session?.user?.email || "",
+      signalsAtDecision: candidate.signals.map((signal) => signal.type),
+    }));
+  }
+
   async function deleteInteraction(id) {
     const interaction = data.interactions.find((item) => item.id === id);
     if (!interaction) return false;
@@ -1820,6 +1835,9 @@ export default function App() {
             onMergeClients={mergeClient}
             mergeLogs={data.mergeLogs || []}
             onUndoMerge={undoMerge}
+            duplicateReviewDecisions={data.duplicateReviewDecisions || []}
+            onMarkNotDuplicate={markNotDuplicate}
+            onPostponeDuplicate={postponeDuplicate}
           />
         )}
         {view === "contacts" && (

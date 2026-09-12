@@ -264,6 +264,7 @@ export function Dashboard({
   sales,
   inbox,
   myChannels,
+  dailySignals,
   onToggle,
   onOpenTask,
   onOpenInteraction,
@@ -271,10 +272,17 @@ export function Dashboard({
   onNavigate,
 }) {
   const clientsById = new Map(clients.map((client) => [client.id, client]));
-  const repurchaseRadar = buildRepurchaseRadar(sales).slice(0, 6);
-  const coldQuotes = findColdQuotes(inbox, sales).slice(0, 6);
-  const hotLeads = findStaleHotLeads(inbox).slice(0, 6);
   const now = today();
+  // Si el cron server-side ya calculó las señales de hoy (dailySignals en el
+  // estado del workspace, ver src/daily-maintenance.mjs), las usamos en vez
+  // de recalcular todo client-side - esto confirma que lo persistido se usa
+  // de verdad y evita repetir el trabajo en el navegador. Si no existe o es
+  // de un día anterior (nadie corrió el cron todavía, o es una fila vieja),
+  // hacemos fallback al cálculo client-side de siempre para no romper nada.
+  const signalsAreFresh = dailySignals && String(dailySignals.calculatedAt || "").slice(0, 10) === now;
+  const repurchaseRadar = (signalsAreFresh ? dailySignals.repurchase : buildRepurchaseRadar(sales)).slice(0, 6);
+  const coldQuotes = (signalsAreFresh ? dailySignals.coldQuotes : findColdQuotes(inbox, sales)).slice(0, 6);
+  const hotLeads = (signalsAreFresh ? dailySignals.hotLeads : findStaleHotLeads(inbox)).slice(0, 6);
   const overdueTasks = tasks.filter((task) => !task.done && task.dueDate && task.dueDate < now);
   const dueTodayTasks = tasks.filter((task) => !task.done && task.dueDate === now);
   const latestByContact = [];

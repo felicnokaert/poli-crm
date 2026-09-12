@@ -1,4 +1,7 @@
 import { completeTasksThrough } from './workspace.mjs';
+import { findStaleHotLeads } from './hot-leads-radar.mjs';
+import { buildRepurchaseRadar } from './repurchase-radar.mjs';
+import { findColdQuotes } from './cold-quotes.mjs';
 
 const EMPTY_STATE = { tasks: [], tasksClosedThrough: '' };
 
@@ -26,5 +29,56 @@ export function buildDailyMaintenanceUpdate(state = EMPTY_STATE, nowISO = new Da
     changed: true,
     nextState,
     summary: { tasksClosed, cutoff: nowISO },
+  };
+}
+
+// Las 3 señales de negocio (leads calientes sin respuesta, cotizaciones
+// frías, radar de recompra) hoy se calculan client-side cada vez que alguien
+// abre el CRM (ver src/Dashboard.jsx). Si nadie abre la app por unos días,
+// esas señales no se calculan ni se guardan en ningún lado. Esta función
+// corre las mismas 3 funciones puras server-side y persiste el resultado en
+// `state.dailySignals`, con un timestamp de cuándo se calculó, para que la
+// señal exista aunque nadie haya abierto el CRM ese día.
+export function buildDailySignalsUpdate(state = EMPTY_STATE, nowISO = new Date().toISOString()) {
+  const inbox = Array.isArray(state.inbox) ? state.inbox : [];
+  const sales = Array.isArray(state.sales) ? state.sales : [];
+  const now = new Date(nowISO);
+
+  const hotLeads = findStaleHotLeads(inbox, { today: now });
+  const coldQuotes = findColdQuotes(inbox, sales, { today: now });
+  const repurchase = buildRepurchaseRadar(sales, now);
+
+  const dailySignals = {
+    calculatedAt: nowISO,
+    hotLeadsCount: hotLeads.length,
+    coldQuotesCount: coldQuotes.length,
+    repurchaseCount: repurchase.length,
+    hotLeads,
+    coldQuotes,
+    repurchase,
+  };
+
+  return {
+    changed: true,
+    nextState: { ...state, dailySignals },
+    summary: {
+      hotLeadsCount: hotLeads.length,
+      coldQuotesCount: coldQuotes.length,
+      repurchaseCount: repurchase.length,
+      calculatedAt: nowISO,
+    },
+  };
+}
+
+// Combina el cierre de tareas vencidas con el cálculo/persistencia de las
+// señales diarias, para que api/cron-daily-maintenance.js llame una sola
+// función por fila de workspace_states.
+export function buildFullDailyMaintenanceUpdate(state = EMPTY_STATE, nowISO = new Date().toISOString()) {
+  const tasksUpdate = buildDailyMaintenanceUpdate(state, nowISO);
+  const signalsUpdate = buildDailySignalsUpdate(tasksUpdate.nextState, nowISO);
+  return {
+    changed: tasksUpdate.changed || signalsUpdate.changed,
+    nextState: signalsUpdate.nextState,
+    summary: { ...tasksUpdate.summary, ...signalsUpdate.summary },
   };
 }

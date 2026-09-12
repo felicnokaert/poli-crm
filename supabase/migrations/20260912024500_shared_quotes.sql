@@ -41,6 +41,7 @@ create table if not exists public.sales_quote_items (
   vat_rate numeric(7,6) check (vat_rate >= 0),
   price_source text,
   commercial_rule_id uuid references public.commercial_rules(id) on delete restrict,
+  line_snapshot jsonb not null,
   active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

@@ -14,7 +14,7 @@ test('cotizaciones y renglones tienen RLS y no permiten borrado al equipo', () =
 });
 
 test('cada renglón conserva snapshot comercial y vínculo al catálogo', () => {
-  for (const field of ['variant_id', 'product_id', 'product_name', 'sku', 'brand', 'family', 'unit_amount', 'currency', 'vat_rate', 'price_source']) {
+  for (const field of ['variant_id', 'product_id', 'product_name', 'sku', 'brand', 'family', 'unit_amount', 'currency', 'vat_rate', 'price_source', 'line_snapshot']) {
     assert.match(migration, new RegExp(`\\b${field}\\b`, 'i'));
   }
   assert.match(migration, /unique index[^;]+\(quote_id, line_key\)/is);

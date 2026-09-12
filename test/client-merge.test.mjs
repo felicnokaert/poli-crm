@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { mergeClients, undoClientMerge } from '../src/workspace.mjs';
+import { mergeClients, recordDuplicateReviewDecision, undoClientMerge } from '../src/workspace.mjs';
 
 function baseState(overrides = {}) {
   return {
@@ -58,4 +58,26 @@ test('undoClientMerge is a no-op for an already-undone or unknown mergeLog', () 
   const twice = undoClientMerge(undone, logId);
   assert.deepEqual(twice, undone);
   assert.deepEqual(undoClientMerge(baseState(), 'nope'), baseState());
+});
+
+test('recordDuplicateReviewDecision guarda la decisión y sobreescribe una previa del mismo par', () => {
+  const state = recordDuplicateReviewDecision(baseState(), 'a::b', 'postponed', {
+    actor: 'felipe@poliplast.com',
+    signalsAtDecision: ['company_name_exact'],
+  });
+  assert.equal(state.duplicateReviewDecisions.length, 1);
+  assert.equal(state.duplicateReviewDecisions[0].id, 'a::b');
+  assert.equal(state.duplicateReviewDecisions[0].decision, 'postponed');
+  assert.equal(state.duplicateReviewDecisions[0].decidedBy, 'felipe@poliplast.com');
+  assert.deepEqual(state.duplicateReviewDecisions[0].signalsAtDecision, ['company_name_exact']);
+
+  const updated = recordDuplicateReviewDecision(state, 'a::b', 'not_duplicate', { signalsAtDecision: ['company_name_exact', 'cuit_exact'] });
+  assert.equal(updated.duplicateReviewDecisions.length, 1);
+  assert.equal(updated.duplicateReviewDecisions[0].decision, 'not_duplicate');
+});
+
+test('recordDuplicateReviewDecision es un no-op sin pairId o con una decisión desconocida', () => {
+  const state = baseState();
+  assert.deepEqual(recordDuplicateReviewDecision(state, '', 'postponed'), state);
+  assert.deepEqual(recordDuplicateReviewDecision(state, 'a::b', 'algo_raro'), state);
 });

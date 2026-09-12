@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { detectDuplicateClientCandidates } from '../src/duplicate-candidates.mjs';
+import { applyDuplicateReviewDecisions, detectDuplicateClientCandidates } from '../src/duplicate-candidates.mjs';
 
 test('suggests same CUIT as high confidence but always requires human review', () => {
   const [candidate] = detectDuplicateClientCandidates([
@@ -60,4 +60,53 @@ test('scans a large mostly-unique portfolio without quadratic comparisons', () =
   assert.equal(result.length, 1);
   assert.equal(result[0].confidence, 'high');
   assert.ok(performance.now() - startedAt < 250);
+});
+
+test('applyDuplicateReviewDecisions: a pair marked "no son duplicados" never reaparece, aunque cambien las señales', () => {
+  const clients = [
+    { id: 'a', company: 'Uno', cuit: '30-1' },
+    { id: 'b', company: 'Uno', cuit: '30-1' },
+  ];
+  const candidates = detectDuplicateClientCandidates(clients);
+  const [candidate] = candidates;
+  const decisions = [{ id: candidate.id, decision: 'not_duplicate', signalsAtDecision: candidate.signals.map((s) => s.type) }];
+  assert.deepEqual(applyDuplicateReviewDecisions(candidates, decisions), []);
+
+  // Ahora aparece una señal nueva (teléfono también coincide): sigue sin
+  // reaparecer porque la decisión "no son duplicados" es permanente.
+  clients[0].contacts = [{ phone: '1144445555' }];
+  clients[1].contacts = [{ phone: '1144445555' }];
+  const laterCandidates = detectDuplicateClientCandidates(clients);
+  assert.deepEqual(applyDuplicateReviewDecisions(laterCandidates, decisions), []);
+});
+
+test('applyDuplicateReviewDecisions: un par "postponed" se oculta mientras las señales sean las mismas', () => {
+  const clients = [
+    { id: 'a', company: 'Poliplast Sur' },
+    { id: 'b', company: 'Poliplast Sur' },
+  ];
+  const candidates = detectDuplicateClientCandidates(clients);
+  const [candidate] = candidates;
+  const decisions = [{ id: candidate.id, decision: 'postponed', signalsAtDecision: candidate.signals.map((s) => s.type) }];
+  assert.deepEqual(applyDuplicateReviewDecisions(candidates, decisions), []);
+});
+
+test('applyDuplicateReviewDecisions: un par "postponed" reaparece si surge una señal nueva', () => {
+  const clients = [
+    { id: 'a', company: 'Poliplast Sur' },
+    { id: 'b', company: 'Poliplast Sur' },
+  ];
+  const before = detectDuplicateClientCandidates(clients);
+  const [candidate] = before;
+  const decisions = [{ id: candidate.id, decision: 'postponed', signalsAtDecision: candidate.signals.map((s) => s.type) }];
+  assert.deepEqual(applyDuplicateReviewDecisions(before, decisions), []);
+
+  // Se agrega una coincidencia de CUIT: es información nueva que Felipe no
+  // vio al postergar, así que el candidato debe reaparecer.
+  clients[0].cuit = '30-12345678-9';
+  clients[1].cuit = '30123456789';
+  const after = detectDuplicateClientCandidates(clients);
+  const visible = applyDuplicateReviewDecisions(after, decisions);
+  assert.equal(visible.length, 1);
+  assert.equal(visible[0].id, candidate.id);
 });

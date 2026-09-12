@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { filterDismissedEvents, isLegacyWhatsAppPreview } from './whatsapp-events.mjs';
 import { whatsappContactIdentity, whatsappContactKey } from './whatsapp-threads.mjs';
-export { completeTasksThrough, mergeWorkspaceState, recordDeletions, restoreRecordId, workspaceStatesEqual } from './workspace.mjs';
+export { completeTasksThrough, mergeClients, mergeWorkspaceState, recordDeletions, restoreRecordId, undoClientMerge, workspaceStatesEqual } from './workspace.mjs';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;

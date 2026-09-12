@@ -44,11 +44,13 @@ import {
 import {
   completeTasksThrough,
   loadOnlineState,
+  mergeClients,
   mergeWorkspaceState,
   onlineConfigured,
   recordDeletions,
   saveOnlineState,
   supabase,
+  undoClientMerge,
   workspaceStatesEqual,
 } from "./online";
 import { connectWhatsApp } from "./meta-onboarding";
@@ -1569,6 +1571,45 @@ export default function App() {
     return true;
   }
 
+  const CLIENT_MERGE_FIELDS = ["company", "legalName", "cuit", "temperature", "family", "stage", "sourceType", "clientType", "industry"];
+
+  async function mergeClient(survivorId, mergedId) {
+    const survivor = data.clients.find((item) => item.id === survivorId);
+    const merged = data.clients.find((item) => item.id === mergedId);
+    if (!survivor || !merged) return false;
+    const conflictFields = CLIENT_MERGE_FIELDS.filter((field) => {
+      const a = String(survivor[field] ?? "").trim();
+      const b = String(merged[field] ?? "").trim();
+      return a && b && a !== b;
+    });
+    const detail = conflictFields.length
+      ? ` Quedan los datos de "${survivor.company}" en los campos donde difieren (${conflictFields.join(", ")}).`
+      : "";
+    if (
+      !(await confirm(
+        `¿Fusionar "${merged.company}" dentro de "${survivor.company}"? Se unen sus contactos, conversaciones, tareas y oportunidades en una sola ficha.${detail} Se puede deshacer desde Sistema.`,
+        { confirmLabel: "Fusionar" },
+      ))
+    )
+      return false;
+    setData((current) =>
+      mergeClients(current, survivorId, mergedId, {
+        actor: session?.user?.email || "",
+        conflictFields,
+      }),
+    );
+    return true;
+  }
+
+  async function undoMerge(mergeLogId) {
+    const log = (data.mergeLogs || []).find((item) => item.id === mergeLogId);
+    if (!log) return false;
+    const mergedName = log.snapshotAntes?.merged?.company || "la ficha fusionada";
+    if (!(await confirm(`¿Deshacer esta fusión y volver a separar "${mergedName}"?`, { confirmLabel: "Deshacer" }))) return false;
+    setData((current) => undoClientMerge(current, mergeLogId));
+    return true;
+  }
+
   async function deleteInteraction(id) {
     const interaction = data.interactions.find((item) => item.id === id);
     if (!interaction) return false;
@@ -1921,6 +1962,9 @@ export default function App() {
             query={query}
             setQuery={setQuery}
             onOpenClient={setSelectedClientId}
+            onMergeClients={mergeClient}
+            mergeLogs={data.mergeLogs || []}
+            onUndoMerge={undoMerge}
           />
         )}
         {view === "contacts" && (
@@ -4131,7 +4175,7 @@ function Pipeline({ clients, onOpenClient, onChangeStage, onDelete, onAdd }) {
   );
 }
 
-function Clients({ clients, query, setQuery, onOpenClient }) {
+function Clients({ clients, query, setQuery, onOpenClient, onMergeClients, mergeLogs = [], onUndoMerge }) {
   const [family, setFamily] = useState("Todas");
   const [portfolio, setPortfolio] = useState("Todos");
   const [contact, setContact] = useState("Todos");
@@ -4269,11 +4313,43 @@ function Clients({ clients, query, setQuery, onOpenClient }) {
                   <div className="duplicate-signals">
                     {candidate.signals.map((signal) => <span key={signal.type}>{signal.label}</span>)}
                   </div>
+                  <div className="duplicate-actions">
+                    <button type="button" onClick={() => onMergeClients(left.id, right.id)}>
+                      Fusionar, quedarse con "{left.company}"
+                    </button>
+                    <button type="button" onClick={() => onMergeClients(right.id, left.id)}>
+                      Fusionar, quedarse con "{right.company}"
+                    </button>
+                  </div>
                 </article>
               );
             })}
             {!duplicateCandidates.length && <Empty text="No se detectaron posibles duplicados." />}
           </div>
+          {mergeLogs.filter((log) => !log.deshecho).length > 0 && (
+            <div className="merge-log-list">
+              <p className="duplicate-note">Fusiones recientes · se pueden deshacer</p>
+              {mergeLogs
+                .filter((log) => !log.deshecho)
+                .slice(-8)
+                .reverse()
+                .map((log) => {
+                  const survivor = clients.find((client) => client.id === log.clienteSobrevivienteId);
+                  const mergedName = log.snapshotAntes?.merged?.company || "ficha eliminada";
+                  return (
+                    <div className="merge-log-row" key={log.id}>
+                      <span>
+                        "{mergedName}" se fusionó dentro de "{survivor?.company || log.snapshotAntes?.survivor?.company || "ficha"}"
+                        {log.fecha ? ` · ${formatDate(log.fecha)}` : ""}
+                      </span>
+                      <button type="button" onClick={() => onUndoMerge(log.id)}>
+                        Deshacer
+                      </button>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
         </div>
       )}
       {paged.length ? (

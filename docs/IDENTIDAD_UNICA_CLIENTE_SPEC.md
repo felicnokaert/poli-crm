@@ -15,7 +15,7 @@
 - ✅ **Hecho (commit `2b31da0`):** pantalla de solo lectura "Posibles duplicados" dentro de Empresas, con nivel de confianza, señales y comparación básica de las dos fichas. No fusiona ni modifica datos.
 - ✅ **Hecho (commit `adaa155`):** detector indexado para carteras grandes. Se eliminó el cálculo cuadrático que trababa Empresas; prueba de rendimiento con 2.001 clientes incorporada.
 - ✅ **Hecho (commit `c84cdcb`):** una empresa puede administrar varias personas y medios de contacto, elegir el principal, editarlo o quitarlo sin eliminar la empresa. Los campos históricos permanecen sincronizados con el contacto principal.
-- ⏸️ **Diferido por Felipe (10/09/2026):** acciones No son duplicados / Postergar y fusión reversible con comparación completa, `mergeLog` y deshacer. No bloquea el comienzo de Academia comercial.
+- ✅ **Hecho (11/09/2026):** fusión manual reversible desde la bandeja de "Posibles duplicados" (`mergeClients`/`undoClientMerge` en `src/workspace.mjs`). Un click elige qué ficha sobrevive; se unen contactos, conversaciones, tareas y oportunidades; queda un `mergeLog` con snapshot completo y campos en conflicto, con "Deshacer" visible mientras el log no esté deshecho. Falta todavía: acciones "No son duplicados" / "Postergar" para sacar un par de la lista sin fusionarlo, y la pantalla de comparación completa de la Sección 5.1 (hoy la resolución de conflictos es "gana la ficha elegida", no campo por campo).
 - 🔜 **Pendiente del bloque de identidad:** clasificación no comercial persistente a nivel de persona (Sección 6) y QA con casos reales de varias personas/teléfonos.
 - **Preguntas de la Sección 8/Anexo:** ya respondidas por Felipe — ver "Decisiones de Felipe" más abajo, que reemplaza el Anexo original.
 

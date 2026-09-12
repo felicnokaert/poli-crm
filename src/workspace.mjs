@@ -1,4 +1,4 @@
-const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], boardLists: [], boardCards: [], salesGoals: [], businessUnits: [], deletedRecordIds: {}, dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '', tasksClosedThrough: '', primaryChannel: 'general', profileName: '' };
+const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], boardLists: [], boardCards: [], salesGoals: [], businessUnits: [], deletedRecordIds: {}, dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '', tasksClosedThrough: '', primaryChannel: 'general', profileName: '', mergeLogs: [] };
 const RECORD_COLLECTIONS = ['clients', 'interactions', 'tasks', 'opportunities', 'sales', 'boardLists', 'boardCards', 'salesGoals', 'businessUnits'];
 const OBSOLETE_PREVIEW_TYPES = new Set(['unread_preview', 'unread_notice', 'verified_unread_preview']);
 
@@ -141,7 +141,92 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
     tasksClosedThrough: [local.tasksClosedThrough || '', remote.tasksClosedThrough || ''].sort().at(-1) || '',
     primaryChannel: local.primaryChannel || remote.primaryChannel || 'general',
     profileName: local.profileName || remote.profileName || '',
+    mergeLogs: mergeRecords(local.mergeLogs, remote.mergeLogs),
   };
+}
+
+// Fusión manual de dos fichas de cliente (Sección 5 de
+// docs/IDENTIDAD_UNICA_CLIENTE_SPEC.md). A diferencia de
+// consolidateDuplicateClients (desactivada, ver Sección 1 del mismo
+// documento), esto nunca corre solo: lo dispara un click humano desde la
+// bandeja de "Posibles duplicados", y deja un mergeLog reversible con el
+// snapshot completo de ambas fichas y de los registros que se reescribieron.
+export function mergeClients(state = EMPTY_STATE, survivorId, mergedId, options = {}) {
+  const clients = Array.isArray(state.clients) ? state.clients : [];
+  const survivor = clients.find((item) => item.id === survivorId);
+  const merged = clients.find((item) => item.id === mergedId);
+  if (!survivor || !merged || survivor.id === merged.id) return state;
+
+  const seenContact = new Set();
+  const contacts = [
+    ...(Array.isArray(survivor.contacts) ? survivor.contacts : []),
+    ...(Array.isArray(merged.contacts) ? merged.contacts : []),
+  ].filter((contact) => {
+    const identity = String(contact.whatsappId || contact.phone || contact.email || contact.name || '').trim().toLocaleLowerCase('es-AR');
+    if (!identity) return true;
+    if (seenContact.has(identity)) return false;
+    seenContact.add(identity);
+    return true;
+  });
+
+  const stamp = new Date().toISOString();
+  const survivorAfter = { ...survivor, ...(options.fieldOverrides || {}), contacts, updatedAt: stamp };
+
+  const affected = {
+    interactions: (state.interactions || []).filter((item) => item.clientId === mergedId).map((item) => item.id),
+    tasks: (state.tasks || []).filter((item) => item.clientId === mergedId).map((item) => item.id),
+    opportunities: (state.opportunities || []).filter((item) => item.clientId === mergedId).map((item) => item.id),
+  };
+  const rewire = (records = []) => records.map((record) => (record.clientId === mergedId ? { ...record, clientId: survivorId } : record));
+
+  const mergeLogEntry = {
+    id: crypto.randomUUID(),
+    fecha: stamp,
+    ejecutadoPor: options.actor || '',
+    clienteSobrevivienteId: survivorId,
+    clientesFusionadosIds: [mergedId],
+    snapshotAntes: { survivor, merged },
+    affectedRecordIds: affected,
+    camposConflicto: options.conflictFields || [],
+    deshecho: false,
+  };
+
+  const nextState = {
+    ...state,
+    clients: clients.filter((item) => item.id !== mergedId).map((item) => (item.id === survivorId ? survivorAfter : item)),
+    interactions: rewire(state.interactions),
+    tasks: rewire(state.tasks),
+    opportunities: rewire(state.opportunities),
+    mergeLogs: [...(state.mergeLogs || []), mergeLogEntry],
+  };
+  return recordDeletions(nextState, { clients: [mergedId] });
+}
+
+// Deshace una fusión mientras exista su mergeLog: restaura ambas fichas tal
+// como estaban antes (snapshotAntes) y revierte el clientId sólo en los
+// registros que la fusión efectivamente reescribió (affectedRecordIds), no
+// en todo lo que hoy apunte al sobreviviente (que puede incluir cosas que ya
+// le pertenecían antes de fusionar, o de otra fusión posterior).
+export function undoClientMerge(state = EMPTY_STATE, mergeLogId) {
+  const logs = Array.isArray(state.mergeLogs) ? state.mergeLogs : [];
+  const log = logs.find((entry) => entry.id === mergeLogId && !entry.deshecho);
+  if (!log) return state;
+  const { survivor, merged } = log.snapshotAntes;
+  const affected = log.affectedRecordIds || {};
+  const rewireBack = (records = [], ids = []) => {
+    const idSet = new Set(ids);
+    return records.map((record) => (idSet.has(record.id) ? { ...record, clientId: merged.id } : record));
+  };
+  const stamp = new Date().toISOString();
+  const nextState = {
+    ...state,
+    clients: [...(state.clients || []).filter((item) => item.id !== survivor.id), survivor, merged],
+    interactions: rewireBack(state.interactions, affected.interactions),
+    tasks: rewireBack(state.tasks, affected.tasks),
+    opportunities: rewireBack(state.opportunities, affected.opportunities),
+    mergeLogs: logs.map((entry) => (entry.id === mergeLogId ? { ...entry, deshecho: true, deshechoEn: stamp } : entry)),
+  };
+  return restoreRecordId(nextState, 'clients', merged.id);
 }
 
 export function workspaceStatesEqual(left = EMPTY_STATE, right = EMPTY_STATE) {

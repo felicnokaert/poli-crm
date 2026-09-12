@@ -1,4 +1,4 @@
-import { buildDailyMaintenanceUpdate } from '../src/daily-maintenance.mjs';
+import { buildFullDailyMaintenanceUpdate } from '../src/daily-maintenance.mjs';
 
 // Cron interno de mantenimiento (ver docs/AUDITORIA_MADUREZ_PRODUCTO_2026-09-12.md,
 // Automatización 35/100: "cero cron jobs... todo lo inteligente es manual o
@@ -6,11 +6,14 @@ import { buildDailyMaintenanceUpdate } from '../src/daily-maintenance.mjs';
 // alcance acotado a pisa propia: solo mantenimiento de datos server-side,
 // nunca manda mensajes/emails a nadie afuera.
 //
-// Hoy el cierre de tareas vencidas (completeTasksThrough) solo corre
-// client-side cuando alguien abre el CRM (src/App.jsx). Si nadie abre la app
-// por varios días, las tareas vencidas quedan "vivas". Este cron aplica la
-// misma lógica pura (buildDailyMaintenanceUpdate) a cada fila de
-// workspace_states, server-side, todos los días.
+// Hoy el cierre de tareas vencidas (completeTasksThrough) y las 3 señales de
+// negocio (leads calientes sin respuesta, cotizaciones frías, radar de
+// recompra) solo corren client-side cuando alguien abre el CRM (src/App.jsx,
+// src/Dashboard.jsx). Si nadie abre la app por varios días, ni las tareas
+// vencidas se cierran ni las señales se calculan/guardan en ningún lado.
+// Este cron aplica la misma lógica pura (buildFullDailyMaintenanceUpdate) a
+// cada fila de workspace_states, server-side, todos los días, y persiste el
+// resultado de las señales en `data.dailySignals`.
 function authorized(request) {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false; // fail-safe: sin secret configurado, nunca corre.
@@ -47,7 +50,7 @@ export default async function handler(request, response) {
     const rows = await fetchWorkspaceRows(process.env);
     const results = [];
     for (const row of rows) {
-      const { changed, nextState, summary } = buildDailyMaintenanceUpdate(row.data || {}, nowISO);
+      const { changed, nextState, summary } = buildFullDailyMaintenanceUpdate(row.data || {}, nowISO);
       if (changed) await saveWorkspaceRow(process.env, row.workspace_key, nextState);
       results.push({ workspaceKey: row.workspace_key, changed, ...summary });
     }

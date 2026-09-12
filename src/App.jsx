@@ -1753,6 +1753,7 @@ export default function App() {
             sales={data.sales || []}
             inbox={data.inbox || []}
             myChannels={myChannels}
+            dailySignals={data.dailySignals}
             onToggle={toggleTask}
             onOpenTask={setSelectedTaskId}
             onOpenInteraction={setSelectedInteractionId}

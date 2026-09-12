@@ -2,7 +2,7 @@
 
 **Estado:** En implementación parcial (ver "Estado de implementación" abajo). Diseño original sin tocar código; los pasos ya ejecutados por Codex están documentados y verificados.
 **Autor:** Claude (Cowork), a pedido de Marketing / equipo Grupo Poliplast.
-**Fecha:** 09/09/2026. Actualizado 10/09/2026 (estado de implementación + decisiones de Felipe).
+**Fecha:** 09/09/2026. Actualizado 12/09/2026 (estado de implementación + decisiones de Felipe).
 **Prioridad:** Bloque #1 del orden de implementación CRM (ver manual, Sección 19.1).
 **Para:** Codex (implementación), Felipe (decisiones comerciales pendientes).
 
@@ -12,10 +12,11 @@
 
 - ✅ **Hecho (commit `f09313e`):** desactivada `consolidateDuplicateClients` (fusión automática por nombre en cada sincronización, descripta como riesgo #1 en la Sección 1). Se verificó contra duplicados reales de producción (Carrocería Argentina, Ferref Refrigeración, Metalúrgica Bonano) sin fusionar, eliminar ni migrar nada existente. Prueba agregada para impedir que se reactive sin querer. 160 pruebas + compilación completa pasando.
 - ✅ **Hecho (commit `e2e77f7`):** construido el detector de posibles duplicados de la Sección 3.4/4 (solo lectura, no persiste todavía como bandeja): evalúa CUIT, teléfono, email, razón social y nombre comercial; cada candidato explica su señal; nombre coincidente solo queda en confianza baja; ninguna confianza fusiona sola. 165 pruebas + compilación pasando.
-- ✅ **Hecho (commit `2b31da0`):** pantalla de solo lectura "Posibles duplicados" dentro de Empresas, con nivel de confianza, señales y comparación básica de las dos fichas. No fusiona ni modifica datos.
+- ✅ **Hecho (commit `2b31da0`):** pantalla "Posibles duplicados" dentro de Empresas, con nivel de confianza, señales y comparación básica de las dos fichas.
 - ✅ **Hecho (commit `adaa155`):** detector indexado para carteras grandes. Se eliminó el cálculo cuadrático que trababa Empresas; prueba de rendimiento con 2.001 clientes incorporada.
 - ✅ **Hecho (commit `c84cdcb`):** una empresa puede administrar varias personas y medios de contacto, elegir el principal, editarlo o quitarlo sin eliminar la empresa. Los campos históricos permanecen sincronizados con el contacto principal.
-- ✅ **Hecho (11/09/2026):** fusión manual reversible desde la bandeja de "Posibles duplicados" (`mergeClients`/`undoClientMerge` en `src/workspace.mjs`). Un click elige qué ficha sobrevive; se unen contactos, conversaciones, tareas y oportunidades; queda un `mergeLog` con snapshot completo y campos en conflicto, con "Deshacer" visible mientras el log no esté deshecho. Falta todavía: acciones "No son duplicados" / "Postergar" para sacar un par de la lista sin fusionarlo, y la pantalla de comparación completa de la Sección 5.1 (hoy la resolución de conflictos es "gana la ficha elegida", no campo por campo).
+- ✅ **Hecho (11/09/2026):** fusión manual reversible desde la bandeja de "Posibles duplicados" (`mergeClients`/`undoClientMerge` en `src/workspace.mjs`). Un click elige qué ficha sobrevive; se unen contactos, conversaciones, tareas y oportunidades; queda un `mergeLog` con snapshot completo y campos en conflicto, con "Deshacer" visible mientras el log no esté deshecho.
+- ✅ **Hecho, actualizado 12/09/2026:** se agregaron las acciones "No son duplicados" y "Postergar" para sacar un par de la lista sin fusionarlo (`markNotDuplicate`/`postponeDuplicate` en `src/App.jsx`, botones en `src/Clients.jsx`). Con esto, la bandeja ya no es de solo lectura y cubre las cuatro acciones que pedía la Sección 5. Cierra los criterios de aceptación 2 y 3 de la sección "Criterios de aceptación" más abajo. Sigue pendiente la pantalla de comparación campo por campo de la Sección 5.1 (hoy la resolución de conflictos es "gana la ficha elegida", no campo por campo) y el QA con casos reales de cartera a gran escala.
 - 🔜 **Pendiente del bloque de identidad:** clasificación no comercial persistente a nivel de persona (Sección 6) y QA con casos reales de varias personas/teléfonos.
 - **Preguntas de la Sección 8/Anexo:** ya respondidas por Felipe — ver "Decisiones de Felipe" más abajo, que reemplaza el Anexo original.
 
@@ -160,7 +161,7 @@ Este detalle no cambia el diseño de la Sección 3.5 (`mergeLog`) ni del resto d
 
 ## 6. Clasificaciones no comerciales (Equipo interno / Familiar / Proveedor / Otro)
 
-Ya existe una implementación parcial: en la bandeja de WhatsApp (`src/App.jsx`), cada contacto puede marcarse con `excludedCategory` ("Equipo interno", "Familiar / personal", "Proveedor / colaborador", "Otro no comercial"), lo que cambia su `classification_status` a `excluded` y lo saca de la vista operativa de "Por revisar". Por separado, a nivel de cliente/empresa existe `sourceType` con un valor "No corresponde" que cumple una función parecida en la cartera.
+Ya existe una implementación parcial: en la bandeja de WhatsApp (`src/InboxComponents.jsx`, lógica en `src/App.jsx` — el frontend se dividió en componentes por pantalla desde que se escribió esta sección), cada contacto puede marcarse con `excludedCategory` ("Equipo interno", "Familiar / personal", "Proveedor / colaborador", "Otro no comercial"), lo que cambia su `classification_status` a `excluded` y lo saca de la vista operativa de "Por revisar". Por separado, a nivel de cliente/empresa existe `sourceType` con un valor "No corresponde" que cumple una función parecida en la cartera.
 
 Lo que falta y este documento pide:
 
@@ -202,9 +203,9 @@ Este diseño no implementa multi-tenant, pero está pensado para no tener que re
 
 ## 10. Criterios de "hecho" (verificables)
 
-1. Existe una función de detección de duplicados que corre sobre los datos reales y genera candidatos con señal y nivel de confianza, sin modificar ningún registro.
-2. Existe una pantalla/bandeja donde un usuario ve esos candidatos y puede Fusionar / Descartar / Postergar — ninguna fusión ocurre sin esa acción explícita.
-3. Toda fusión genera un `mergeLog` con snapshot previo, y existe una acción de "Deshacer" que restaura el estado anterior verificablemente (se puede probar: fusionar dos clientes de prueba, deshacer, y confirmar que ambos vuelven con todos sus datos e historial intactos).
+1. ✅ Existe una función de detección de duplicados que corre sobre los datos reales y genera candidatos con señal y nivel de confianza, sin modificar ningún registro.
+2. ✅ Existe una pantalla/bandeja donde un usuario ve esos candidatos y puede Fusionar / Descartar ("No son duplicados") / Postergar — ninguna fusión ocurre sin esa acción explícita.
+3. ✅ Toda fusión genera un `mergeLog` con snapshot previo, y existe una acción de "Deshacer" que restaura el estado anterior (queda pendiente el QA con casos reales de cartera a gran escala, no la implementación — ver `docs/QA_OPERATIVO_CRM_2026-09-10.md`).
 4. `consolidateDuplicateClients` ya no se ejecuta automáticamente en cada sincronización — o fue reemplazada por el flujo de bandeja, o quedó explícitamente desactivada con un comentario que explique por qué.
 5. Un contacto marcado como no comercial no reaparece en "Por revisar" tras un mensaje genérico nuevo, pero sí genera una alerta (visible, no bloqueante) cuando el mensaje nuevo tiene contenido comercial explícito.
 6. Un teléfono nuevo asociado a una empresa ya existente (mismo CUIT o razón social) no crea una ficha de empresa duplicada — pero tampoco fusiona un contacto nuevo en la empresa sin que sea claramente el mismo canal de contacto ya conocido u ofrecido como sugerencia.

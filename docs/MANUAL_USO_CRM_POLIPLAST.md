@@ -1,10 +1,10 @@
 # Manual práctico de Poliplast Sales Copilot
 
-**Versión:** 1.1  
-**Fecha:** 10/09/2026  
+**Versión:** 1.2  
+**Fecha:** 12/09/2026  
 **Aplicación:** <https://poli-crm.vercel.app>  
 **Audiencia:** Felipe y equipo comercial de Grupo Poliplast  
-**Estado:** revisión pedagógica de Claude y validación técnica QA de Codex aplicadas. Las 12 etapas coinciden con el sistema y con `SISTEMA_COMERCIAL_GRUPO_POLIPLAST.md`. PDF de revisión generado; pendiente la lectura rápida de Felipe (sección 21) antes de publicar la versión aprobada en Drive.
+**Estado:** revisión pedagógica de Claude y validación técnica QA de Codex aplicadas. Las 12 etapas coinciden con el sistema y con `SISTEMA_COMERCIAL_GRUPO_POLIPLAST.md`. Actualizado el 12/09/2026 para reflejar la fusión manual de duplicados, el Plan de hoy clicable, los atajos de fecha en Tareas y el botón de ignorar rápido en la bandeja de WhatsApp. Pendiente la lectura rápida de Felipe (sección 21) antes de publicar la versión aprobada en Drive.
 
 ## 1. Para qué sirve
 
@@ -77,14 +77,25 @@ Es el resumen operativo. Incluye:
 
 Los radares son ayudas para decidir. No crean automáticamente una obligación de contactar a todas las personas.
 
+### Plan de hoy es clicable
+
+El Plan de hoy no es solo una lista para tildar: cada ítem que viene de una tarea o de un mensaje pendiente **abre directamente esa tarea o esa conversación** al tocarlo, sin tener que ir a buscarla a Tareas o a Por revisar. Además:
+
+- **Sumar (＋):** cualquier pendiente sugerido (tarea del día, seguimiento vencido, cotización fría, recompra sugerida) se puede sumar al plan con un clic.
+- **Tildar:** marca el ítem como hecho dentro del plan; queda tachado y cuenta en el contador ("X de Y hechas").
+- **Quitar (✕):** saca el ítem del plan sin borrar la tarea o la conversación original.
+- **Agregar algo propio:** el campo de texto libre permite sumar un pendiente que no viene de ninguna otra pantalla.
+- Si hay seguimientos vencidos, aparece un acceso directo "Ver todas las tareas vencidas en Tareas".
+
 ## 5. Por revisar
 
 Muestra entradas nuevas de WhatsApp que todavía necesitan una decisión humana.
 
 ### Acciones principales
 
+- **Botón de un clic "No requiere acción":** cada fila pendiente tiene un ícono de tilde a la vista, sin abrir "Acciones". Sirve para descartar rápido los mensajes que no necesitan revisión (spam, confirmaciones automáticas, etc.) sin perder tiempo abriendo el detalle.
 - **Revisar conversación:** abre el formulario de clasificación.
-- **No requiere acción / Solo contexto:** conserva información sin generar seguimiento innecesario.
+- **No requiere acción / Solo contexto:** conserva información sin generar seguimiento innecesario (misma acción que el botón de un clic, más "Solo contexto" para guardar información sin descartarla).
 - **No es cliente:** permite clasificar Equipo interno, Familiar/personal, Proveedor/colaborador u Otro no comercial.
 - **Archivar:** quita la conversación del trabajo diario sin eliminarla.
 - **Eliminar del CRM:** descarta ese registro. Las eliminaciones poseen persistencia para que la sincronización no lo restaure.
@@ -128,6 +139,14 @@ Crear una tarea cuando exista:
 
 No crear tareas masivas para toda la cartera “por las dudas”. Al marcar una tarea como completada, el cambio debe mantenerse después de recargar.
 
+### Atajos de fecha
+
+Al crear o postergar una tarea, en vez de abrir el calendario y elegir el día, hay cuatro botones rápidos que cubren los casos más comunes: **Hoy**, **Mañana**, **+3 días** y **+1 semana**. Se puede seguir usando el selector de fecha para cualquier otro día.
+
+### Cierre automático de tareas vencidas
+
+Un proceso interno (corre solo, una vez por día, sin que nadie tenga que abrir el CRM) cierra las tareas cuya fecha ya pasó, para que "Vencida" no se acumule indefinidamente en pantalla. Es mantenimiento de la lista, no una decisión comercial: si una tarea cerrada sola todavía necesita seguimiento, hay que crear una nueva con la fecha correspondiente.
+
 ## 8. Cuentas activas y las 12 etapas
 
 La temperatura y la etapa pertenecen a la empresa comercial, no a cada número de teléfono.
@@ -160,7 +179,14 @@ Agregar cada persona o teléfono en la misma ficha y elegir un contacto principa
 
 ### Posibles duplicados
 
-El CRM detecta señales de coincidencia, pero no fusiona automáticamente por nombre. La futura fusión/deshacer está diferida. Hasta entonces, revisar y editar con prudencia.
+El CRM detecta señales de coincidencia (CUIT, teléfono, email, nombre) pero **nunca fusiona solo por nombre parecido**. Cada candidato muestra su nivel de confianza (alta, media, o "revisar nombre") y qué señales coincidieron. Desde el botón "Posibles duplicados" de Empresas, para cada par sugerido hay cuatro acciones:
+
+- **Fusionar, quedarse con "Empresa A":** une las dos fichas (teléfonos, contactos, conversaciones, tareas y ventas) y conserva los datos de la empresa elegida como sobreviviente.
+- **Fusionar, quedarse con "Empresa B":** la misma fusión, pero eligiendo la otra ficha como sobreviviente.
+- **No son duplicados:** descarta esa combinación para que no vuelva a aparecer sugerida.
+- **Postergar:** la saca de la lista por ahora sin descartarla definitivamente.
+
+Toda fusión queda registrada en "Fusiones recientes", con la opción de **Deshacer** — restaura ambas fichas tal como estaban antes de fusionar, con su historial completo. Revisar y confirmar con prudencia: la fusión no es automática, pero una vez confirmada mueve datos reales entre fichas.
 
 ### Triage comercial
 
@@ -298,6 +324,10 @@ La limpieza automática debe limitarse a fixtures inequívocos. Nunca borrar cli
 
 Verificar primero que aparezca **Sincronizado**. Repetir el caso una vez y registrar exactamente qué entidad volvió. Las correcciones de persistencia ya cubren tareas, eliminaciones y clasificaciones; un caso nuevo debe tratarse como regresión específica.
 
+### “La pantalla quedó en blanco o dice error al abrir/guardar”
+
+Al abrir el CRM y al guardar, ahora se ve claramente cuando algo falla, en vez de quedar en silencio: si la carga inicial falla aparece "No se pudo cargar tu información" con un botón **Reintentar**; si falla el guardado, la pastilla de estado (arriba a la derecha) muestra "Error de sincronización" también con **Reintentar**. Tocar Reintentar antes de recargar la página o repetir la acción a mano.
+
 ### “Veo dos empresas parecidas”
 
 No borrar ni fusionar por intuición. Comparar CUIT, teléfonos, personas y origen. Editar solamente cuando la identidad esté confirmada.
@@ -318,7 +348,7 @@ Es esperable si son tareas de naturaleza distinta. Proyecto general: Trello. Com
 
 - QA manual completo en producción.
 - Revisión de calidad de los 1.052 registros importados.
-- Fusión y deshacer de duplicados.
+- QA de la fusión y el deshacer de duplicados con casos reales de cartera (la función ya existe y funciona; falta la revisión con casos de producción a gran escala).
 - Conciliación de Ventas/Comisiones contra un mes real.
 - Validación real de Mercado Libre.
 - Canales Penosil y Juan, diferidos.

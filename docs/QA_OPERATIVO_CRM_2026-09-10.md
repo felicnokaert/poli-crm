@@ -1,5 +1,7 @@
 # QA operativo del CRM - 10/09/2026
 
+> **Nota posterior (12/09/2026):** este documento es una foto del 10/09/2026. El punto "Empresas / identidad unica" de la matriz y el pendiente #2 ya no reflejan el estado actual: la fusión manual, "No son duplicados", "Postergar" y "Deshacer" se implementaron el 11-12/09/2026 (ver `docs/IDENTIDAD_UNICA_CLIENTE_SPEC.md`, sección "Estado de implementación", y `docs/MANUAL_USO_CRM_POLIPLAST.md`, sección 9). Falta todavía el QA de esa función con casos reales de cartera a gran escala, no la implementación. El resto de la matriz de este documento no se revalidó de nuevo.
+
 ## Alcance
 
 Validacion funcional de solo lectura en produccion, complementada con la suite automatizada local. No se guardaron cambios sobre clientes, conversaciones, tareas ni ventas reales durante la prueba.
@@ -30,7 +32,7 @@ Validacion funcional de solo lectura en produccion, complementada con la suite a
 | Ventas | Aprobado en lectura | Se visualizaron ventas, objetivos, unidades y comisiones. No se probo alta/edicion con datos reales. |
 | Mercado Libre | Bloqueado externamente | POLIPLAST y FOAM figuran pendientes de conectar en produccion; requiere completar autorizacion oficial. |
 | Penosil y Juan | Diferido por decision | No forman parte del cierre operativo actual. |
-| Empresas / identidad unica | Parcial | El modelo admite empresa y contacto, pero el flujo de posibles duplicados, fusion manual y deshacer sigue pendiente. |
+| Empresas / identidad unica | Parcial al 10/09 | El modelo admite empresa y contacto; a esta fecha el flujo de posibles duplicados, fusion manual y deshacer seguia pendiente. **Implementado el 11-12/09/2026** (ver nota al inicio del documento). |
 | Persistencia de tareas | Aprobado por codigo/pruebas | La correccion impide nuevas tareas accidentales. Las tareas historicas ya generadas requieren limpieza controlada aparte. |
 
 ## Correcciones cerradas durante el QA
@@ -43,7 +45,7 @@ Validacion funcional de solo lectura en produccion, complementada con la suite a
 ## Pendientes reales
 
 1. Limpiar de manera controlada las tareas historicas generadas automaticamente, sin tocar compromisos reales.
-2. Implementar la bandeja de posibles duplicados y la fusion reversible de identidad unica.
+2. ~~Implementar la bandeja de posibles duplicados y la fusion reversible de identidad unica.~~ Implementado el 11-12/09/2026; pendiente el QA con casos reales de cartera a gran escala.
 3. Completar y validar la autorizacion oficial de Mercado Libre cuando la plataforma lo permita.
 4. Validar altas y ediciones de Ventas con una operacion real acordada por Felipe.
 5. Hacer una pasada corta del manual con Felipe y publicar la version aprobada en Drive.

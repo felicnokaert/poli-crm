@@ -13,7 +13,11 @@ export default async function handler(request, response) {
     const environment = process.env;
     const state = verifyOAuthState(request.query?.state, environment.MELI_OAUTH_STATE_SECRET);
     if (request.query?.error) return finish(response, 400, 'Autorización cancelada', 'Mercado Libre no autorizó la conexión.');
-    if (!request.query?.code) throw new Error('Mercado Libre no devolvió el código de autorización.');
+    const code = request.query?.code;
+    // Mercado Libre devuelve códigos de autorización cortos y alfanuméricos.
+    // Este chequeo de forma es barato y evita mandar basura arbitrariamente
+    // grande (un query param manipulado) al endpoint de token de ML.
+    if (typeof code !== 'string' || !code || code.length > 512) throw new Error('Mercado Libre no devolvió el código de autorización.');
 
     const tokenResult = await fetch('https://api.mercadolibre.com/oauth/token', {
       method: 'POST',
@@ -22,7 +26,7 @@ export default async function handler(request, response) {
         grant_type: 'authorization_code',
         client_id: environment.MELI_CLIENT_ID,
         client_secret: environment.MELI_CLIENT_SECRET,
-        code: request.query.code,
+        code,
         redirect_uri: environment.MELI_REDIRECT_URI,
       }),
     });
@@ -53,6 +57,7 @@ export default async function handler(request, response) {
     if (!saved.ok) throw new Error('La cuenta fue autorizada, pero no se pudo guardar la conexión.');
     return finish(response, 200, `${row.account_label} conectada`, `La cuenta ${row.nickname} quedó vinculada en modo de solo lectura.`);
   } catch (error) {
+    console.error(`mercadolibre-callback failed (accountKey=${request.query?.state ? 'ver state firmado' : 'desconocido'}):`, error);
     return finish(response, 400, 'No se pudo conectar Mercado Libre', error.message || 'Error desconocido.');
   }
 }

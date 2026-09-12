@@ -4,6 +4,7 @@ import { formatDate } from "./utils.mjs";
 import { Empty } from "./ui-primitives";
 import { clientContacts } from "./client-contacts.mjs";
 import { applyDuplicateReviewDecisions, detectDuplicateClientCandidates } from "./duplicate-candidates.mjs";
+import { canonicalFamily } from "./families.mjs";
 
 export function Clients({ clients, query, setQuery, onOpenClient, onMergeClients, mergeLogs = [], onUndoMerge, duplicateReviewDecisions = [], onMarkNotDuplicate, onPostponeDuplicate }) {
   const [family, setFamily] = useState("Todas");
@@ -23,11 +24,11 @@ export function Clients({ clients, query, setQuery, onOpenClient, onMergeClients
   );
   const families = [
     "Todas",
-    ...new Set(clients.map((client) => client.family || "Sin definir")),
+    ...new Set(clients.map((client) => canonicalFamily(client.family) || "Sin definir")),
   ];
   const visible = clients.filter(
     (client) =>
-      (family === "Todas" || (client.family || "Sin definir") === family) &&
+      (family === "Todas" || (canonicalFamily(client.family) || "Sin definir") === family) &&
       (portfolio === "Todos" ||
         (portfolio === "Activos"
           ? client.pipelineActive !== false

@@ -10,7 +10,7 @@ import {
   updateClientContact,
   withClientContact,
 } from "./client-contacts.mjs";
-import { FAMILIES } from "./families.mjs";
+import { canonicalFamily, FAMILIES } from "./families.mjs";
 import { lastPurchaseForClient } from "./client-purchase-history.mjs";
 import { buildCommercialGuidance } from "./commercial-guidance.mjs";
 import { PIPELINE, commercialOutcome, commercialStage, useModalEscape } from "./app-shared";
@@ -31,7 +31,14 @@ export function ClientDetail({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(client || {});
   const [newContact, setNewContact] = useState({ name: "", role: "", phone: "", email: "" });
-  useEffect(() => setDraft(client || {}), [client?.id]);
+  useEffect(() => {
+    // Algunas fichas importadas tienen `family` en mayúsculas o con una
+    // variante distinta a FAMILIES (ej. "CARROZADOS", "POLIURETANOS") - sin
+    // esto, el <select> de abajo no encontraba ninguna opción para
+    // seleccionar y guardar sin tocar este campo podía pisarlo con el
+    // primer valor de la lista sin que nadie lo notara.
+    setDraft(client ? { ...client, family: canonicalFamily(client.family) } : {});
+  }, [client?.id]);
   if (!client) return null;
   const latest = interactions[0];
   const detectedPurchase = lastPurchaseForClient(client, sales || []);

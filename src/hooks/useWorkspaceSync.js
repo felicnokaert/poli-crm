@@ -18,6 +18,79 @@ import { findClientByWhatsApp } from "../client-contacts.mjs";
 const TASKS_CLOSED_THROUGH = "2026-09-09.1";
 const HISTORY_RESET_VERSION = "2026-09-03T16:00:00.000Z";
 
+// Lógica pura de qué transformaciones aplicarle al estado recién cargado de
+// Supabase antes de mostrarlo, extraída del efecto de carga para poder
+// testearla sin mockear Supabase. No hace I/O: sólo decide el `nextState` y
+// si hace falta re-guardarlo (el caller es quien llama a saveOnlineState).
+export function reconcileLoadedWorkspaceState({ state, statusEvents }) {
+  let nextState = { ...initialState, ...state, inbox: state.inbox || [] };
+  let dirty = false;
+  if (nextState.historyResetVersion !== HISTORY_RESET_VERSION) {
+    nextState = { ...nextState, interactions: [], historyResetVersion: HISTORY_RESET_VERSION };
+    dirty = true;
+  }
+  if ((nextState.tasksClosedThrough || "") < TASKS_CLOSED_THROUGH) {
+    nextState = completeTasksThrough(nextState, TASKS_CLOSED_THROUGH);
+    dirty = true;
+  }
+  return { nextState, dirty, statusEvents: statusEvents || [] };
+}
+
+// Lógica pura de cómo un evento entrante de WhatsApp (INSERT en tiempo real)
+// modifica el workspace: si corresponde ignorarlo, a qué cliente pertenece,
+// si genera un recordatorio nuevo, y cómo queda el inbox/tasks resultante.
+// Extraída del listener de Supabase para poder testearla con datos simples,
+// sin abrir una conexión real de tiempo real.
+export function applyInboundWhatsAppEvent(current, event) {
+  if (current.inbox.some((item) => item.event_id === event.event_id)) return current;
+  // Un mensaje que ya se eliminó del CRM no debe resucitar solo porque
+  // llega por el canal de tiempo real - este chequeo faltaba acá aunque sí
+  // se aplica al cargar la bandeja completa.
+  if ((current.dismissedInboxEventIds || []).includes(event.event_id)) return current;
+  const ignoredRule = isIgnoredWhatsAppContact(current.ignoredWhatsAppContacts || [], event);
+  const client =
+    findClientByWhatsApp(current.clients, event) ||
+    current.clients.find(
+      (item) =>
+        event.customer_name &&
+        item.company?.toLowerCase() === event.customer_name.toLowerCase(),
+    );
+  const taskTitle = "Revisar nuevo mensaje de WhatsApp";
+  const hasReminder =
+    client &&
+    current.tasks.some(
+      (item) => item.clientId === client.id && !item.done && item.title === taskTitle,
+    );
+  const reminder =
+    !ignoredRule && event.direction === "inbound" && client && !hasReminder
+      ? {
+          id: crypto.randomUUID(),
+          clientId: client.id,
+          company: client.company,
+          title: taskTitle,
+          dueDate: today(),
+          cadence: "Diaria",
+          priority: "Media",
+          done: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          trigger: `Nuevo mensaje recibido por ${CHANNELS[event.channel]?.name || "WhatsApp"}`,
+        }
+      : null;
+  return {
+    ...current,
+    inbox: [
+      {
+        ...event,
+        classification_status: ignoredRule ? "excluded" : event.classification_status || "pending",
+        excludedCategory: ignoredRule?.category,
+      },
+      ...current.inbox,
+    ],
+    tasks: reminder ? [...current.tasks, reminder] : current.tasks,
+  };
+}
+
 // Todo el ciclo de vida de la sincronización online con Supabase: sesión,
 // carga inicial del workspace, guardado con debounce, tiempo real (mensajes
 // entrantes de WhatsApp + cambios de otros usuarios) y el estado de
@@ -64,20 +137,14 @@ export function useWorkspaceSync(data, setData) {
     let active = true;
     setSyncStatus("Sincronizando…");
     loadOnlineState(session.user.id, myChannels)
-      .then(({ state, statusEvents }) => {
+      .then((loaded) => {
         if (!active) return;
-        let nextState = { ...initialState, ...state, inbox: state.inbox || [] };
-        if (nextState.historyResetVersion !== HISTORY_RESET_VERSION) {
-          nextState.interactions = [];
-          nextState.historyResetVersion = HISTORY_RESET_VERSION;
-          saveOnlineState(session.user.id, session.user.email, nextState).catch(() => {});
-        }
-        if ((nextState.tasksClosedThrough || "") < TASKS_CLOSED_THROUGH) {
-          nextState = completeTasksThrough(nextState, TASKS_CLOSED_THROUGH);
+        const { nextState, dirty, statusEvents } = reconcileLoadedWorkspaceState(loaded);
+        if (dirty) {
           saveOnlineState(session.user.id, session.user.email, nextState).catch(() => {});
         }
         setData(nextState);
-        setOutboundStatusEvents(statusEvents || []);
+        setOutboundStatusEvents(statusEvents);
         setRemoteReady(true);
         setSyncStatus("Sincronizado");
       })
@@ -95,66 +162,7 @@ export function useWorkspaceSync(data, setData) {
             ["unread_preview", "unread_notice"].includes(event.message_type)
           )
             return;
-          setData((current) => {
-            if (current.inbox.some((item) => item.event_id === event.event_id))
-              return current;
-            // Un mensaje que ya se eliminó del CRM no debe resucitar solo
-            // porque llega por el canal de tiempo real - este chequeo faltaba
-            // acá aunque sí se aplica al cargar la bandeja completa.
-            if ((current.dismissedInboxEventIds || []).includes(event.event_id))
-              return current;
-            const ignoredRule = isIgnoredWhatsAppContact(current.ignoredWhatsAppContacts || [], event);
-            const client =
-              findClientByWhatsApp(current.clients, event) ||
-              current.clients.find(
-                (item) =>
-                  event.customer_name &&
-                  item.company?.toLowerCase() ===
-                    event.customer_name.toLowerCase(),
-              );
-            const taskTitle = "Revisar nuevo mensaje de WhatsApp";
-            const hasReminder =
-              client &&
-              current.tasks.some(
-                (item) =>
-                  item.clientId === client.id &&
-                  !item.done &&
-                  item.title === taskTitle,
-              );
-            const reminder =
-              !ignoredRule &&
-              event.direction === "inbound" &&
-              client &&
-              !hasReminder
-                ? {
-                    id: crypto.randomUUID(),
-                    clientId: client.id,
-                    company: client.company,
-                    title: taskTitle,
-                    dueDate: today(),
-                    cadence: "Diaria",
-                    priority: "Media",
-                    done: false,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                    trigger: `Nuevo mensaje recibido por ${CHANNELS[event.channel]?.name || "WhatsApp"}`,
-                  }
-                : null;
-            return {
-              ...current,
-              inbox: [
-                {
-                  ...event,
-                  classification_status: ignoredRule
-                    ? "excluded"
-                    : event.classification_status || "pending",
-                  excludedCategory: ignoredRule?.category,
-                },
-                ...current.inbox,
-              ],
-              tasks: reminder ? [...current.tasks, reminder] : current.tasks,
-            };
-          });
+          setData((current) => applyInboundWhatsAppEvent(current, event));
         },
       )
       .subscribe();

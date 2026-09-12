@@ -1,4 +1,5 @@
 import { buildFullDailyMaintenanceUpdate } from '../src/daily-maintenance.mjs';
+import { withRetry } from '../lib/retry.mjs';
 
 // Cron interno de mantenimiento (ver docs/AUDITORIA_MADUREZ_PRODUCTO_2026-09-12.md,
 // Automatización 35/100: "cero cron jobs... todo lo inteligente es manual o
@@ -29,29 +30,56 @@ async function fetchWorkspaceRows(environment) {
   return result.json();
 }
 
-async function saveWorkspaceRow(environment, workspaceKey, data) {
-  const result = await fetch(`${environment.SUPABASE_URL}/rest/v1/workspace_states?workspace_key=eq.${encodeURIComponent(workspaceKey)}`, {
-    method: 'PATCH',
-    headers: {
-      apikey: environment.SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${environment.SUPABASE_SERVICE_ROLE_KEY}`,
-      'Content-Type': 'application/json',
-      Prefer: 'return=minimal',
-    },
-    body: JSON.stringify({ data, updated_at: new Date().toISOString() }),
+// El PATCH puede fallar por un corte de red o un 5xx pasajero de Supabase -
+// eso no debería tirar todo el cron ni perder el cálculo de mantenimiento de
+// ese workspace. Reintenta un par de veces con backoff acotado, pero nunca
+// para errores de credenciales/validación (401/403/4xx en general): esos
+// van a fallar exactamente igual en el siguiente intento.
+async function saveWorkspaceRow(environment, workspaceKey, data, fetchImpl = fetch) {
+  const result = await withRetry(async () => {
+    let response;
+    try {
+      response = await fetchImpl(`${environment.SUPABASE_URL}/rest/v1/workspace_states?workspace_key=eq.${encodeURIComponent(workspaceKey)}`, {
+        method: 'PATCH',
+        headers: {
+          apikey: environment.SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${environment.SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=minimal',
+        },
+        body: JSON.stringify({ data, updated_at: new Date().toISOString() }),
+      });
+    } catch (error) {
+      // fetch rechazado (timeout, DNS, conexión cortada): sin status HTTP.
+      return { ok: false, threw: true, error };
+    }
+    return { ok: response.ok, status: response.status };
   });
-  if (!result.ok) throw new Error(`No se pudo actualizar el workspace ${workspaceKey} (status ${result.status}).`);
+  if (!result.ok) {
+    throw new Error(`No se pudo actualizar el workspace ${workspaceKey} (status ${result.status ?? 'sin respuesta'}).`);
+  }
 }
 
 export default async function handler(request, response) {
   if (!authorized(request)) return response.status(401).json({ error: 'No autorizado.' });
+  const nowISO = new Date().toISOString();
+  // Se guarda afuera del try para que, si algo falla a mitad de camino, el
+  // log diga en qué paso y en qué workspace estaba (en vez de un error crudo
+  // sin ubicar - lo que hace falta para diagnosticar desde los logs de
+  // Vercel sin tener que reproducir el fallo).
+  let step = 'fetchWorkspaceRows';
+  let currentWorkspaceKey = null;
   try {
-    const nowISO = new Date().toISOString();
     const rows = await fetchWorkspaceRows(process.env);
     const results = [];
+    step = 'buildFullDailyMaintenanceUpdate';
     for (const row of rows) {
+      currentWorkspaceKey = row.workspace_key;
       const { changed, nextState, summary } = buildFullDailyMaintenanceUpdate(row.data || {}, nowISO);
-      if (changed) await saveWorkspaceRow(process.env, row.workspace_key, nextState);
+      if (changed) {
+        step = 'saveWorkspaceRow';
+        await saveWorkspaceRow(process.env, row.workspace_key, nextState);
+      }
       results.push({ workspaceKey: row.workspace_key, changed, ...summary });
     }
     return response.status(200).json({
@@ -63,7 +91,7 @@ export default async function handler(request, response) {
       results,
     });
   } catch (error) {
-    console.error('cron-daily-maintenance failed:', error);
+    console.error(`cron-daily-maintenance failed at step "${step}"${currentWorkspaceKey ? ` (workspaceKey=${currentWorkspaceKey})` : ''} ranAt=${nowISO}:`, error);
     return response.status(500).json({ error: 'Error interno al correr el mantenimiento diario.' });
   }
 }

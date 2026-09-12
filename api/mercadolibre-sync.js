@@ -90,6 +90,7 @@ export default async function handler(request, response) {
     });
     return response.status(200).json({ ok: true, accountKey, items: rows.length, syncedAt: stamp });
   } catch (error) {
+    console.error(`mercadolibre-sync failed for account "${accountKey}" (accountId=${account.id}):`, error);
     if (/volver a autorizar/i.test(error.message || '')) {
       await fetch(`${environment.SUPABASE_URL}/rest/v1/mercadolibre_accounts?id=eq.${account.id}`, {
         method: 'PATCH', headers: serviceHeaders(environment, { 'Content-Type': 'application/json' }), body: JSON.stringify({ status: 'reauthorization_required', updated_at: new Date().toISOString() }),

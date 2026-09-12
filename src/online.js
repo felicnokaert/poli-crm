@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { filterDismissedEvents, isLegacyWhatsAppPreview } from './whatsapp-events.mjs';
 import { whatsappContactIdentity, whatsappContactKey } from './whatsapp-threads.mjs';
+import { withRetry } from '../lib/retry.mjs';
 export { completeTasksThrough, mergeClients, mergeWorkspaceState, recordDeletions, recordDuplicateReviewDecision, restoreRecordId, undoClientMerge, workspaceStatesEqual } from './workspace.mjs';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
@@ -69,13 +70,29 @@ export async function loadOnlineState(userId, allowedChannels = ['general']) {
   };
 }
 
+// Cada guardado del CRM pasa por acá. Si Supabase devuelve un 5xx pasajero
+// (o el PATCH ni siquiera llega a completarse por un corte de red), no tiene
+// sentido perder los cambios del usuario a la primera - se reintenta un par
+// de veces con backoff acotado. Un 401/403 (sesión vencida, RLS) nunca se
+// reintenta: va a fallar exactamente igual y solo demoraría el error real.
 export async function saveOnlineState(userId, email, data) {
-  const { error } = await supabase.from('workspace_states').upsert({
-    workspace_key: userId,
-    data,
-    updated_by: userId,
-    updated_by_email: email,
-    updated_at: new Date().toISOString(),
+  const result = await withRetry(async () => {
+    let outcome;
+    try {
+      outcome = await supabase.from('workspace_states').upsert({
+        workspace_key: userId,
+        data,
+        updated_by: userId,
+        updated_by_email: email,
+        updated_at: new Date().toISOString(),
+      });
+    } catch (error) {
+      // supabase-js puede rechazar la promesa directamente en cortes de red
+      // (fetch failed) en vez de resolver con { error }.
+      return { ok: false, threw: true, error };
+    }
+    if (!outcome.error) return { ok: true };
+    return { ok: false, status: outcome.status, error: outcome.error };
   });
-  if (error) throw error;
+  if (!result.ok) throw result.error;
 }

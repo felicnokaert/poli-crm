@@ -1,0 +1,10 @@
+# Config mínima escrita a mano (no generada por `supabase init`) para que
+# `supabase/migrations/` sea reconocida como carpeta de migraciones del CLI.
+# Pendiente: correr `supabase login` + `supabase link --project-ref nghwmtccpovrdtzvllwe`
+# y dejar que el CLI regenere/complete este archivo con la config real
+# (puertos locales, auth, storage, etc.) — ver supabase/migrations/README.md.
+
+project_id = "nghwmtccpovrdtzvllwe"
+
+[db]
+major_version = 17

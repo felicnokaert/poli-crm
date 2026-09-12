@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { FileCheck2 } from "lucide-react";
 import { useConfirm } from "./ConfirmDialog";
-import { Empty } from "./ui-primitives";
+import { Empty, Loading } from "./ui-primitives";
 
 const TECHNICAL_DOCUMENT_STATUS_LABELS = {
   inventariado: "Inventariado",
@@ -17,6 +17,14 @@ export function TechnicalDocumentsAdmin({ session }) {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [messageIsError, setMessageIsError] = useState(false);
+  // Wrapper para no repetir "setMessage + setMessageIsError(true)" en cada
+  // catch: antes un error de guardado se veía exactamente igual (mismo
+  // banner verde) que un éxito, así que pasaba desapercibido.
+  function setErrorMessage(text) {
+    setMessage(text);
+    setMessageIsError(true);
+  }
   const [statusFilter, setStatusFilter] = useState("all");
   const [familyFilter, setFamilyFilter] = useState("all");
   const [drafts, setDrafts] = useState({});
@@ -26,6 +34,7 @@ export function TechnicalDocumentsAdmin({ session }) {
 
   async function load() {
     setLoading(true);
+    setMessageIsError(false);
     try {
       const [{ fetchTechnicalDocuments }, { isTechnicalDocumentAdmin }] = await Promise.all([
         import("./technical-documents-repo.mjs"),
@@ -35,7 +44,7 @@ export function TechnicalDocumentsAdmin({ session }) {
       setDocuments(docs);
       setIsAdmin(isTechnicalDocumentAdmin(session?.user?.email));
     } catch (error) {
-      setMessage(error.message || "No se pudo cargar la base técnica.");
+      setErrorMessage(error.message || "No se pudo cargar la base técnica.");
     } finally {
       setLoading(false);
     }
@@ -60,10 +69,11 @@ export function TechnicalDocumentsAdmin({ session }) {
   async function saveStatus(doc) {
     const draft = draftFor(doc);
     if (draft.status === "vigente" && !isAdmin) {
-      setMessage('Solo Felipe puede marcar un documento "vigente".');
+      setErrorMessage('Solo Felipe puede marcar un documento "vigente".');
       return;
     }
     setMessage("Guardando…");
+    setMessageIsError(false);
     try {
       const { updateTechnicalDocumentStatus } = await import("./technical-documents-repo.mjs");
       const updated = await updateTechnicalDocumentStatus(doc.id, {
@@ -77,20 +87,21 @@ export function TechnicalDocumentsAdmin({ session }) {
       setDrafts((current) => ({ ...current, [doc.id]: { status: updated.status, notes: "", replacedBy: updated.replacedBy || "" } }));
       setMessage(`"${doc.title}" quedó en ${TECHNICAL_DOCUMENT_STATUS_LABELS[updated.status] || updated.status}.`);
     } catch (error) {
-      setMessage(error.message || "No se pudo guardar el cambio de estado.");
+      setErrorMessage(error.message || "No se pudo guardar el cambio de estado.");
     }
   }
 
   async function saveTitle(doc) {
     const nextTitle = (titleDrafts[doc.id] ?? doc.title).trim();
     if (!nextTitle || nextTitle === doc.title) return;
+    setMessageIsError(false);
     try {
       const { updateTechnicalDocumentTitle } = await import("./technical-documents-repo.mjs");
       const updated = await updateTechnicalDocumentTitle(doc.id, nextTitle);
       setDocuments((current) => current.map((item) => (item.id === doc.id ? updated : item)));
       setMessage(`Nombre actualizado: "${updated.title}".`);
     } catch (error) {
-      setMessage(error.message || "No se pudo renombrar el documento.");
+      setErrorMessage(error.message || "No se pudo renombrar el documento.");
     }
   }
 
@@ -102,6 +113,7 @@ export function TechnicalDocumentsAdmin({ session }) {
   async function attachFile(doc, file) {
     if (!file) return;
     setMessage(`Adjuntando "${doc.title}"…`);
+    setMessageIsError(false);
     try {
       const { attachTechnicalDocumentFile } = await import("./technical-documents-repo.mjs");
       const updated = await attachTechnicalDocumentFile(doc.id, file);
@@ -112,12 +124,13 @@ export function TechnicalDocumentsAdmin({ session }) {
           : `"${doc.title}" quedó adjunta, pero no se pudo leer el texto (¿es un PDF escaneado como imagen?). El archivo igual se puede ver.`,
       );
     } catch (error) {
-      setMessage(error.message || "No se pudo adjuntar ese archivo.");
+      setErrorMessage(error.message || "No se pudo adjuntar ese archivo.");
     }
   }
 
   async function viewFile(doc) {
     setMessage(`Abriendo "${doc.title}"…`);
+    setMessageIsError(false);
     try {
       const { getTechnicalDocumentFileUrl } = await import("./technical-documents-repo.mjs");
       const url = await getTechnicalDocumentFileUrl(doc.storagePath);
@@ -125,7 +138,7 @@ export function TechnicalDocumentsAdmin({ session }) {
       window.open(url, "_blank", "noopener,noreferrer");
       setMessage("");
     } catch (error) {
-      setMessage(error.message || "No se pudo abrir el archivo.");
+      setErrorMessage(error.message || "No se pudo abrir el archivo.");
     }
   }
 
@@ -151,13 +164,14 @@ export function TechnicalDocumentsAdmin({ session }) {
     const nonPdfCount = missingBefore.filter((doc) => !/\.pdf$/i.test(doc.sourceFile || "")).length;
     const pending = missingBefore.filter((doc) => bySourceFile.has(doc.sourceFile));
     if (!pending.length) {
-      setMessage(
+      setErrorMessage(
         `Ningún archivo de esa carpeta coincide con una ficha sin PDF adjunto. Revisá que hayas elegido la carpeta "FICHAS TÉCNICAS" completa (no una de adentro).` +
         (nonPdfCount > 0 ? ` (${nonPdfCount} fichas pendientes son Word, no PDF - esas nunca van a matchear acá, hay que convertirlas primero.)` : ""),
       );
       return;
     }
     setMessage(`Adjuntando ${pending.length} de ${missingBefore.length} fichas pendientes…`);
+    setMessageIsError(false);
     try {
       const { attachTechnicalDocumentFile } = await import("./technical-documents-repo.mjs");
       let firstError = "";
@@ -181,8 +195,9 @@ export function TechnicalDocumentsAdmin({ session }) {
         (stillMissing === 0 ? " No queda ninguna pendiente." : "") +
         (succeeded.length === 0 && firstError ? ` Error: ${firstError}` : ""),
       );
+      if (succeeded.length === 0 && firstError) setMessageIsError(true);
     } catch (error) {
-      setMessage(error.message || "No se pudo adjuntar los archivos.");
+      setErrorMessage(error.message || "No se pudo adjuntar los archivos.");
     }
   }
 
@@ -191,13 +206,14 @@ export function TechnicalDocumentsAdmin({ session }) {
   // referencia compartida por todo el equipo, no algo para borrar por error.
   async function deleteDocument(doc) {
     if (!(await confirm(`¿Eliminar "${doc.title}" de Base técnica? Esto no se puede deshacer.`, { danger: true, confirmLabel: "Eliminar" }))) return;
+    setMessageIsError(false);
     try {
       const { deleteTechnicalDocument } = await import("./technical-documents-repo.mjs");
       await deleteTechnicalDocument(doc.id, doc.storagePath);
       setDocuments((current) => current.filter((item) => item.id !== doc.id));
       setMessage(`"${doc.title}" se eliminó.`);
     } catch (error) {
-      setMessage(error.message || "No se pudo eliminar el documento.");
+      setErrorMessage(error.message || "No se pudo eliminar el documento.");
     }
   }
 
@@ -206,6 +222,7 @@ export function TechnicalDocumentsAdmin({ session }) {
   // parecido por accidente.
   async function deleteFolder(folderPath, docsInFolder) {
     if (!(await confirm(`¿Eliminar la carpeta "${folderPath}" y sus ${docsInFolder.length} ficha${docsInFolder.length === 1 ? "" : "s"}? Esto no se puede deshacer.`, { danger: true, confirmLabel: "Eliminar carpeta" }))) return;
+    setMessageIsError(false);
     try {
       const { deleteTechnicalDocument } = await import("./technical-documents-repo.mjs");
       const ids = new Set();
@@ -220,8 +237,9 @@ export function TechnicalDocumentsAdmin({ session }) {
       setDocuments((current) => current.filter((item) => !ids.has(item.id)));
       const failed = docsInFolder.length - ids.size;
       setMessage(`${ids.size} ficha${ids.size === 1 ? "" : "s"} eliminada${ids.size === 1 ? "" : "s"} de "${folderPath}".${failed > 0 ? ` ${failed} no se pudieron eliminar.` : ""}`);
+      if (failed > 0) setMessageIsError(true);
     } catch (error) {
-      setMessage(error.message || "No se pudo eliminar la carpeta.");
+      setErrorMessage(error.message || "No se pudo eliminar la carpeta.");
     }
   }
 
@@ -232,6 +250,7 @@ export function TechnicalDocumentsAdmin({ session }) {
   async function renameFolderTo(folderPath, newName) {
     const trimmed = newName.trim();
     if (!trimmed || trimmed === folderPath.split(" / ").at(-1)) return;
+    setMessageIsError(false);
     try {
       const { renameFolder } = await import("./technical-documents-mapping.mjs");
       const { updateTechnicalDocumentSourceFile } = await import("./technical-documents-repo.mjs");
@@ -248,8 +267,9 @@ export function TechnicalDocumentsAdmin({ session }) {
       setDocuments((current) => current.map((item) => succeeded.find((updated) => updated.id === item.id) || item));
       const failed = changes.length - succeeded.length;
       setMessage(`Carpeta renombrada a "${trimmed}" (${succeeded.length} ficha${succeeded.length === 1 ? "" : "s"}).${failed > 0 ? ` ${failed} no se pudieron actualizar.` : ""}`);
+      if (failed > 0) setMessageIsError(true);
     } catch (error) {
-      setMessage(error.message || "No se pudo renombrar la carpeta.");
+      setErrorMessage(error.message || "No se pudo renombrar la carpeta.");
     }
   }
 
@@ -258,6 +278,7 @@ export function TechnicalDocumentsAdmin({ session }) {
   // vacía sin documentos: se deriva de source_file, ver
   // technical-documents-mapping.mjs).
   async function moveDocumentToFolder(doc, newFolderPath) {
+    setMessageIsError(false);
     try {
       const { moveDocumentToFolder: computeNewPath, folderFromSourceFile } = await import("./technical-documents-mapping.mjs");
       if (folderFromSourceFile(doc.sourceFile) === (newFolderPath || "Sin carpeta")) return;
@@ -267,7 +288,7 @@ export function TechnicalDocumentsAdmin({ session }) {
       setDocuments((current) => current.map((item) => (item.id === doc.id ? updated : item)));
       setMessage(`"${doc.title}" se movió a ${newFolderPath || "la raíz"}.`);
     } catch (error) {
-      setMessage(error.message || "No se pudo mover la ficha.");
+      setErrorMessage(error.message || "No se pudo mover la ficha.");
     }
   }
 
@@ -330,9 +351,17 @@ export function TechnicalDocumentsAdmin({ session }) {
             Agrupar por carpeta (como en Drive)
           </label>
         </div>
-        {message && <div className="system-message">{message}</div>}
+        {message && (
+          <div
+            className={`system-message ${messageIsError ? "error" : ""}`}
+            role="status"
+            aria-live="polite"
+          >
+            {message}
+          </div>
+        )}
         {loading ? (
-          <Empty text="Cargando…" />
+          <Loading text="Cargando base técnica…" />
         ) : filtered.length ? (
           <TechnicalDocumentGroups
             documents={filtered}

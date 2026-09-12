@@ -22,7 +22,7 @@ import {
   FileCheck2,
 } from "lucide-react";
 import { useConfirm } from "./ConfirmDialog";
-import { Splash } from "./ui-primitives";
+import { Splash, Spinner } from "./ui-primitives";
 import {
   CHANNELS,
   LEGACY_STAGE_MAP,
@@ -206,6 +206,12 @@ export default function App() {
     onlineConfigured ? "Conectando…" : "Modo local",
   );
   const [readiness, setReadiness] = useState(null);
+  // Contadores que solo existen para poder reintentar a mano: incrementarlos
+  // re-dispara el efecto de carga/guardado correspondiente sin duplicar la
+  // lógica de arriba. Antes, si "Error de sincronización" aparecía, no había
+  // ninguna forma de reintentar sin recargar toda la página.
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [saveAttempt, setSaveAttempt] = useState(0);
   const [view, setView] = useState("dashboard");
   // Arranca con todos los grupos colapsados - Felipe: "así está más
   // limpio", que se vean los 6 títulos primero y cada uno se abra al
@@ -284,7 +290,7 @@ export default function App() {
         setRemoteReady(true);
         setSyncStatus("Sincronizado");
       })
-      .catch(() => active && setSyncStatus("Error de sincronización"));
+      .catch(() => active && setSyncStatus("Error al cargar"));
 
     const channel = supabase
       .channel("whatsapp-inbox")
@@ -388,7 +394,7 @@ export default function App() {
       supabase.removeChannel(channel);
       supabase.removeChannel(workspaceChannel);
     };
-  }, [session?.user?.id]);
+  }, [session?.user?.id, loadAttempt]);
 
   useEffect(() => {
     if (!session?.access_token || syncStatus !== "Sincronizado") return;
@@ -410,7 +416,7 @@ export default function App() {
         .catch(() => setSyncStatus("Error de sincronización"));
     }, 700);
     return () => clearTimeout(timer);
-  }, [data, remoteReady, session?.user?.id]);
+  }, [data, remoteReady, session?.user?.id, saveAttempt]);
 
   // El guardado tiene un margen de 700ms (de arriba) antes de escribir a
   // Supabase - si alguien recarga o cierra la pestaña justo en ese margen
@@ -453,6 +459,27 @@ export default function App() {
 
   if (!authReady) return <Splash text="Preparando acceso seguro…" />;
   if (onlineConfigured && !session) return <LoginScreen />;
+  // Mientras se descarga el workspace inicial de Supabase no había ningún
+  // indicio visual - se veía la app vacía (o con datos locales viejos de
+  // otro dispositivo) y parecía colgada. Si falla, se ofrece reintentar en
+  // vez de dejar al usuario mirando una pantalla en blanco para siempre.
+  if (onlineConfigured && session && !remoteReady) {
+    if (syncStatus === "Error al cargar") {
+      return (
+        <div className="login-shell" role="alert">
+          <section className="login-card">
+            <div className="brand-mark">P</div>
+            <h1>No se pudo cargar tu información</h1>
+            <p>Revisá tu conexión e intentá de nuevo.</p>
+            <button className="primary" onClick={() => setLoadAttempt((n) => n + 1)}>
+              Reintentar
+            </button>
+          </section>
+        </div>
+      );
+    }
+    return <Splash text="Cargando tu información…" />;
+  }
 
   const filteredClients = data.clients.filter((client) =>
     clientSearchText(client).toLowerCase().includes(query.toLowerCase()),
@@ -1670,9 +1697,23 @@ export default function App() {
               );
             })()}
             <span
-              className={`sync-pill ${syncStatus === "Sincronizado" ? "ok" : ""}`}
+              className={`sync-pill ${syncStatus === "Sincronizado" ? "ok" : ""} ${syncStatus === "Error de sincronización" ? "error" : ""}`}
+              role="status"
+              aria-live="polite"
             >
+              {(syncStatus === "Guardando…" || syncStatus === "Sincronizando…" || syncStatus === "Conectando…") && (
+                <Spinner size={11} />
+              )}
               {syncStatus}
+              {syncStatus === "Error de sincronización" && (
+                <button
+                  type="button"
+                  className="sync-retry"
+                  onClick={() => setSaveAttempt((n) => n + 1)}
+                >
+                  Reintentar
+                </button>
+              )}
             </span>
             <div
               className="profile-pill"

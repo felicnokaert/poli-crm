@@ -107,10 +107,34 @@ const PINNED_TASKS_BY_CHANNEL = {
   ],
 };
 
-export function DayMode({ overdueTasks, dueTodayTasks, hotLeads, coldQuotes, repurchaseRadar, myChannels, onNavigate }) {
+// Un ítem del plan de hoy puede señalar una tarea o un mensaje de WhatsApp
+// concreto (id con prefijo "task:"/"hot:"/"cold:"). Cuando ese es el caso,
+// devolvemos la acción que abre esa ficha directamente - así ver la
+// urgencia y actuar sobre ella no obliga a navegar a otra pantalla primero.
+function openTargetForId(id, { onOpenTask, onOpenEvent, onNavigate }) {
+  if (id.startsWith("task:")) return () => onOpenTask?.(id.slice("task:".length));
+  if (id.startsWith("hot:") || id.startsWith("cold:")) {
+    return () => onOpenEvent?.(id.slice(id.indexOf(":") + 1));
+  }
+  if (id === "overdue:summary") return () => onNavigate?.("tasks");
+  return null;
+}
+
+export function DayMode({
+  overdueTasks,
+  dueTodayTasks,
+  hotLeads,
+  coldQuotes,
+  repurchaseRadar,
+  myChannels,
+  onNavigate,
+  onOpenTask,
+  onOpenEvent,
+}) {
   const [plan, setPlan] = useDayPlan();
   const [customText, setCustomText] = useState("");
   const planIds = new Set(plan.map((item) => item.id));
+  const openHandlers = { onOpenTask, onOpenEvent, onNavigate };
 
   function addToPlan(id, label) {
     if (planIds.has(id)) return;
@@ -155,26 +179,57 @@ export function DayMode({ overdueTasks, dueTodayTasks, hotLeads, coldQuotes, rep
       </div>
       {plan.length > 0 && (
         <div className="day-mode-list">
-          {plan.map((item) => (
-            <label className={`day-mode-item${item.done ? " is-done" : ""}`} key={item.id}>
-              <input type="checkbox" checked={item.done} onChange={() => toggleDone(item.id)} />
-              <span>{item.label}</span>
-              <button type="button" className="icon-button" onClick={() => removeFromPlan(item.id)} aria-label="Quitar del plan">
-                <X size={13} />
-              </button>
-            </label>
-          ))}
+          {plan.map((item) => {
+            const openTarget = openTargetForId(item.id, openHandlers);
+            return (
+              <div className={`day-mode-item${item.done ? " is-done" : ""}`} key={item.id}>
+                <input
+                  type="checkbox"
+                  checked={item.done}
+                  onChange={() => toggleDone(item.id)}
+                  aria-label={item.done ? `Marcar "${item.label}" como pendiente` : `Marcar "${item.label}" como hecha`}
+                />
+                {openTarget ? (
+                  <button type="button" className="day-mode-item-label" onClick={openTarget}>
+                    {item.label}
+                  </button>
+                ) : (
+                  <span className="day-mode-item-label">{item.label}</span>
+                )}
+                <button type="button" className="icon-button" onClick={() => removeFromPlan(item.id)} aria-label="Quitar del plan">
+                  <X size={13} />
+                </button>
+              </div>
+            );
+          })}
           <small className="day-mode-progress">{doneCount} de {plan.length} hechas</small>
         </div>
       )}
       {candidates.length > 0 && (
         <div className="day-mode-candidates">
           <span className="day-mode-subhead">Pendiente — ¿lo hacés hoy?</span>
-          {candidates.map((item) => (
-            <button type="button" className="day-mode-candidate" key={item.id} onClick={() => addToPlan(item.id, item.label)}>
-              <Plus size={13} /> {item.label}
-            </button>
-          ))}
+          {candidates.map((item) => {
+            const openTarget = openTargetForId(item.id, openHandlers);
+            return (
+              <div className="day-mode-candidate" key={item.id}>
+                {openTarget ? (
+                  <button type="button" className="day-mode-candidate-label" onClick={openTarget}>
+                    {item.label}
+                  </button>
+                ) : (
+                  <span className="day-mode-candidate-label">{item.label}</span>
+                )}
+                <button
+                  type="button"
+                  className="icon-button day-mode-candidate-add"
+                  onClick={() => addToPlan(item.id, item.label)}
+                  aria-label={`Sumar "${item.label}" al plan de hoy`}
+                >
+                  <Plus size={13} />
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
       <form className="day-mode-add" onSubmit={addCustom}>
@@ -212,6 +267,7 @@ export function Dashboard({
   onToggle,
   onOpenTask,
   onOpenInteraction,
+  onOpenEvent,
   onNavigate,
 }) {
   const clientsById = new Map(clients.map((client) => [client.id, client]));
@@ -263,6 +319,8 @@ export function Dashboard({
         repurchaseRadar={repurchaseRadar}
         myChannels={myChannels}
         onNavigate={onNavigate}
+        onOpenTask={onOpenTask}
+        onOpenEvent={onOpenEvent}
       />
       <section className="metric-grid">
         {cards.map(([label, value, note, Icon]) => (

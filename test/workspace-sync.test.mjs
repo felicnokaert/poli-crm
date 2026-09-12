@@ -1,10 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import fs from 'node:fs';
 import {
   recordDeletions,
   restoreRecordId,
-  consolidateDuplicateClients,
   completeTasksThrough,
   mergeWorkspaceState,
   workspaceStatesEqual,
@@ -74,39 +72,9 @@ test('restoreRecordId es un no-op si no se pasa id', () => {
   assert.deepEqual(restoreRecordId(state, 'clients', undefined), state);
 });
 
-// --- consolidateDuplicateClients: existe, funciona aislada, pero NO se usa en el flujo activo ---
-
-test('consolidateDuplicateClients fusiona clientes con el mismo nombre de empresa normalizado, si se invoca directamente', () => {
-  const state = baseState({
-    clients: [
-      { id: 'a', company: 'Herrería El Progreso', updatedAt: '2026-01-01T00:00:00Z', contact: 'Marcos', phone: '111' },
-      { id: 'b', company: 'herreria el progreso', updatedAt: '2026-02-01T00:00:00Z', contact: 'Marcos', phone: '222' },
-    ],
-    interactions: [{ id: 'i1', clientId: 'a', text: 'hola' }],
-  });
-  const next = consolidateDuplicateClients(state);
-  assert.equal(next.clients.length, 1);
-  // Se queda con la ficha más reciente y sus datos, pero conserva ambos contactos.
-  assert.equal(next.clients[0].id, 'b');
-  assert.equal(next.clients[0].contacts.length, 2);
-  assert.deepEqual(next.interactions.map((i) => i.clientId), ['b']);
-});
-
-test('consolidateDuplicateClients existe como función aislada pero no está enganchada a ningún flujo activo del código', () => {
-  // Ver docs/IDENTIDAD_UNICA_CLIENTE_SPEC.md Sección 1: la fusión automática por
-  // nombre causó el incidente más grave del proyecto. Este test no verifica el
-  // comportamiento de la función (eso ya lo hace el test anterior) sino que
-  // ningún otro archivo fuente la importe o la invoque, es decir que sigue
-  // desactivada. Si este test empieza a fallar, alguien la volvió a conectar
-  // y hay que revisar con cuidado antes de dejarlo pasar.
-  const sourceFiles = fs.readdirSync(new URL('../src', import.meta.url))
-    .filter((name) => (name.endsWith('.mjs') || name.endsWith('.jsx')) && name !== 'workspace.mjs');
-  const offenders = sourceFiles.filter((name) => {
-    const content = fs.readFileSync(new URL(`../src/${name}`, import.meta.url), 'utf8');
-    return content.includes('consolidateDuplicateClients');
-  });
-  assert.deepEqual(offenders, [], `consolidateDuplicateClients no debería estar referenciada fuera de workspace.mjs, pero aparece en: ${offenders.join(', ')}`);
-});
+// consolidateDuplicateClients: ver test/disabled-consolidate-duplicate-clients.test.mjs
+// (movida ahí — es código desactivado a propósito, no un flujo vivo, y no debe
+// contarse junto a la cobertura funcional real de este archivo).
 
 // --- completeTasksThrough ---
 

@@ -1,4 +1,5 @@
 node_modules/
+test/.jsx-cache/
 dist/
 .env
 .env.*
@@ -7,3 +8,4 @@ dist/
 .DS_Store
 Thumbs.db
 tmp/
+package-lock.json

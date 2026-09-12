@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { attachWhatsAppContact, classifyClientContactByWhatsApp, clientContacts, duplicatePhoneSignals, findClientByWhatsApp, removeClientContact, setPrimaryClientContact, updateClientContact, withClientContact } from '../src/client-contacts.mjs';
+import { attachWhatsAppContact, classifyClientContactByWhatsApp, clientContacts, clientSearchText, duplicatePhoneSignals, findClientByWhatsApp, removeClientContact, setPrimaryClientContact, updateClientContact, withClientContact } from '../src/client-contacts.mjs';
 
 test('keeps several people and phone numbers under one company', () => {
   let client = { id: 'a', company: 'Empresa A' };
@@ -48,4 +48,18 @@ test('edits, selects and removes contacts while keeping legacy primary fields sy
   assert.equal(clientContacts(client).length, 1);
   assert.equal(client.contact, 'Ana');
   assert.equal(client.phone, '111');
+});
+
+test('builds searchable text from company data and every contact, skipping blanks', () => {
+  let client = { id: 'a', company: 'Empresa A', legalName: 'Empresa A SRL', cuit: '30-12345678-9', family: 'Poliuretano', sourceType: 'Cliente histórico' };
+  client = withClientContact(client, { name: 'Ana', role: 'Compras', phone: '11 5555-0001', email: 'ana@empresa.com' });
+  client = withClientContact(client, { name: 'Carlos', phone: '11 5555-0002' });
+  const text = clientSearchText(client);
+  for (const value of ['Empresa A', 'Empresa A SRL', '30-12345678-9', 'Poliuretano', 'Cliente histórico', 'Ana', 'Compras', 'ana@empresa.com', 'Carlos']) {
+    assert.ok(text.includes(value), `expected search text to include "${value}"`);
+  }
+
+  // Blank/missing fields must not leak literal "undefined"/"null" into the text.
+  const bare = clientSearchText({ id: 'b' });
+  assert.equal(bare, '');
 });

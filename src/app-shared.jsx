@@ -96,6 +96,12 @@ export function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
+export function addDaysToToday(days) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 export function longToday() {
   return new Intl.DateTimeFormat("es-AR", {
     weekday: "long",

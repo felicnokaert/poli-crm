@@ -2,7 +2,37 @@ import { useEffect, useState } from "react";
 import { CheckCircle2, Plus, Search, X } from "lucide-react";
 import { formatDate } from "./utils.mjs";
 import { Empty, Fact } from "./ui-primitives";
-import { googleCalendarUrl, today, useModalEscape } from "./app-shared";
+import { addDaysToToday, googleCalendarUrl, today, useModalEscape } from "./app-shared";
+
+// Elegir "vencimiento" a mano abriendo el calendario es el paso más lento de
+// crear o postergar una tarea. Estos atajos cubren los casos más comunes
+// (hoy, mañana, en 3 días, en una semana) en un solo clic.
+const DUE_DATE_SHORTCUTS = [
+  ["Hoy", 0],
+  ["Mañana", 1],
+  ["+3 días", 3],
+  ["+1 semana", 7],
+];
+
+function DueDateShortcuts({ value, onPick }) {
+  return (
+    <div className="due-date-shortcuts">
+      {DUE_DATE_SHORTCUTS.map(([label, days]) => {
+        const date = addDaysToToday(days);
+        return (
+          <button
+            type="button"
+            key={label}
+            className={`due-date-shortcut${value === date ? " selected" : ""}`}
+            onClick={() => onPick(date)}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export function Tasks({ items, onToggle, onOpen, onNew }) {
   const [filter, setFilter] = useState("pending");
@@ -172,6 +202,10 @@ export function TaskDetail({ task, client, onClose, onToggle, onSave, onOpenClie
                     setDraft({ ...draft, dueDate: event.target.value })
                   }
                 />
+                <DueDateShortcuts
+                  value={draft.dueDate || ""}
+                  onPick={(date) => setDraft({ ...draft, dueDate: date })}
+                />
               </label>
               <label>
                 Prioridad
@@ -332,6 +366,10 @@ export function TaskForm({ form, setForm, clients, onClose, onSave }) {
           <label>
             Vencimiento
             <input required type="date" {...field("dueDate")} />
+            <DueDateShortcuts
+              value={form.dueDate || ""}
+              onPick={(date) => setForm({ ...form, dueDate: date })}
+            />
           </label>
           <label>
             Prioridad

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, X } from "lucide-react";
+import { Check, ChevronRight, X } from "lucide-react";
 import { inferIntent } from "./commercial-intelligence.mjs";
 import { buildSuggestion, PENDING_LABEL } from "./suggestion-rules.mjs";
 import { prepareManualQuery } from "./ai-provider.mjs";
@@ -126,6 +126,17 @@ export function InboxRow({
         </div>
         <ChevronRight size={18} />
       </button>
+      {pending && (
+        <button
+          type="button"
+          className="row-quick-ignore icon-button"
+          aria-label={`Marcar "${name}" como que no requiere acción`}
+          title="No requiere acción"
+          onClick={() => onClassify(item.event_id, "ignore")}
+        >
+          <Check size={15} />
+        </button>
+      )}
       <button
         type="button"
         className="row-actions-toggle"

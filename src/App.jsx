@@ -1756,6 +1756,7 @@ export default function App() {
             onToggle={toggleTask}
             onOpenTask={setSelectedTaskId}
             onOpenInteraction={setSelectedInteractionId}
+            onOpenEvent={openInboxDraft}
             onNavigate={setView}
           />
         )}

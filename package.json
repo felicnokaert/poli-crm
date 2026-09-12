@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test"
+    "test": "node --import ./test/setup-dom.mjs --test"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
@@ -17,5 +17,10 @@
     "react": "latest",
     "react-dom": "latest",
     "vite": "latest"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.3",
+    "jsdom": "^30.0.1"
   }
 }

@@ -1,4 +1,4 @@
-import { normalizeWebhook, verifyMetaSignature } from '../lib/whatsapp.mjs';
+import { normalizeWebhook, verifyMetaSignature, verifyMetaVerifyToken } from '../lib/whatsapp.mjs';
 import { persistEvents } from '../lib/storage.mjs';
 
 export const config = { api: { bodyParser: false } };
@@ -27,7 +27,7 @@ export default async function handler(request, response) {
     const mode = request.query['hub.mode'];
     const token = request.query['hub.verify_token'];
     const challenge = request.query['hub.challenge'];
-    if (mode === 'subscribe' && token === process.env.WHATSAPP_VERIFY_TOKEN) return response.status(200).send(challenge);
+    if (mode === 'subscribe' && verifyMetaVerifyToken(token, process.env.WHATSAPP_VERIFY_TOKEN)) return response.status(200).send(challenge);
     return response.status(403).json({ ok: false });
   }
 

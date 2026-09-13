@@ -65,6 +65,21 @@ function DueDateShortcuts({ value, onPick }) {
   );
 }
 
+// El mensaje vacío importa especialmente en "Pendientes": es el estado al
+// que un vendedor llega justo después de resolver su última tarea del día.
+// Mostrarle "No hay tareas que coincidan con este filtro" ahí lee como un
+// error o un callejón sin salida, cuando en realidad es la mejor noticia
+// posible (está al día). Distinguimos ese caso de una búsqueda sin
+// resultados y del estado realmente vacío (todavía no se creó ninguna tarea).
+function taskListEmptyText({ items, filtered, filter, query }) {
+  if (filtered.length) return undefined;
+  if (query.trim()) return "No hay tareas que coincidan con tu búsqueda.";
+  if (!items.length) return "Todavía no hay tareas. Creá la primera acción comercial.";
+  if (filter === "pending") return "¡Estás al día! No tenés tareas pendientes.";
+  if (filter === "done") return "Todavía no completaste ninguna tarea.";
+  return "No hay tareas que coincidan con este filtro.";
+}
+
 function TasksBase({ items, onToggle, onOpen, onNew }) {
   const [filter, setFilter] = useState("pending");
   const [query, setQuery] = useState("");
@@ -134,11 +149,7 @@ function TasksBase({ items, onToggle, onOpen, onNew }) {
         items={filtered}
         onToggle={onToggle}
         onOpen={onOpen}
-        emptyText={
-          items.length
-            ? "No hay tareas que coincidan con este filtro."
-            : "Todavía no hay tareas. Creá la primera acción comercial."
-        }
+        emptyText={taskListEmptyText({ items, filtered, filter, query })}
       />
     </section>
   );

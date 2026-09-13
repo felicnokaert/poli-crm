@@ -1,10 +1,10 @@
 # Manual práctico de Poliplast Sales Copilot
 
-**Versión:** 1.2  
-**Fecha:** 12/09/2026  
+**Versión:** 1.3  
+**Fecha:** 15/09/2026  
 **Aplicación:** <https://poli-crm.vercel.app>  
 **Audiencia:** Felipe y equipo comercial de Grupo Poliplast  
-**Estado:** revisión pedagógica de Claude y validación técnica QA de Codex aplicadas. Las 12 etapas coinciden con el sistema y con `SISTEMA_COMERCIAL_GRUPO_POLIPLAST.md`. Actualizado el 12/09/2026 para reflejar la fusión manual de duplicados, el Plan de hoy clicable, los atajos de fecha en Tareas y el botón de ignorar rápido en la bandeja de WhatsApp. Pendiente la lectura rápida de Felipe (sección 21) antes de publicar la versión aprobada en Drive.
+**Estado:** revisión pedagógica de Claude y validación técnica QA de Codex aplicadas. Las 12 etapas coinciden con el sistema y con `SISTEMA_COMERCIAL_GRUPO_POLIPLAST.md`. Actualizado el 15/09/2026 para reflejar las tareas automáticas del cron (hot leads y cotizaciones frías), los atajos de teclado globales con su ayuda ("?"), el badge de vencidas y la exportación a CSV en Tareas, las tareas del cliente dentro de su propia ficha, y el estado vacío accionable de Empresas. Pendiente la lectura rápida de Felipe (sección 21) antes de publicar la versión aprobada en Drive.
 
 ## 1. Para qué sirve
 
@@ -77,6 +77,10 @@ Es el resumen operativo. Incluye:
 
 Los radares son ayudas para decidir. No crean automáticamente una obligación de contactar a todas las personas.
 
+### El sistema puede crear tareas solo, una vez por día
+
+Debajo del resumen aparece un aviso chico: **"El sistema generó N tareas automáticas hoy"** (o "no generó" si no hubo ninguna). Es el mismo proceso interno que cierra las tareas vencidas (ver sección 7): una vez por día detecta hot leads sin responder y cotizaciones frías, y si no existe ya una tarea abierta para ese contacto, crea una nueva sola. Nunca manda un mensaje al cliente — solo crea el recordatorio interno para que alguien del equipo actúe. Esas tareas aparecen en Tareas como cualquier otra, con prioridad Alta (hot lead) o Media (cotización fría).
+
 ### Plan de hoy es clicable
 
 El Plan de hoy no es solo una lista para tildar: cada ítem que viene de una tarea o de un mensaje pendiente **abre directamente esa tarea o esa conversación** al tocarlo, sin tener que ir a buscarla a Tareas o a Por revisar. Además:
@@ -147,6 +151,22 @@ Al crear o postergar una tarea, en vez de abrir el calendario y elegir el día, 
 
 Un proceso interno (corre solo, una vez por día, sin que nadie tenga que abrir el CRM) cierra las tareas cuya fecha ya pasó, para que "Vencida" no se acumule indefinidamente en pantalla. Es mantenimiento de la lista, no una decisión comercial: si una tarea cerrada sola todavía necesita seguimiento, hay que crear una nueva con la fecha correspondiente.
 
+### Tareas creadas automáticamente por el sistema
+
+El mismo proceso diario también puede crear tareas nuevas (no solo cerrarlas): una para cada hot lead sin responder y una para cada cotización fría, sin duplicar si ya existe una abierta para ese contacto. Se ven igual que cualquier otra tarea; el aviso de cuántas se crearon hoy aparece en Inicio (sección 4). El sistema nunca le escribe al cliente — solo genera el recordatorio interno.
+
+### Badge de tareas vencidas en el menú
+
+El ícono de **Tareas** en el menú lateral muestra un número en rojo con la cantidad de tareas vencidas, visible sin necesidad de entrar a la sección. Es el mismo criterio que usa Inicio para su propio contador de vencidos.
+
+### Exportar a CSV
+
+El botón **Exportar CSV** descarga exactamente la lista que se está viendo en ese momento, según el filtro activo (Pendientes, Completadas o Todas) — mismo formato que las exportaciones ya existentes de Empresas y Ventas, compatible con Excel.
+
+### Atajos de teclado
+
+Desde cualquier pantalla: **"/"** enfoca el buscador de la pantalla activa (por ejemplo Empresas o Contactos), **"n"** abre el formulario de Nueva tarea, y **Esc** cierra el formulario o la ficha abierta. El botón **"?"** en la barra superior abre un panel con estos tres atajos por si se olvidan.
+
 ## 8. Cuentas activas y las 12 etapas
 
 La temperatura y la etapa pertenecen a la empresa comercial, no a cada número de teléfono.
@@ -187,6 +207,14 @@ El CRM detecta señales de coincidencia (CUIT, teléfono, email, nombre) pero **
 - **Postergar:** la saca de la lista por ahora sin descartarla definitivamente.
 
 Toda fusión queda registrada en "Fusiones recientes", con la opción de **Deshacer** — restaura ambas fichas tal como estaban antes de fusionar, con su historial completo. Revisar y confirmar con prudencia: la fusión no es automática, pero una vez confirmada mueve datos reales entre fichas.
+
+### Si la lista aparece vacía
+
+El mensaje cambia según el motivo: si todavía no se cargó ninguna empresa, sugiere ir a Datos → Importar clientes CSV; si hay empresas cargadas pero ninguna coincide con el filtro o búsqueda actual, avisa que hay que revisar los filtros. Sirve para no confundir cartera vacía con un filtro mal puesto.
+
+### Las tareas de la empresa, dentro de su propia ficha
+
+La ficha de cada empresa (Empresas → abrir una) muestra la lista de tareas de esa empresa igual que en Tareas, con la posibilidad de abrirlas o completarlas sin salir de la ficha.
 
 ### Triage comercial
 

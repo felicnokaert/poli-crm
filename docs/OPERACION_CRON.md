@@ -7,9 +7,12 @@ horario UTC) y aplica sobre CADA workspace guardado en `workspace_states`:
    abre, ver `src/daily-maintenance.mjs`).
 2. Calcula y persiste las 3 señales de negocio del Dashboard (hot leads sin
    responder, cotizaciones frías, radar de recompra) en `data.dailySignals`.
-3. Crea tareas de seguimiento automáticas (`source: "auto-hot-lead"`) para los
-   hot leads detectados, sin duplicar si ya existe una abierta para ese
-   contacto.
+3. Crea tareas de seguimiento automáticas para los hot leads detectados
+   (`source: "auto-hot-lead"`, prioridad Alta) y para las cotizaciones frías
+   (`source: "auto-cold-quote"`, prioridad Media), sin duplicar si ya existe
+   una tarea abierta para ese contacto y esa señal. El radar de recompra no
+   crea tareas automáticas — queda solo como dato para revisar en Inicio,
+   porque su acción correcta es ambigua sin detalle de producto.
 
 Existe para que esto pase todos los días aunque nadie abra el CRM (antes solo
 corría client-side, al abrir la pestaña).
@@ -24,6 +27,13 @@ ejemplo, un PATCH a Supabase que agota los reintentos), las demás igual se
 procesan y se guardan — no hace falta que un workspace roto tire abajo el
 mantenimiento del resto. `ok: false` a nivel raíz solo significa que alguna
 fila individual falló, no que el cron entero se cayó.
+
+El cron también devuelve un resumen legible en español (una línea de
+descripción más el desglose por señal). El CRM lo usa en Inicio para mostrar
+"El sistema generó N tareas automáticas hoy" (o "no generó" si no hubo
+ninguna), contando las tareas con `source` `auto-hot-lead` o `auto-cold-quote`
+creadas ese mismo día — es la forma de auditar, desde la propia app, qué
+hizo el cron sin tener que ir a mirar logs de Vercel.
 
 ## Si un día no se crearon tareas automáticas
 

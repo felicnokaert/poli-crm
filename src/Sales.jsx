@@ -78,6 +78,7 @@ function draftFromGoal(goal, currentMonth, currentQuarter) {
 }
 
 function GoalRow({ goal, current, onEdit, onDelete }) {
+  const confirm = useConfirm();
   const format = GOAL_METRICS[goal.metric]?.format || String;
   const pct = goal.target > 0 ? Math.min(100, Math.round((current / goal.target) * 100)) : 0;
   const scopeLabel = [
@@ -85,6 +86,11 @@ function GoalRow({ goal, current, onEdit, onDelete }) {
     goal.pointOfSale !== 'Todas' ? goal.pointOfSale : '',
     goal.family && goal.family !== 'Todas' ? goal.family : '',
   ].filter(Boolean).join(' · ') || 'Todas las unidades';
+  const label = `${GOAL_METRICS[goal.metric]?.label || 'este objetivo'} de ${goal.periodType === 'quarter' ? 'trimestre' : 'mes'} ${goal.period}`;
+  async function handleDelete() {
+    if (!(await confirm(`¿Eliminar el objetivo "${label}"? Esto no se puede deshacer.`, { danger: true, confirmLabel: "Eliminar" }))) return;
+    onDelete(goal.id);
+  }
   return (
     <div className="goal-bar">
       <div className="goal-bar-head">
@@ -94,7 +100,7 @@ function GoalRow({ goal, current, onEdit, onDelete }) {
         <span>
           {format(current)} de {format(goal.target)}{" "}
           <button type="button" className="icon-button" onClick={() => onEdit(goal)} aria-label="Editar objetivo"><Pencil size={13}/></button>
-          <button type="button" className="icon-button" onClick={() => onDelete(goal.id)} aria-label="Eliminar objetivo"><X size={13}/></button>
+          <button type="button" className="icon-button" onClick={handleDelete} aria-label="Eliminar objetivo"><X size={13}/></button>
         </span>
       </div>
       <div className="goal-bar-track"><div className="goal-bar-fill" style={{ width: `${pct}%` }}/></div>

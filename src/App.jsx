@@ -498,7 +498,14 @@ export default function App() {
   }
 
   async function deleteOpportunity(id) {
-    if (!(await confirm("¿Eliminar esta oportunidad del CRM?", { danger: true, confirmLabel: "Eliminar" }))) return;
+    const opportunity = data.opportunities.find((item) => item.id === id);
+    const client = data.clients.find((item) => item.id === opportunity?.clientId);
+    const label = opportunity?.title || client?.company || "esta oportunidad";
+    const linkedTaskCount = data.tasks.filter((item) => item.opportunityId === id).length;
+    const taskWarning = linkedTaskCount
+      ? ` Se eliminarán también ${linkedTaskCount} tarea${linkedTaskCount === 1 ? "" : "s"} vinculada${linkedTaskCount === 1 ? "" : "s"}.`
+      : "";
+    if (!(await confirm(`¿Eliminar "${label}" del CRM? Esto no se puede deshacer.${taskWarning}`, { danger: true, confirmLabel: "Eliminar" }))) return;
     setData((current) => {
       const linkedTaskIds = current.tasks.filter((item) => item.opportunityId === id).map((item) => item.id);
       return recordDeletions({
@@ -595,7 +602,9 @@ export default function App() {
   }
 
   async function deleteSale(id) {
-    if (!(await confirm("¿Eliminar esta venta del registro?", { danger: true, confirmLabel: "Eliminar" }))) return;
+    const sale = (data.sales || []).find((item) => item.id === id);
+    const label = sale?.customer ? `la venta a "${sale.customer}"` : "esta venta";
+    if (!(await confirm(`¿Eliminar ${label} del registro? Esto no se puede deshacer.`, { danger: true, confirmLabel: "Eliminar" }))) return;
     setData((current) => recordDeletions({
       ...current,
       sales: (current.sales || []).filter((item) => item.id !== id),
@@ -604,7 +613,7 @@ export default function App() {
 
   async function deleteSales(ids) {
     if (!ids.length) return;
-    if (!(await confirm(`¿Eliminar ${ids.length} venta${ids.length === 1 ? "" : "s"} del registro?`, { danger: true, confirmLabel: "Eliminar" }))) return;
+    if (!(await confirm(`¿Eliminar ${ids.length} venta${ids.length === 1 ? "" : "s"} del registro? Esto no se puede deshacer.`, { danger: true, confirmLabel: "Eliminar" }))) return;
     setData((current) => recordDeletions({
       ...current,
       sales: (current.sales || []).filter((item) => !ids.includes(item.id)),

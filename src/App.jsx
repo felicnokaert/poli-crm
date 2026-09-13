@@ -21,7 +21,6 @@ import {
   ShoppingBag,
   FileCheck2,
   HelpCircle,
-  X,
 } from "lucide-react";
 import { useConfirm } from "./ConfirmDialog";
 import { Splash, Spinner } from "./ui-primitives";
@@ -37,7 +36,6 @@ import {
   longToday,
   profileInitials,
   today,
-  useModalEscape,
 } from "./app-shared";
 import { Tasks, TaskList, TaskDetail, TaskForm } from "./Tasks";
 import { Pipeline } from "./Pipeline";
@@ -56,6 +54,7 @@ import { Conversations } from "./Conversations";
 import { LegacyInboxRow, InboxRow, CopilotSuggestionPanel, InboxDraftModal } from "./InboxComponents";
 import { WhatsAppInbox } from "./WhatsAppInbox";
 import { ClientDetail } from "./ClientDetail";
+import { ShortcutsHelp } from "./ShortcutsHelp";
 import { CLASSIFICATIONS } from "./knowledge";
 import {
   mergeClients,
@@ -1784,49 +1783,6 @@ export default function App() {
       {showShortcutsHelp && (
         <ShortcutsHelp onClose={() => setShowShortcutsHelp(false)} />
       )}
-    </div>
-  );
-}
-
-// Los atajos ("/" y "n") solo se anunciaban con un title (tooltip al pasar
-// el mouse), poco visible. Este panel los lista de forma explícita desde el
-// ícono de ayuda de la topbar.
-function ShortcutsHelp({ onClose }) {
-  useModalEscape(onClose);
-  const shortcuts = [
-    ["/", "Buscar en la pantalla actual"],
-    ["n", "Nueva tarea"],
-    ["Esc", "Cerrar el formulario o ficha abierta"],
-  ];
-  return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <section
-        className="modal shortcuts-help"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="modal-head">
-          <div>
-            <span className="eyebrow">Ayuda</span>
-            <h2>Atajos de teclado</h2>
-          </div>
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Cerrar"
-            onClick={onClose}
-          >
-            <X />
-          </button>
-        </div>
-        <dl className="shortcuts-list">
-          {shortcuts.map(([key, description]) => (
-            <div key={key}>
-              <kbd>{key}</kbd>
-              <dd>{description}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
     </div>
   );
 }

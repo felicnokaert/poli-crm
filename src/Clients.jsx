@@ -6,7 +6,7 @@ import { clientContacts } from "./client-contacts.mjs";
 import { applyDuplicateReviewDecisions, detectDuplicateClientCandidates } from "./duplicate-candidates.mjs";
 import { canonicalFamily } from "./families.mjs";
 
-function ClientsBase({ clients, query, setQuery, onOpenClient, onMergeClients, mergeLogs = [], onUndoMerge, duplicateReviewDecisions = [], onMarkNotDuplicate, onPostponeDuplicate }) {
+function ClientsBase({ clients, query, setQuery, onOpenClient, onMergeClients, mergeLogs = [], onUndoMerge, duplicateReviewDecisions = [], onMarkNotDuplicate, onPostponeDuplicate, searchInputRef }) {
   const [family, setFamily] = useState("Todas");
   const [portfolio, setPortfolio] = useState("Todos");
   const [contact, setContact] = useState("Todos");
@@ -71,9 +71,11 @@ function ClientsBase({ clients, query, setQuery, onOpenClient, onMergeClients, m
         <label className="search">
           <Search size={17} />
           <input
+            ref={searchInputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Empresa, CUIT, contacto, teléfono…"
+            title="Presioná / para buscar"
           />
         </label>
       </div>
@@ -257,7 +259,7 @@ function ClientsBase({ clients, query, setQuery, onOpenClient, onMergeClients, m
 // (sync, otras pantallas), y detectar duplicados/candidatos es trabajo real.
 export const Clients = memo(ClientsBase);
 
-export function Contacts({ clients, query, setQuery, onOpenClient }) {
+export function Contacts({ clients, query, setQuery, onOpenClient, searchInputRef }) {
   const rows = clients.flatMap((client) =>
     clientContacts(client).map((contact) => ({
       ...contact,
@@ -290,9 +292,11 @@ export function Contacts({ clients, query, setQuery, onOpenClient }) {
         <label className="search">
           <Search size={17} />
           <input
+            ref={searchInputRef}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Persona, empresa, teléfono o email…"
+            title="Presioná / para buscar"
           />
         </label>
       </div>

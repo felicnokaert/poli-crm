@@ -56,7 +56,7 @@ function TasksBase({ items, onToggle, onOpen, onNew }) {
           <span className="eyebrow">Agenda única</span>
           <h2>Tareas comerciales</h2>
         </div>
-        <button className="primary" type="button" onClick={onNew}>
+        <button className="primary" type="button" onClick={onNew} title="Nueva tarea (n)">
           <Plus size={17} /> Nueva tarea
         </button>
       </div>

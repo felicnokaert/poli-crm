@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Building2,
   CheckCircle2,
@@ -42,16 +42,13 @@ import {
 import { Tasks, TaskList, TaskDetail, TaskForm } from "./Tasks";
 import { Pipeline } from "./Pipeline";
 import { Clients, Contacts } from "./Clients";
-import {
-  TechnicalDocumentsAdmin,
-  TechnicalDocumentRow,
-  TechnicalDocumentFolderNode,
-  TechnicalDocumentGroups,
-} from "./TechnicalDocuments";
+const TechnicalDocumentsAdmin = lazy(() =>
+  import("./TechnicalDocuments").then((m) => ({ default: m.TechnicalDocumentsAdmin }))
+);
 import { Academy, CommercialKnowledge, Coach, QuickReplies, Training } from "./Academy";
 import { TestCleanupPanel, Profile } from "./Settings";
 import { LoginScreen } from "./Login";
-import { DataSettings } from "./DataSettings";
+const DataSettings = lazy(() => import("./DataSettings").then((m) => ({ default: m.DataSettings })));
 import { InteractionForm } from "./InteractionForm";
 import { InteractionDetail } from "./Interactions";
 import { ProjectBoardGateway, DayMode, Dashboard } from "./Dashboard";
@@ -68,7 +65,7 @@ import {
   undoClientMerge,
 } from "./online";
 import { inferIntent } from "./commercial-intelligence.mjs";
-import Sales from "./Sales";
+const Sales = lazy(() => import("./Sales"));
 import { moveCard, reorderList } from "./board-model.mjs";
 import {
   isIgnoredWhatsAppContact,
@@ -84,7 +81,7 @@ import {
   findClientByWhatsApp,
 } from "./client-contacts.mjs";
 import { defaultBusinessUnits } from "./sales-model.mjs";
-import MercadoLibre from "./MercadoLibre";
+const MercadoLibre = lazy(() => import("./MercadoLibre"));
 import { scoreTriage, suggestTriage } from "./commercial-triage.mjs";
 import { shouldCreateFollowup } from "./followup-policy.mjs";
 import { useWorkspaceSync } from "./hooks/useWorkspaceSync";
@@ -1614,24 +1611,30 @@ export default function App() {
           />
         )}
         {view === "sales" && (
-          <Sales
-            items={data.sales || EMPTY_ARRAY}
-            goals={data.salesGoals || EMPTY_ARRAY}
-            businessUnits={data.businessUnits}
-            onSaveGoal={saveSalesGoal}
-            onDeleteGoal={deleteSalesGoal}
-            onSaveBusinessUnit={saveBusinessUnit}
-            onDeleteBusinessUnit={deleteBusinessUnit}
-            onSave={saveSale}
-            onSaveMany={saveSales}
-            onDelete={deleteSale}
-            onDeleteMany={deleteSales}
-          />
+          <Suspense fallback={<Splash text="Cargando ventas…" />}>
+            <Sales
+              items={data.sales || EMPTY_ARRAY}
+              goals={data.salesGoals || EMPTY_ARRAY}
+              businessUnits={data.businessUnits}
+              onSaveGoal={saveSalesGoal}
+              onDeleteGoal={deleteSalesGoal}
+              onSaveBusinessUnit={saveBusinessUnit}
+              onDeleteBusinessUnit={deleteBusinessUnit}
+              onSave={saveSale}
+              onSaveMany={saveSales}
+              onDelete={deleteSale}
+              onDeleteMany={deleteSales}
+            />
+          </Suspense>
         )}
         {view === "board" && (
           <ProjectBoardGateway />
         )}
-        {view === "mercadolibre" && <MercadoLibre session={session} />}
+        {view === "mercadolibre" && (
+          <Suspense fallback={<Splash text="Cargando Mercado Libre…" />}>
+            <MercadoLibre session={session} />
+          </Suspense>
+        )}
         {view === "clients" && (
           <Clients
             clients={filteredClients}
@@ -1665,7 +1668,9 @@ export default function App() {
           />
         )}
         {view === "techdocs" && (
-          <TechnicalDocumentsAdmin session={session} />
+          <Suspense fallback={<Splash text="Cargando base técnica…" />}>
+            <TechnicalDocumentsAdmin session={session} />
+          </Suspense>
         )}
         {view === "profile" && (
           <Profile data={data} setData={setData} session={session} />
@@ -1674,12 +1679,14 @@ export default function App() {
           <TestCleanupPanel data={data} setData={setData} session={session} />
         )}
         {view === "settings" && (
-          <DataSettings
-            data={data}
-            setData={setData}
-            session={session}
-            syncStatus={syncStatus}
-          />
+          <Suspense fallback={<Splash text="Cargando datos…" />}>
+            <DataSettings
+              data={data}
+              setData={setData}
+              session={session}
+              syncStatus={syncStatus}
+            />
+          </Suspense>
         )}
       </main>
 

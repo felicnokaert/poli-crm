@@ -198,7 +198,14 @@ export function DayMode({
       id: `task:${task.id}`,
       label: `${task.title}${task.company ? ` — ${task.company}` : ""}`,
     })),
-    ...(overdueTasks.length ? [{ id: "overdue:summary", label: `Revisar ${overdueTasks.length} seguimientos vencidos en Tareas` }] : []),
+    ...(overdueTasks.length
+      ? [
+          {
+            id: "overdue:summary",
+            label: `Revisar ${overdueTasks.length} ${overdueTasks.length === 1 ? "seguimiento vencido" : "seguimientos vencidos"} en Tareas`,
+          },
+        ]
+      : []),
     ...coldQuotes.map((item) => ({ id: `cold:${item.eventId}`, label: `Retomar cotización fría — ${item.customer}` })),
     ...repurchaseRadar.map((item) => ({ id: `repurchase:${item.customer}-${item.product}`, label: `Ofrecer recompra — ${item.customer} (${item.product})` })),
     ...(myChannels || []).flatMap((channel) => PINNED_TASKS_BY_CHANNEL[channel] || []),
@@ -346,7 +353,11 @@ function DashboardBase({
     [
       "Seguimientos vencidos",
       metrics.overdue,
-      metrics.dueToday ? `${metrics.dueToday} para hoy` : "Ninguno para hoy",
+      metrics.overdue
+        ? "Necesitan acción hoy"
+        : metrics.dueToday
+          ? `${metrics.dueToday} vencen hoy`
+          : "Ninguno pendiente",
       CircleAlert,
     ],
     [

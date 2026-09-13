@@ -226,6 +226,116 @@ test("buildAutoFollowupTasks vincula la tarea a un cliente existente cuando el W
   assert.equal(result.nextState.tasks[0].clientId, "client-1");
 });
 
+// Test de integración de punta a punta: simula una corrida real y completa
+// del cron (api/cron-daily-maintenance.js) sobre un único workspace con
+// datos de VARIOS clientes a la vez - tareas vencidas de más de un cliente,
+// una cotización fría, un cliente para repurchase radar y un hot lead sin
+// responder, todo junto en el mismo estado. Los tests existentes de
+// buildFullDailyMaintenanceUpdate ejercitan un solo caso por vez; este cubre
+// que las 3 señales + el cierre de tareas + las auto-tareas conviven bien
+// cuando hay ruido de varios clientes en la misma corrida.
+test("buildFullDailyMaintenanceUpdate corre de punta a punta con datos realistas de varios clientes", () => {
+  const now = "2026-09-13T03:00:00.000Z";
+
+  const state = {
+    tasksClosedThrough: "",
+    tasks: [
+      // Tarea vencida de un cliente - debe cerrarse.
+      { id: "task-vencida-cliente-a", clientId: "client-a", dueDate: "2026-09-01", done: false },
+      // Tarea vencida de otro cliente - debe cerrarse también.
+      { id: "task-vencida-cliente-b", clientId: "client-b", dueDate: "2026-09-05", done: false },
+      // Tarea que todavía no vence - no se toca.
+      { id: "task-futura-cliente-c", clientId: "client-c", dueDate: "2026-10-01", done: false },
+    ],
+    clients: [
+      {
+        id: "client-a",
+        company: "Cliente A SA",
+        contacts: [{ id: "ca-1", whatsappId: "5491100000001", primary: true }],
+      },
+      {
+        id: "client-b",
+        company: "Cliente B SRL",
+        contacts: [{ id: "cb-1", whatsappId: "5491100000002", primary: true }],
+      },
+      {
+        id: "client-c",
+        company: "Cliente C SA",
+        contacts: [{ id: "cc-1", whatsappId: "5491100000003", primary: true }],
+      },
+    ],
+    inbox: [
+      // Hot lead: mensaje entrante comercial y urgente, sin clasificar, de
+      // Cliente A, varios días sin respuesta.
+      {
+        event_id: "evt-hotlead",
+        direction: "inbound",
+        channel: "general",
+        customer_wa_id: "5491100000001",
+        customer_name: "Cliente A SA",
+        text_body: "Necesito el precio para hoy, cuántos kg tienen en stock?",
+        occurred_at: "2026-09-01T10:00:00Z",
+        classification_status: "pending",
+      },
+      // Mensaje ya respondido/clasificado de Cliente C - no debe generar señales.
+      {
+        event_id: "evt-resuelto",
+        direction: "inbound",
+        channel: "general",
+        customer_wa_id: "5491100000003",
+        customer_name: "Cliente C SA",
+        text_body: "Gracias, quedamos así.",
+        occurred_at: "2026-09-10T10:00:00Z",
+        classification_status: "resolved",
+      },
+    ],
+    sales: [
+      // Cliente B: dos compras del mismo producto en distintos meses -> repurchase radar.
+      { customer: "Cliente B SRL", date: "2026-07-01", items: [{ description: "Easy Spray" }] },
+      { customer: "Cliente B SRL", date: "2026-08-01", items: [{ description: "Easy Spray" }] },
+    ],
+  };
+
+  const before = {
+    taskIds: new Set(state.tasks.map((t) => t.id)),
+  };
+
+  const result = buildFullDailyMaintenanceUpdate(state, now);
+
+  assert.equal(result.changed, true);
+
+  // 1) Cierre de tareas vencidas: 2 de las 3 tareas debían cerrarse.
+  assert.equal(result.summary.tasksClosed, 2);
+  assert.equal(result.nextState.tasks.find((t) => t.id === "task-vencida-cliente-a").done, true);
+  assert.equal(result.nextState.tasks.find((t) => t.id === "task-vencida-cliente-b").done, true);
+  assert.equal(result.nextState.tasks.find((t) => t.id === "task-futura-cliente-c").done, false);
+
+  // 2) Señales calculadas y persistidas juntas: hot lead de Cliente A,
+  //    repurchase de Cliente B.
+  assert.equal(result.nextState.dailySignals.calculatedAt, now);
+  assert.equal(result.nextState.dailySignals.hotLeadsCount, 1);
+  assert.equal(result.nextState.dailySignals.hotLeads[0].customer, "Cliente A SA");
+  assert.equal(result.nextState.dailySignals.repurchaseCount, 1);
+  assert.equal(result.nextState.dailySignals.repurchase[0].customer, "Cliente B SRL");
+  assert.equal(result.summary.hotLeadsCount, 1);
+  assert.equal(result.summary.repurchaseCount, 1);
+
+  // 3) Auto-tarea de seguimiento creada para el hot lead de Cliente A,
+  //    vinculada al cliente correcto, sin duplicar ninguna de las tareas
+  //    preexistentes.
+  assert.equal(result.summary.autoFollowupTasksCreated, 1);
+  const autoTasks = result.nextState.tasks.filter((t) => t.source === AUTO_HOT_LEAD_TASK_SOURCE);
+  assert.equal(autoTasks.length, 1);
+  assert.equal(autoTasks[0].clientId, "client-a");
+  assert.match(autoTasks[0].title, /Cliente A SA/);
+
+  // El total de tareas es: las 3 originales + la 1 auto-generada.
+  assert.equal(result.nextState.tasks.length, 4);
+  for (const id of before.taskIds) {
+    assert.ok(result.nextState.tasks.some((t) => t.id === id), `la tarea original ${id} no debería desaparecer`);
+  }
+});
+
 test("buildFullDailyMaintenanceUpdate también crea tareas de seguimiento para hot leads", () => {
   const state = {
     tasks: [],

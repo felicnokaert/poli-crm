@@ -1,5 +1,5 @@
 import { authenticatedCorporateUser, serviceHeaders } from '../lib/corporate-auth.mjs';
-import { normalizeItem, openToken, sealToken } from '../lib/mercadolibre.mjs';
+import { MERCADOLIBRE_ACCOUNTS, normalizeItem, openToken, sealToken } from '../lib/mercadolibre.mjs';
 
 async function refreshAccess(account, environment) {
   const refreshToken = openToken(account.refresh_token_ciphertext, environment.MELI_TOKEN_ENCRYPTION_KEY);
@@ -63,8 +63,9 @@ export default async function handler(request, response) {
   const user = await authenticatedCorporateUser(request);
   if (!user) return response.status(401).json({ error: 'Acceso corporativo requerido.' });
   const accountKey = request.body?.accountKey;
+  if (!MERCADOLIBRE_ACCOUNTS[accountKey]) return response.status(400).json({ error: 'Cuenta no válida.' });
   const environment = process.env;
-  const accountResult = await fetch(`${environment.SUPABASE_URL}/rest/v1/mercadolibre_accounts?account_key=eq.${encodeURIComponent(accountKey || '')}&select=*&limit=1`, { headers: serviceHeaders() });
+  const accountResult = await fetch(`${environment.SUPABASE_URL}/rest/v1/mercadolibre_accounts?account_key=eq.${encodeURIComponent(accountKey)}&select=*&limit=1`, { headers: serviceHeaders() });
   const accounts = accountResult.ok ? await accountResult.json() : [];
   const account = accounts[0];
   if (!account) return response.status(404).json({ error: 'La cuenta todavía no está conectada.' });

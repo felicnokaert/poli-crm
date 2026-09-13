@@ -63,35 +63,47 @@ async function saveWorkspaceRow(environment, workspaceKey, data, fetchImpl = fet
 export default async function handler(request, response) {
   if (!authorized(request)) return response.status(401).json({ error: 'No autorizado.' });
   const nowISO = new Date().toISOString();
-  // Se guarda afuera del try para que, si algo falla a mitad de camino, el
-  // log diga en qué paso y en qué workspace estaba (en vez de un error crudo
-  // sin ubicar - lo que hace falta para diagnosticar desde los logs de
-  // Vercel sin tener que reproducir el fallo).
-  let step = 'fetchWorkspaceRows';
-  let currentWorkspaceKey = null;
+
+  // fetchWorkspaceRows es la única parte que, si falla, realmente no deja
+  // nada para procesar (no hay filas) - eso sí amerita abortar con 500.
+  let rows;
   try {
-    const rows = await fetchWorkspaceRows(process.env);
-    const results = [];
-    step = 'buildFullDailyMaintenanceUpdate';
-    for (const row of rows) {
-      currentWorkspaceKey = row.workspace_key;
-      const { changed, nextState, summary } = buildFullDailyMaintenanceUpdate(row.data || {}, nowISO);
-      if (changed) {
-        step = 'saveWorkspaceRow';
-        await saveWorkspaceRow(process.env, row.workspace_key, nextState);
-      }
-      results.push({ workspaceKey: row.workspace_key, changed, ...summary });
-    }
-    return response.status(200).json({
-      ok: true,
-      ranAt: nowISO,
-      workspacesProcessed: results.length,
-      workspacesUpdated: results.filter((item) => item.changed).length,
-      tasksClosed: results.reduce((sum, item) => sum + (item.tasksClosed || 0), 0),
-      results,
-    });
+    rows = await fetchWorkspaceRows(process.env);
   } catch (error) {
-    console.error(`cron-daily-maintenance failed at step "${step}"${currentWorkspaceKey ? ` (workspaceKey=${currentWorkspaceKey})` : ''} ranAt=${nowISO}:`, error);
+    console.error(`cron-daily-maintenance failed at step "fetchWorkspaceRows" ranAt=${nowISO}:`, error);
     return response.status(500).json({ error: 'Error interno al correr el mantenimiento diario.' });
   }
+
+  // A partir de acá cada fila se procesa de forma independiente: este cron
+  // corre sin supervisión humana, así que un workspace con datos corruptos o
+  // un PATCH que agota los reintentos de saveWorkspaceRow no debe impedir
+  // que el resto de los workspaces (y sus tareas vencidas/señales/auto-tareas)
+  // se procesen igual. El error de la fila que falló queda logueado con su
+  // workspaceKey y reflejado en el resultado de esa fila (ok:false), no tira
+  // abajo la corrida completa.
+  const results = [];
+  for (const row of rows) {
+    const workspaceKey = row.workspace_key;
+    try {
+      const { changed, nextState, summary } = buildFullDailyMaintenanceUpdate(row.data || {}, nowISO);
+      if (changed) {
+        await saveWorkspaceRow(process.env, workspaceKey, nextState);
+      }
+      results.push({ workspaceKey, changed, ok: true, ...summary });
+    } catch (error) {
+      console.error(`cron-daily-maintenance failed processing workspaceKey=${workspaceKey} ranAt=${nowISO}:`, error);
+      results.push({ workspaceKey, changed: false, ok: false, error: error.message || 'Error desconocido.' });
+    }
+  }
+
+  const failed = results.filter((item) => !item.ok);
+  return response.status(200).json({
+    ok: failed.length === 0,
+    ranAt: nowISO,
+    workspacesProcessed: results.length,
+    workspacesUpdated: results.filter((item) => item.changed).length,
+    workspacesFailed: failed.length,
+    tasksClosed: results.reduce((sum, item) => sum + (item.tasksClosed || 0), 0),
+    results,
+  });
 }

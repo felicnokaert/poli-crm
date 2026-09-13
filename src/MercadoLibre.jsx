@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { ExternalLink, RefreshCw, ShoppingBag } from 'lucide-react';
 import { Loading } from './ui-primitives';
 import { withRetry } from '../lib/retry.mjs';
@@ -35,7 +35,11 @@ function friendlyDate(value) {
   return new Intl.DateTimeFormat('es-AR', { dateStyle: 'short', timeStyle: 'short', hour12: false }).format(new Date(value));
 }
 
-export default function MercadoLibre({ session }) {
+// Solo recibe `session` (referencia estable) - sin memo, cada tick de
+// syncStatus en App.jsx (autoguardado en segundo plano) re-renderizaba esta
+// pantalla aunque el usuario estuviera solo mirando Mercado Libre sin tocar
+// nada.
+function MercadoLibreBase({ session }) {
   const [status, setStatus] = useState({ configured: false, accounts: [] });
   const [message, setMessage] = useState('');
   const [messageIsError, setMessageIsError] = useState(false);
@@ -148,4 +152,7 @@ export default function MercadoLibre({ session }) {
     </div>
   );
 }
+
+const MercadoLibre = memo(MercadoLibreBase);
+export default MercadoLibre;
 

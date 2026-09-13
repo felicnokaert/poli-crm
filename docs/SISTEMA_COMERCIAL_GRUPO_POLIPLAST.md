@@ -3,7 +3,7 @@
 **Estado:** Manual operativo canónico — v2
 **Responsable:** Felipe Cnokaert
 **Equipo:** ver sección 4 (Equipo y funciones)
-**Última actualización:** 10 de septiembre de 2026 (v2.8)
+**Última actualización:** 10 de septiembre de 2026
 **Cadencia de revisión:** semanal durante la implementación; mensual una vez estabilizado
 
 ## 0. Control de versión y changelog
@@ -25,12 +25,6 @@ Esos cuatro documentos quedan como **respaldo histórico** en `docs/historico/` 
 | v2 | 09/09/2026 | Fusiona v1 con el método de 12 etapas (confirmado en producción, `src/opportunities-model.mjs`), el sistema de 5 criterios y el triage de 6 variables en un único triage, la biblioteca de 11 objeciones con las 10 nuevas, y los 10 playbooks por segmento. Corrige "CRM 45% / Meta 65%" (dato histórico del 28/08, retirado), identifica "Fase 6" como ajena al proceso comercial, distingue personas confirmadas de funciones de apoyo, deja el Ejecutivo Comercial como pendiente de confirmación, y agrega la tabla de datos pendientes de validación. Aprobada con condiciones por Marketing el 09/09/2026. |
 | v2.1 | 10/09/2026 | Registra el arranque de la implementación del bloque #1 de la sección 19.1 (identidad única del cliente): desactivación de la fusión automática por nombre (`consolidateDuplicateClients`) y construcción del detector de posibles duplicados, ambos sin fusionar ni migrar datos existentes. Incorpora en sección 21 las decisiones de Felipe sobre las 4 preguntas abiertas de `docs/IDENTIDAD_UNICA_CLIENTE_SPEC.md`. No cambia método, triage, objeciones ni playbooks. |
 | v2.2 | 10/09/2026 | Incorpora la arquitectura aprobada de "CRM como copiloto comercial" (nuevo documento `docs/COPILOTO_COMERCIAL_ARQUITECTURA.md`): tres niveles (ayuda contextual, Academia comercial, aprendizaje con casos reales) que continúan la sección 19.1 después del bloque #1. Ajusta la sección 19.2, cuyos ítems de objeciones/playbooks/casos se absorben en el nuevo documento. No cambia método, triage, objeciones ni playbooks (secciones 5-8). |
-| v2.3 | 10/09/2026 | Revisión del tablero Trello "VENTAS — Grupo Poliplast": incorpora metas cuantitativas de trimestre/semana (secciones 2.1 y 14) que llenaban un hueco pendiente de la sección 16, con reserva explícita sobre su documento fuente (`Sistema_Operativo_de_Ventas_Grupo_Poliplast.pdf`, no identificado como parte de este manual — pendiente de confirmación de Felipe). Suma a la sección 21 el estado técnico más reciente reportado por Codex en Trello (cartera y ventas importadas a producción, multi-tenant, integración ML, automatizaciones activas). No cambia método, triage, objeciones ni playbooks. |
-| v2.4 | 10/09/2026 | Cierra la reserva sobre `Sistema_Operativo_de_Ventas_Grupo_Poliplast.pdf` (confirmado antecedente absorbido, no documento vivo aparte) y la fila de objetivos de venta/cuota en sección 16. Reescribe la sección 18 con la división Codex/Claude vigente hasta el 18/09/2026 (Codex: implementación, QA técnico y manual del CRM; Claude: método, contenido, Trello y continuidad post-18). Incorpora el handoff técnico de Codex (`docs/HANDOFF_CODEX_A_CLAUDE_2026-09-18.md`) a la sección 21. No cambia método, triage, objeciones ni playbooks. |
-| v2.5 | 10/09/2026 | Codex verificó que el tablero interno del CRM y Trello eran dos sistemas de tareas independientes y desactualizados entre sí. Desde el commit `f7b32f9`, **Trello queda confirmado como único tablero maestro de proyectos** — la sección "Tablero / Trello" del CRM pasa a ser puerta de entrada al tablero oficial (misma guía de listas), no un segundo tablero; los datos del tablero interno anterior se preservaron pero dejaron de presentarse como fuente operativa; las tareas ligadas a clientes siguen en el módulo Tareas del CRM. Refuerza la regla de coordinación de la sección 18. No cambia método, triage, objeciones ni playbooks. |
-| v2.6 | 10/09/2026 | Codex cerró el QA operativo del CRM (commit `e4eaa2e`, informe `docs/QA_OPERATIVO_CRM_2026-09-10.md`, 186/186 pruebas) y publicó `output/pdf/MANUAL_USO_CRM_POLIPLAST.pdf` con la revisión pedagógica ya incorporada. Confirma en producción que las 12 etapas del método son consistentes en todo el CRM, que clasificar una conversación sin compromiso ya no crea una tarea automática, y que Ganado/Perdido/Pausado quedan como resultado comercial y no como etapas — validando en código el hallazgo de la sección 21 anterior. Registra en sección 21 el cierre del QA y los pendientes reales que deja abiertos. No cambia método, triage, objeciones ni playbooks. |
-| v2.7 | 10/09/2026 | Codex construyó la base de conocimiento técnica (commit `763fb09`, `docs/BASE_CONOCIMIENTO_TECNICA_SPEC.md`): gobierna cómo el CRM va a citar fichas técnicas de Drive sin inventar datos, con seis estados documentales, detección de duplicados sin borrado automático, y confirma formalmente la fuente de precio/costo/stock (Contabilium, nunca la ficha técnica) — cierra una ambigüedad que quedaba abierta desde `COPILOTO_COMERCIAL_ARQUITECTURA.md`. Registra también el alcance inicial de un cotizador comercial (`docs/COTIZADOR_COMERCIAL_SPEC.md`, backlog explícito, no bloquea identidad única ni Ventas) y el prompt de continuidad que Marketing envió a Claude Code (`docs/PROMPT_CONTINUIDAD_CLAUDE_CODE_BASE_TECNICA.md`) para ejecutar el primer bloque: importador con vista previa y familia piloto de 5-10 fichas. No cambia método, triage, objeciones ni playbooks. |
-| v2.8 | 10/09/2026 | Claude Code implementó la persistencia del inventario técnico en Supabase (commit `8fb5d7d`) sobre una migración aditiva, con catálogo compartido a nivel Grupo Poliplast (no por canal), RLS verificado en vivo (lectura anónima vacía, escritura anónima rechazada) y ningún documento marcado `vigente` automáticamente — según las condiciones acordadas con Marketing. En la misma tanda: corrigió que al borrar un cliente sus conversaciones quedaban huérfanas en Historial, agregó eliminar una conversación o tarea individual sin borrar el cliente entero, unificó el estilo de los botones "Eliminar", y agregó a Base técnica que las fichas se pueden renombrar y quedan agrupadas por carpeta como en Drive. La decisión de Mercado Libre/E-commerce quedó movida a Trello, sin acción en el CRM. 248/248 pruebas y build correctos. Registra en sección 21 el detalle completo y el pendiente abierto (confirmar si el fix de "Por revisar" resucitando chats cubre la causa completa). No cambia método, triage, objeciones ni playbooks. |
 
 ---
 
@@ -67,12 +61,6 @@ La ventaja distintiva es la integración del grupo — y ningún competidor dire
 6. Acompañamiento técnico-comercial (Imperpur, N°1 del mercado en aislamiento y revestimientos térmicos).
 
 No todas las oportunidades requieren las seis capacidades. El valor está en poder combinarlas cuando el problema lo exige. Este argumento de integración vertical hoy vive disperso en distintos documentos — este manual lo convierte en discurso repetible (ver sección 8, playbooks).
-
-### 2.1 Objetivo comercial del trimestre (fuente original: tablero Trello "VENTAS — Grupo Poliplast", tarjeta "Objetivo comercial del trimestre", que citaba a su vez `Sistema_Operativo_de_Ventas_Grupo_Poliplast.pdf` sección 2.2 — **confirmado por Marketing el 10/09/2026: ese PDF es un antecedente histórico ya absorbido por este manual, no un documento vivo en paralelo**)
-
-- 10 a 15 clientes nuevos en el trimestre.
-- Registrar conversaciones y próximos pasos de cada oportunidad, vía CRM.
-- Aumentar recompra y cross-selling sobre la cartera histórica (793 clientes PUR).
 
 ## 3. Fuentes metodológicas y herramientas prácticas
 
@@ -501,14 +489,6 @@ Las columnas de responsabilidad usan **funciones** (sección 4), no necesariamen
 
 Leads identificados; contactos efectivos; diagnósticos completados; propuestas; seguimientos cumplidos.
 
-**Panel semanal de referencia (fuente: tarjeta Trello "Métricas semanales", panel que se actualiza y no se archiva — misma reserva de la sección 2.1 sobre su documento origen):**
-
-- 15 contactos nuevos por semana.
-- 8 a 10 contactos efectivos por semana.
-- 2 a 3 propuestas por semana.
-- Seguimientos vencidos: objetivo cero.
-- Ventas cerradas, recompra y motivos de pérdida se registran en el CRM (Oportunidades), no en Trello.
-
 ### Conversión
 
 Triage a diagnóstico; diagnóstico a propuesta; propuesta a venta; tiempo medio entre etapas; motivos de pérdida.
@@ -549,7 +529,7 @@ Nada de esta tabla se completa por inferencia — queda explícitamente abierto 
 | Política de crédito / cuenta corriente | Pendiente | Afecta directamente la etapa de Negociación |
 | Capacidad de producción / stock real de Foam Factory frente a pedidos grandes | Pendiente | Condiciona compromisos de entrega |
 | Criterio formal de cuántos intentos de seguimiento corresponden antes de reclasificar una cuenta | Sugerido (3 intentos en 3 semanas) pero no validado formalmente | Afecta la etapa de Seguimiento (sección 5.2) |
-| Objetivos de venta o cuota por vendedor/familia | **Resuelto 10/09/2026** — meta trimestral y semanal incorporadas (secciones 2.1 y 14); `Sistema_Operativo_de_Ventas_Grupo_Poliplast.pdf` confirmado como antecedente absorbido, no documento vivo aparte. Sigue pendiente si hay cuota por vendedor individual (hoy es meta de equipo) | Define contra qué se mide el método a partir de ahora |
+| Objetivos de venta o cuota por vendedor/familia | Pendiente | No hay meta cuantitativa contra la cual medir el método |
 | Argumentario de precio/valor frente a competidores de marca reconocida (Sika, Fischer) | Pendiente | Necesario para la objeción "es caro" (sección 7) |
 | Vigencia y contenido del Proyecto de Transición Comercial (5 Sprints, Notion) | Pendiente de revisión — se conserva como antecedente, no se declara reemplazado | Podría solaparse con este manual; no se asume sin leerlo |
 | Capacidad real de contactos diarios que puede sostener el equipo | Pendiente | Condiciona el plan de implementación (sección 17) |
@@ -613,17 +593,17 @@ Nada de esta tabla se completa por inferencia — queda explícitamente abierto 
 
 Aporta decisiones y contexto que no puede inferirse; ejecuta conversaciones reales; valida lenguaje, prioridades y límites; comparte objeciones y resultados; aprueba cambios de alcance o acciones externas; resuelve la tabla de datos pendientes (sección 16).
 
-### Codex (hasta el 18/09/2026)
+### Codex
 
-Implementación y QA técnico del CRM; corrección de persistencia e identidad; manual operativo del CRM (cómo usar la aplicación, primera versión a su cargo); inventario técnico de automatizaciones y fuentes; sincronización final de Drive; handoff integral a Claude (ver `docs/HANDOFF_CODEX_A_CLAUDE_2026-09-18.md`, vivo hasta el cierre).
+Mantiene el CRM (`Oportunidades`, `Ventas y Comisiones`) y su código; verifica que este manual y el CRM sigan alineados; prueba identidad, persistencia, seguridad y experiencia; integra datos y automatizaciones; entrega evidencia técnica y handoffs; confirma el estado real de avance por frente cuando se le pida.
 
 ### Claude
 
-Mantiene y mejora el Sistema Comercial (este documento); revisa pedagógicamente el manual del CRM cuando Codex entregue su primera versión y lo alinea con este manual, sin duplicar contenido; trabaja objeciones, playbooks y triage con casos reales de Cohorte 1 a medida que llegan; coordina Trello; continúa el proyecto después del 18/09. No implementa funciones nuevas en el CRM en paralelo a Codex mientras dure el sprint de cierre — una mejora detectada se documenta o se agrega al backlog (sección 19), no se codea dos veces.
+Desarrolla metodología, guiones y entrenamiento; sintetiza conversaciones y objeciones reales; prepara materiales pedagógicos; ayuda a convertir aprendizajes en playbooks; no modifica la arquitectura técnica, el CRM ni Supabase sin coordinación explícita.
 
 ### Regla de coordinación
 
-El documento define el método. El CRM registra la operación. **Trello es el único tablero maestro de proyectos** (confirmado desde el commit `f7b32f9`, ver sección 21) — el CRM no mantiene un tablero interno paralelo; su sección "Tablero / Trello" es puerta de entrada al tablero oficial, y las tareas ligadas a un cliente puntual viven en el módulo Tareas del CRM, no en Trello. Drive conserva activos y fuentes. Ninguno reemplaza a los demás ni se duplica como fuente canónica. **División Codex/Claude confirmada por Marketing el 10/09/2026, vigente hasta el 18/09/2026** — después de esa fecha, Claude asume la continuidad completa del proyecto (ver sección 21).
+El documento define el método. El CRM registra la operación. Trello administra trabajo. Drive conserva activos y fuentes. Ninguno reemplaza a los demás ni se duplica como fuente canónica.
 
 ## 19. Backlog posterior
 
@@ -714,19 +694,6 @@ Espacio vivo para que Codex documente, a medida que ocurre, el estado técnico y
 - No se espera a que Claude termine de mejorar el contenido del manual para que Codex empiece a construir el contenedor (arquitectura de los tres niveles) — avanzan en paralelo; las versiones aprobadas del manual se sincronizan sobre esa arquitectura.
 - Impacto sobre este manual: actualiza sección 19.1 (agrega continuación aprobada tras el bloque #1) y sección 19.2 (varios ítems se absorben en el nuevo documento, con nota de referencia). No cambia método, triage, objeciones ni playbooks (secciones 5-8) — el nuevo documento es de arquitectura de interfaz, no de contenido comercial.
 
-**10/09/2026 — Marketing, revisión del tablero Trello "VENTAS — Grupo Poliplast" (43 tarjetas, 6 listas: 00 — Norte y métricas, Backlog comercial, Backlog — Ecommerce/Canales/Operación, En ejecución, Prioridad semanal, Revisión):**
-
-- **Regla ya vigente en Trello, consistente con este manual:** "Trello administra trabajo (tareas, responsables, fechas); el CRM administra clientes y conversaciones; la Base Comercial canónica administra prospectos, no se duplica en Trello; clientes individuales no se cargan como tarjetas." No hay conflicto de gobernanza — Trello y este manual cubren cosas distintas.
-- **Hallazgo a resolver:** dos tarjetas de la lista "00 — Norte y métricas" ("Objetivo comercial del trimestre", "Métricas semanales") citan como fuente `Sistema_Operativo_de_Ventas_Grupo_Poliplast.pdf`, un nombre de archivo que no coincide con este manual ni aparece en su changelog (sección 0) como documento absorbido. Contienen metas cuantitativas que este manual no tenía (10-15 clientes nuevos/trimestre; 15 contactos, 8-10 efectivos y 2-3 propuestas por semana) y que sí llenan un hueco real de la sección 16 ("Objetivos de venta o cuota" estaba pendiente). Se incorporaron a las secciones 2.1, 14 y 16 con la fuente citada explícitamente. **Falta que Felipe confirme si ese PDF es un antecedente ya superado por este manual o si sigue vivo en paralelo** — mientras tanto, las metas quedan citadas, no asumidas como definitivas.
-- **Estado técnico más reciente reportado por Codex en Trello (tarjetas "Mapa general del sistema comercial" y "Inventario de automatizaciones", ambas actualizadas 09/09/2026, más recientes que la entrada del 07/09 de este mismo registro):**
-  - CRM operativo en producción (`poli-crm.vercel.app`). Cartera importada: 1.052 registros (792 históricos + 166 prospectos + 26 relevamientos activos + 68 previos) — validación manual de calidad todavía pendiente. Ventas: 43 cargadas (12/09 + 31 previas), sin validación multi-comercial todavía.
-  - Multi-tenant en marcha: felipe→canal General, juan→canal Juan, info→canal Penosil; aislamiento probado con tests automatizados; uso real de Juan sin verificar todavía.
-  - Integración oficial Mercado Libre (solo lectura, multi-cuenta POLIPLAST+FOAM, OAuth, tokens AES-256) construida; bloqueada 24hs por ML, retoma prevista 10/09.
-  - Shopify: sin ejecución de Codex — queda a cargo de Claude vía Shopify MCP hasta que existan acciones documentadas del lado técnico (consistente con el reparto ya acordado, sección 18).
-  - Automatizaciones de Codex activas y confirmadas (no son "5 pausadas" como decía un inventario anterior del 04/09): Catálogo WhatsApp completo (diaria 09:00), Contenido Penosil (semanal, lunes 08:30), Marketplace lote 50 (diaria 05:00) — ninguna con evidencia verificada de resultados reales todavía. Hallazgo técnico pendiente de que Codex corrija: `/api/health` reporta `browserBridge:true` de forma engañosa (el puente ya fue retirado).
-  - 156 pruebas automatizadas y build de producción correctos al 09/09.
-- Impacto sobre este manual: actualiza sección 16 (dato "capacidad real de contactos diarios" sigue abierto; se suma contexto de cartera/ventas ya importadas) y agrega la reserva sobre `Sistema_Operativo_de_Ventas_Grupo_Poliplast.pdf` como pregunta abierta. No cambia método, triage, objeciones ni playbooks.
-
 **10/09/2026 — Codex, cierre de la base utilizable de identidad única (commits `2b31da0`, `adaa155` y `c84cdcb`):**
 
 - Se incorporó en Empresas la revisión de posibles duplicados en modo solo lectura, sin fusionar ni alterar datos reales.
@@ -734,66 +701,6 @@ Espacio vivo para que Codex documente, a medida que ocurre, el estado técnico y
 - La ficha Empresa ahora permite varias personas y medios de contacto, elección de principal, edición y baja individual. El buscador contempla cualquiera de esos datos.
 - Verificación: 167 pruebas automatizadas y compilación de producción completas.
 - Decisión de Felipe: las acciones de candidatos y la fusión/deshacer quedan diferidas. El próximo frente habilitado es Academia comercial; identidad conserva como pendientes la clasificación no comercial por persona y el QA real.
-
-**10/09/2026 — Marketing, división de responsabilidades confirmada hasta el 18/09 y cierre de preguntas abiertas:**
-
-- **Confirmado:** `Sistema_Operativo_de_Ventas_Grupo_Poliplast.pdf` es un antecedente histórico absorbido por este manual, no un documento vivo en paralelo (cierra la reserva de la entrada anterior; ver secciones 2.1 y 16).
-- **División Codex/Claude confirmada y volcada a la sección 18:** Codex hasta el 18/09 se queda con implementación y QA técnico del CRM, manual de uso del CRM (primera versión), inventario técnico y handoff integral. Claude mantiene el Sistema Comercial, revisa pedagógicamente el manual del CRM cuando llegue, trabaja objeciones/playbooks/triage con Cohorte 1, coordina Trello y continúa el proyecto después del 18. Ninguno de los dos implementa funciones nuevas del CRM en paralelo al otro durante el sprint de cierre.
-- **Handoff técnico recibido de Codex:** `docs/HANDOFF_CODEX_A_CLAUDE_2026-09-18.md` (documento vivo, se actualiza hasta el cierre). Confirma estado por módulo con evidencia de commit y pruebas — entre lo más relevante: Empresas operativo con rendimiento corregido (prueba con 2.001 clientes); identidad única en base utilizable (fusión/deshacer diferida por Felipe); Academia comercial con 12 etapas, 13 objeciones, 10 playbooks y E-C-E-R-A estructurados como datos testeables; ayuda contextual v1 y triage 0-12 construidos y publicados (175 y 179 pruebas respectivamente); persistencia de workspace, eliminaciones e historial corregidas (180-184 pruebas); WhatsApp Penosil y Juan diferidos por decisión de Felipe, sin bloquear el cierre de Codex; Mercado Libre con integración de lectura construida, pendiente de autorización real.
-- **WhatsApp Penosil y Juan — diferido confirmado.** Se publicó un comentario en la tarjeta Trello "Mapa general del sistema comercial" documentando la decisión, para que quede trazable ahí también (no se editó la descripción de la tarjeta, que es mantenida por Codex).
-- **Pedido de datos de Cohorte 1 para validar objeciones/playbooks/triage** (ver mensaje de Claude del 10/09/2026 en el chat de continuidad — no se transcribe acá para no duplicar contenido operativo fuera de este manual).
-- Impacto sobre este manual: cierra dos filas de la sección 16 (Sistema_Operativo_de_Ventas y objetivos de venta/cuota), reescribe la sección 18 con la división vigente hasta el 18/09, sin cambiar método, triage, objeciones ni playbooks.
-
-**10/09/2026 — Marketing/Codex, consolidación del tablero de proyectos (commit `f7b32f9`):**
-
-- Codex verificó que el tablero interno del CRM y Trello eran dos sistemas de gestión de tareas independientes entre sí y desactualizados uno respecto del otro (no reflejaban el mismo estado). Para eliminar esa duplicación, **Trello ("VENTAS — Grupo Poliplast") queda como único tablero maestro de proyectos.**
-- La sección "Tablero / Trello" del CRM dejó de ser un segundo tablero: ahora es una puerta de entrada al tablero oficial de Trello, con la misma guía de listas que ya usaba internamente.
-- Los datos del tablero interno anterior se preservaron (no se borraron), pero ya no se presentan como fuente operativa dentro del CRM.
-- Las tareas ligadas a un cliente puntual (no a un proyecto o iniciativa) permanecen donde ya estaban: en el módulo Tareas del CRM. Esa distinción no cambia — Trello administra proyectos e iniciativas, el módulo Tareas del CRM administra el trabajo comercial atado a una cuenta.
-- Ya revisé el manual de uso del CRM (`docs/MANUAL_USO_CRM_POLIPLAST.md`, sección 14, "Tablero / Trello") y confirmé que describe correctamente esta misma decisión — no requirió corrección en ese punto.
-- Impacto sobre este manual: refuerza la "Regla de coordinación" de la sección 18 (ya no dice solo "Trello administra trabajo", ahora aclara explícitamente que es el único tablero — sin tablero interno paralelo en el CRM). No cambia método, triage, objeciones ni playbooks.
-
-**10/09/2026 — Codex, cierre del QA operativo del CRM (commit `e4eaa2e`, informe `docs/QA_OPERATIVO_CRM_2026-09-10.md`):**
-
-- Generó y publicó `output/pdf/MANUAL_USO_CRM_POLIPLAST.pdf` a partir de la versión con la revisión pedagógica de Claude ya aplicada (corrección de la sección 8, nombres de etapa alineados).
-- Cerró QA operativo de solo lectura sobre producción, sin modificar clientes, conversaciones, tareas ni ventas reales: 186/186 pruebas automatizadas aprobadas, build de producción correcto.
-- Confirmó en producción, con evidencia: las 12 etapas canónicas coinciden en todo el CRM; clasificar una conversación sin compromiso concreto ya no genera una tarea automática (`Fecha próxima` y `Próxima acción` quedan vacías); Ganado, Perdido y Pausado quedan como **resultado** comercial, no como etapas — esto confirma en código el hallazgo que motivó la corrección de la sección 8 del manual del CRM en la entrada anterior de esta sección; Trello sigue confirmado como único tablero maestro.
-- **Pendientes reales que deja el QA, sin resolver todavía:** limpieza controlada de tareas históricas generadas automáticamente antes de la corrección (sin tocar compromisos reales); bandeja de posibles duplicados y fusión reversible de identidad única (bloque #1 de la sección 19.1, sigue diferido por Felipe); autorización oficial de Mercado Libre pendiente de la plataforma; validación de altas/ediciones de Ventas con una operación real; lectura rápida de Felipe sobre el manual del CRM (sección 21 de ese documento) antes de publicar la versión aprobada en Drive.
-- **Cierre y balance personal de Codex sobre el mes de trabajo (compartido por Marketing, se deja registrado por su valor de continuidad):** en un mes se pasó de archivos y sistemas separados a un CRM real, Trello como organizador único, documentación canónica y una metodología comercial concreta; lo mejor fue la capacidad de probar, corregir y conservar la historia; lo menos bueno fue cambiar de arquitectura demasiado rápido y documentar varias veces lo mismo. Foco propuesto para lo que sigue, en este orden: (1) limpieza controlada de tareas automáticas antiguas, (2) identidad única y duplicados reversibles, (3) validación práctica de Ventas y comisiones, (4) después, integración de Mercado Libre y transferencia completa a Claude. Este orden es consistente con el ya definido en la sección 19.1 (bloque #1 sigue siendo identidad única) y con el plan de cierre del `docs/HANDOFF_CODEX_A_CLAUDE_2026-09-18.md` — no lo reemplaza, lo confirma.
-- Impacto sobre este manual: cierra el estado técnico de la sección 21 con evidencia validada en producción; no abre nuevas filas en la sección 16; no cambia método, triage, objeciones ni playbooks.
-
-**10/09/2026 — Codex, base de conocimiento técnica y cotizador comercial (commit `763fb09`):**
-
-- Construyó la arquitectura y las reglas de seguridad de la **base de conocimiento técnica** (`docs/BASE_CONOCIMIENTO_TECNICA_SPEC.md`): convierte fichas técnicas, manuales y documentos oficiales de Drive en algo consultable desde el CRM, sin que el copiloto invente datos. Drive sigue siendo el original; el CRM solo mantiene índice, contenido extraído, estado de vigencia y referencia a la fuente.
-- Seis estados documentales (`inventariado`, `posible_duplicado`, `pendiente_validacion`, `vigente`, `desactualizado`, `no_tecnico`) y detección de duplicados por hash SHA-256 (exacto) o nombre/tamaño (solo candidato) — **ningún documento se borra ni se marca vigente automáticamente**; eso queda para una persona responsable, con fecha. Mismo criterio que ya usamos para duplicados de clientes (sección 19.1, bloque #1).
-- **Confirma formalmente la fuente de precio, costo y stock: Contabilium o la fuente operativa aprobada — nunca una ficha técnica.** Esto cierra una ambigüedad que venía abierta implícitamente desde `docs/COPILOTO_COMERCIAL_ARQUITECTURA.md` (qué fuente respalda una sugerencia de precio).
-- Regla de respuesta: un dato técnico solo se cita si el documento está `vigente`, con fuente, responsable y fecha de validación; si falta, el copiloto debe decir "pendiente de verificar" y preguntar, no completar por probabilidad. Nunca se envía una respuesta automáticamente — mismo principio ya vigente en Academia comercial (sección 13 del manual del CRM).
-- Penosil: no se importa el sitio completo. Primero se cruza el catálogo realmente comercializado por Poliplast contra la documentación oficial en español; por producto, como mínimo, ficha técnica y ficha de seguridad.
-- Piloto recomendado: familia Poliuretano o PURMAC, 5-10 documentos completos, antes de escalar.
-- 31 documentos ya indexados por metadata en `src/technical-library.mjs`, ninguno todavía validado — el inventario recursivo de Drive, la extracción de texto y la interfaz siguen pendientes.
-- **Cotizador comercial** (`docs/COTIZADOR_COMERCIAL_SPEC.md`): alcance inicial registrado, backlog explícito — no desplaza identidad única, limpieza histórica ni validación de Ventas. Decisión: sí conviene un cotizador interno reutilizable dentro del CRM, tomando como referencia funcional el cotizador Resinplast 2026, sin copiar datos estáticos ni crear una fuente de precios paralela al Catálogo Maestro/Contabilium. MVP recomendado: Resinplast primero (ya tiene cotizador probado y listas CF/Mayorista estructuradas); Baldes, PRFV y Penosil después, como adaptadores de listas.
-- Marketing envió a Claude Code el prompt de continuidad (`docs/PROMPT_CONTINUIDAD_CLAUDE_CODE_BASE_TECNICA.md`) para ejecutar el primer bloque: importador de inventario con vista previa (informa nuevos, modificados, duplicados exactos, posibles duplicados y errores antes de guardar) y una familia piloto de 5-10 fichas. El prompt no mezcla ese bloque con limpieza de tareas, identidad única, Ventas ni Mercado Libre — se revisó contra la gobernanza ya vigente en este manual antes de enviarlo y es consistente con ella.
-- Impacto sobre este manual: no abre ni cierra filas de la sección 16; documenta una nueva capa de trabajo (base técnica + cotizador) que se suma al backlog ya ordenado en la sección 19.1, sin alterar su orden. No cambia método, triage, objeciones ni playbooks.
-
-**10/09/2026 — Claude Code, piloto real del importador técnico (commit `a6cca90`):**
-
-- Siguió al pie de la letra `docs/PROMPT_CONTINUIDAD_CLAUDE_CODE_BASE_TECNICA.md`: leyó el handoff, la spec de base técnica, la arquitectura del copiloto y la spec de identidad única antes de tocar código.
-- Construyó `src/technical-inventory-import.mjs` apoyado en la gobernanza que ya había hecho Codex, sin duplicarla — clasifica archivos en nuevos, modificados, duplicados exactos, posibles duplicados y errores, sin guardar ni marcar nada `vigente`.
-- Corrió el piloto contra **archivos reales de PURMAC** (no simulados): 9 archivos, hash y tamaño calculados de verdad, nada movido en Drive. Resultado: 7 nuevos y 2 duplicados exactos reales (la misma ficha de la manta calefactora guardada en dos carpetas, y el mismo manual de la pistola PM 3500 repetido como "(1)").
-- El piloto encontró un bug real que ningún test simulado había detectado: la primera versión solo comparaba contra lo ya indexado, no contra los demás archivos del mismo lote — con catálogo vacío, los 2 duplicados reales salían como "9 nuevos". Se corrigió y se agregó el test de regresión de ese caso exacto.
-- Dejó sin decidir, tal como pedía el prompt, dónde persistir el catálogo (Supabase vs. archivo estático) — documentado como pendiente en `docs/BASE_CONOCIMIENTO_TECNICA_SPEC.md`, sección 10.1, para que no se resolviera solo.
-- No tocó `docs/SISTEMA_COMERCIAL_GRUPO_POLIPLAST.md` ni su PDF, que estaban en edición sin commitear en ese momento.
-- Impacto sobre este manual: confirma en la práctica, con datos reales, que la regla de duplicados de la sección anterior funciona y que probarla contra datos reales (no solo simulados) puede revelar bugs que los tests no cubren — mismo principio que ya aplicamos al importar catálogos grandes (sección 19.1). No cambia método, triage, objeciones ni playbooks.
-
-**10/09/2026 — Claude Code, persistencia en Supabase y correcciones de CRM (commit `8fb5d7d`):**
-
-- Marketing decidió Supabase (no archivo estático) para el catálogo técnico, consistente con el resto del CRM y con el principio de que cambiar un estado de validación es una acción operativa, no un redeploy. Le envié a Claude Code el prompt con 10 condiciones (migración aditiva; catálogo compartido a nivel Grupo Poliplast, no por canal; RLS por organización y rol; Drive sigue siendo el origen; ningún documento `vigente` automáticamente; mantener la vista previa; historial de validación con usuario/fecha/estado anterior-nuevo/observación; no construir el cotizador todavía; no tocar este manual en edición; tests y build antes de commit).
-- Implementó la persistencia sobre una migración exclusivamente aditiva, con el catálogo compartido a nivel Grupo Poliplast (no duplicado por canal General/Penosil/Juan) y RLS **verificado en vivo, no solo por diseño**: confirmó que la lectura anónima devuelve vacío y que la escritura anónima es rechazada explícitamente.
-- En la misma tanda, corrigió dos bugs reales del CRM: al borrar un cliente, sus conversaciones quedaban huérfanas en Historial (ahora se borran junto con el cliente); y agregó la posibilidad de eliminar una conversación o una tarea individual sin borrar el cliente entero (no existía antes). También unificó el estilo de todos los botones "Eliminar" (píldora redondeada con color distintivo) y agregó a Base técnica que las fichas se pueden renombrar y quedan agrupadas por carpeta, igual que en Drive.
-- La decisión pendiente de Mercado Libre/E-commerce quedó movida a Trello — sin acción tomada en el CRM.
-- 248/248 pruebas y build correctos; todo commiteado y pusheado a `main`.
-- **Pendiente real, sin cerrar:** el fix de "Por revisar" resucitando conversaciones ya clasificadas resuelve el gap concreto que se encontró, pero Claude Code fue explícito en que no está confirmado que sea la única causa — pedir aviso si el síntoma vuelve a aparecer.
-- Impacto sobre este manual: no abre ni cierra filas de la sección 16; confirma que la base técnica ya tiene persistencia real y gobernanza verificada en producción, no solo documentada. No cambia método, triage, objeciones ni playbooks.
 
 ---
 

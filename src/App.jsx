@@ -20,6 +20,8 @@ import {
   UserCog,
   ShoppingBag,
   FileCheck2,
+  HelpCircle,
+  X,
 } from "lucide-react";
 import { useConfirm } from "./ConfirmDialog";
 import { Splash, Spinner } from "./ui-primitives";
@@ -35,6 +37,7 @@ import {
   longToday,
   profileInitials,
   today,
+  useModalEscape,
 } from "./app-shared";
 import { Tasks, TaskList, TaskDetail, TaskForm } from "./Tasks";
 import { Pipeline } from "./Pipeline";
@@ -210,6 +213,7 @@ export default function App() {
   const [view, setView] = useState("dashboard");
   const [collapsedNavGroups, setCollapsedNavGroups] = useNavGroups(NAV_GROUP_NAMES);
   const [showForm, setShowForm] = useState(false);
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [taskForm, setTaskForm] = useState(blankTask);
   const [editingInteractionId, setEditingInteractionId] = useState(null);
@@ -229,6 +233,7 @@ export default function App() {
   const hasOpenModal =
     showForm ||
     showTaskForm ||
+    showShortcutsHelp ||
     Boolean(inboxDraft) ||
     Boolean(selectedInteractionId) ||
     Boolean(selectedClientId) ||
@@ -1522,6 +1527,15 @@ export default function App() {
                 </button>
               )}
             </span>
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="Ver atajos de teclado"
+              title="Atajos de teclado"
+              onClick={() => setShowShortcutsHelp(true)}
+            >
+              <HelpCircle size={18} />
+            </button>
             <div
               className="profile-pill"
               title={data.profileName || session?.user?.email || ""}
@@ -1731,6 +1745,8 @@ export default function App() {
           onOpenInteraction={setSelectedInteractionId}
           onNewInteraction={startClientInteraction}
           onNewTask={startClientTask}
+          onOpenTask={setSelectedTaskId}
+          onToggleTask={toggleTask}
           onSave={updateClient}
           onDelete={deleteClient}
         />
@@ -1758,6 +1774,52 @@ export default function App() {
           }}
         />
       )}
+      {showShortcutsHelp && (
+        <ShortcutsHelp onClose={() => setShowShortcutsHelp(false)} />
+      )}
+    </div>
+  );
+}
+
+// Los atajos ("/" y "n") solo se anunciaban con un title (tooltip al pasar
+// el mouse), poco visible. Este panel los lista de forma explícita desde el
+// ícono de ayuda de la topbar.
+function ShortcutsHelp({ onClose }) {
+  useModalEscape(onClose);
+  const shortcuts = [
+    ["/", "Buscar en la pantalla actual"],
+    ["n", "Nueva tarea"],
+    ["Esc", "Cerrar el formulario o ficha abierta"],
+  ];
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <section
+        className="modal shortcuts-help"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="modal-head">
+          <div>
+            <span className="eyebrow">Ayuda</span>
+            <h2>Atajos de teclado</h2>
+          </div>
+          <button
+            type="button"
+            className="icon-button"
+            aria-label="Cerrar"
+            onClick={onClose}
+          >
+            <X />
+          </button>
+        </div>
+        <dl className="shortcuts-list">
+          {shortcuts.map(([key, description]) => (
+            <div key={key}>
+              <kbd>{key}</kbd>
+              <dd>{description}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
     </div>
   );
 }

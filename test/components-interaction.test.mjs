@@ -85,6 +85,64 @@ describe("Clients.jsx - interacción real", () => {
     fireEvent.change(searchInput, { target: { value: "Envases" } });
     assert.deepEqual(calls, ["Envases"]);
   });
+
+  // El empty state agregado la noche del 14/09 tiene dos mensajes distintos
+  // según el motivo por el que la lista está vacía: sin clientes cargados
+  // (invita a importar un CSV) vs. hay clientes pero el filtro activo no
+  // matchea ninguno (mensaje genérico). Antes de este test ambos casos
+  // caían en el mismo <Empty>, sin verificar cuál mensaje corresponde a cuál.
+  test("clients=[] muestra el mensaje de onboarding para importar el primer CSV", async () => {
+    const mod = await loadJsxModule("src/Clients.jsx");
+    render(
+      React.createElement(mod.Clients, {
+        clients: [],
+        query: "",
+        setQuery: () => {},
+        onOpenClient: () => {},
+        onMergeClients: () => {},
+      }),
+    );
+    assert.ok(
+      screen.getByText(
+        "Todavía no cargaste ninguna empresa. Probá importar un CSV desde Datos → Importar clientes CSV.",
+      ),
+    );
+    assert.equal(
+      screen.queryByText("No hay empresas que coincidan con estos filtros."),
+      null,
+    );
+  });
+
+  test("hay clientes pero el filtro de portfolio no matchea ninguno: muestra el mensaje genérico de filtros", async () => {
+    const mod = await loadJsxModule("src/Clients.jsx");
+    render(
+      React.createElement(mod.Clients, {
+        clients,
+        query: "",
+        setQuery: () => {},
+        onOpenClient: () => {},
+        onMergeClients: () => {},
+      }),
+    );
+    // Ninguno de los fixtures define `pipelineActive`, así que "Activos"
+    // (pipelineActive !== false) matchea a los 3 pero "En cartera"
+    // (pipelineActive === false) no matchea a ninguno - forma simple de
+    // vaciar la lista visible sin depender de valores de <option> sin
+    // atributo `value` explícito (React usa el texto como value).
+    const portfolioSelect = screen.getAllByRole("combobox").find((select) =>
+      Array.from(select.options).some((option) => option.value === "En cartera"),
+    );
+    assert.ok(portfolioSelect, "debería existir un <select> con la opción 'En cartera'");
+    fireEvent.change(portfolioSelect, { target: { value: "En cartera" } });
+
+    assert.ok(screen.getByText("No hay empresas que coincidan con estos filtros."));
+    assert.equal(
+      screen.queryByText(
+        "Todavía no cargaste ninguna empresa. Probá importar un CSV desde Datos → Importar clientes CSV.",
+      ),
+      null,
+    );
+  });
 });
 
 describe("Tasks.jsx / TaskList - interacción real", () => {
@@ -221,5 +279,114 @@ describe("useNavGroups - renderHook", () => {
     const { result } = renderHook(() => mod.useNavGroups(["Comercial", "Inventario", "Reportes"]));
     const [collapsed] = result.current;
     assert.deepEqual(collapsed, ["Reportes"]);
+  });
+});
+
+describe("ShortcutsHelp.jsx - interacción real", () => {
+  // Se extrajo de App.jsx (donde estaba definido como función anidada, sin
+  // exportar) a src/ShortcutsHelp.jsx para poder montarlo aislado acá: montar
+  // App() completo requiere sesión/Supabase y decenas de props, demasiado
+  // costoso para verificar un panel de ayuda estático.
+  test("muestra los 3 atajos documentados", async () => {
+    const mod = await loadJsxModule("src/ShortcutsHelp.jsx");
+    render(React.createElement(mod.ShortcutsHelp, { onClose: () => {} }));
+    assert.ok(screen.getByText("Atajos de teclado"));
+    assert.ok(screen.getByText("Buscar en la pantalla actual"));
+    assert.ok(screen.getByText("Nueva tarea"));
+    assert.ok(screen.getByText("Cerrar el formulario o ficha abierta"));
+  });
+
+  test("click en el botón de cerrar llama a onClose", async () => {
+    const mod = await loadJsxModule("src/ShortcutsHelp.jsx");
+    let closed = false;
+    render(React.createElement(mod.ShortcutsHelp, { onClose: () => (closed = true) }));
+    fireEvent.click(screen.getByLabelText("Cerrar"));
+    assert.equal(closed, true);
+  });
+
+  test("presionar Escape llama a onClose (vía useModalEscape)", async () => {
+    const mod = await loadJsxModule("src/ShortcutsHelp.jsx");
+    let closed = false;
+    render(React.createElement(mod.ShortcutsHelp, { onClose: () => (closed = true) }));
+    fireEvent.keyDown(document, { key: "Escape" });
+    assert.equal(closed, true);
+  });
+
+  test("click en el backdrop llama a onClose, pero click dentro del panel no", async () => {
+    const mod = await loadJsxModule("src/ShortcutsHelp.jsx");
+    let closeCalls = 0;
+    render(React.createElement(mod.ShortcutsHelp, { onClose: () => closeCalls++ }));
+    fireEvent.click(screen.getByText("Atajos de teclado"));
+    assert.equal(closeCalls, 0, "un click dentro del modal no debería cerrarlo");
+
+    const backdrop = document.querySelector(".modal-backdrop");
+    fireEvent.click(backdrop);
+    assert.equal(closeCalls, 1);
+  });
+});
+
+describe("ClientDetail.jsx - interacción real", () => {
+  // No había ningún test para ClientDetail antes de esta noche, cuando se le
+  // agregó la sección "Tareas de esta empresa" (TaskList). El componente
+  // tiene bastantes props/callbacks, pero todos son funciones no invocadas
+  // en este flujo de solo-lectura, así que alcanza con no-ops.
+  const client = {
+    id: "c1",
+    company: "Envases del Sur SA",
+    family: "Sin definir",
+    phone: "111",
+  };
+  const tasks = [
+    { id: "t1", title: "Llamar para renovar pedido", company: "Envases del Sur SA", done: false, dueDate: "2026-09-10" },
+    { id: "t2", title: "Enviar cotización actualizada", company: "Envases del Sur SA", done: false, dueDate: "2026-09-12" },
+  ];
+
+  test("renderiza el cliente y sus tareas asociadas", async () => {
+    const mod = await loadJsxModule("src/ClientDetail.jsx");
+    render(
+      React.createElement(mod.ClientDetail, {
+        client,
+        interactions: [],
+        tasks,
+        sales: [],
+        onClose: () => {},
+        onOpenInteraction: () => {},
+        onNewInteraction: () => {},
+        onNewTask: () => {},
+        onOpenTask: () => {},
+        onToggleTask: () => {},
+        onSave: () => {},
+      }),
+    );
+    assert.ok(screen.getAllByText("Envases del Sur SA").length > 0);
+    assert.ok(screen.getByText("Tareas de esta empresa"));
+    // "Llamar para renovar pedido" también aparece en el panel de guidance
+    // (próxima tarea sugerida) además de en la lista - por eso getAllByText
+    // en vez de getByText, que exige unicidad.
+    assert.ok(screen.getAllByText("Llamar para renovar pedido").length > 0);
+    assert.ok(screen.getAllByText("Enviar cotización actualizada").length > 0);
+  });
+
+  test("click en el checkbox de una tarea de la ficha llama a onToggleTask con el id correcto", async () => {
+    const mod = await loadJsxModule("src/ClientDetail.jsx");
+    const calls = [];
+    render(
+      React.createElement(mod.ClientDetail, {
+        client,
+        interactions: [],
+        tasks,
+        sales: [],
+        onClose: () => {},
+        onOpenInteraction: () => {},
+        onNewInteraction: () => {},
+        onNewTask: () => {},
+        onOpenTask: () => {},
+        onToggleTask: (id) => calls.push(id),
+        onSave: () => {},
+      }),
+    );
+    const checkbox = screen.getByLabelText("Completar Enviar cotización actualizada");
+    fireEvent.click(checkbox);
+    assert.deepEqual(calls, ["t2"]);
   });
 });

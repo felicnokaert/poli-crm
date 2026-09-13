@@ -87,6 +87,7 @@ import { shouldCreateFollowup } from "./followup-policy.mjs";
 import { useWorkspaceSync } from "./hooks/useWorkspaceSync";
 import { useSelectedRecords } from "./hooks/useSelectedRecords";
 import { useNavGroups } from "./hooks/useNavGroups";
+import { useSalesActions } from "./hooks/useSalesActions";
 
 // "Registrar conversación" solo tiene sentido donde se sigue a un cliente
 // puntual, no en todos los módulos.
@@ -295,7 +296,6 @@ export default function App() {
       ),
     [data.clients, query],
   );
-
   if (!authReady) return <Splash text="Preparando acceso seguro…" />;
   if (onlineConfigured && !session) return <LoginScreen />;
   // Mientras se descarga el workspace inicial de Supabase no había ningún
@@ -405,12 +405,12 @@ export default function App() {
     setShowForm(false);
   }
 
-  function editInteraction(interaction) {
+  const editInteraction = useCallback((interaction) => {
     setForm({ ...blankInteraction(), ...interaction });
     setEditingInteractionId(interaction.id);
     setSelectedInteractionId(null);
     setShowForm(true);
-  }
+  }, [setSelectedInteractionId]);
 
   function closeInteractionForm() {
     setForm(blankInteraction());
@@ -597,98 +597,16 @@ export default function App() {
     }));
   }
 
-  function saveSale(sale) {
-    const stamp = new Date().toISOString();
-    const record = {
-      ...sale,
-      id: sale.id || crypto.randomUUID(),
-      createdAt: sale.createdAt || stamp,
-      updatedAt: stamp,
-    };
-    setData((current) => ({
-      ...current,
-      sales: (current.sales || []).some((item) => item.id === record.id)
-        ? current.sales.map((item) => item.id === record.id ? record : item)
-        : [...(current.sales || []), record],
-    }));
-  }
-
-  function saveSales(rows) {
-    const stamp = new Date().toISOString();
-    setData((current) => {
-      const sales = [...(current.sales || [])];
-      for (const sale of rows) {
-        const record = {
-          ...sale,
-          id: sale.id || crypto.randomUUID(),
-          createdAt: sale.createdAt || stamp,
-          updatedAt: stamp,
-        };
-        const index = sales.findIndex((item) => item.id === record.id);
-        if (index === -1) sales.push(record);
-        else sales[index] = record;
-      }
-      return { ...current, sales };
-    });
-  }
-
-  async function deleteSale(id) {
-    const sale = (data.sales || []).find((item) => item.id === id);
-    const label = sale?.customer ? `la venta a "${sale.customer}"` : "esta venta";
-    if (!(await confirm(`¿Eliminar ${label} del registro? Esto no se puede deshacer.`, { danger: true, confirmLabel: "Eliminar" }))) return;
-    setData((current) => recordDeletions({
-      ...current,
-      sales: (current.sales || []).filter((item) => item.id !== id),
-    }, { sales: [id] }));
-  }
-
-  async function deleteSales(ids) {
-    if (!ids.length) return;
-    if (!(await confirm(`¿Eliminar ${ids.length} venta${ids.length === 1 ? "" : "s"} del registro? Esto no se puede deshacer.`, { danger: true, confirmLabel: "Eliminar" }))) return;
-    setData((current) => recordDeletions({
-      ...current,
-      sales: (current.sales || []).filter((item) => !ids.includes(item.id)),
-    }, { sales: ids }));
-  }
-
-  function saveSalesGoal(goal) {
-    setData((current) => {
-      const existing = Array.isArray(current.salesGoals) ? current.salesGoals : [];
-      const index = existing.findIndex((item) => item.id === goal.id);
-      const salesGoals = index === -1 ? [...existing, goal] : existing.map((item, i) => (i === index ? goal : item));
-      return { ...current, salesGoals };
-    });
-  }
-
-  function deleteSalesGoal(id) {
-    setData((current) => recordDeletions({
-      ...current,
-      salesGoals: (Array.isArray(current.salesGoals) ? current.salesGoals : []).filter((goal) => goal.id !== id),
-    }, { salesGoals: [id] }));
-  }
-
-  function saveBusinessUnit(unit) {
-    setData((current) => {
-      const existing = Array.isArray(current.businessUnits) && current.businessUnits.length
-        ? current.businessUnits
-        : defaultBusinessUnits();
-      const index = existing.findIndex((item) => item.id === unit.id);
-      const businessUnits = index === -1
-        ? [...existing, unit]
-        : existing.map((item) => (item.id === unit.id ? unit : item));
-      return { ...current, businessUnits };
-    });
-  }
-
-  async function deleteBusinessUnit(id) {
-    if (!(await confirm("¿Eliminar esta unidad de negocio? Las ventas ya cargadas con esta unidad no se modifican.", { danger: true, confirmLabel: "Eliminar" }))) return;
-    setData((current) => {
-      const existing = Array.isArray(current.businessUnits) && current.businessUnits.length
-        ? current.businessUnits
-        : defaultBusinessUnits();
-      return recordDeletions({ ...current, businessUnits: existing.filter((item) => item.id !== id) }, { businessUnits: [id] });
-    });
-  }
+  const {
+    saveSale,
+    saveSales,
+    deleteSale,
+    deleteSales,
+    saveSalesGoal,
+    deleteSalesGoal,
+    saveBusinessUnit,
+    deleteBusinessUnit,
+  } = useSalesActions(data, setData, confirm);
 
   const classifyInbox = useCallback((eventId, decision) => {
     const event = data.inbox.find((item) => item.event_id === eventId);
@@ -1309,7 +1227,7 @@ export default function App() {
     }));
   }, [session]);
 
-  async function deleteInteraction(id) {
+  const deleteInteraction = useCallback(async (id) => {
     const interaction = data.interactions.find((item) => item.id === id);
     if (!interaction) return false;
     if (!(await confirm(`¿Eliminar esta conversación de "${interaction.company}"? Esto no se puede deshacer.`, { danger: true, confirmLabel: "Eliminar" }))) return false;
@@ -1318,7 +1236,7 @@ export default function App() {
       interactions: current.interactions.filter((item) => item.id !== id),
     }, { interactions: [id] }));
     return true;
-  }
+  }, [data.interactions, confirm, setData]);
 
   async function deleteTask(id) {
     const task = data.tasks.find((item) => item.id === id);
@@ -1331,7 +1249,7 @@ export default function App() {
     return true;
   }
 
-  function addPipelineClient(company, stage) {
+  const addPipelineClient = useCallback((company, stage) => {
     const stamp = new Date().toISOString();
     const client = {
       id: crypto.randomUUID(),
@@ -1346,9 +1264,9 @@ export default function App() {
       updatedAt: stamp,
     };
     setData((current) => ({ ...current, clients: [...current.clients, client] }));
-  }
+  }, [setData]);
 
-  function updateClient(updatedClient) {
+  const updateClient = useCallback((updatedClient) => {
     const stamp = new Date().toISOString();
     setData((current) => {
       const previous = current.clients.find((client) => client.id === updatedClient.id) || {};
@@ -1379,7 +1297,38 @@ export default function App() {
         ],
       };
     });
-  }
+  }, [setData]);
+  // Mismo motivo que filteredClients: Pipeline está memoizado con memo(), así
+  // que un .filter() inline en el JSX (nuevo array en cada render de App())
+  // anulaba el memo por completo.
+  const pipelineClients = useMemo(
+    () => data.clients.filter((client) => client.pipelineActive !== false),
+    [data.clients],
+  );
+  const changeClientStage = useCallback(
+    (id, stage) => updateClient({ id, stage }),
+    [updateClient],
+  );
+  // InteractionDetail está memoizado con memo(): estos tres handlers antes se
+  // creaban inline en el JSX (nueva función en cada render de App()), lo que
+  // anulaba el memo apenas se abría el modal.
+  const closeInteractionDetail = useCallback(
+    () => setSelectedInteractionId(null),
+    [setSelectedInteractionId],
+  );
+  const openClientFromInteraction = useCallback(
+    (clientId) => {
+      setSelectedInteractionId(null);
+      setSelectedClientId(clientId);
+    },
+    [setSelectedInteractionId, setSelectedClientId],
+  );
+  const deleteInteractionFromDetail = useCallback(
+    async (id) => {
+      if (await deleteInteraction(id)) setSelectedInteractionId(null);
+    },
+    [deleteInteraction, setSelectedInteractionId],
+  );
 
   function updateTask(updatedTask) {
     const stamp = new Date().toISOString();
@@ -1643,19 +1592,17 @@ export default function App() {
         )}
         {view === "pipeline" && (
           <Pipeline
-            clients={data.clients.filter(
-              (client) => client.pipelineActive !== false,
-            )}
+            clients={pipelineClients}
             onOpenClient={setSelectedClientId}
-            onChangeStage={(id, stage) => updateClient({ id, stage })}
+            onChangeStage={changeClientStage}
             onDelete={deleteClient}
             onAdd={addPipelineClient}
           />
         )}
         {view === "sales" && (
           <Sales
-            items={data.sales || []}
-            goals={data.salesGoals || []}
+            items={data.sales || EMPTY_ARRAY}
+            goals={data.salesGoals || EMPTY_ARRAY}
             businessUnits={data.businessUnits}
             onSaveGoal={saveSalesGoal}
             onDeleteGoal={deleteSalesGoal}
@@ -1764,15 +1711,10 @@ export default function App() {
                 (entry) => entry.id === selectedInteractionId,
               )?.clientId,
           )}
-          onClose={() => setSelectedInteractionId(null)}
+          onClose={closeInteractionDetail}
           onEdit={editInteraction}
-          onOpenClient={(clientId) => {
-            setSelectedInteractionId(null);
-            setSelectedClientId(clientId);
-          }}
-          onDelete={async (id) => {
-            if (await deleteInteraction(id)) setSelectedInteractionId(null);
-          }}
+          onOpenClient={openClientFromInteraction}
+          onDelete={deleteInteractionFromDetail}
         />
       )}
       {selectedClientId && (

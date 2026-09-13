@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Building2,
   CheckCircle2,
@@ -224,6 +224,37 @@ export default function App() {
     setSelectedTaskId,
   } = useSelectedRecords();
   const openTaskForm = useCallback(() => setShowTaskForm(true), []);
+  const searchInputRef = useRef(null);
+  const hasOpenModal =
+    showForm ||
+    showTaskForm ||
+    Boolean(inboxDraft) ||
+    Boolean(selectedInteractionId) ||
+    Boolean(selectedClientId) ||
+    Boolean(selectedTaskId);
+
+  useEffect(() => {
+    function handleGlobalShortcut(event) {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = document.activeElement;
+      const isTyping =
+        ["INPUT", "TEXTAREA", "SELECT"].includes(target?.tagName) ||
+        target?.isContentEditable;
+      if (event.key === "/" && !isTyping) {
+        if (searchInputRef.current) {
+          event.preventDefault();
+          searchInputRef.current.focus();
+        }
+        return;
+      }
+      if (event.key === "n" && !isTyping && !hasOpenModal) {
+        event.preventDefault();
+        openTaskForm();
+      }
+    }
+    window.addEventListener("keydown", handleGlobalShortcut);
+    return () => window.removeEventListener("keydown", handleGlobalShortcut);
+  }, [hasOpenModal, openTaskForm]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -1645,6 +1676,7 @@ export default function App() {
             clients={filteredClients}
             query={query}
             setQuery={setQuery}
+            searchInputRef={searchInputRef}
             onOpenClient={setSelectedClientId}
             onMergeClients={mergeClient}
             mergeLogs={data.mergeLogs || EMPTY_ARRAY}
@@ -1659,6 +1691,7 @@ export default function App() {
             clients={data.clients}
             query={query}
             setQuery={setQuery}
+            searchInputRef={searchInputRef}
             onOpenClient={setSelectedClientId}
           />
         )}

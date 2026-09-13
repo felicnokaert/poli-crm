@@ -5,6 +5,13 @@ const MAX_TEXT_LENGTH = 4000; // igual de largo que un mensaje real de WhatsApp 
 const MAX_NAME_LENGTH = 200;
 const WA_ID_PATTERN = /^\d{6,20}$/; // customer_wa_id real de Meta: solo dígitos
 
+// El body legítimo (channel + customerName + customerWaId + text) nunca supera
+// unos pocos KB dado MAX_TEXT_LENGTH/MAX_NAME_LENGTH arriba. Este endpoint ya
+// requiere el bearer token de COPILOT_SIMULATOR_TOKEN, pero capamos el tamaño
+// del body antes de parsear JSON como defensa adicional (menor superficie si
+// el token se filtra o hay un bug en otro lado) sin agregar infraestructura.
+export const config = { api: { bodyParser: { sizeLimit: '32kb' } } };
+
 export default async function handler(request, response) {
   if (request.method !== 'POST') return response.status(405).json({ ok: false });
   const expected = process.env.COPILOT_SIMULATOR_TOKEN;

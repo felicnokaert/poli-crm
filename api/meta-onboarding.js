@@ -1,24 +1,10 @@
+import { authenticatedCorporateUser } from '../lib/corporate-auth.mjs';
+
 const APP_ID = '857121580457426';
-const ALLOWED_BACKUP = 'felipecnokaert@gmail.com';
-
-function allowedEmail(email = '') {
-  return email.toLowerCase().endsWith('@grupopoliplast.com.ar') || email.toLowerCase() === ALLOWED_BACKUP;
-}
-
-async function authenticatedUser(request) {
-  const authorization = request.headers.authorization || '';
-  if (!authorization.startsWith('Bearer ') || !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
-  const response = await fetch(`${process.env.SUPABASE_URL}/auth/v1/user`, {
-    headers: { Authorization: authorization, apikey: process.env.SUPABASE_SERVICE_ROLE_KEY },
-  });
-  if (!response.ok) return null;
-  const user = await response.json();
-  return allowedEmail(user.email) ? user : null;
-}
 
 export default async function handler(request, response) {
   if (request.method !== 'POST') return response.status(405).json({ error: 'Método no permitido.' });
-  const user = await authenticatedUser(request);
+  const user = await authenticatedCorporateUser(request);
   if (!user) return response.status(401).json({ error: 'Acceso corporativo requerido.' });
   if (!process.env.META_APP_SECRET) return response.status(503).json({ error: 'Meta no está configurado.' });
 

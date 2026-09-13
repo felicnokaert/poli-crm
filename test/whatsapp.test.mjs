@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import test from 'node:test';
-import { normalizeWebhook, verifyMetaSignature } from '../lib/whatsapp.mjs';
+import { normalizeWebhook, verifyMetaSignature, verifyMetaVerifyToken } from '../lib/whatsapp.mjs';
 
 test('validates Meta webhook signatures', () => {
   const body = Buffer.from('{"object":"whatsapp_business_account"}');
@@ -9,6 +9,17 @@ test('validates Meta webhook signatures', () => {
   const signature = `sha256=${crypto.createHmac('sha256', secret).update(body).digest('hex')}`;
   assert.equal(verifyMetaSignature(body, signature, secret), true);
   assert.equal(verifyMetaSignature(body, 'sha256=bad', secret), false);
+});
+
+test('validates the GET handshake verify_token with a constant-time comparison', () => {
+  assert.equal(verifyMetaVerifyToken('correct-token', 'correct-token'), true);
+  // Same length as the expected token, but wrong content.
+  assert.equal(verifyMetaVerifyToken('wrong-tokenX', 'correct-token'), false);
+  // Different length must be rejected without throwing (timingSafeEqual
+  // throws on mismatched buffer lengths if called directly).
+  assert.equal(verifyMetaVerifyToken('short', 'correct-token'), false);
+  assert.equal(verifyMetaVerifyToken('', 'correct-token'), false);
+  assert.equal(verifyMetaVerifyToken('correct-token', ''), false);
 });
 
 test('normalizes inbound WhatsApp messages', () => {

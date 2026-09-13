@@ -1,6 +1,29 @@
 import { useEffect, useState } from 'react';
 import { ExternalLink, RefreshCw, ShoppingBag } from 'lucide-react';
 import { Loading } from './ui-primitives';
+import { withRetry } from '../lib/retry.mjs';
+
+// `load` (GET, solo lectura) y `sync` (POST, pero idempotente: vuelve a leer
+// las publicaciones de Mercado Libre y las upsertea, sin crear nada nuevo
+// si se repite) son seguras para reintentar ante un 5xx pasajero o un corte
+// de red - el mismo criterio que ya usa saveOnlineState en src/online.js.
+// `connect` (abajo) NO pasa por acá a propósito: inicia un redirect de OAuth
+// y falla instantáneo si algo anda mal, así que reintentarla automáticamente
+// solo demoraría el feedback al usuario sin ganar nada (con un click en
+// "Conectar"/"Reautorizar" alcanza para probar de nuevo).
+async function fetchWithRetry(url, options) {
+  const result = await withRetry(async () => {
+    let response;
+    try {
+      response = await fetch(url, options);
+    } catch (error) {
+      return { ok: false, threw: true, error };
+    }
+    const body = await response.json().catch(() => ({}));
+    return { ok: response.ok, status: response.status, body };
+  });
+  return result;
+}
 
 const EXPECTED = [
   { key: 'poliplast', label: 'POLIPLAST' },
@@ -32,10 +55,9 @@ export default function MercadoLibre({ session }) {
     if (!session?.access_token) return;
     setLoading(true);
     try {
-      const response = await fetch('/api/mercadolibre-accounts', { headers: { Authorization: `Bearer ${session.access_token}` } });
-      const body = await response.json();
-      if (response.ok) setStatus(body);
-      else showError(body.error || 'No se pudo consultar Mercado Libre.');
+      const result = await fetchWithRetry('/api/mercadolibre-accounts', { headers: { Authorization: `Bearer ${session.access_token}` } });
+      if (result.ok) setStatus(result.body);
+      else showError(result.body?.error || 'No se pudo consultar Mercado Libre.');
     } catch {
       // Sin esto, un fallo de red (servidor caído, sin conexión) dejaba la
       // pantalla en blanco sin ningún aviso - ahora se ve el mismo mensaje
@@ -70,17 +92,16 @@ export default function MercadoLibre({ session }) {
     setWorking(accountKey);
     showMessage('Sincronizando publicaciones en modo lectura…');
     try {
-      const response = await fetch('/api/mercadolibre-sync', {
+      const result = await fetchWithRetry('/api/mercadolibre-sync', {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ accountKey }),
       });
-      const body = await response.json();
-      if (response.ok) {
-        showMessage(`${body.items} publicaciones sincronizadas.`);
+      if (result.ok) {
+        showMessage(`${result.body.items} publicaciones sincronizadas.`);
         await load();
       } else {
-        showError(body.error || 'No se pudo sincronizar.');
+        showError(result.body?.error || 'No se pudo sincronizar.');
       }
     } catch {
       showError('No se pudo conectar con el servidor. Intentá de nuevo en un momento.');

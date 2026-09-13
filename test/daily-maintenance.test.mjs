@@ -6,16 +6,32 @@ import {
   buildFullDailyMaintenanceUpdate,
   buildAutoFollowupTasks,
   AUTO_HOT_LEAD_TASK_SOURCE,
+  AUTO_COLD_QUOTE_TASK_SOURCE,
 } from "../src/daily-maintenance.mjs";
 
+// A propósito sin "precio"/"cotiz" en el texto: inferIntent (usado por
+// findColdQuotes) clasificaría esto también como "Precio / cotización" y el
+// evento terminaría contando como cotización fría además de hot lead,
+// mezclando las dos señales en los tests que esperan solo una.
 const HOT_LEAD_EVENT = {
   event_id: "e1",
   direction: "inbound",
   channel: "general",
   customer_wa_id: "5491100000001",
   customer_name: "Cliente Caliente",
-  text_body: "Necesito el precio para hoy, cuántos kg tienen en stock?",
+  text_body: "Necesito comprar hoy, cuántos kg tienen en stock?",
   occurred_at: "2026-09-01T10:00:00Z",
+  classification_status: "pending",
+};
+
+const COLD_QUOTE_EVENT = {
+  event_id: "e2",
+  direction: "inbound",
+  channel: "general",
+  customer_wa_id: "5491100000002",
+  customer_name: "Cliente Frío",
+  text_body: "Hola, me pasan precio de Easy Spray?",
+  occurred_at: "2026-08-20T10:00:00Z",
   classification_status: "pending",
 };
 
@@ -322,15 +338,18 @@ test("buildFullDailyMaintenanceUpdate corre de punta a punta con datos realistas
 
   // 3) Auto-tarea de seguimiento creada para el hot lead de Cliente A,
   //    vinculada al cliente correcto, sin duplicar ninguna de las tareas
-  //    preexistentes.
-  assert.equal(result.summary.autoFollowupTasksCreated, 1);
-  const autoTasks = result.nextState.tasks.filter((t) => t.source === AUTO_HOT_LEAD_TASK_SOURCE);
-  assert.equal(autoTasks.length, 1);
-  assert.equal(autoTasks[0].clientId, "client-a");
-  assert.match(autoTasks[0].title, /Cliente A SA/);
+  //    preexistentes. El mismo mensaje también califica como cotización
+  //    fría (pidió precio y pasaron más de 7 días sin venta a su nombre),
+  //    así que genera además su propia auto-tarea con un source distinto -
+  //    nunca se pisan entre sí (autoKey separado por source).
+  assert.equal(result.summary.autoFollowupTasksCreated, 2);
+  const autoHotTasks = result.nextState.tasks.filter((t) => t.source === AUTO_HOT_LEAD_TASK_SOURCE);
+  assert.equal(autoHotTasks.length, 1);
+  assert.equal(autoHotTasks[0].clientId, "client-a");
+  assert.match(autoHotTasks[0].title, /Cliente A SA/);
 
-  // El total de tareas es: las 3 originales + la 1 auto-generada.
-  assert.equal(result.nextState.tasks.length, 4);
+  // El total de tareas es: las 3 originales + 2 auto-generadas (hot lead + cotización fría).
+  assert.equal(result.nextState.tasks.length, 5);
   for (const id of before.taskIds) {
     assert.ok(result.nextState.tasks.some((t) => t.id === id), `la tarea original ${id} no debería desaparecer`);
   }
@@ -349,6 +368,60 @@ test("buildFullDailyMaintenanceUpdate también crea tareas de seguimiento para h
   assert.equal(result.summary.autoFollowupTasksCreated, 1);
   assert.equal(
     result.nextState.tasks.filter((t) => t.source === AUTO_HOT_LEAD_TASK_SOURCE).length,
+    1,
+  );
+});
+
+test("buildAutoFollowupTasks crea una tarea nueva para una cotización fría sin tarea previa", () => {
+  const state = { inbox: [COLD_QUOTE_EVENT], sales: [], tasks: [], clients: [] };
+  const result = buildAutoFollowupTasks(state, "2026-09-12T03:00:00.000Z");
+  assert.equal(result.changed, true);
+  assert.equal(result.summary.autoFollowupTasksCreated, 1);
+  const [task] = result.nextState.tasks;
+  assert.equal(task.source, AUTO_COLD_QUOTE_TASK_SOURCE);
+  assert.equal(task.priority, "Media");
+  assert.match(task.title, /Cliente Frío/);
+  assert.ok(task.autoKey);
+});
+
+test("buildAutoFollowupTasks no duplica la tarea de cotización fría si ya hay una abierta", () => {
+  const existingTask = {
+    id: "existing-cold",
+    source: AUTO_COLD_QUOTE_TASK_SOURCE,
+    autoKey: "5491100000002",
+    done: false,
+  };
+  const state = { inbox: [COLD_QUOTE_EVENT], sales: [], tasks: [existingTask], clients: [] };
+  const result = buildAutoFollowupTasks(state, "2026-09-12T03:00:00.000Z");
+  assert.equal(result.changed, false);
+  assert.equal(result.summary.autoFollowupTasksCreated, 0);
+  assert.equal(result.nextState.tasks.length, 1);
+});
+
+test("buildAutoFollowupTasks maneja hot leads y cotizaciones frías al mismo tiempo sin cruzar sus claves", () => {
+  const state = { inbox: [HOT_LEAD_EVENT, COLD_QUOTE_EVENT], sales: [], tasks: [], clients: [] };
+  const result = buildAutoFollowupTasks(state, "2026-09-12T03:00:00.000Z");
+  assert.equal(result.summary.autoFollowupTasksCreated, 2);
+  const hotTask = result.nextState.tasks.find((t) => t.source === AUTO_HOT_LEAD_TASK_SOURCE);
+  const coldTask = result.nextState.tasks.find((t) => t.source === AUTO_COLD_QUOTE_TASK_SOURCE);
+  assert.ok(hotTask);
+  assert.ok(coldTask);
+  assert.notEqual(hotTask.autoKey, coldTask.autoKey);
+});
+
+test("buildFullDailyMaintenanceUpdate también crea tareas de seguimiento para cotizaciones frías", () => {
+  const state = {
+    tasks: [],
+    tasksClosedThrough: "",
+    inbox: [COLD_QUOTE_EVENT],
+    sales: [],
+    clients: [],
+  };
+  const result = buildFullDailyMaintenanceUpdate(state, "2026-09-12T03:00:00.000Z");
+  assert.equal(result.changed, true);
+  assert.equal(result.summary.autoFollowupTasksCreated, 1);
+  assert.equal(
+    result.nextState.tasks.filter((t) => t.source === AUTO_COLD_QUOTE_TASK_SOURCE).length,
     1,
   );
 });

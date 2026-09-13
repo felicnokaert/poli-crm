@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { CircleAlert, GraduationCap, Search, Sparkles } from "lucide-react";
 import {
   QUICK_REPLIES,
@@ -82,7 +82,12 @@ export function QuickReplies({ myChannels }) {
   );
 }
 
-export function Academy({ myChannels, interactions, data, setData }) {
+// myChannels ya llega memoizado desde App.jsx (useMemo por email) e
+// interactions/data/setData son referencias estables mientras nadie edita
+// nada de esto - sin memo, cualquier estado ajeno de App.jsx (tipear en el
+// buscador de otra pantalla, el tick de syncStatus) volvía a renderizar
+// toda la Academia sin ningún prop distinto.
+function AcademyBase({ myChannels, interactions, data, setData }) {
   const [section, setSection] = useState("method");
   return (
     <div className="content-stack">
@@ -111,6 +116,8 @@ export function Academy({ myChannels, interactions, data, setData }) {
     </div>
   );
 }
+
+export const Academy = memo(AcademyBase);
 
 export function CommercialKnowledge({ section }) {
   const [search, setSearch] = useState("");

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import {
   CircleAlert,
   Database,
@@ -24,7 +24,11 @@ import { FAMILIES } from "./families.mjs";
 import { channelsForEmail } from "./user-channels.mjs";
 import { CHANNELS, initialState, today } from "./app-shared";
 
-export function DataSettings({ data, setData, session, syncStatus }) {
+// `data` y `session` llegan como la misma referencia mientras nadie edita
+// nada acá - sin memo, cualquier otro estado ajeno de App.jsx (abrir el
+// modal de tarea, tipear en el buscador de otra pantalla, el tick de
+// syncStatus) volvía a renderizar todo este panel sin ningún prop distinto.
+function DataSettingsBase({ data, setData, session, syncStatus }) {
   const myChannels = channelsForEmail(session?.user?.email);
   const [message, setMessage] = useState("");
   const [messageIsError, setMessageIsError] = useState(false);
@@ -718,3 +722,5 @@ export function DataSettings({ data, setData, session, syncStatus }) {
     </div>
   );
 }
+
+export const DataSettings = memo(DataSettingsBase);

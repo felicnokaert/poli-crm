@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { ChevronRight, Search } from "lucide-react";
 import { filterInteractionsByDate, groupConversationHistory } from "./conversation-history.mjs";
 import { FAMILIES } from "./families.mjs";
@@ -7,7 +7,12 @@ import { CHANNELS } from "./app-shared";
 
 const CONVERSATIONS_PAGE_SIZE = 20;
 
-export function Conversations({ items, clients, onOpen, onOpenClient }) {
+// items/clients son data.interactions/data.clients (referencia estable si
+// nadie edita nada de eso) y onOpen/onOpenClient son setters de useState -
+// sin memo, cualquier otro estado ajeno de App.jsx (el tick de syncStatus,
+// abrir el modal de tarea) volvía a renderizar todo el historial sin ningún
+// prop distinto.
+function ConversationsBase({ items, clients, onOpen, onOpenClient }) {
   const [query, setQuery] = useState("");
   const [family, setFamily] = useState("all");
   const [temperature, setTemperature] = useState("all");
@@ -151,3 +156,5 @@ export function Conversations({ items, clients, onOpen, onOpenClient }) {
     </section>
   );
 }
+
+export const Conversations = memo(ConversationsBase);

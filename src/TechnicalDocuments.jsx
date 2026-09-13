@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { FileCheck2 } from "lucide-react";
 import { useConfirm } from "./ConfirmDialog";
 import { Empty, Loading } from "./ui-primitives";
@@ -12,7 +12,11 @@ const TECHNICAL_DOCUMENT_STATUS_LABELS = {
   no_tecnico: "No técnico",
 };
 
-export function TechnicalDocumentsAdmin({ session }) {
+// Solo recibe `session` (referencia estable salvo cambio real de sesión) -
+// sin memo, cada tick de syncStatus en App.jsx (autoguardado, que ocurre
+// aunque el usuario esté viendo Base técnica) volvía a renderizar toda esta
+// pantalla sin ningún prop distinto.
+function TechnicalDocumentsAdminBase({ session }) {
   const confirm = useConfirm();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -387,6 +391,8 @@ export function TechnicalDocumentsAdmin({ session }) {
     </div>
   );
 }
+
+export const TechnicalDocumentsAdmin = memo(TechnicalDocumentsAdminBase);
 
 export function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile, deleteDocument, moveDocumentToFolder }) {
   const draft = draftFor(doc);

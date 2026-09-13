@@ -43,7 +43,11 @@ import { Clients, Contacts } from "./Clients";
 const TechnicalDocumentsAdmin = lazy(() =>
   import("./TechnicalDocuments").then((m) => ({ default: m.TechnicalDocumentsAdmin }))
 );
-import { Academy, CommercialKnowledge, Coach, QuickReplies, Training } from "./Academy";
+// Único de los cinco named exports de Academy.jsx que se usa acá - los
+// otros (CommercialKnowledge, Coach, QuickReplies, Training) son internos,
+// consumidos solo por el propio <Academy> - así que separarla en su propio
+// chunk no arrastra nada que este archivo necesite.
+const Academy = lazy(() => import("./Academy").then((m) => ({ default: m.Academy })));
 import { TestCleanupPanel, Profile } from "./Settings";
 import { LoginScreen } from "./Login";
 const DataSettings = lazy(() => import("./DataSettings").then((m) => ({ default: m.DataSettings })));
@@ -1675,12 +1679,14 @@ export default function App() {
           />
         )}
         {view === "academy" && (
-          <Academy
-            myChannels={myChannels}
-            interactions={data.interactions}
-            data={data}
-            setData={setData}
-          />
+          <Suspense fallback={<Splash text="Cargando academia…" />}>
+            <Academy
+              myChannels={myChannels}
+              interactions={data.interactions}
+              data={data}
+              setData={setData}
+            />
+          </Suspense>
         )}
         {view === "techdocs" && (
           <Suspense fallback={<Splash text="Cargando base técnica…" />}>

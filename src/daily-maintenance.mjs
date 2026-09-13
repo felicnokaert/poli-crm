@@ -3,12 +3,19 @@ import { findStaleHotLeads } from './hot-leads-radar.mjs';
 import { buildRepurchaseRadar } from './repurchase-radar.mjs';
 import { findColdQuotes } from './cold-quotes.mjs';
 import { findClientByWhatsApp } from './client-contacts.mjs';
+import { whatsappContactIdentity } from './whatsapp-threads.mjs';
 
 const EMPTY_STATE = { tasks: [], tasksClosedThrough: '' };
 
 // Marca las tareas que crea el sistema (nunca una persona) para poder
 // distinguirlas al buscar duplicados. Nunca se usa para nada más.
 export const AUTO_HOT_LEAD_TASK_SOURCE = 'auto-hot-lead';
+
+// Segunda señal habilitada para auto-followup (ver nota larga más abajo,
+// junto a buildAutoFollowupTasks): source distinto a propósito, así el
+// filtro `task.source === X` de cada señal nunca mezcla sus tareas abiertas
+// ni su deduplicación con las de la otra.
+export const AUTO_COLD_QUOTE_TASK_SOURCE = 'auto-cold-quote';
 
 function normalizedIdentity(value = '') {
   return String(value).trim().toLocaleLowerCase('es-AR');
@@ -22,6 +29,14 @@ function normalizedIdentity(value = '') {
 // queremos una tarea nueva por cada corrida del cron mientras siga abierto.
 function hotLeadAutoKey(hotLead) {
   return `${normalizedIdentity(hotLead.channel || 'unknown')}:${normalizedIdentity(hotLead.customer || 'unknown')}`;
+}
+
+// Misma idea que hotLeadAutoKey, pero findColdQuotes no expone `channel` (no
+// lo necesita para su propio cálculo) - resolvemos la identidad del contacto
+// a partir del evento original de la bandeja (mismo criterio que usa
+// findColdQuotes internamente para agrupar mensajes de un contacto).
+function coldQuoteAutoKey(coldQuote, event) {
+  return event ? whatsappContactIdentity(event) : normalizedIdentity(coldQuote.customer || 'unknown');
 }
 
 // Mantenimiento diario que hoy solo corre client-side cuando alguien abre el
@@ -90,53 +105,68 @@ export function buildDailySignalsUpdate(state = EMPTY_STATE, nowISO = new Date()
 }
 
 // Primer paso de "el sistema actúa, no solo calcula" (ver auditorías de
-// madurez, Automatización 50/100): en vez de dejar los hot leads solo
-// visibles en el Dashboard para que alguien los note, el cron crea una
-// tarea de seguimiento interna por cada lead caliente sin respuesta.
+// madurez, Automatización 50/100 y luego 66/100): en vez de dejar los hot
+// leads y las cotizaciones frías solo visibles en el Dashboard para que
+// alguien los note, el cron crea una tarea de seguimiento interna por cada
+// señal detectada.
 //
-// A propósito acotado SOLO a hot leads (findStaleHotLeads), no a cotizaciones
-// frías ni repurchase: es la señal más inequívoca de las 3 (mensaje entrante
-// urgente + comercial, sin clasificar, con >= minDays sin respuesta) y la
-// única cuyo "actuar" es obvio y de bajo riesgo (crear una tarea de "revisar
-// y responder", no una recomendación ambigua). Cold quotes y repurchase son
-// señales más blandas (ausencia de actividad, no un mensaje concreto
-// esperando respuesta) y sumarlas de entrada arriesgaba inundar la lista de
-// Tareas la primera noche - mejor validar el patrón con la señal más clara
-// antes de extenderlo.
+// Extendido de "solo hot leads" a hot leads + cold quotes (ver
+// AUDITORIA_MADUREZ_PRODUCTO_2026-09-14-tarde.md) una vez validado en
+// producción el patrón con la señal más inequívoca de las 3. Repurchase
+// queda afuera a propósito: ahí "actuar" significaría sugerir una compra
+// específica (qué producto, cuánto), un criterio bastante más ambiguo que
+// "respondé este mensaje" o "retomá esta cotización" - generar esa tarea
+// sin ese detalle sería ruido, no ayuda.
 //
-// Anti-duplicado: cada tarea auto-generada lleva `source: AUTO_HOT_LEAD_TASK_SOURCE`
-// y un `autoKey` estable (canal + identidad del contacto, el mismo criterio
-// que usa findStaleHotLeads para agrupar mensajes de un contacto). Si ya
-// existe una tarea ABIERTA (done: false) con esa combinación source+autoKey,
-// no se crea una segunda - así un lead que sigue sin respuesta varios días
-// solo genera una tarea (la primera vez que se detecta), no una por día.
-// Si la tarea existente ya se marcó `done`, se entiende que alguien la
-// atendió y, si el lead vuelve a aparecer como stale más adelante (nueva
-// conversación), se puede crear una tarea nueva.
+// Cold quotes SÍ se suma porque el criterio de acción es igual de concreto
+// que el de hot leads: alguien preguntó precio (inferIntent === "Precio /
+// cotización" en findColdQuotes), pasaron >= minDays y no hay una venta
+// registrada a su nombre después - "retomar el contacto y preguntar si
+// sigue interesado" es una acción clara y de bajo riesgo, igual que
+// "responder el mensaje pendiente" para hot leads. La única diferencia real
+// es de urgencia (cold quotes no es un mensaje urgente sin contestar), por
+// eso su tarea sale con prioridad "Media" en vez de "Alta".
+//
+// Anti-duplicado (igual para ambas señales, pero SEPARADO por tipo): cada
+// tarea auto-generada lleva `source` (AUTO_HOT_LEAD_TASK_SOURCE o
+// AUTO_COLD_QUOTE_TASK_SOURCE) y un `autoKey` estable (identidad del
+// contacto). Al buscar duplicados siempre se filtra por
+// `task.source === <ese tipo>` antes de mirar `autoKey`, así una tarea de
+// hot-lead y una de cold-quote para el mismo contacto nunca se pisan entre
+// sí ni se cuentan como "la misma". Si ya existe una tarea ABIERTA
+// (done: false) con esa combinación source+autoKey, no se crea una segunda
+// - así una señal que sigue activa varios días solo genera una tarea (la
+// primera vez que se detecta), no una por día. Si la tarea existente ya se
+// marcó `done`, se entiende que alguien la atendió y, si la señal vuelve a
+// aparecer más adelante, se puede crear una tarea nueva.
 export function buildAutoFollowupTasks(state = EMPTY_STATE, nowISO = new Date().toISOString()) {
   const inbox = Array.isArray(state.inbox) ? state.inbox : [];
+  const sales = Array.isArray(state.sales) ? state.sales : [];
   const clients = Array.isArray(state.clients) ? state.clients : [];
   const tasks = Array.isArray(state.tasks) ? state.tasks : [];
   const now = new Date(nowISO);
   const today = nowISO.slice(0, 10);
 
   const hotLeads = findStaleHotLeads(inbox, { today: now });
-  if (!hotLeads.length) {
+  const coldQuotes = findColdQuotes(inbox, sales, { today: now });
+  if (!hotLeads.length && !coldQuotes.length) {
     return { changed: false, nextState: state, summary: { autoFollowupTasksCreated: 0 } };
   }
 
-  const openAutoKeys = new Set(
+  const openKeysBySource = (source) => new Set(
     tasks
-      .filter((task) => task.source === AUTO_HOT_LEAD_TASK_SOURCE && !task.done)
+      .filter((task) => task.source === source && !task.done)
       .map((task) => task.autoKey)
       .filter(Boolean),
   );
+  const openHotLeadKeys = openKeysBySource(AUTO_HOT_LEAD_TASK_SOURCE);
+  const openColdQuoteKeys = openKeysBySource(AUTO_COLD_QUOTE_TASK_SOURCE);
 
   const newTasks = [];
   for (const hotLead of hotLeads) {
     const autoKey = hotLeadAutoKey(hotLead);
-    if (openAutoKeys.has(autoKey)) continue;
-    openAutoKeys.add(autoKey); // evita crear dos tareas para el mismo contacto en la misma corrida
+    if (openHotLeadKeys.has(autoKey)) continue;
+    openHotLeadKeys.add(autoKey); // evita crear dos tareas para el mismo contacto en la misma corrida
 
     const event = inbox.find((item) => item.event_id === hotLead.eventId);
     const client = event ? findClientByWhatsApp(clients, event) : undefined;
@@ -155,6 +185,32 @@ export function buildAutoFollowupTasks(state = EMPTY_STATE, nowISO = new Date().
       updatedAt: nowISO,
       createdBy: 'sistema',
       source: AUTO_HOT_LEAD_TASK_SOURCE,
+      autoKey,
+    });
+  }
+
+  for (const coldQuote of coldQuotes) {
+    const event = inbox.find((item) => item.event_id === coldQuote.eventId);
+    const autoKey = coldQuoteAutoKey(coldQuote, event);
+    if (openColdQuoteKeys.has(autoKey)) continue;
+    openColdQuoteKeys.add(autoKey);
+
+    const client = event ? findClientByWhatsApp(clients, event) : undefined;
+
+    newTasks.push({
+      id: crypto.randomUUID(),
+      clientId: client?.id,
+      company: coldQuote.customer || client?.company || 'Contacto de WhatsApp',
+      title: `Retomar cotización de ${coldQuote.customer || 'contacto'} - lleva ${coldQuote.daysSince} días sin cerrar`,
+      dueDate: today,
+      cadence: 'Diaria',
+      priority: 'Media',
+      trigger: 'Cotización fría sin seguimiento (detección automática)',
+      done: false,
+      createdAt: nowISO,
+      updatedAt: nowISO,
+      createdBy: 'sistema',
+      source: AUTO_COLD_QUOTE_TASK_SOURCE,
       autoKey,
     });
   }

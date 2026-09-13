@@ -16,10 +16,49 @@ import {
 import { buildRepurchaseRadar } from "./repurchase-radar.mjs";
 import { findColdQuotes } from "./cold-quotes.mjs";
 import { findStaleHotLeads } from "./hot-leads-radar.mjs";
+import { AUTO_HOT_LEAD_TASK_SOURCE, AUTO_COLD_QUOTE_TASK_SOURCE } from "./daily-maintenance.mjs";
 import { Empty } from "./ui-primitives";
 import { today } from "./app-shared";
 import { TaskList } from "./Tasks";
 import { InteractionRow } from "./Interactions";
+
+const AUTO_TASK_SOURCES = new Set([AUTO_HOT_LEAD_TASK_SOURCE, AUTO_COLD_QUOTE_TASK_SOURCE]);
+
+// Indicador chico de auditabilidad (ver AUDITORIA_MADUREZ_PRODUCTO_2026-09-14-tarde):
+// hasta ahora las tareas que crea el cron (buildAutoFollowupTasks) quedaban
+// mezcladas en la lista de tareas sin ninguna marca visible de que las armó
+// el sistema y no una persona. Cuenta cuántas tareas auto-generadas se
+// crearon HOY (por `createdAt`, no por `dueDate`, que puede quedar viejo si
+// una tarea sigue abierta) para que Felipe pueda notar de un vistazo si el
+// cron corrió y qué tan activo estuvo, sin tener que abrir cada tarea.
+function AutomationSummary({ tasks }) {
+  const now = today();
+  const createdToday = tasks.filter(
+    (task) => AUTO_TASK_SOURCES.has(task.source) && String(task.createdAt || "").slice(0, 10) === now,
+  );
+  if (!createdToday.length) {
+    return (
+      <div className="automation-note is-quiet">
+        <ListChecks size={15} />
+        <span>El sistema no generó tareas automáticas hoy.</span>
+      </div>
+    );
+  }
+  const hotCount = createdToday.filter((task) => task.source === AUTO_HOT_LEAD_TASK_SOURCE).length;
+  const coldCount = createdToday.filter((task) => task.source === AUTO_COLD_QUOTE_TASK_SOURCE).length;
+  const parts = [];
+  if (hotCount) parts.push(`${hotCount} de leads calientes`);
+  if (coldCount) parts.push(`${coldCount} de cotizaciones frías`);
+  return (
+    <div className="automation-note">
+      <ListChecks size={15} />
+      <span>
+        El sistema generó {createdToday.length} {createdToday.length === 1 ? "tarea automática" : "tareas automáticas"} hoy
+        {parts.length ? ` (${parts.join(", ")})` : ""}.
+      </span>
+    </div>
+  );
+}
 
 export function ProjectBoardGateway() {
   return (
@@ -340,6 +379,7 @@ function DashboardBase({
           </article>
         ))}
       </section>
+      <AutomationSummary tasks={tasks} />
       <section className="two-columns">
         <article className="panel">
           <div className="panel-head">

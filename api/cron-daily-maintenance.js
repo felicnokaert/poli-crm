@@ -22,12 +22,24 @@ function authorized(request) {
   return authorization === `Bearer ${secret}`;
 }
 
-async function fetchWorkspaceRows(environment) {
-  const result = await fetch(`${environment.SUPABASE_URL}/rest/v1/workspace_states?select=workspace_key,data`, {
-    headers: { apikey: environment.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${environment.SUPABASE_SERVICE_ROLE_KEY}` },
+// Lectura simple (GET), sin efectos secundarios - segura para reintentar
+// ante un 5xx pasajero o un corte de red, con el mismo criterio que
+// saveWorkspaceRow.
+async function fetchWorkspaceRows(environment, fetchImpl = fetch) {
+  const result = await withRetry(async () => {
+    let response;
+    try {
+      response = await fetchImpl(`${environment.SUPABASE_URL}/rest/v1/workspace_states?select=workspace_key,data`, {
+        headers: { apikey: environment.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${environment.SUPABASE_SERVICE_ROLE_KEY}` },
+      });
+    } catch (error) {
+      return { ok: false, threw: true, error };
+    }
+    if (!response.ok) return { ok: false, status: response.status };
+    return { ok: true, rows: await response.json() };
   });
-  if (!result.ok) throw new Error(`No se pudieron leer los workspaces (status ${result.status}).`);
-  return result.json();
+  if (!result.ok) throw new Error(`No se pudieron leer los workspaces (status ${result.status ?? 'sin respuesta'}).`);
+  return result.rows;
 }
 
 // El PATCH puede fallar por un corte de red o un 5xx pasajero de Supabase -
@@ -82,12 +94,33 @@ export default async function handler(request, response) {
       }
       results.push({ workspaceKey: row.workspace_key, changed, ...summary });
     }
+    // `results` (una fila por workspace, con los mismos campos crípticos que
+    // usan las funciones puras de daily-maintenance.mjs) sigue disponible
+    // para debugging fino, pero nadie sin contexto del código puede leerlo
+    // de un vistazo. `summary` agrega esos mismos números en un solo bloque
+    // con nombres en español y una frase corta - lo que Felipe necesita para
+    // confirmar "corrió, e hizo esto" sin tener que interpretar el JSON.
+    const autoFollowupTasksCreated = results.reduce((sum, item) => sum + (item.autoFollowupTasksCreated || 0), 0);
+    const tasksClosed = results.reduce((sum, item) => sum + (item.tasksClosed || 0), 0);
+    const hotLeadsCount = results.reduce((sum, item) => sum + (item.hotLeadsCount || 0), 0);
+    const coldQuotesCount = results.reduce((sum, item) => sum + (item.coldQuotesCount || 0), 0);
+    const repurchaseCount = results.reduce((sum, item) => sum + (item.repurchaseCount || 0), 0);
     return response.status(200).json({
       ok: true,
       ranAt: nowISO,
       workspacesProcessed: results.length,
       workspacesUpdated: results.filter((item) => item.changed).length,
-      tasksClosed: results.reduce((sum, item) => sum + (item.tasksClosed || 0), 0),
+      tasksClosed,
+      summary: {
+        descripcion: `Se cerraron ${tasksClosed} tarea(s) vencida(s) y se crearon ${autoFollowupTasksCreated} tarea(s) automática(s) de seguimiento en ${results.length} workspace(s).`,
+        tareasVencidasCerradas: tasksClosed,
+        tareasAutomaticasCreadas: autoFollowupTasksCreated,
+        señales: {
+          leadsCalientesSinResponder: hotLeadsCount,
+          cotizacionesFrias: coldQuotesCount,
+          radarDeRecompra: repurchaseCount,
+        },
+      },
       results,
     });
   } catch (error) {

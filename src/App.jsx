@@ -1389,6 +1389,17 @@ export default function App() {
     ]],
   ];
   const nav = navGroups.flatMap(([, items]) => items);
+  // Señal única y barata para el ícono de "Tareas": tareas vencidas
+  // (mismo criterio que overdueTasks en Dashboard.jsx). A propósito NO suma
+  // hot leads ni cotizaciones frías acá: esas radares se calculan con
+  // buildRepurchaseRadar/findColdQuotes/findStaleHotLeads sobre inbox/sales,
+  // funciones más pesadas que hoy solo corren cuando el Dashboard está
+  // montado. Sumarlas a un badge que vive en el sidebar (montado siempre)
+  // repetiría ese cálculo en cada render de toda la app; conviene resolverlo
+  // reutilizando `dailySignals` (ya cacheado) antes de ponerlo acá.
+  const overdueTaskCount = data.tasks.filter(
+    (task) => !task.done && task.dueDate && task.dueDate < today(),
+  ).length;
 
   function displayedChannel(key) {
     const status = readiness?.channels?.[key];
@@ -1455,6 +1466,11 @@ export default function App() {
                       onClick={() => setView(id)}
                     >
                       <Icon size={19} /> {label}
+                      {id === "tasks" && overdueTaskCount > 0 && (
+                        <span className="nav-badge" aria-label={`${overdueTaskCount} tareas vencidas`}>
+                          {overdueTaskCount}
+                        </span>
+                      )}
                     </button>
                   ))}
               </div>

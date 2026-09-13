@@ -1,5 +1,6 @@
 import { normalizeWebhook, verifyMetaSignature, verifyMetaVerifyToken } from '../lib/whatsapp.mjs';
 import { persistEvents } from '../lib/storage.mjs';
+import { logError } from '../lib/log.mjs';
 
 export const config = { api: { bodyParser: false } };
 
@@ -38,7 +39,7 @@ export default async function handler(request, response) {
     rawBody = await readBody(request);
   } catch (error) {
     if (error instanceof PayloadTooLargeError) return response.status(413).json({ ok: false, error: 'payload_too_large' });
-    console.error('whatsapp-webhook failed reading request body:', error);
+    logError('whatsapp-webhook', 'failed reading request body', {}, error);
     return response.status(400).json({ ok: false, error: 'invalid_body' });
   }
 
@@ -49,7 +50,7 @@ export default async function handler(request, response) {
   try {
     payload = JSON.parse(rawBody.toString('utf8'));
   } catch (error) {
-    console.error('whatsapp-webhook received a body with an invalid signature-verified JSON payload:', error);
+    logError('whatsapp-webhook', 'received a body with an invalid signature-verified JSON payload', {}, error);
     return response.status(400).json({ ok: false, error: 'invalid_json' });
   }
   // Forma mínima esperada de un webhook real de WhatsApp Business - protege
@@ -71,7 +72,7 @@ export default async function handler(request, response) {
     const result = await persistEvents(events);
     return response.status(200).json({ ok: true, accepted: events.length, stored: result.stored });
   } catch (error) {
-    console.error(`whatsapp-webhook failed persisting ${events.length} event(s):`, error);
+    logError('whatsapp-webhook', 'failed persisting events', { eventCount: events.length }, error);
     return response.status(502).json({ ok: false, error: 'persist_failed' });
   }
 }

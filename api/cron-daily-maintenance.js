@@ -1,5 +1,6 @@
 import { buildFullDailyMaintenanceUpdate } from '../src/daily-maintenance.mjs';
 import { withRetry } from '../lib/retry.mjs';
+import { logError } from '../lib/log.mjs';
 
 // Cron interno de mantenimiento (ver docs/AUDITORIA_MADUREZ_PRODUCTO_2026-09-12.md,
 // Automatización 35/100: "cero cron jobs... todo lo inteligente es manual o
@@ -82,7 +83,7 @@ export default async function handler(request, response) {
   try {
     rows = await fetchWorkspaceRows(process.env);
   } catch (error) {
-    console.error(`cron-daily-maintenance failed at step "fetchWorkspaceRows" ranAt=${nowISO}:`, error);
+    logError('cron-daily-maintenance', 'failed at step "fetchWorkspaceRows"', { ranAt: nowISO }, error);
     return response.status(500).json({ error: 'Error interno al correr el mantenimiento diario.' });
   }
 
@@ -103,7 +104,7 @@ export default async function handler(request, response) {
       }
       results.push({ workspaceKey, changed, ok: true, ...summary });
     } catch (error) {
-      console.error(`cron-daily-maintenance failed processing workspaceKey=${workspaceKey} ranAt=${nowISO}:`, error);
+      logError('cron-daily-maintenance', 'failed processing workspace', { workspaceKey, ranAt: nowISO }, error);
       results.push({ workspaceKey, changed: false, ok: false, error: error.message || 'Error desconocido.' });
     }
   }

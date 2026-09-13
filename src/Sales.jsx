@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { memo, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CalendarCheck, CheckCircle2, Download, FileUp, Pencil, Plus, ReceiptText, Target, Trash2, X } from 'lucide-react';
 import { blankSale, computeGoalProgress, defaultBusinessUnits, duplicateSale, GOAL_METRICS, netAmountInArs, normalizedSale, pointOfSaleMapFrom, quarterKey, saleCommission, salesToCsv, unitsMapFrom } from './sales-model.mjs';
 import { FAMILIES } from './families.mjs';
@@ -183,7 +183,7 @@ function GoalsPanel({ goals, sales, businessUnits, currentMonth, currentQuarter,
   );
 }
 
-export default function Sales({ items, goals, businessUnits, onSaveGoal, onDeleteGoal, onSaveBusinessUnit, onDeleteBusinessUnit, onSave, onSaveMany, onDelete, onDeleteMany }) {
+function SalesBase({ items, goals, businessUnits, onSaveGoal, onDeleteGoal, onSaveBusinessUnit, onDeleteBusinessUnit, onSave, onSaveMany, onDelete, onDeleteMany }) {
   const currentMonth = new Date().toISOString().slice(0, 7);
   const units = unitsMapFrom(businessUnits);
   const unitNames = Object.keys(units);
@@ -400,6 +400,9 @@ export default function Sales({ items, goals, businessUnits, onSaveGoal, onDelet
     )}
   </div>;
 }
+
+const Sales = memo(SalesBase);
+export default Sales;
 
 function BulkReviewTable({ rows, selected, existingSales, units, unitNames, onToggle, onToggleAll, onChange, onDiscard, onSaveSelected }) {
   return (

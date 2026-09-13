@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { Plus, Trash2, X } from "lucide-react";
 import { PIPELINE, commercialStage } from "./app-shared";
 
-export function Pipeline({ clients, onOpenClient, onChangeStage, onDelete, onAdd }) {
+function PipelineBase({ clients, onOpenClient, onChangeStage, onDelete, onAdd }) {
   const [draggingId, setDraggingId] = useState(null);
   const [addingStage, setAddingStage] = useState(null);
   const [addingValue, setAddingValue] = useState("");
@@ -97,3 +97,5 @@ export function Pipeline({ clients, onOpenClient, onChangeStage, onDelete, onAdd
     </div>
   );
 }
+
+export const Pipeline = memo(PipelineBase);

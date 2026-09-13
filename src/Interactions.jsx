@@ -1,9 +1,10 @@
+import { memo } from "react";
 import { ChevronRight, X } from "lucide-react";
 import { formatDate } from "./utils.mjs";
 import { Fact } from "./ui-primitives";
 import { CHANNELS, commercialStage, useModalEscape } from "./app-shared";
 
-export function InteractionRow({ item, expanded = false, onOpen, liveTemperature }) {
+function InteractionRowBase({ item, expanded = false, onOpen, liveTemperature }) {
   // liveTemperature (la temperatura actual de la ficha del cliente, si se
   // conoce en este contexto) pisa la que se guardó al registrar la
   // conversación — el historial no debería quedar con una foto vieja.
@@ -46,7 +47,9 @@ export function InteractionRow({ item, expanded = false, onOpen, liveTemperature
   );
 }
 
-export function InteractionDetail({
+export const InteractionRow = memo(InteractionRowBase);
+
+function InteractionDetailBase({
   interaction,
   client,
   onClose,
@@ -132,3 +135,5 @@ export function InteractionDetail({
     </div>
   );
 }
+
+export const InteractionDetail = memo(InteractionDetailBase);

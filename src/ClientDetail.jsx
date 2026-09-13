@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import { formatDate } from "./utils.mjs";
 import { Empty, Fact } from "./ui-primitives";
 import { InteractionRow } from "./Interactions";
+import { TaskList } from "./Tasks";
 import {
   clientContacts,
   removeClientContact,
@@ -24,6 +25,8 @@ export function ClientDetail({
   onOpenInteraction,
   onNewInteraction,
   onNewTask,
+  onOpenTask,
+  onToggleTask,
   onSave,
   onDelete,
 }) {
@@ -465,6 +468,20 @@ export function ClientDetail({
                 </button>
               )}
             </div>
+            {onOpenTask && (
+              <div className="history">
+                <h3>Tareas de esta empresa</h3>
+                <TaskList
+                  items={tasks}
+                  onToggle={onToggleTask}
+                  onOpen={(id) => {
+                    onClose();
+                    onOpenTask(id);
+                  }}
+                  emptyText="Sin tareas registradas para esta empresa."
+                />
+              </div>
+            )}
             <div className="history">
               <h3>Historial</h3>
               {interactions.length ? (

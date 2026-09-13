@@ -249,7 +249,13 @@ function ClientsBase({ clients, query, setQuery, onOpenClient, onMergeClients, m
           </div>
         </>
       ) : (
-        <Empty text="No hay empresas que coincidan con estos filtros." />
+        <Empty
+          text={
+            clients.length
+              ? "No hay empresas que coincidan con estos filtros."
+              : "Todavía no cargaste ninguna empresa. Probá importar un CSV desde Datos → Importar clientes CSV."
+          }
+        />
       )}
     </section>
   );

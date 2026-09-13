@@ -1,8 +1,39 @@
 import { memo, useEffect, useState } from "react";
-import { CheckCircle2, Plus, Search, X } from "lucide-react";
+import { CheckCircle2, Download, Plus, Search, X } from "lucide-react";
 import { formatDate } from "./utils.mjs";
 import { Empty, Fact } from "./ui-primitives";
 import { addDaysToToday, googleCalendarUrl, today, useModalEscape } from "./app-shared";
+
+// Mismo patrón que clientsToCsv/salesToCsv (client-csv.mjs, sales-model.mjs):
+// punto y coma como separador, BOM para que Excel/Sheets abran los acentos
+// bien, y comillas solo cuando el valor las necesita.
+function escapeTaskCsvCell(value) {
+  const text = String(value ?? "");
+  return /[;"\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+function tasksToCsv(tasks = []) {
+  const columns = [
+    ["Acción", "title"], ["Empresa", "company"], ["Vencimiento", "dueDate"],
+    ["Prioridad", "priority"], ["Estado", "statusLabel"], ["Disparador / contexto", "trigger"],
+  ];
+  const lines = [columns.map(([label]) => escapeTaskCsvCell(label)).join(";")];
+  for (const task of tasks) {
+    const row = { ...task, statusLabel: task.done ? "Completada" : "Pendiente" };
+    lines.push(columns.map(([, key]) => escapeTaskCsvCell(row[key])).join(";"));
+  }
+  return `﻿${lines.join("\r\n")}`;
+}
+
+function exportTasksCsv(tasks, filter) {
+  const blob = new Blob([tasksToCsv(tasks)], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `tareas-${filter}-${today()}.csv`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
 
 // Elegir "vencimiento" a mano abriendo el calendario es el paso más lento de
 // crear o postergar una tarea. Estos atajos cubren los casos más comunes
@@ -89,6 +120,15 @@ function TasksBase({ items, onToggle, onOpen, onNew }) {
             Todas
           </button>
         </div>
+        <button
+          className="secondary"
+          type="button"
+          onClick={() => exportTasksCsv(filtered, filter)}
+          disabled={!filtered.length}
+          title="Exportar a CSV la lista de tareas visible con este filtro"
+        >
+          <Download size={15} /> Exportar CSV
+        </button>
       </div>
       <TaskList
         items={filtered}

@@ -1,11 +1,55 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap');
 
 :root {
+  font-family: 'DM Sans', sans-serif;
+  color: #282828;
+  background: #f5f5f6;
+  font-synthesis: none;
+  --brand-red: #ed1c24;
+  --brand-red-dark: #c9151c;
+  --brand-charcoal: #292929;
+  --brand-gray: #999b9e;
   --radius-pill: 999px;
   --radius-md: 9px;
   --radius-lg: 10px;
   --radius-xl: 12px;
   --radius-sm: 8px;
+  --color-white: #fff;
+  --color-forest: #18352f;
+  --color-input-bg: #fbfcfb;
+  --color-border-input: #d9e1dd;
+  --color-focus-border: #4b8d79;
+  --color-border: #d9e2dd;
+  --color-border-alt: #dbe3df;
+  --color-border-light: #edf1ef;
+  --color-border-soft: #dfe6e2;
+  --color-border-warm: #dfe8e3;
+  --color-bg-soft: #eef2ef;
+  --color-panel-bg: #f8faf8;
+  --color-text-muted: #7d8e88;
+  --color-text-faint: #758781;
+  --color-text-secondary: #60766f;
+  --color-text-body: #667a74;
+  --color-text-mid: #71847e;
+  --color-text-dark: #526a63;
+  --color-text-gray: #84918d;
+  --color-text-gray2: #777;
+  --color-green-text: #365047;
+  --color-teal-brand: #176b58;
+  --color-teal-strong: #0d7764;
+  --color-teal-mid: #456159;
+  --color-teal-dark: #226b58;
+  --color-success: #347663;
+  --color-success-bg: #e7f4ee;
+  --color-danger-strong: #a34848;
+  --color-danger-text: #ad5140;
+  --color-danger-bg: #fbe7e3;
+  --color-amber-dark: #a3720f;
+  --color-amber-text: #855e15;
+  --color-amber-bg: #fff3df;
+  --color-terracotta: #a15b52;
+  --color-blue-mid: #3b6d9b;
+  --color-blue-cold: #e9f2f7;
 }
 * { box-sizing: border-box; }
 .login-logo { width: min(260px, 82%); height: auto; object-fit: contain; margin: 0 auto 22px; display: block; }

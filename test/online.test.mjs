@@ -1,7 +1,80 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { completeTasksThrough, consolidateDuplicateClients, mergeWorkspaceState, recordDeletions, workspaceStatesEqual } from '../src/workspace.mjs';
+import { completeTasksThrough, consolidateDuplicateClients, mergeWorkspaceState, recordDeletions, validateWorkspaceStateShape, workspaceStatesEqual } from '../src/workspace.mjs';
 import { filterDismissedEvents, isLegacyWhatsAppPreview, isLowSignalWhatsAppEvent, isTrustedWhatsAppEvent } from '../src/whatsapp-events.mjs';
+
+const REALISTIC_STATE = {
+  clients: [
+    { id: 'a', company: 'Báltico Construcciones', temperature: 'Caliente', updatedAt: '2026-09-01' },
+    { id: 'b', company: 'Carrocería Argentina', temperature: 'Tibio', updatedAt: '2026-09-02' },
+  ],
+  interactions: [{ id: 'i1', clientId: 'a' }],
+  tasks: [{ id: 't1', clientId: 'a', done: false }],
+  inbox: [{ event_id: 'w1' }],
+  opportunities: [{ id: 'o1', title: 'Cotización' }],
+  sales: [{ id: 's1', total: 1000 }],
+  dismissedInboxEventIds: ['old-1'],
+  ignoredWhatsAppContacts: [],
+  boardLists: [],
+  boardCards: [],
+  salesGoals: [],
+  businessUnits: [],
+  mergeLogs: [],
+  duplicateReviewDecisions: [],
+  deletedRecordIds: {},
+  planChecks: {},
+  commercialMasterVersion: '',
+  historyResetVersion: '',
+  tasksClosedThrough: '',
+  primaryChannel: 'general',
+  profileName: 'Felipe',
+};
+
+test('validateWorkspaceStateShape acepta un estado real bien formado sin lanzar', () => {
+  assert.doesNotThrow(() => validateWorkspaceStateShape(REALISTIC_STATE));
+});
+
+test('validateWorkspaceStateShape acepta el estado vacío inicial de una cuenta nueva', () => {
+  assert.doesNotThrow(() => validateWorkspaceStateShape({ clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], deletedRecordIds: {}, boardLists: [], boardCards: [], salesGoals: [], planChecks: {}, businessUnits: [], mergeLogs: [], duplicateReviewDecisions: [] }));
+});
+
+test('validateWorkspaceStateShape acepta campos ausentes (no exige todas las claves)', () => {
+  assert.doesNotThrow(() => validateWorkspaceStateShape({ clients: [{ id: 'a', company: 'X' }] }));
+});
+
+test('validateWorkspaceStateShape rechaza data undefined o no-objeto', () => {
+  assert.throws(() => validateWorkspaceStateShape(undefined), /objeto/);
+  assert.throws(() => validateWorkspaceStateShape('oops'), /objeto/);
+  assert.throws(() => validateWorkspaceStateShape(['no']), /objeto/);
+});
+
+test('validateWorkspaceStateShape rechaza clients undefined en vez de array', () => {
+  assert.throws(() => validateWorkspaceStateShape({ ...REALISTIC_STATE, clients: undefined }), /clients.*array/);
+});
+
+test('validateWorkspaceStateShape rechaza clients como string en vez de array', () => {
+  assert.throws(() => validateWorkspaceStateShape({ ...REALISTIC_STATE, clients: 'not-an-array' }), /clients.*array/);
+});
+
+test('validateWorkspaceStateShape rechaza clients como objeto en vez de array', () => {
+  assert.throws(() => validateWorkspaceStateShape({ ...REALISTIC_STATE, clients: { id: 'a' } }), /clients.*array/);
+});
+
+test('validateWorkspaceStateShape rechaza tasks como objeto en vez de array', () => {
+  assert.throws(() => validateWorkspaceStateShape({ ...REALISTIC_STATE, tasks: {} }), /tasks.*array/);
+});
+
+test('validateWorkspaceStateShape rechaza un cliente sin id', () => {
+  assert.throws(() => validateWorkspaceStateShape({ ...REALISTIC_STATE, clients: [{ company: 'Sin ID' }] }), /clients\[0\].*id/);
+});
+
+test('validateWorkspaceStateShape rechaza un cliente sin company', () => {
+  assert.throws(() => validateWorkspaceStateShape({ ...REALISTIC_STATE, clients: [{ id: 'a' }] }), /clients\[0\].*company/);
+});
+
+test('validateWorkspaceStateShape rechaza un cliente que no es un objeto', () => {
+  assert.throws(() => validateWorkspaceStateShape({ ...REALISTIC_STATE, clients: ['not-a-client'] }), /clients\[0\]/);
+});
 
 test('consolidates duplicate company cards and rewires their history to one commercial identity', () => {
   const result = consolidateDuplicateClients({

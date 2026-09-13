@@ -2,7 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 import { filterDismissedEvents, isLegacyWhatsAppPreview } from './whatsapp-events.mjs';
 import { whatsappContactIdentity, whatsappContactKey } from './whatsapp-threads.mjs';
 import { withRetry } from '../lib/retry.mjs';
-export { completeTasksThrough, mergeClients, mergeWorkspaceState, recordDeletions, recordDuplicateReviewDecision, restoreRecordId, undoClientMerge, workspaceStatesEqual } from './workspace.mjs';
+export { completeTasksThrough, mergeClients, mergeWorkspaceState, recordDeletions, recordDuplicateReviewDecision, restoreRecordId, undoClientMerge, validateWorkspaceStateShape, workspaceStatesEqual } from './workspace.mjs';
+import { validateWorkspaceStateShape } from './workspace.mjs';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -76,6 +77,10 @@ export async function loadOnlineState(userId, allowedChannels = ['general']) {
 // de veces con backoff acotado. Un 401/403 (sesión vencida, RLS) nunca se
 // reintenta: va a fallar exactamente igual y solo demoraría el error real.
 export async function saveOnlineState(userId, email, data) {
+  // Validación de forma antes de gastar un round-trip (y reintentos) contra
+  // Supabase: si `data` está corrupto, no tiene sentido reintentarlo, va a
+  // fallar la validación exactamente igual las tres veces.
+  validateWorkspaceStateShape(data);
   const result = await withRetry(async () => {
     let outcome;
     try {

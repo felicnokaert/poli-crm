@@ -255,3 +255,45 @@ export function recordDuplicateReviewDecision(state = EMPTY_STATE, pairId, decis
 export function workspaceStatesEqual(left = EMPTY_STATE, right = EMPTY_STATE) {
   return JSON.stringify(mergeWorkspaceState(EMPTY_STATE, left)) === JSON.stringify(mergeWorkspaceState(EMPTY_STATE, right));
 }
+
+// Colecciones que `data` (workspace_states.data, ver src/online.js) siempre
+// debe traer como array - si alguna llega undefined, un objeto o un string
+// por un bug de frontend, guardarla así en Supabase corrompe el estado
+// silenciosamente (nadie se entera hasta que algo intenta leerla como array
+// más adelante, típicamente en producción). No son todos los campos de
+// EMPTY_STATE: los que son objetos a propósito (deletedRecordIds,
+// planChecks) o strings (primaryChannel, profileName, etc.) no aplican acá.
+const ARRAY_FIELDS = ['clients', 'interactions', 'tasks', 'inbox', 'opportunities', 'sales', 'dismissedInboxEventIds', 'ignoredWhatsAppContacts', 'boardLists', 'boardCards', 'salesGoals', 'businessUnits', 'mergeLogs', 'duplicateReviewDecisions'];
+
+// Red de seguridad, no un modelo de datos nuevo: solo confirma la forma
+// mínima esperada antes de persistir, sin tocar el contenido de cada campo
+// (eso ya lo validan a mano las pantallas que producen `data`). Un dato bien
+// formado (el caso normal) siempre pasa esto sin cambios de comportamiento;
+// solo corta el guardado cuando algo claramente no tiene la forma de un
+// workspace state (undefined, un string, un objeto en vez de array, un
+// cliente sin id/company). Usada por saveOnlineState (src/online.js) antes
+// de mandar cualquier cosa a Supabase.
+export function validateWorkspaceStateShape(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error('Estado de workspace inválido: se esperaba un objeto con clients, tasks, interactions, etc.');
+  }
+  for (const field of ARRAY_FIELDS) {
+    if (field in data && !Array.isArray(data[field])) {
+      throw new Error(`Estado de workspace inválido: "${field}" debería ser un array y llegó ${data[field] === null ? 'null' : typeof data[field]}.`);
+    }
+  }
+  if (Array.isArray(data.clients)) {
+    data.clients.forEach((client, index) => {
+      if (!client || typeof client !== 'object' || Array.isArray(client)) {
+        throw new Error(`Estado de workspace inválido: clients[${index}] no es un objeto de cliente.`);
+      }
+      if (!client.id) {
+        throw new Error(`Estado de workspace inválido: clients[${index}] no tiene "id".`);
+      }
+      if (!client.company) {
+        throw new Error(`Estado de workspace inválido: clients[${index}] (id "${client.id}") no tiene "company".`);
+      }
+    });
+  }
+  return data;
+}

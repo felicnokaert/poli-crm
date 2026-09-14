@@ -180,6 +180,85 @@ describe("Sales.jsx - interacción real", () => {
     assert.ok(screen.getByText("Foam Norte SRL"));
     assert.equal(screen.queryByText("Envases del Sur SA"), null);
   });
+
+  // Cierra el hueco documentado en la décima auditoría de madurez
+  // (AUDITORIA_MADUREZ_PRODUCTO_2026-09-16-decima.md, sección 5, Testing):
+  // el flujo de SaleModal con el datalist/aviso de cliente no coincidente
+  // (ver AUDITORIA_MADUREZ_PRODUCTO_2026-09-15-novena.md) solo estaba
+  // probado indirectamente por tests de sales-model.mjs (lógica pura), sin
+  // ejercitar la interacción real de abrir el modal, tipear y guardar.
+  const clientsWithKnownCompany = [{ id: "c1", company: "Envases del Sur SA" }];
+
+  test("abrir 'Registrar venta', tipear un cliente que no matchea muestra el aviso, y matchear uno existente lo saca", async () => {
+    // SaleModal usa useConfirm() (aviso de venta duplicada) - necesita el
+    // mismo fixture con <ConfirmProvider> que documenta
+    // test/fixtures/technical-documents-with-confirm.jsx.
+    const harness = await loadJsxModule("test/fixtures/sales-with-confirm.jsx");
+    render(
+      React.createElement(harness.SalesWithConfirm, {
+        items: [],
+        goals: [],
+        businessUnits,
+        clients: clientsWithKnownCompany,
+        onSaveGoal: () => {},
+        onDeleteGoal: () => {},
+        onSaveBusinessUnit: () => {},
+        onDeleteBusinessUnit: () => {},
+        onSave: () => {},
+        onSaveMany: () => {},
+        onDelete: () => {},
+        onDeleteMany: () => {},
+      }),
+    );
+
+    fireEvent.click(screen.getByText("Registrar venta"));
+    assert.ok(screen.getByText("Ingresá el importe neto, sin IVA."), "debería abrirse el modal de venta");
+
+    const customerInput = screen.getByPlaceholderText("Razón social o nombre");
+    fireEvent.change(customerInput, { target: { value: "Cliente Nuevo SA" } });
+    assert.ok(screen.getByText(/No coincide con ningún cliente de tu cartera/));
+
+    fireEvent.change(customerInput, { target: { value: "Envases del Sur SA" } });
+    assert.equal(
+      screen.queryByText(/No coincide con ningún cliente de tu cartera/),
+      null,
+      "el aviso no debería mostrarse para un nombre que sí coincide con la cartera",
+    );
+  });
+
+  test("guardar una venta nueva desde el modal llama a onSave con los datos cargados y cierra el modal", async () => {
+    const harness = await loadJsxModule("test/fixtures/sales-with-confirm.jsx");
+    const saveCalls = [];
+    render(
+      React.createElement(harness.SalesWithConfirm, {
+        items: [],
+        goals: [],
+        businessUnits,
+        clients: clientsWithKnownCompany,
+        onSaveGoal: () => {},
+        onDeleteGoal: () => {},
+        onSaveBusinessUnit: () => {},
+        onDeleteBusinessUnit: () => {},
+        onSave: (value) => saveCalls.push(value),
+        onSaveMany: () => {},
+        onDelete: () => {},
+        onDeleteMany: () => {},
+      }),
+    );
+
+    fireEvent.click(screen.getByText("Registrar venta"));
+    fireEvent.change(screen.getByPlaceholderText("Razón social o nombre"), { target: { value: "Envases del Sur SA" } });
+    fireEvent.change(screen.getByLabelText("Número (últimos 5)"), { target: { value: "789" } });
+    fireEvent.change(screen.getByLabelText("Importe neto sin IVA"), { target: { value: "5000" } });
+    fireEvent.submit(screen.getByText("Guardar venta").closest("form"));
+
+    assert.equal(saveCalls.length, 1);
+    assert.equal(saveCalls[0].customer, "Envases del Sur SA");
+    // normalizedSale() rellena el número de comprobante a 5 dígitos.
+    assert.equal(saveCalls[0].documentNumber, "00789");
+    assert.equal(Number(saveCalls[0].netAmount), 5000);
+    assert.equal(screen.queryByText("Ingresá el importe neto, sin IVA."), null, "el modal debería cerrarse después de guardar");
+  });
 });
 
 describe("WhatsAppInbox.jsx - interacción real", () => {

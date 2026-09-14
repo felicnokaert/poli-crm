@@ -27,6 +27,13 @@ test('cron retries a transient 503 on the workspace PATCH and still reports succ
   let patchAttempts = 0;
   global.fetch = t.mock.fn(async (url, options) => {
     const method = options?.method || 'GET';
+    // El backup (lib/backup.mjs) llama a /storage/v1/... y a /rest/v1/<otras
+    // tablas> - se responde con un stub genérico que no interfiere con el
+    // conteo de intentos del PATCH de workspace_states, que es lo único que
+    // este test necesita ejercitar.
+    if (!String(url).includes('/rest/v1/workspace_states')) {
+      return { ok: true, status: 200, json: async () => [] };
+    }
     if (method === 'GET') {
       return {
         ok: true,
@@ -79,6 +86,9 @@ test('cron does not retry a 401 on the workspace PATCH, fails fast and reports t
   let patchAttempts = 0;
   global.fetch = t.mock.fn(async (url, options) => {
     const method = options?.method || 'GET';
+    if (!String(url).includes('/rest/v1/workspace_states')) {
+      return { ok: true, status: 200, json: async () => [] };
+    }
     if (method === 'GET') {
       return {
         ok: true,
@@ -128,6 +138,9 @@ test('a broken row does not stop the cron from processing the other workspaces',
   const patchedWorkspaces = [];
   global.fetch = t.mock.fn(async (url, options) => {
     const method = options?.method || 'GET';
+    if (!String(url).includes('/rest/v1/workspace_states')) {
+      return { ok: true, status: 200, json: async () => [] };
+    }
     if (method === 'GET') {
       return {
         ok: true,

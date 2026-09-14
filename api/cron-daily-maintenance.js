@@ -1,6 +1,7 @@
 import { buildFullDailyMaintenanceUpdate } from '../src/daily-maintenance.mjs';
 import { withRetry } from '../lib/retry.mjs';
 import { logError } from '../lib/log.mjs';
+import { runDailyBackup, cleanupOldBackups } from '../lib/backup.mjs';
 
 // Cron interno de mantenimiento (ver docs/AUDITORIA_MADUREZ_PRODUCTO_2026-09-12.md,
 // Automatización 35/100: "cero cron jobs... todo lo inteligente es manual o
@@ -87,6 +88,23 @@ export default async function handler(request, response) {
     return response.status(500).json({ error: 'Error interno al correr el mantenimiento diario.' });
   }
 
+  // Backup diario a Storage (ver lib/backup.mjs - Datos, "no hay backup
+  // automático"). Se corre antes del mantenimiento por fila a propósito: si
+  // algo de lo de abajo modificara `rows` en memoria de forma inesperada, el
+  // backup igual refleja lo que había ANTES de tocar nada. Un fallo acá se
+  // loguea pero nunca aborta el cron - el mantenimiento diario (tareas
+  // vencidas, señales, auto-tareas) es más importante que el backup de ese
+  // día puntual, y mañana hay otra oportunidad de que el backup funcione.
+  let backupSummary = { ok: false, filesUploaded: [], deletedFolders: [] };
+  try {
+    const { filesUploaded } = await runDailyBackup(process.env, rows, nowISO);
+    const deletedFolders = await cleanupOldBackups(process.env, nowISO);
+    backupSummary = { ok: true, filesUploaded, deletedFolders };
+  } catch (error) {
+    logError('cron-daily-maintenance', 'failed at step "runDailyBackup"', { ranAt: nowISO }, error);
+    backupSummary = { ok: false, filesUploaded: [], deletedFolders: [], error: error.message || 'Error desconocido.' };
+  }
+
   // A partir de acá cada fila se procesa de forma independiente: este cron
   // corre sin supervisión humana, así que un workspace con datos corruptos o
   // un PATCH que agota los reintentos de saveWorkspaceRow no debe impedir
@@ -137,7 +155,11 @@ export default async function handler(request, response) {
         cotizacionesFrias: coldQuotesCount,
         radarDeRecompra: repurchaseCount,
       },
+      backup: backupSummary.ok
+        ? `Backup de hoy subido (${backupSummary.filesUploaded.length} tablas)${backupSummary.deletedFolders.length ? `, se borraron ${backupSummary.deletedFolders.length} backup(s) vencido(s)` : ''}.`
+        : `El backup de hoy falló: ${backupSummary.error || 'error desconocido'}.`,
     },
+    backup: backupSummary,
     results,
   });
 }

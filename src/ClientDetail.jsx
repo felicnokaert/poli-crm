@@ -113,6 +113,22 @@ export function ClientDetail({
             </button>
           </div>
         </div>
+        <div className="review-controls">
+          <span>
+            Última cotización:{" "}
+            <strong>{client.lastQuotedAt ? formatDate(client.lastQuotedAt) : "Sin registrar"}</strong>
+          </span>
+          <div>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => onSave({ ...client, lastQuotedAt: new Date().toISOString() })}
+              title="Guarda solo la fecha, no el presupuesto en sí - para saber cuándo hacer seguimiento sin tener que adjuntar nada de Contabilium"
+            >
+              Marqué que coticé hoy
+            </button>
+          </div>
+        </div>
         {!editing && (
           <div className="commercial-guidance">
             <div className="commercial-guidance-head">

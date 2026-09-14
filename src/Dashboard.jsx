@@ -4,6 +4,7 @@ import {
   CalendarCheck,
   CheckCircle2,
   CircleAlert,
+  Clock3,
   ExternalLink,
   Flame,
   ListChecks,
@@ -18,13 +19,24 @@ import { buildRepurchaseRadar } from "./repurchase-radar.mjs";
 import { findColdQuotes } from "./cold-quotes.mjs";
 import { findStaleHotLeads } from "./hot-leads-radar.mjs";
 import { findStaleClients } from "./stale-clients-radar.mjs";
-import { AUTO_HOT_LEAD_TASK_SOURCE, AUTO_COLD_QUOTE_TASK_SOURCE, AUTO_STALE_CLIENT_TASK_SOURCE } from "./daily-maintenance.mjs";
+import { findExpiredQuotes } from "./quoted-clients-radar.mjs";
+import {
+  AUTO_HOT_LEAD_TASK_SOURCE,
+  AUTO_COLD_QUOTE_TASK_SOURCE,
+  AUTO_STALE_CLIENT_TASK_SOURCE,
+  AUTO_EXPIRED_QUOTE_TASK_SOURCE,
+} from "./daily-maintenance.mjs";
 import { Empty } from "./ui-primitives";
 import { today } from "./app-shared";
 import { TaskList } from "./Tasks";
 import { InteractionRow } from "./Interactions";
 
-const AUTO_TASK_SOURCES = new Set([AUTO_HOT_LEAD_TASK_SOURCE, AUTO_COLD_QUOTE_TASK_SOURCE, AUTO_STALE_CLIENT_TASK_SOURCE]);
+const AUTO_TASK_SOURCES = new Set([
+  AUTO_HOT_LEAD_TASK_SOURCE,
+  AUTO_COLD_QUOTE_TASK_SOURCE,
+  AUTO_STALE_CLIENT_TASK_SOURCE,
+  AUTO_EXPIRED_QUOTE_TASK_SOURCE,
+]);
 
 // Indicador chico de auditabilidad (ver AUDITORIA_MADUREZ_PRODUCTO_2026-09-14-tarde):
 // hasta ahora las tareas que crea el cron (buildAutoFollowupTasks) quedaban
@@ -49,10 +61,12 @@ function AutomationSummary({ tasks }) {
   const hotCount = createdToday.filter((task) => task.source === AUTO_HOT_LEAD_TASK_SOURCE).length;
   const coldCount = createdToday.filter((task) => task.source === AUTO_COLD_QUOTE_TASK_SOURCE).length;
   const staleCount = createdToday.filter((task) => task.source === AUTO_STALE_CLIENT_TASK_SOURCE).length;
+  const expiredCount = createdToday.filter((task) => task.source === AUTO_EXPIRED_QUOTE_TASK_SOURCE).length;
   const parts = [];
   if (hotCount) parts.push(`${hotCount} de leads calientes`);
   if (coldCount) parts.push(`${coldCount} de cotizaciones frías`);
   if (staleCount) parts.push(`${staleCount} de clientes sin contacto`);
+  if (expiredCount) parts.push(`${expiredCount} de cotizaciones vencidas`);
   return (
     <div className="automation-note">
       <ListChecks size={15} />
@@ -170,6 +184,7 @@ export function DayMode({
   coldQuotes,
   repurchaseRadar,
   staleClients,
+  expiredQuotes,
   myChannels,
   onNavigate,
   onOpenTask,
@@ -213,6 +228,7 @@ export function DayMode({
       : []),
     ...coldQuotes.map((item) => ({ id: `cold:${item.eventId}`, label: `Retomar cotización fría — ${item.customer}` })),
     ...staleClients.map((item) => ({ id: `stale:${item.clientId}`, label: `Retomar contacto — ${item.company} (${item.daysSince}d sin actividad)` })),
+    ...expiredQuotes.map((item) => ({ id: `expired:${item.clientId}`, label: `Seguimiento de cotización — ${item.company} (${item.daysSince}d sin cerrar)` })),
     ...repurchaseRadar.map((item) => ({ id: `repurchase:${item.customer}-${item.product}`, label: `Ofrecer recompra — ${item.customer} (${item.product})` })),
     ...(myChannels || []).flatMap((channel) => PINNED_TASKS_BY_CHANNEL[channel] || []),
   ].filter((item) => !planIds.has(item.id)).slice(0, 10);
@@ -336,6 +352,7 @@ function DashboardBase({
   const coldQuotes = (signalsAreFresh ? dailySignals.coldQuotes : findColdQuotes(inbox, sales)).slice(0, 6);
   const hotLeads = (signalsAreFresh ? dailySignals.hotLeads : findStaleHotLeads(inbox)).slice(0, 6);
   const staleClients = (signalsAreFresh ? dailySignals.staleClients : findStaleClients(clients, sales, inbox)).slice(0, 6);
+  const expiredQuotes = (signalsAreFresh ? dailySignals.expiredQuotes : findExpiredQuotes(clients, sales)).slice(0, 6);
   const overdueTasks = tasks.filter((task) => !task.done && task.dueDate && task.dueDate < now);
   const dueTodayTasks = tasks.filter((task) => !task.done && task.dueDate === now);
   const latestByContact = [];
@@ -383,6 +400,7 @@ function DashboardBase({
         coldQuotes={coldQuotes}
         repurchaseRadar={repurchaseRadar}
         staleClients={staleClients}
+        expiredQuotes={expiredQuotes}
         myChannels={myChannels}
         onNavigate={onNavigate}
         onOpenTask={onOpenTask}
@@ -507,6 +525,33 @@ function DashboardBase({
             <UserX size={22} />
           </div>
           {staleClients.map((item) => (
+            <button
+              type="button"
+              className="radar-row radar-row-clickable"
+              key={item.clientId}
+              onClick={() => onNavigate("clients")}
+            >
+              <div>
+                <strong>{item.company}</strong>
+              </div>
+              <div>
+                <span className="radar-badge cold">{item.daysSince}d</span>
+              </div>
+            </button>
+          ))}
+        </section>
+      )}
+      {expiredQuotes.length > 0 && (
+        <section className="panel">
+          <div className="panel-head">
+            <div>
+              <span className="eyebrow">Marcadas con "Coticé hoy", sin cerrar</span>
+              <h2>Cotizaciones vencidas</h2>
+              <p>Cuentas donde marcaste que enviaste una cotización y pasaron 15 días o más sin registrar una venta.</p>
+            </div>
+            <Clock3 size={22} />
+          </div>
+          {expiredQuotes.map((item) => (
             <button
               type="button"
               className="radar-row radar-row-clickable"

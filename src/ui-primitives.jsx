@@ -50,32 +50,34 @@ export function Fact({ label, value }) {
   );
 }
 
-// Recreación en SVG del isologo de Grupo Poliplast (colores reales: rojo +
-// gris, no la versión en negro que se usó en un primer intento) armada en 3
-// piezas independientes a propósito - a diferencia de un PNG plano, esto
-// permite animar SOLO los dos aros (el rojo exterior, con el corte que
-// forma la "G", y el gris interior) y dejar la "P" del centro siempre
-// quieta, tal como pidió Felipe. `animated` controla si los aros giran
-// (pantalla de carga) o quedan fijos (pantalla de error - no hay nada
-// "cargando" ahí).
+// Isologo REAL de Grupo Poliplast (public/poliplast-isotipo-color.png, el
+// archivo que mandó Felipe - no una recreación). Un PNG plano no permite
+// animar partes por separado, así que se usan 2 copias superpuestas de la
+// MISMA imagen, cada una recortada con una máscara circular (mask-image +
+// radial-gradient): una muestra solo el centro (la "P", siempre quieta),
+// la otra muestra solo el resto hacia afuera (los aros rojo y gris, que
+// giran juntos cuando `animated` es true). Como las dos capas son
+// literalmente los mismos píxeles del archivo real, en reposo se ve
+// idéntico al logo original - no hay ningún color ni forma inventada acá.
+// Si esta técnica de máscaras no rinde bien en algún navegador, Felipe
+// pidió como respaldo dejarlo fijo (animated=false) antes que una
+// animación que se vea mal.
 export function PoliplastMark({ animated = false, size = 84 }) {
   return (
-    <svg
-      className={`poliplast-mark${animated ? " poliplast-mark-animated" : ""}`}
-      width={size}
-      height={size}
-      viewBox="0 0 100 100"
+    <span
+      className="poliplast-mark"
+      style={{ width: size, height: size }}
       role="img"
       aria-label="Grupo Poliplast"
     >
-      <g className="poliplast-mark-ring poliplast-mark-ring-outer">
-        <circle cx="50" cy="50" r="44" fill="none" stroke="#e2231a" strokeWidth="6" strokeLinecap="round" strokeDasharray="230 46" />
-      </g>
-      <g className="poliplast-mark-ring poliplast-mark-ring-inner">
-        <circle cx="50" cy="50" r="33" fill="none" stroke="#a7a9ac" strokeWidth="5" strokeLinecap="round" strokeDasharray="170 37" />
-      </g>
-      <text x="50" y="67" textAnchor="middle" fontFamily="Manrope, sans-serif" fontWeight="800" fontSize="46" fill="#e2231a">P</text>
-    </svg>
+      <img
+        className={`poliplast-mark-layer poliplast-mark-layer-rings${animated ? " poliplast-mark-animated" : ""}`}
+        src="/poliplast-isotipo-color.png"
+        alt=""
+        aria-hidden="true"
+      />
+      <img className="poliplast-mark-layer poliplast-mark-layer-letter" src="/poliplast-isotipo-color.png" alt="" aria-hidden="true" />
+    </span>
   );
 }
 

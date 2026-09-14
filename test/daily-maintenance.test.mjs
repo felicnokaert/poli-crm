@@ -7,6 +7,7 @@ import {
   buildAutoFollowupTasks,
   AUTO_HOT_LEAD_TASK_SOURCE,
   AUTO_COLD_QUOTE_TASK_SOURCE,
+  AUTO_STALE_CLIENT_TASK_SOURCE,
 } from "../src/daily-maintenance.mjs";
 
 // A propósito sin "precio"/"cotiz" en el texto: inferIntent (usado por
@@ -335,21 +336,32 @@ test("buildFullDailyMaintenanceUpdate corre de punta a punta con datos realistas
   assert.equal(result.nextState.dailySignals.repurchase[0].customer, "Cliente B SRL");
   assert.equal(result.summary.hotLeadsCount, 1);
   assert.equal(result.summary.repurchaseCount, 1);
+  assert.equal(result.nextState.dailySignals.staleClientsCount, 1);
+  assert.equal(result.nextState.dailySignals.staleClients[0].clientId, "client-b");
+  assert.equal(result.summary.staleClientsCount, 1);
 
   // 3) Auto-tarea de seguimiento creada para el hot lead de Cliente A,
   //    vinculada al cliente correcto, sin duplicar ninguna de las tareas
   //    preexistentes. El mismo mensaje también califica como cotización
   //    fría (pidió precio y pasaron más de 7 días sin venta a su nombre),
   //    así que genera además su propia auto-tarea con un source distinto -
-  //    nunca se pisan entre sí (autoKey separado por source).
-  assert.equal(result.summary.autoFollowupTasksCreated, 2);
+  //    nunca se pisan entre sí (autoKey separado por source). Cliente B SRL
+  //    también aparece: su última venta fue el 2026-08-01, 43 días antes de
+  //    "now" (2026-09-13) y sin ningún mensaje después - cliente activo
+  //    (sin outcome fijado, default "Abierto") sin contacto reciente.
+  assert.equal(result.summary.autoFollowupTasksCreated, 3);
   const autoHotTasks = result.nextState.tasks.filter((t) => t.source === AUTO_HOT_LEAD_TASK_SOURCE);
   assert.equal(autoHotTasks.length, 1);
   assert.equal(autoHotTasks[0].clientId, "client-a");
   assert.match(autoHotTasks[0].title, /Cliente A SA/);
 
-  // El total de tareas es: las 3 originales + 2 auto-generadas (hot lead + cotización fría).
-  assert.equal(result.nextState.tasks.length, 5);
+  const autoStaleClientTasks = result.nextState.tasks.filter((t) => t.source === AUTO_STALE_CLIENT_TASK_SOURCE);
+  assert.equal(autoStaleClientTasks.length, 1);
+  assert.equal(autoStaleClientTasks[0].clientId, "client-b");
+  assert.match(autoStaleClientTasks[0].title, /Cliente B SRL/);
+
+  // El total de tareas es: las 3 originales + 3 auto-generadas (hot lead + cotización fría + cliente sin contacto).
+  assert.equal(result.nextState.tasks.length, 6);
   for (const id of before.taskIds) {
     assert.ok(result.nextState.tasks.some((t) => t.id === id), `la tarea original ${id} no debería desaparecer`);
   }

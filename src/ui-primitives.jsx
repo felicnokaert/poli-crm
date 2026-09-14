@@ -50,13 +50,14 @@ export function Fact({ label, value }) {
   );
 }
 
+// El isologo de Grupo Poliplast ya está dibujado como un anillo partido en
+// dos tonos (ver poliplast-isotipo-negro.png) - hacerlo girar entero alcanza
+// para leerse como "cargando" sin necesitar un spinner aparte superpuesto.
 export function Splash({ text }) {
   return (
     <div className="login-shell" role="status" aria-live="polite">
-      <section className="login-card">
-        <div className="brand-mark">P</div>
-        <h1>Poliplast Sales Copilot</h1>
-        <Spinner size={22} />
+      <section className="login-card splash-card">
+        <img className="splash-mark" src="/poliplast-isotipo-negro.png" alt="Grupo Poliplast" />
         <p>{text}</p>
       </section>
     </div>

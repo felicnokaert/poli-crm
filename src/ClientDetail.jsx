@@ -366,7 +366,7 @@ export function ClientDetail({
                 value={
                   detectedPurchase
                     ? `${formatDate(detectedPurchase.date)} · ${detectedPurchase.products.join(", ") || "sin producto legible"}${detectedPurchase.unit ? ` · ${detectedPurchase.unit}` : ""}`
-                    : "Sin facturas cargadas a nombre de este cliente"
+                    : "Sin facturas a nombre exacto de este cliente (revisá Ventas si cargaste alguna con otro nombre)"
                 }
               />
               <Fact label="Compras" value={client.totalPurchases} />

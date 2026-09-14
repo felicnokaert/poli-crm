@@ -183,7 +183,7 @@ function GoalsPanel({ goals, sales, businessUnits, currentMonth, currentQuarter,
   );
 }
 
-function SalesBase({ items, goals, businessUnits, onSaveGoal, onDeleteGoal, onSaveBusinessUnit, onDeleteBusinessUnit, onSave, onSaveMany, onDelete, onDeleteMany }) {
+function SalesBase({ items, goals, businessUnits, clients, onSaveGoal, onDeleteGoal, onSaveBusinessUnit, onDeleteBusinessUnit, onSave, onSaveMany, onDelete, onDeleteMany }) {
   const currentMonth = new Date().toISOString().slice(0, 7);
   const units = unitsMapFrom(businessUnits);
   const unitNames = Object.keys(units);
@@ -393,6 +393,7 @@ function SalesBase({ items, goals, businessUnits, onSaveGoal, onDeleteGoal, onSa
         sales={items}
         units={units}
         unitNames={unitNames}
+        clients={clients}
         onClose={() => setEditing(null)}
         onSave={(value) => { onSave(normalizedSale(value, units)); setEditing(null); }}
         onDelete={editing.id ? () => { onDelete(editing.id); setEditing(null); } : null}
@@ -472,12 +473,16 @@ function BulkReviewTable({ rows, selected, existingSales, units, unitNames, onTo
   );
 }
 
-function SaleModal({ value, sales, units, unitNames, onClose, onSave, onDelete }) {
+function SaleModal({ value, sales, units, unitNames, clients, onClose, onSave, onDelete }) {
   const confirm = useConfirm();
   const [form, setForm] = useState(value);
   const update = (name, value) => setForm((current) => ({ ...current, [name]: value }));
   const changeUnit = (unit) => setForm((current) => ({ ...current, unit, pointOfSale: current.documentType === 'Factura' ? (units[unit]?.invoicePoints[0] || '') : '' }));
   const duplicate = duplicateSale(sales, form);
+  const clientNames = useMemo(() => [...new Set((clients || []).flatMap((client) => [client.company, client.legalName]).filter(Boolean))], [clients]);
+  const customerTyped = (form.customer || '').trim();
+  const matchesKnownClient = !customerTyped
+    || clientNames.some((name) => name.trim().toLocaleLowerCase('es-AR') === customerTyped.toLocaleLowerCase('es-AR'));
   async function submit(event) {
     event.preventDefault();
     if (duplicate && !(await confirm(`Ya existe una venta con este mismo comprobante para ${duplicate.customer} (${money(duplicate.netAmount)}). ¿Guardar de todas formas?`))) return;
@@ -492,7 +497,12 @@ function SaleModal({ value, sales, units, unitNames, onClose, onSave, onDelete }
       <label>Comprobante<select value={form.documentType} onChange={(e) => setForm((current) => ({ ...current, documentType: e.target.value, pointOfSale: e.target.value === 'Factura' ? (units[current.unit]?.invoicePoints[0] || '') : '' }))}><option>Factura</option><option>COT</option></select></label>
       {form.documentType === 'Factura' && <label>Punto de venta<select value={form.pointOfSale} onChange={(e) => update('pointOfSale', e.target.value)}>{(units[form.unit]?.invoicePoints || []).map((item) => <option key={item}>{item}</option>)}</select></label>}
       <label>Número (últimos 5)<input required inputMode="numeric" pattern="[0-9]{1,5}" maxLength="5" value={form.documentNumber} onChange={(e) => update('documentNumber', e.target.value.replace(/\D/g, '').slice(0, 5))}/></label>
-      <label>Cliente<input required value={form.customer} onChange={(e) => update('customer', e.target.value)} placeholder="Razón social o nombre"/></label>
+      <label>Cliente<input required list="sale-customer-options" value={form.customer} onChange={(e) => update('customer', e.target.value)} placeholder="Razón social o nombre"/>
+        <datalist id="sale-customer-options">{clientNames.map((name) => <option key={name} value={name}/>)}</datalist>
+        {customerTyped && !matchesKnownClient && clientNames.length > 0 && (
+          <small className="field-hint">No coincide con ningún cliente de tu cartera — revisá el nombre para que la venta se vincule a su ficha.</small>
+        )}
+      </label>
       <label>Familia<select value={form.family || ''} onChange={(e) => update('family', e.target.value)}><option value="">Sin definir</option>{FAMILIES.filter((item) => item !== 'Sin definir').map((item) => <option key={item}>{item}</option>)}</select></label>
       <label>Moneda de la factura<select value={form.currency || 'ARS'} onChange={(e) => update('currency', e.target.value)}><option value="ARS">Pesos</option><option value="USD">Dólares</option></select></label>
       <label>Importe neto sin IVA{form.currency === 'USD' ? ' (USD)' : ''}<input required type="number" min="0" step="0.01" value={form.netAmount} onChange={(e) => update('netAmount', e.target.value)}/></label>

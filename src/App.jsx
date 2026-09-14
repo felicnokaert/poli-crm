@@ -1635,6 +1635,7 @@ export default function App() {
               items={data.sales || EMPTY_ARRAY}
               goals={data.salesGoals || EMPTY_ARRAY}
               businessUnits={data.businessUnits}
+              clients={data.clients || EMPTY_ARRAY}
               onSaveGoal={saveSalesGoal}
               onDeleteGoal={deleteSalesGoal}
               onSaveBusinessUnit={saveBusinessUnit}

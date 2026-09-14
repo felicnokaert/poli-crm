@@ -3,15 +3,26 @@
 // mismo cliente autenticado que el resto del CRM - la seguridad la hace RLS,
 // no este archivo: cualquier intento de guardar algo "vigente" sin validar,
 // o de borrar un documento, es rechazado por la base, no solo por la UI.
-import { supabase } from './online.js';
+import { onlineConfigured, supabase } from './online.js';
 import { extractPdfText } from './pdf-text.js';
 import { fromRow, historyFromRow, safeStorageFileName, sanitizeExtractedText, toRow } from './technical-documents-mapping.mjs';
 
 const STORAGE_BUCKET = 'technical-documents';
 
+// Sin Supabase configurado (modo local/demo, sin VITE_SUPABASE_URL) `supabase`
+// es `null` (ver online.js) - sin esta guarda, cualquier función de acá abajo
+// tiraba un TypeError crudo ("Cannot read properties of null (reading
+// 'from')") apenas se abría Base técnica. TechnicalDocuments.jsx ya atrapa el
+// error y lo muestra como mensaje (no crashea la app), pero el mensaje en sí
+// era ilegible - esto lo reemplaza por uno explicable.
+function assertOnlineConfigured() {
+  if (!onlineConfigured) throw new Error('La base técnica necesita conexión a Supabase configurada - no está disponible en modo local.');
+}
+
 // Catálogo completo, compartido a nivel Grupo Poliplast (no filtra por
 // canal - General/Penosil/Juan ven lo mismo, ver ADR-001).
 export async function fetchTechnicalDocuments() {
+  assertOnlineConfigured();
   const { data, error } = await supabase
     .from('technical_documents')
     .select('*')
@@ -32,6 +43,7 @@ export async function fetchTechnicalDocuments() {
 // un archivo puntual falla al subirse, el documento igual queda guardado -
 // se puede adjuntar después a mano desde Base técnica, no bloquea el resto.
 export async function saveInventoryImport(newDocuments = [], filesBySourceFile = {}) {
+  assertOnlineConfigured();
   if (!newDocuments.length) return [];
   const rows = newDocuments.map(toRow);
   const { data, error } = await supabase.from('technical_documents').insert(rows).select();
@@ -53,6 +65,7 @@ export async function saveInventoryImport(newDocuments = [], filesBySourceFile =
 // como la observación de ese cambio puntual - log_technical_document_status_change
 // la copia al historial automáticamente.
 export async function updateTechnicalDocumentStatus(id, { status, notes = '', verifiedByUserId = null, verifiedByEmail = null, verifiedAt = null, replacedBy = undefined } = {}) {
+  assertOnlineConfigured();
   const patch = { status, notes };
   if (status === 'vigente') {
     patch.verified_by = verifiedByUserId;
@@ -71,6 +84,7 @@ export async function updateTechnicalDocumentStatus(id, { status, notes = '', ve
 // no el archivo real en Drive - source_file no se toca). No dispara
 // historial de validación: no es un cambio de estado, es prolijidad.
 export async function updateTechnicalDocumentTitle(id, title) {
+  assertOnlineConfigured();
   const clean = String(title || '').trim();
   if (!clean) throw new Error('El nombre no puede quedar vacío.');
   const { data, error } = await supabase.from('technical_documents').update({ title: clean }).eq('id', id).select().maybeSingle();
@@ -83,6 +97,7 @@ export async function updateTechnicalDocumentTitle(id, title) {
 // Solo toca source_file, que es de donde se deriva la carpeta - no hay una
 // tabla de carpetas separada que pueda desincronizarse.
 export async function updateTechnicalDocumentSourceFile(id, sourceFile) {
+  assertOnlineConfigured();
   const clean = String(sourceFile || '').trim();
   if (!clean) throw new Error('La ruta no puede quedar vacía.');
   const { data, error } = await supabase.from('technical_documents').update({ source_file: clean }).eq('id', id).select().maybeSingle();
@@ -98,6 +113,7 @@ export async function updateTechnicalDocumentSourceFile(id, sourceFile) {
 // de gobernanza. Se usa tanto al importar como para adjuntar/reemplazar el
 // PDF de una ficha que ya existía sin archivo.
 export async function attachTechnicalDocumentFile(id, file) {
+  assertOnlineConfigured();
   if (!/\.pdf$/i.test(file.name)) throw new Error(`"${file.name}" no es un PDF - el bucket solo acepta PDF.`);
   const path = `${id}/${Date.now()}-${safeStorageFileName(file.name)}`;
   // Forzamos 'application/pdf' siempre, sin mirar file.type: eligiendo una
@@ -129,6 +145,7 @@ export async function attachTechnicalDocumentFile(id, file) {
 // privado (solo equipo Poliplast, misma regla que el resto del CRM), no se
 // puede armar una URL pública fija.
 export async function getTechnicalDocumentFileUrl(storagePath) {
+  assertOnlineConfigured();
   if (!storagePath) return null;
   const { data, error } = await supabase.storage
     .from(STORAGE_BUCKET)
@@ -144,6 +161,7 @@ export async function getTechnicalDocumentFileUrl(storagePath) {
 // archivo ya no estaba (o falla el borrado en Storage), la fila igual se
 // borra, no queda una ficha fantasma bloqueando el intento.
 export async function deleteTechnicalDocument(id, storagePath) {
+  assertOnlineConfigured();
   if (storagePath) {
     try {
       await supabase.storage.from(STORAGE_BUCKET).remove([storagePath]);
@@ -156,6 +174,7 @@ export async function deleteTechnicalDocument(id, storagePath) {
 }
 
 export async function fetchTechnicalDocumentHistory(documentId) {
+  assertOnlineConfigured();
   const { data, error } = await supabase
     .from('technical_document_history')
     .select('*')

@@ -54,9 +54,9 @@ describe("ui-primitives.jsx", () => {
     assert.match(html, /Cargando/);
   });
 
-  test("Splash renderiza el nombre del producto y el texto de estado", () => {
+  test("Splash renderiza el isologo animado y el texto de estado", () => {
     const html = renderToStaticMarkup(React.createElement(ui.Splash, { text: "Sincronizando…" }));
-    assert.match(html, /Poliplast Sales Copilot/);
+    assert.match(html, /poliplast-isotipo-negro\.png/);
     assert.match(html, /Sincronizando/);
   });
 

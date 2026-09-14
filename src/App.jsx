@@ -311,8 +311,8 @@ export default function App() {
     if (syncStatus === "Error al cargar") {
       return (
         <div className="login-shell" role="alert">
-          <section className="login-card">
-            <div className="brand-mark">P</div>
+          <section className="login-card splash-card">
+            <img className="splash-mark splash-mark-static" src="/poliplast-isotipo-negro.png" alt="Grupo Poliplast" />
             <h1>No se pudo cargar tu información</h1>
             <p>Revisá tu conexión e intentá de nuevo.</p>
             <button className="primary" onClick={retryLoad}>

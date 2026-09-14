@@ -5,6 +5,9 @@
   "crons": [
     { "path": "/api/cron-daily-maintenance", "schedule": "0 6 * * *" }
   ],
+  "rewrites": [
+    { "source": "/api/readiness", "destination": "/api/health" }
+  ],
   "headers": [
     {
       "source": "/(.*)",

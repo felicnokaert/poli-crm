@@ -75,11 +75,31 @@ export async function loadJsxModule(srcRelPath) {
   });
   const { output } = await bundle.generate({ format: "esm" });
   await bundle.close();
-  const code = output[0].code;
 
+  // Un componente con imports dinámicos (ej. TechnicalDocuments.jsx,
+  // DataSettings.jsx) que además comparten una dependencia estática con el
+  // entry (ej. ambos acaban importando "./online.js", uno directo y otro a
+  // través de un import() perezoso) hacen que rolldown genere más de un
+  // chunk: el entry, más un chunk "compartido" que el entry importa por su
+  // nombre de archivo. Antes acá solo se escribía output[0] a disco - el
+  // resto de los chunks quedaba en memoria, así que el import del entry
+  // fallaba con ERR_MODULE_NOT_FOUND apenas necesitaba ese chunk
+  // compartido. Ahora se escribe cada chunk generado (todos, no solo el
+  // entry) con su nombre real, para que las referencias entre ellos
+  // resuelvan igual que en un build real de Vite/rolldown.
+  // Los chunks no-entry se escriben con su `fileName` real (rolldown ya le
+  // agrega un hash de contenido) porque el entry los importa por ese nombre
+  // exacto, en el mismo directorio - renombrarlos rompería esa referencia.
   const hash = crypto.createHash("sha1").update(srcRelPath).digest("hex").slice(0, 10);
-  const outFile = path.join(CACHE_DIR, `${path.basename(srcRelPath, path.extname(srcRelPath))}.${hash}.mjs`);
-  writeFileSync(outFile, code, "utf8");
+  let entryFile = "";
+  for (const chunk of output) {
+    if (chunk.type !== "chunk") continue;
+    const outFile = chunk.isEntry
+      ? path.join(CACHE_DIR, `${path.basename(srcRelPath, path.extname(srcRelPath))}.${hash}.mjs`)
+      : path.join(CACHE_DIR, chunk.fileName);
+    writeFileSync(outFile, chunk.code, "utf8");
+    if (chunk.isEntry) entryFile = outFile;
+  }
 
-  return import(pathToFileURL(outFile).href + `?t=${Date.now()}`);
+  return import(pathToFileURL(entryFile).href + `?t=${Date.now()}`);
 }

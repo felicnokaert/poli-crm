@@ -38,6 +38,27 @@ const AUTO_TASK_SOURCES = new Set([
   AUTO_EXPIRED_QUOTE_TASK_SOURCE,
 ]);
 
+// Horas de margen antes de marcar el cron como "no corrió" - corre 1 vez
+// por día a las 6am (vercel.json), así que 36h da margen para el atraso de
+// hasta 1 hora que el plan Hobby permite en la hora del cron, sin marcar
+// falsa alarma el mismo día por unas horas de diferencia.
+const CRON_STALE_HOURS = 36;
+
+// Indicador de salud del cron - nace directo del incidente real del
+// 14/09/2026: `CRON_SECRET` faltaba en Vercel, así que el mantenimiento
+// diario (esta misma señal, `dailySignals`) llevaba SEMANAS sin correr ni
+// una sola vez sin que nadie lo notara, porque "El sistema no generó tareas
+// automáticas hoy" (el mensaje de abajo) se ve idéntico tanto si el cron
+// corrió y no encontró nada, como si el cron nunca corrió. `dailySignals`
+// solo lo escribe el cron server-side (nunca el cliente - ver el comentario
+// en DashboardBase sobre `signalsAreFresh`), así que su `calculatedAt` es
+// la única fuente confiable de "¿corrió de verdad, o no?".
+function cronHealth(dailySignals) {
+  if (!dailySignals?.calculatedAt) return { ok: false, hoursSince: null };
+  const hoursSince = (Date.now() - new Date(dailySignals.calculatedAt).getTime()) / 3_600_000;
+  return { ok: hoursSince <= CRON_STALE_HOURS, hoursSince };
+}
+
 // Indicador chico de auditabilidad (ver AUDITORIA_MADUREZ_PRODUCTO_2026-09-14-tarde):
 // hasta ahora las tareas que crea el cron (buildAutoFollowupTasks) quedaban
 // mezcladas en la lista de tareas sin ninguna marca visible de que las armó
@@ -45,7 +66,23 @@ const AUTO_TASK_SOURCES = new Set([
 // crearon HOY (por `createdAt`, no por `dueDate`, que puede quedar viejo si
 // una tarea sigue abierta) para que Felipe pueda notar de un vistazo si el
 // cron corrió y qué tan activo estuvo, sin tener que abrir cada tarea.
-function AutomationSummary({ tasks }) {
+function AutomationSummary({ tasks, dailySignals }) {
+  const { ok: cronOk, hoursSince } = cronHealth(dailySignals);
+  if (!cronOk) {
+    const sinceText = hoursSince === null
+      ? "todavía no corrió nunca en este workspace"
+      : `no corrió en las últimas ${Math.round(hoursSince / 24)} día(s)`;
+    return (
+      <div className="automation-note is-warning">
+        <CircleAlert size={15} />
+        <span>
+          ⚠️ El mantenimiento diario {sinceText} - revisar Vercel → Cron Jobs
+          y la variable <code>CRON_SECRET</code>.
+        </span>
+      </div>
+    );
+  }
+
   const now = today();
   const createdToday = tasks.filter(
     (task) => AUTO_TASK_SOURCES.has(task.source) && String(task.createdAt || "").slice(0, 10) === now,
@@ -54,7 +91,7 @@ function AutomationSummary({ tasks }) {
     return (
       <div className="automation-note is-quiet">
         <ListChecks size={15} />
-        <span>El sistema no generó tareas automáticas hoy.</span>
+        <span>El sistema corrió el mantenimiento diario y no generó tareas automáticas hoy.</span>
       </div>
     );
   }
@@ -416,7 +453,7 @@ function DashboardBase({
           </article>
         ))}
       </section>
-      <AutomationSummary tasks={tasks} />
+      <AutomationSummary tasks={tasks} dailySignals={dailySignals} />
       <section className="two-columns">
         <article className="panel">
           <div className="panel-head">

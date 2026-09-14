@@ -51,33 +51,20 @@ export function Fact({ label, value }) {
 }
 
 // Isologo REAL de Grupo Poliplast (public/poliplast-isotipo-color.png, el
-// archivo que mandó Felipe - no una recreación). Un PNG plano no permite
-// animar partes por separado, así que se usan 2 copias superpuestas de la
-// MISMA imagen, cada una recortada con una máscara circular (mask-image +
-// radial-gradient): una muestra solo el centro (la "P", siempre quieta),
-// la otra muestra solo el resto hacia afuera (los aros rojo y gris, que
-// giran juntos cuando `animated` es true). Como las dos capas son
-// literalmente los mismos píxeles del archivo real, en reposo se ve
-// idéntico al logo original - no hay ningún color ni forma inventada acá.
-// Si esta técnica de máscaras no rinde bien en algún navegador, Felipe
-// pidió como respaldo dejarlo fijo (animated=false) antes que una
-// animación que se vea mal.
-export function PoliplastMark({ animated = false, size = 84 }) {
+// archivo que mandó Felipe - no una recreación). Se probó una versión
+// animada (2 capas superpuestas con mask-image, para que solo los aros
+// giraran y la "P" quedara quieta) pero dejaba una costura visible donde
+// se cruzan las dos máscaras - Felipe ya había autorizado este respaldo
+// para ese caso exacto: mostrar el logo real fijo, sin animar, antes que
+// una animación con un defecto visible.
+export function PoliplastMark({ size = 84 }) {
   return (
-    <span
+    <img
       className="poliplast-mark"
+      src="/poliplast-isotipo-color.png"
+      alt="Grupo Poliplast"
       style={{ width: size, height: size }}
-      role="img"
-      aria-label="Grupo Poliplast"
-    >
-      <img
-        className={`poliplast-mark-layer poliplast-mark-layer-rings${animated ? " poliplast-mark-animated" : ""}`}
-        src="/poliplast-isotipo-color.png"
-        alt=""
-        aria-hidden="true"
-      />
-      <img className="poliplast-mark-layer poliplast-mark-layer-letter" src="/poliplast-isotipo-color.png" alt="" aria-hidden="true" />
-    </span>
+    />
   );
 }
 
@@ -85,7 +72,7 @@ export function Splash({ text }) {
   return (
     <div className="login-shell" role="status" aria-live="polite">
       <section className="login-card splash-card">
-        <PoliplastMark animated />
+        <PoliplastMark />
         <p>{text}</p>
       </section>
     </div>

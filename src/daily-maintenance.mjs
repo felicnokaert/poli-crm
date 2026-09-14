@@ -3,6 +3,7 @@ import { findStaleHotLeads } from './hot-leads-radar.mjs';
 import { buildRepurchaseRadar } from './repurchase-radar.mjs';
 import { findColdQuotes } from './cold-quotes.mjs';
 import { findStaleClients } from './stale-clients-radar.mjs';
+import { findExpiredQuotes } from './quoted-clients-radar.mjs';
 import { findClientByWhatsApp } from './client-contacts.mjs';
 import { whatsappContactIdentity } from './whatsapp-threads.mjs';
 
@@ -22,6 +23,10 @@ export const AUTO_COLD_QUOTE_TASK_SOURCE = 'auto-cold-quote';
 // stale-clients-radar.mjs): mismo motivo de source separado que las dos
 // anteriores.
 export const AUTO_STALE_CLIENT_TASK_SOURCE = 'auto-stale-client';
+
+// Quinta señal (ver findExpiredQuotes en quoted-clients-radar.mjs): mismo
+// motivo de source separado que las anteriores.
+export const AUTO_EXPIRED_QUOTE_TASK_SOURCE = 'auto-expired-quote';
 
 function normalizedIdentity(value = '') {
   return String(value).trim().toLocaleLowerCase('es-AR');
@@ -50,6 +55,12 @@ function coldQuoteAutoKey(coldQuote, event) {
 // cartera - se usa directo, sin normalizar nada.
 function staleClientAutoKey(staleClient) {
   return String(staleClient.clientId || '');
+}
+
+// Igual que staleClientAutoKey: identidad por id de cliente, estable entre
+// corridas.
+function expiredQuoteAutoKey(expiredQuote) {
+  return String(expiredQuote.clientId || '');
 }
 
 // Mantenimiento diario que hoy solo corre client-side cuando alguien abre el
@@ -96,6 +107,7 @@ export function buildDailySignalsUpdate(state = EMPTY_STATE, nowISO = new Date()
   const coldQuotes = findColdQuotes(inbox, sales, { today: now });
   const repurchase = buildRepurchaseRadar(sales, now);
   const staleClients = findStaleClients(clients, sales, inbox, { today: now });
+  const expiredQuotes = findExpiredQuotes(clients, sales, { today: now });
 
   const dailySignals = {
     calculatedAt: nowISO,
@@ -103,10 +115,12 @@ export function buildDailySignalsUpdate(state = EMPTY_STATE, nowISO = new Date()
     coldQuotesCount: coldQuotes.length,
     repurchaseCount: repurchase.length,
     staleClientsCount: staleClients.length,
+    expiredQuotesCount: expiredQuotes.length,
     hotLeads,
     coldQuotes,
     repurchase,
     staleClients,
+    expiredQuotes,
   };
 
   return {
@@ -117,6 +131,7 @@ export function buildDailySignalsUpdate(state = EMPTY_STATE, nowISO = new Date()
       coldQuotesCount: coldQuotes.length,
       repurchaseCount: repurchase.length,
       staleClientsCount: staleClients.length,
+      expiredQuotesCount: expiredQuotes.length,
       calculatedAt: nowISO,
     },
   };
@@ -152,11 +167,20 @@ export function buildDailySignalsUpdate(state = EMPTY_STATE, nowISO = new Date()
 // le escriba. Prioridad "Media", igual que cold quotes: no es un mensaje
 // urgente sin contestar, es una cuenta que se está enfriando.
 //
-// Anti-duplicado (igual para las 3 señales, pero SEPARADO por tipo): cada
+// Quinta señal (ver findExpiredQuotes en quoted-clients-radar.mjs): a
+// diferencia de las 4 anteriores, esta depende de que Felipe marque el
+// botón "Marqué que coticé hoy" en la ficha del cliente (client.
+// lastQuotedAt) - no se infiere de ningún dato automático. Se optó por
+// este dato manual mínimo en vez de tracking de cambio de etapa del
+// pipeline (no existe todavía) o de adjuntar el presupuesto real de
+// Contabilium (decisión explícita de Felipe: sería tedioso y pesa la base
+// de datos sin necesidad - un timestamp alcanza).
+//
+// Anti-duplicado (igual para las 5 señales, pero SEPARADO por tipo): cada
 // tarea auto-generada lleva `source` (AUTO_HOT_LEAD_TASK_SOURCE,
-// AUTO_COLD_QUOTE_TASK_SOURCE o AUTO_STALE_CLIENT_TASK_SOURCE) y un
-// `autoKey` estable (identidad del contacto, o el id del cliente para esta
-// señal). Al buscar duplicados siempre se filtra por
+// AUTO_COLD_QUOTE_TASK_SOURCE, AUTO_STALE_CLIENT_TASK_SOURCE o
+// AUTO_EXPIRED_QUOTE_TASK_SOURCE) y un `autoKey` estable (identidad del
+// contacto, o el id del cliente para las dos últimas señales). Al buscar duplicados siempre se filtra por
 // `task.source === <ese tipo>` antes de mirar `autoKey`, así una tarea de
 // hot-lead y una de cold-quote para el mismo contacto nunca se pisan entre
 // sí ni se cuentan como "la misma". Si ya existe una tarea ABIERTA
@@ -176,7 +200,8 @@ export function buildAutoFollowupTasks(state = EMPTY_STATE, nowISO = new Date().
   const hotLeads = findStaleHotLeads(inbox, { today: now });
   const coldQuotes = findColdQuotes(inbox, sales, { today: now });
   const staleClients = findStaleClients(clients, sales, inbox, { today: now });
-  if (!hotLeads.length && !coldQuotes.length && !staleClients.length) {
+  const expiredQuotes = findExpiredQuotes(clients, sales, { today: now });
+  if (!hotLeads.length && !coldQuotes.length && !staleClients.length && !expiredQuotes.length) {
     return { changed: false, nextState: state, summary: { autoFollowupTasksCreated: 0 } };
   }
 
@@ -189,6 +214,7 @@ export function buildAutoFollowupTasks(state = EMPTY_STATE, nowISO = new Date().
   const openHotLeadKeys = openKeysBySource(AUTO_HOT_LEAD_TASK_SOURCE);
   const openColdQuoteKeys = openKeysBySource(AUTO_COLD_QUOTE_TASK_SOURCE);
   const openStaleClientKeys = openKeysBySource(AUTO_STALE_CLIENT_TASK_SOURCE);
+  const openExpiredQuoteKeys = openKeysBySource(AUTO_EXPIRED_QUOTE_TASK_SOURCE);
 
   const newTasks = [];
   for (const hotLead of hotLeads) {
@@ -262,6 +288,29 @@ export function buildAutoFollowupTasks(state = EMPTY_STATE, nowISO = new Date().
       updatedAt: nowISO,
       createdBy: 'sistema',
       source: AUTO_STALE_CLIENT_TASK_SOURCE,
+      autoKey,
+    });
+  }
+
+  for (const expiredQuote of expiredQuotes) {
+    const autoKey = expiredQuoteAutoKey(expiredQuote);
+    if (!autoKey || openExpiredQuoteKeys.has(autoKey)) continue;
+    openExpiredQuoteKeys.add(autoKey);
+
+    newTasks.push({
+      id: crypto.randomUUID(),
+      clientId: expiredQuote.clientId,
+      company: expiredQuote.company || 'Cliente sin nombre',
+      title: `Hacer seguimiento de la cotización a ${expiredQuote.company || 'este cliente'} - lleva ${expiredQuote.daysSince} días sin cerrar`,
+      dueDate: today,
+      cadence: 'Diaria',
+      priority: 'Media',
+      trigger: 'Cotización marcada como vencida (detección automática)',
+      done: false,
+      createdAt: nowISO,
+      updatedAt: nowISO,
+      createdBy: 'sistema',
+      source: AUTO_EXPIRED_QUOTE_TASK_SOURCE,
       autoKey,
     });
   }

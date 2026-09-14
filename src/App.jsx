@@ -292,8 +292,7 @@ export default function App() {
   // Memoizado: es la prop `clients` de <Clients>, que ahora está envuelto en
   // React.memo - sin esto se calculaba un array nuevo en cada render de
   // App() (ej. al tipear en el buscador de otra pantalla, o al tick de
-  // syncStatus) y el memo nunca evitaba nada. Se calcula acá (antes de los
-  // early return de abajo) para no violar las reglas de hooks.
+  // syncStatus) y el memo nunca evitaba nada.
   const filteredClients = useMemo(
     () =>
       data.clients.filter((client) =>
@@ -301,29 +300,6 @@ export default function App() {
       ),
     [data.clients, query],
   );
-  if (!authReady) return <Splash text="Preparando acceso seguro…" />;
-  if (onlineConfigured && !session) return <LoginScreen />;
-  // Mientras se descarga el workspace inicial de Supabase no había ningún
-  // indicio visual - se veía la app vacía (o con datos locales viejos de
-  // otro dispositivo) y parecía colgada. Si falla, se ofrece reintentar en
-  // vez de dejar al usuario mirando una pantalla en blanco para siempre.
-  if (onlineConfigured && session && !remoteReady) {
-    if (syncStatus === "Error al cargar") {
-      return (
-        <div className="login-shell" role="alert">
-          <section className="login-card splash-card">
-            <PoliplastMark />
-            <h1>No se pudo cargar tu información</h1>
-            <p>Revisá tu conexión e intentá de nuevo.</p>
-            <button className="primary" onClick={retryLoad}>
-              Reintentar
-            </button>
-          </section>
-        </div>
-      );
-    }
-    return <Splash text="Cargando tu información…" />;
-  }
 
   function saveInteraction(event) {
     event.preventDefault();
@@ -1432,6 +1408,40 @@ export default function App() {
       status: "Conexión pendiente",
       statusTone: "offline",
     };
+  }
+
+  // Estas 3 pantallas (login/carga/error) tienen que decidirse ACÁ, después
+  // de que TODOS los hooks de arriba (useState/useCallback/useMemo/
+  // useEffect) ya se llamaron sin excepción - un early return más arriba,
+  // antes de definir el resto de los hooks, hace que React vea una
+  // cantidad distinta de hooks entre el render "cargando" y el render
+  // "listo" y crashea con "Rendered more hooks than during the previous
+  // render" (pantalla en blanco en producción, sin ningún error de
+  // servidor porque el crash es 100% del lado del navegador). Las reglas
+  // de hooks de React exigen que se llamen siempre, en el mismo orden, sin
+  // importar en qué rama de código termine el componente.
+  if (!authReady) return <Splash text="Preparando acceso seguro…" />;
+  if (onlineConfigured && !session) return <LoginScreen />;
+  // Mientras se descarga el workspace inicial de Supabase no había ningún
+  // indicio visual - se veía la app vacía (o con datos locales viejos de
+  // otro dispositivo) y parecía colgada. Si falla, se ofrece reintentar en
+  // vez de dejar al usuario mirando una pantalla en blanco para siempre.
+  if (onlineConfigured && session && !remoteReady) {
+    if (syncStatus === "Error al cargar") {
+      return (
+        <div className="login-shell" role="alert">
+          <section className="login-card splash-card">
+            <PoliplastMark />
+            <h1>No se pudo cargar tu información</h1>
+            <p>Revisá tu conexión e intentá de nuevo.</p>
+            <button className="primary" onClick={retryLoad}>
+              Reintentar
+            </button>
+          </section>
+        </div>
+      );
+    }
+    return <Splash text="Cargando tu información…" />;
   }
 
   return (

@@ -1394,16 +1394,23 @@ export default function App() {
   ];
   const nav = navGroups.flatMap(([, items]) => items);
   // Señal única y barata para el ícono de "Tareas": tareas vencidas
-  // (mismo criterio que overdueTasks en Dashboard.jsx). A propósito NO suma
-  // hot leads ni cotizaciones frías acá: esas radares se calculan con
-  // buildRepurchaseRadar/findColdQuotes/findStaleHotLeads sobre inbox/sales,
-  // funciones más pesadas que hoy solo corren cuando el Dashboard está
-  // montado. Sumarlas a un badge que vive en el sidebar (montado siempre)
-  // repetiría ese cálculo en cada render de toda la app; conviene resolverlo
-  // reutilizando `dailySignals` (ya cacheado) antes de ponerlo acá.
+  // (mismo criterio que overdueTasks en Dashboard.jsx).
   const overdueTaskCount = data.tasks.filter(
     (task) => !task.done && task.dueDate && task.dueDate < today(),
   ).length;
+  // Hot leads + cotizaciones frías en el ícono de "Por revisar": reutiliza
+  // `dailySignals` (ya calculado y cacheado por el cron diario, ver
+  // daily-maintenance.mjs) en vez de correr findStaleHotLeads/findColdQuotes
+  // acá - eso repetiría en cada render del sidebar (montado siempre) un
+  // cálculo pensado para correr una vez por día. Si dailySignals no existe
+  // todavía o quedó de un día anterior (nadie abrió el CRM y el cron no
+  // corrió), no se muestra nada en vez de mostrar un número viejo o
+  // engañoso - mismo criterio de "sin confirmar antes que inventar" que el
+  // resto del sistema de señales.
+  const signalsAreFreshForBadge = data.dailySignals && String(data.dailySignals.calculatedAt || "").slice(0, 10) === today();
+  const inboxSignalCount = signalsAreFreshForBadge
+    ? (data.dailySignals.hotLeadsCount || 0) + (data.dailySignals.coldQuotesCount || 0)
+    : 0;
 
   function displayedChannel(key) {
     const status = readiness?.channels?.[key];
@@ -1473,6 +1480,11 @@ export default function App() {
                       {id === "tasks" && overdueTaskCount > 0 && (
                         <span className="nav-badge" aria-label={`${overdueTaskCount} tareas vencidas`}>
                           {overdueTaskCount}
+                        </span>
+                      )}
+                      {id === "inbox" && inboxSignalCount > 0 && (
+                        <span className="nav-badge" aria-label={`${inboxSignalCount} leads calientes o cotizaciones frías sin atender`}>
+                          {inboxSignalCount}
                         </span>
                       )}
                     </button>

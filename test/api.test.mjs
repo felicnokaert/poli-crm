@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import health from '../api/health.js';
 import simulate from '../api/simulate-whatsapp.js';
-import readiness from '../api/readiness.js';
+import { handleReadiness as readiness } from '../lib/readiness.mjs';
 import inboxDelete from '../api/inbox-delete.js';
 
 function responseRecorder() {
@@ -52,6 +52,26 @@ test('operational readiness requires a corporate session', async () => {
   await readiness({ method: 'GET', headers: {} }, response);
   assert.equal(response.statusCode, 401);
   assert.equal(response.payload.error, 'Acceso corporativo requerido.');
+});
+
+test('health.js despacha a la logica de readiness cuando la URL pedida es /api/readiness', async () => {
+  // Fusion de api/readiness.js dentro de api/health.js (ver el comentario
+  // largo en ese archivo sobre el limite de 12 Serverless Functions del
+  // plan Hobby de Vercel) - un rewrite en vercel.json hace que Vercel
+  // preserve el pathname original en request.url. Sin auth, debe
+  // comportarse exactamente igual que el readiness.js viejo: 401.
+  const response = responseRecorder();
+  await health({ method: 'GET', headers: {}, url: '/api/readiness' }, response);
+  assert.equal(response.statusCode, 401);
+  assert.equal(response.payload.error, 'Acceso corporativo requerido.');
+});
+
+test('health.js sigue respondiendo su propio chequeo cuando la URL pedida es /api/health', async () => {
+  const response = responseRecorder();
+  await health({ url: '/api/health' }, response);
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.payload.ok, true);
+  assert.equal(response.payload.databaseReachable, false);
 });
 
 test('permanent inbox deletion requires an authenticated user', async () => {

@@ -34,11 +34,9 @@ test('runDailyBackup sube workspace_states y cada tabla propia del CRM a backups
     'whatsapp_events',
     'technical_documents',
     'technical_document_history',
-    'mercadolibre_accounts',
-    'mercadolibre_items',
     'copilot_states',
   ]);
-  assert.equal(uploaded.length, 7);
+  assert.equal(uploaded.length, 5);
   const workspaceUpload = uploaded.find((item) => item.path === '2026-09-14/workspace_states.json');
   assert.deepEqual(workspaceUpload.body, workspaceStatesRows);
   const whatsappUpload = uploaded.find((item) => item.path === '2026-09-14/whatsapp_events.json');

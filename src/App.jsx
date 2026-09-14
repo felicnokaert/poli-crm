@@ -18,7 +18,6 @@ import {
   Users,
   LayoutGrid,
   UserCog,
-  ShoppingBag,
   FileCheck2,
   HelpCircle,
 } from "lucide-react";
@@ -84,7 +83,6 @@ import {
   findClientByWhatsApp,
 } from "./client-contacts.mjs";
 import { defaultBusinessUnits } from "./sales-model.mjs";
-const MercadoLibre = lazy(() => import("./MercadoLibre"));
 import { scoreTriage, suggestTriage } from "./commercial-triage.mjs";
 import { shouldCreateFollowup } from "./followup-policy.mjs";
 import { useWorkspaceSync } from "./hooks/useWorkspaceSync";
@@ -1352,9 +1350,6 @@ export default function App() {
     ["Organización", [
       ["board", "Tablero / Trello", LayoutGrid],
     ]],
-    ["Canales", [
-      ["mercadolibre", "Mercado Libre", ShoppingBag],
-    ]],
     ["Cartera", [
       ["clients", "Empresas", Building2],
       ["contacts", "Contactos", Users],
@@ -1671,11 +1666,6 @@ export default function App() {
         )}
         {view === "board" && (
           <ProjectBoardGateway />
-        )}
-        {view === "mercadolibre" && (
-          <Suspense fallback={<Splash text="Cargando Mercado Libre…" />}>
-            <MercadoLibre session={session} />
-          </Suspense>
         )}
         {view === "clients" && (
           <Clients

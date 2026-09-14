@@ -50,14 +50,40 @@ export function Fact({ label, value }) {
   );
 }
 
-// El isologo de Grupo Poliplast ya está dibujado como un anillo partido en
-// dos tonos (ver poliplast-isotipo-negro.png) - hacerlo girar entero alcanza
-// para leerse como "cargando" sin necesitar un spinner aparte superpuesto.
+// Recreación en SVG del isologo de Grupo Poliplast (colores reales: rojo +
+// gris, no la versión en negro que se usó en un primer intento) armada en 3
+// piezas independientes a propósito - a diferencia de un PNG plano, esto
+// permite animar SOLO los dos aros (el rojo exterior, con el corte que
+// forma la "G", y el gris interior) y dejar la "P" del centro siempre
+// quieta, tal como pidió Felipe. `animated` controla si los aros giran
+// (pantalla de carga) o quedan fijos (pantalla de error - no hay nada
+// "cargando" ahí).
+export function PoliplastMark({ animated = false, size = 84 }) {
+  return (
+    <svg
+      className={`poliplast-mark${animated ? " poliplast-mark-animated" : ""}`}
+      width={size}
+      height={size}
+      viewBox="0 0 100 100"
+      role="img"
+      aria-label="Grupo Poliplast"
+    >
+      <g className="poliplast-mark-ring poliplast-mark-ring-outer">
+        <circle cx="50" cy="50" r="44" fill="none" stroke="#e2231a" strokeWidth="6" strokeLinecap="round" strokeDasharray="230 46" />
+      </g>
+      <g className="poliplast-mark-ring poliplast-mark-ring-inner">
+        <circle cx="50" cy="50" r="33" fill="none" stroke="#a7a9ac" strokeWidth="5" strokeLinecap="round" strokeDasharray="170 37" />
+      </g>
+      <text x="50" y="67" textAnchor="middle" fontFamily="Manrope, sans-serif" fontWeight="800" fontSize="46" fill="#e2231a">P</text>
+    </svg>
+  );
+}
+
 export function Splash({ text }) {
   return (
     <div className="login-shell" role="status" aria-live="polite">
       <section className="login-card splash-card">
-        <img className="splash-mark" src="/poliplast-isotipo-negro.png" alt="Grupo Poliplast" />
+        <PoliplastMark animated />
         <p>{text}</p>
       </section>
     </div>

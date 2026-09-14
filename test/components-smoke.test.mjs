@@ -56,8 +56,13 @@ describe("ui-primitives.jsx", () => {
 
   test("Splash renderiza el isologo animado y el texto de estado", () => {
     const html = renderToStaticMarkup(React.createElement(ui.Splash, { text: "Sincronizando…" }));
-    assert.match(html, /poliplast-isotipo-negro\.png/);
+    assert.match(html, /poliplast-mark-animated/);
     assert.match(html, /Sincronizando/);
+  });
+
+  test("PoliplastMark sin animated no gira (pantalla de error, no de carga)", () => {
+    const html = renderToStaticMarkup(React.createElement(ui.PoliplastMark, {}));
+    assert.doesNotMatch(html, /poliplast-mark-animated/);
   });
 
   test("Spinner no explota sin props", () => {

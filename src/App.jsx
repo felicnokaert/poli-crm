@@ -23,7 +23,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { useConfirm } from "./ConfirmDialog";
-import { Splash, Spinner } from "./ui-primitives";
+import { Splash, Spinner, PoliplastMark } from "./ui-primitives";
 import {
   CHANNELS,
   LEGACY_STAGE_MAP,
@@ -312,7 +312,7 @@ export default function App() {
       return (
         <div className="login-shell" role="alert">
           <section className="login-card splash-card">
-            <img className="splash-mark splash-mark-static" src="/poliplast-isotipo-negro.png" alt="Grupo Poliplast" />
+            <PoliplastMark />
             <h1>No se pudo cargar tu información</h1>
             <p>Revisá tu conexión e intentá de nuevo.</p>
             <button className="primary" onClick={retryLoad}>

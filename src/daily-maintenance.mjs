@@ -2,6 +2,7 @@ import { completeTasksThrough } from './workspace.mjs';
 import { findStaleHotLeads } from './hot-leads-radar.mjs';
 import { buildRepurchaseRadar } from './repurchase-radar.mjs';
 import { findColdQuotes } from './cold-quotes.mjs';
+import { findStaleClients } from './stale-clients-radar.mjs';
 import { findClientByWhatsApp } from './client-contacts.mjs';
 import { whatsappContactIdentity } from './whatsapp-threads.mjs';
 
@@ -16,6 +17,11 @@ export const AUTO_HOT_LEAD_TASK_SOURCE = 'auto-hot-lead';
 // filtro `task.source === X` de cada señal nunca mezcla sus tareas abiertas
 // ni su deduplicación con las de la otra.
 export const AUTO_COLD_QUOTE_TASK_SOURCE = 'auto-cold-quote';
+
+// Tercera señal habilitada para auto-followup (ver findStaleClients en
+// stale-clients-radar.mjs): mismo motivo de source separado que las dos
+// anteriores.
+export const AUTO_STALE_CLIENT_TASK_SOURCE = 'auto-stale-client';
 
 function normalizedIdentity(value = '') {
   return String(value).trim().toLocaleLowerCase('es-AR');
@@ -37,6 +43,13 @@ function hotLeadAutoKey(hotLead) {
 // findColdQuotes internamente para agrupar mensajes de un contacto).
 function coldQuoteAutoKey(coldQuote, event) {
   return event ? whatsappContactIdentity(event) : normalizedIdentity(coldQuote.customer || 'unknown');
+}
+
+// A diferencia de las otras dos señales (identidad por contacto de
+// WhatsApp), un cliente sin contacto ya tiene un id estable y único en la
+// cartera - se usa directo, sin normalizar nada.
+function staleClientAutoKey(staleClient) {
+  return String(staleClient.clientId || '');
 }
 
 // Mantenimiento diario que hoy solo corre client-side cuando alguien abre el
@@ -76,20 +89,24 @@ export function buildDailyMaintenanceUpdate(state = EMPTY_STATE, nowISO = new Da
 export function buildDailySignalsUpdate(state = EMPTY_STATE, nowISO = new Date().toISOString()) {
   const inbox = Array.isArray(state.inbox) ? state.inbox : [];
   const sales = Array.isArray(state.sales) ? state.sales : [];
+  const clients = Array.isArray(state.clients) ? state.clients : [];
   const now = new Date(nowISO);
 
   const hotLeads = findStaleHotLeads(inbox, { today: now });
   const coldQuotes = findColdQuotes(inbox, sales, { today: now });
   const repurchase = buildRepurchaseRadar(sales, now);
+  const staleClients = findStaleClients(clients, sales, inbox, { today: now });
 
   const dailySignals = {
     calculatedAt: nowISO,
     hotLeadsCount: hotLeads.length,
     coldQuotesCount: coldQuotes.length,
     repurchaseCount: repurchase.length,
+    staleClientsCount: staleClients.length,
     hotLeads,
     coldQuotes,
     repurchase,
+    staleClients,
   };
 
   return {
@@ -99,6 +116,7 @@ export function buildDailySignalsUpdate(state = EMPTY_STATE, nowISO = new Date()
       hotLeadsCount: hotLeads.length,
       coldQuotesCount: coldQuotes.length,
       repurchaseCount: repurchase.length,
+      staleClientsCount: staleClients.length,
       calculatedAt: nowISO,
     },
   };
@@ -127,10 +145,18 @@ export function buildDailySignalsUpdate(state = EMPTY_STATE, nowISO = new Date()
 // es de urgencia (cold quotes no es un mensaje urgente sin contestar), por
 // eso su tarea sale con prioridad "Media" en vez de "Alta".
 //
-// Anti-duplicado (igual para ambas señales, pero SEPARADO por tipo): cada
-// tarea auto-generada lleva `source` (AUTO_HOT_LEAD_TASK_SOURCE o
-// AUTO_COLD_QUOTE_TASK_SOURCE) y un `autoKey` estable (identidad del
-// contacto). Al buscar duplicados siempre se filtra por
+// Cuarta señal (ver findStaleClients en stale-clients-radar.mjs): un
+// cliente activo sin venta ni mensaje en 30+ días también tiene una acción
+// concreta y de bajo riesgo ("retomar contacto"), igual de inequívoca que
+// las dos anteriores - no sugiere qué vender, solo que alguien lo llame o
+// le escriba. Prioridad "Media", igual que cold quotes: no es un mensaje
+// urgente sin contestar, es una cuenta que se está enfriando.
+//
+// Anti-duplicado (igual para las 3 señales, pero SEPARADO por tipo): cada
+// tarea auto-generada lleva `source` (AUTO_HOT_LEAD_TASK_SOURCE,
+// AUTO_COLD_QUOTE_TASK_SOURCE o AUTO_STALE_CLIENT_TASK_SOURCE) y un
+// `autoKey` estable (identidad del contacto, o el id del cliente para esta
+// señal). Al buscar duplicados siempre se filtra por
 // `task.source === <ese tipo>` antes de mirar `autoKey`, así una tarea de
 // hot-lead y una de cold-quote para el mismo contacto nunca se pisan entre
 // sí ni se cuentan como "la misma". Si ya existe una tarea ABIERTA
@@ -149,7 +175,8 @@ export function buildAutoFollowupTasks(state = EMPTY_STATE, nowISO = new Date().
 
   const hotLeads = findStaleHotLeads(inbox, { today: now });
   const coldQuotes = findColdQuotes(inbox, sales, { today: now });
-  if (!hotLeads.length && !coldQuotes.length) {
+  const staleClients = findStaleClients(clients, sales, inbox, { today: now });
+  if (!hotLeads.length && !coldQuotes.length && !staleClients.length) {
     return { changed: false, nextState: state, summary: { autoFollowupTasksCreated: 0 } };
   }
 
@@ -161,6 +188,7 @@ export function buildAutoFollowupTasks(state = EMPTY_STATE, nowISO = new Date().
   );
   const openHotLeadKeys = openKeysBySource(AUTO_HOT_LEAD_TASK_SOURCE);
   const openColdQuoteKeys = openKeysBySource(AUTO_COLD_QUOTE_TASK_SOURCE);
+  const openStaleClientKeys = openKeysBySource(AUTO_STALE_CLIENT_TASK_SOURCE);
 
   const newTasks = [];
   for (const hotLead of hotLeads) {
@@ -211,6 +239,29 @@ export function buildAutoFollowupTasks(state = EMPTY_STATE, nowISO = new Date().
       updatedAt: nowISO,
       createdBy: 'sistema',
       source: AUTO_COLD_QUOTE_TASK_SOURCE,
+      autoKey,
+    });
+  }
+
+  for (const staleClient of staleClients) {
+    const autoKey = staleClientAutoKey(staleClient);
+    if (!autoKey || openStaleClientKeys.has(autoKey)) continue;
+    openStaleClientKeys.add(autoKey);
+
+    newTasks.push({
+      id: crypto.randomUUID(),
+      clientId: staleClient.clientId,
+      company: staleClient.company || 'Cliente sin nombre',
+      title: `Retomar contacto con ${staleClient.company || 'este cliente'} - lleva ${staleClient.daysSince} días sin actividad`,
+      dueDate: today,
+      cadence: 'Diaria',
+      priority: 'Media',
+      trigger: 'Cliente activo sin contacto (detección automática)',
+      done: false,
+      createdAt: nowISO,
+      updatedAt: nowISO,
+      createdBy: 'sistema',
+      source: AUTO_STALE_CLIENT_TASK_SOURCE,
       autoKey,
     });
   }

@@ -15,10 +15,10 @@
   --radius-xl: 12px;
   --radius-sm: 8px;
   --color-white: #fff;
-  --color-forest: #18352f;
+  --color-forest: #1c1c1c;
   --color-input-bg: #fbfcfb;
   --color-border-input: #d9e1dd;
-  --color-focus-border: #4b8d79;
+  --color-focus-border: #b4b6b9;
   --color-border: #d9e2dd;
   --color-border-alt: #dbe3df;
   --color-border-light: #edf1ef;
@@ -26,23 +26,24 @@
   --color-border-warm: #dfe8e3;
   --color-bg-soft: #eef2ef;
   --color-panel-bg: #f8faf8;
-  /* --color-text-muted/--color-text-faint oscurecidos ligeramente (14/09):
-     el tono original (#7d8e88 / #758781) da ~3.4:1 / ~3.8:1 sobre blanco,
-     por debajo del mínimo AA de 4.5:1 para texto normal. Mismo matiz
-     verde-grisáceo, solo un poco más oscuro - no es un rediseño de paleta. */
-  --color-text-muted: #667972;
-  --color-text-faint: #5f7169;
-  --color-text-secondary: #60766f;
-  --color-text-body: #667a74;
-  --color-text-mid: #71847e;
-  --color-text-dark: #526a63;
-  --color-text-gray: #84918d;
+  /* Ronda 1 rework de marca (ver DESIGN.md): la escala verde/teal original
+     no tenía relación con la identidad de Poliplast (rojo/gris/grafito del
+     isologo). Se reemplaza por neutros grafito, manteniendo los mismos
+     nombres de variable (para no tocar cada componente en esta ronda) y
+     el mismo contraste AA ya validado (14/09) o mejor. */
+  --color-text-muted: #5c5d60;
+  --color-text-faint: #55565a;
+  --color-text-secondary: #57585b;
+  --color-text-body: #5c5d60;
+  --color-text-mid: #64656a;
+  --color-text-dark: #3d3e40;
+  --color-text-gray: #797a7d;
   --color-text-gray2: #777;
-  --color-green-text: #365047;
-  --color-teal-brand: #176b58;
-  --color-teal-strong: #0d7764;
-  --color-teal-mid: #456159;
-  --color-teal-dark: #226b58;
+  --color-green-text: #2c2d2f;
+  --color-teal-brand: #3a3a3c;
+  --color-teal-strong: #292929;
+  --color-teal-mid: #55565a;
+  --color-teal-dark: #292929;
   --color-success: #347663;
   --color-success-bg: #e7f4ee;
   --color-danger-strong: #a34848;

@@ -124,9 +124,9 @@ Claude no debe, sin aprobación de Felipe:
 - Métricas reales de adopción, aceptación y conversión.
 - Resolver y asignar responsable al riesgo de checkout de Shopify.
 
-## 8. Prueba de continuidad
+## 8. Prueba de continuidad — APROBADA
 
-La transferencia se considera aprobada cuando Claude, usando solamente este índice y sus enlaces, puede:
+Claude completó el ensayo el 16/09/2026 usando los documentos publicados en GitHub y sin depender de memoria de chats anteriores. Cumplió los cinco criterios:
 
 1. identificar repositorio, rama y commit de CRM y cotizador;
 2. distinguir operativo, probado, diferido e histórico;
@@ -134,3 +134,13 @@ La transferencia se considera aprobada cuando Claude, usando solamente este índ
 4. proponer el siguiente cambio seguro sin abrir un módulo nuevo;
 5. explicar qué requiere aprobación de Felipe.
 
+### Estado de la migración al aprobar el ensayo
+
+- Documentación y contexto: 100%.
+- Código y puntos de continuidad: 100% preservados.
+- Validación de continuidad con Claude: 100%.
+- Organización de fuentes: 90%; falta confirmar la copia independiente final en Google Drive.
+- Automatizaciones: 80%; falta verificar las tareas que viven en la otra computadora.
+- Cotizador: transferido; su QA comercial real permanece como trabajo de producto, no como falla de transferencia.
+
+**Migración global estimada: 95%.** Los únicos cierres administrativos restantes son Google Drive y la verificación de automatizaciones de la otra computadora. El QA del cotizador es la siguiente actividad operativa prioritaria, pero no invalida el handoff.

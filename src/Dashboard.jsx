@@ -420,12 +420,14 @@ function DashboardBase({
           ? `${metrics.dueToday} vencen hoy`
           : "Ninguno pendiente",
       CircleAlert,
+      metrics.overdue > 0,
     ],
     [
       "Calientes sin responder",
       hotLeads.length,
       hotLeads.length ? "Mensajes urgentes en la bandeja" : "Ninguno por ahora",
       Flame,
+      hotLeads.length > 0,
     ],
   ];
   return (
@@ -444,8 +446,8 @@ function DashboardBase({
         onOpenEvent={onOpenEvent}
       />
       <section className="metric-grid">
-        {cards.map(([label, value, note, Icon]) => (
-          <article className="metric-card" key={label}>
+        {cards.map(([label, value, note, Icon, urgent]) => (
+          <article className={`metric-card${urgent ? " is-urgent" : ""}`} key={label}>
             <Icon size={20} />
             <span>{label}</span>
             <strong>{value}</strong>

@@ -38,7 +38,8 @@ Decisiones cerradas:
 | GitHub | `https://github.com/felicnokaert/poli-crm` |
 | Local | `C:\Users\felip\OneDrive\Desktop\Poliplast\poliplast-sales-copilot` |
 | Rama canónica | `main` |
-| HEAD local/remoto | `b0a343fd203c8b241d2b7ee509ebb712c6754c30` (`b0a343f`) |
+| Último commit funcional | `b0a343fd203c8b241d2b7ee509ebb712c6754c30` (`b0a343f`) |
+| Commit del handoff | `397f867` (`main`; contiene este documento y el reporte del 15/09) |
 | Producción | `https://poli-crm.vercel.app/` |
 | Stack | React + Vite + Supabase + funciones Vercel |
 
@@ -49,7 +50,8 @@ Decisiones cerradas:
 | GitHub | `https://github.com/felicnokaert/poliplast-cotizador` |
 | Worktree de cierre | `C:\Users\felip\.codex\worktrees\5c02\poliplast-cotizador` |
 | Rama más reciente | `codex/cotizador-v2-price-explanations` |
-| HEAD | `b4210961214d8d9f2e15a6125a66ff5cabdd1e25` (`b421096`) |
+| Último commit funcional/documental previo | `b4210961214d8d9f2e15a6125a66ff5cabdd1e25` (`b421096`) |
+| Commit puntero del handoff | `91e0928` en `codex/cotizador-v2-price-explanations` |
 | `origin/master` al corte | `bbe3ffd` |
 | Producción | `https://poliplast-cotizador.vercel.app/` |
 | Proyecto Vercel | `poliplast-cotizador` |

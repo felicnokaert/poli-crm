@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { ExternalLink, X } from "lucide-react";
 import { formatDate } from "./utils.mjs";
 import { Empty, Fact } from "./ui-primitives";
 import { InteractionRow } from "./Interactions";
@@ -64,6 +64,21 @@ export function ClientDetail({
     setEditing(false);
   }
   const contacts = clientContacts(draft);
+  // Link minimo hacia el cotizador (app separada, ver docs/ADR-001 en el
+  // repo del cotizador) - todavia no hay una API compartida entre ambos,
+  // asi que solo pasamos empresa/telefono por query string para precargar
+  // el formulario del lado del cotizador cuando ese lado los lea. Si el
+  // cotizador no los consume todavia, el link simplemente abre su home sin
+  // romper nada.
+  const primaryContact = clientContacts(client).find((item) => item.primary) || clientContacts(client)[0];
+  const cotizadorUrl = (() => {
+    const params = new URLSearchParams();
+    if (client.company) params.set("empresa", client.company);
+    const phone = client.phone || primaryContact?.phone || primaryContact?.whatsappId;
+    if (phone) params.set("telefono", phone);
+    const query = params.toString();
+    return `https://poliplast-cotizador.vercel.app/${query ? `?${query}` : ""}`;
+  })();
   const guidance = buildCommercialGuidance({ client, interactions });
   function changeContact(contactId, fieldName, value) {
     setDraft((current) => updateClientContact(current, contactId, { [fieldName]: value }));
@@ -465,6 +480,16 @@ export function ClientDetail({
               >
                 Nueva tarea
               </button>
+              <a
+                className="secondary"
+                style={{ textDecoration: "none" }}
+                href={cotizadorUrl}
+                target="_blank"
+                rel="noreferrer"
+                title="Abre el cotizador en una pestaña nueva, con la empresa y el teléfono precargados por URL cuando el cotizador los use."
+              >
+                <ExternalLink size={14} /> Abrir en cotizador
+              </a>
               <button
                 className="primary"
                 type="button"

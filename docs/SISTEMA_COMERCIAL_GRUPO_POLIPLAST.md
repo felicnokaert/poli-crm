@@ -704,6 +704,15 @@ Espacio vivo para que Codex documente, a medida que ocurre, el estado técnico y
 
 ---
 
+**16/09/2026 — Codex, corrección sobre el estado de WhatsApp (`docs/REPORTE_CODEX_PARA_CLAUDE_2026-09-15.md`, commit `e7c5631`):**
+
+- Corrige la entrada del 07/09/2026: "WhatsApp General y Juan: operativos 100%" es impreciso y queda sin efecto. Estado real verificado:
+  - **WhatsApp General:** en uso operativo. No modificar sin regresión comprobada.
+  - **WhatsApp Juan:** funciona como canal independiente, pero **no está integrado al CRM** — decisión deliberada de Felipe de no integrarlo hasta consolidar primero WhatsApp General dentro del CRM.
+  - **WhatsApp Penosil:** diferido por decisión de Felipe, no por falla técnica. Arquitectura oficial Meta Cloud API construida; coexistencia del número físico y confirmación de un mensaje entrante real siguen pendientes.
+- El 81,2% de la décima auditoría es un índice de madurez técnica del CRM (promedio de 10 frentes: UX, UI, automatización, practicidad, backend, frontend, datos, testing, documentación y seguridad) — no mide adopción operativa de WhatsApp, Meta ni del negocio.
+- Impacto sobre este manual: reemplaza la lectura de la entrada del 07/09 sobre WhatsApp. No cambia método, triage, objeciones ni playbooks (secciones 5-8).
+
 ## Anexo A — Qué era la "Fase 6"
 
 "Fase 6" **no pertenece al proceso comercial** y no se agrega como fase de ventas en este manual. Corresponde al frente Catálogo/Compras: en la ruta de 8 fases de ese frente (`claude/VENTAS_y_Prospeccion.md`, sección 6), Fase 6 = costos, precios y rentabilidad del catálogo (Costo USD, Precio Final USD, Markup, Margen), con avance histórico ~65% al 26/08. Se referencia acá únicamente como **dependencia**: los precios y márgenes que ese frente vaya confirmando alimentan la etapa de Propuesta (sección 5.2) y el futuro Cotizador — no como parte de este proceso.

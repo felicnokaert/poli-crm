@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from "react";
-import { CheckCircle2, Download, Plus, Search, X } from "lucide-react";
+import { Bot, CheckCircle2, Download, Plus, Search, X } from "lucide-react";
 import { formatDate } from "./utils.mjs";
 import { Empty, Fact } from "./ui-primitives";
 import { addDaysToToday, googleCalendarUrl, today, useModalEscape } from "./app-shared";
@@ -189,7 +189,14 @@ export function TaskList({
           type="button"
           onClick={() => onOpen?.(task.id)}
         >
-          <strong>{task.title}</strong>
+          <strong>
+            {task.title}
+            {task.origin && (
+              <span className="task-origin-badge" title={`Creada automáticamente por: ${task.origin}`}>
+                <Bot size={11} /> {task.origin.replace(/^Automatización /i, "")}
+              </span>
+            )}
+          </strong>
           <span>
             {task.company} ·{" "}
             <span className={overdue ? "task-due-overdue" : undefined}>
@@ -222,7 +229,9 @@ export function TaskDetail({ task, client, onClose, onToggle, onSave, onOpenClie
       <section className="modal interaction-detail">
         <div className="modal-head">
           <div>
-            <span className="eyebrow">Tarea comercial</span>
+            <span className="eyebrow">
+              {task.origin ? `Automatización · ${task.origin.replace(/^Automatización /i, "")}` : "Tarea comercial"}
+            </span>
             <h2>{task.title}</h2>
             <p>{task.company || "Sin empresa vinculada"}</p>
           </div>

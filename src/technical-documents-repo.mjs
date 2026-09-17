@@ -4,7 +4,6 @@
 // no este archivo: cualquier intento de guardar algo "vigente" sin validar,
 // o de borrar un documento, es rechazado por la base, no solo por la UI.
 import { onlineConfigured, supabase } from './online.js';
-import { extractPdfText } from './pdf-text.js';
 import { fromRow, historyFromRow, safeStorageFileName, sanitizeExtractedText, toRow } from './technical-documents-mapping.mjs';
 
 const STORAGE_BUCKET = 'technical-documents';
@@ -127,6 +126,12 @@ export async function attachTechnicalDocumentFile(id, file) {
   if (uploadError) throw uploadError;
   let extractedText = null;
   try {
+    // Import dinamico a proposito (mismo patron que Sales.jsx con las
+    // facturas): pdfjs-dist pesa ~1.7MB entre el worker y el parser de
+    // texto. Si esto fuera un import estatico, ese peso se cargaria apenas
+    // alguien abre Base tecnica, aunque nunca suba un PDF - confirmado con
+    // Network en el navegador antes de este cambio.
+    const { extractPdfText } = await import('./pdf-text.js');
     extractedText = sanitizeExtractedText(await extractPdfText(file));
   } catch {
     extractedText = null;

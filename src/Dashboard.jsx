@@ -27,7 +27,7 @@ import {
   AUTO_EXPIRED_QUOTE_TASK_SOURCE,
 } from "./daily-maintenance.mjs";
 import { Empty } from "./ui-primitives";
-import { today } from "./app-shared";
+import { today, TRELLO_BOARD_URL } from "./app-shared";
 import { TaskList } from "./Tasks";
 import { InteractionRow } from "./Interactions";
 
@@ -129,7 +129,7 @@ export function ProjectBoardGateway() {
         </div>
         <a
           className="primary"
-          href="https://trello.com/b/uSYz1qMF/ventas-grupo-poliplast"
+          href={TRELLO_BOARD_URL}
           target="_blank"
           rel="noreferrer"
         >

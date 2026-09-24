@@ -2,7 +2,7 @@ import { memo, useEffect, useState } from "react";
 import { Bot, CheckCircle2, Download, Plus, Search, X } from "lucide-react";
 import { formatDate } from "./utils.mjs";
 import { Empty, Fact } from "./ui-primitives";
-import { addDaysToToday, googleCalendarUrl, today, useModalEscape } from "./app-shared";
+import { addDaysToToday, googleCalendarUrl, today, TRELLO_BOARD_URL, useModalEscape } from "./app-shared";
 
 // Mismo patrón que clientsToCsv/salesToCsv (client-csv.mjs, sales-model.mjs):
 // punto y coma como separador, BOM para que Excel/Sheets abran los acentos
@@ -349,6 +349,17 @@ export function TaskDetail({ task, client, onClose, onToggle, onSave, onOpenClie
               >
                 Abrir en Google Calendar
               </a>
+              {task.origin && (
+                <a
+                  className="secondary calendar-link"
+                  href={TRELLO_BOARD_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  title="El detalle y el historial de este hallazgo se actualizan en Trello, no acá."
+                >
+                  Ver en Trello
+                </a>
+              )}
               <button
                 className="secondary"
                 type="button"

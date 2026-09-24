@@ -1,6 +1,11 @@
 import { useEffect } from "react";
 import { COMMERCIAL_STAGES } from "./commercial-knowledge.mjs";
 
+// Tablero maestro de Trello (ver ProjectBoardGateway en Dashboard.jsx): unica
+// fuente de proyectos/prioridades del equipo, compartida acá tambien para el
+// link "Ver en Trello" de las tareas de automatizacion en Tasks.jsx.
+export const TRELLO_BOARD_URL = "https://trello.com/b/uSYz1qMF/ventas-grupo-poliplast";
+
 export const CHANNELS = {
   general: {
     name: "WhatsApp General",

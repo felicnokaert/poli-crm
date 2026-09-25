@@ -58,6 +58,7 @@ import { LegacyInboxRow, InboxRow, CopilotSuggestionPanel, InboxDraftModal } fro
 import { WhatsAppInbox } from "./WhatsAppInbox";
 import { ClientDetail } from "./ClientDetail";
 import { ShortcutsHelp } from "./ShortcutsHelp";
+import { useCronStatus } from "./hooks/useCronStatus";
 import { CLASSIFICATIONS } from "./knowledge";
 import {
   mergeClients,
@@ -208,6 +209,7 @@ export default function App() {
     retryLoad,
     retrySave,
   } = useWorkspaceSync(data, setData);
+  const cronStatus = useCronStatus(session);
   const [view, setView] = useState("dashboard");
   const [collapsedNavGroups, setCollapsedNavGroups] = useNavGroups(NAV_GROUP_NAMES);
   const [showForm, setShowForm] = useState(false);
@@ -1593,6 +1595,7 @@ export default function App() {
             inbox={data.inbox || EMPTY_ARRAY}
             myChannels={myChannels}
             dailySignals={data.dailySignals}
+            cronStatus={cronStatus}
             onToggle={toggleTask}
             onOpenTask={setSelectedTaskId}
             onOpenInteraction={setSelectedInteractionId}

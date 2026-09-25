@@ -2,6 +2,7 @@ import { buildFullDailyMaintenanceUpdate } from '../src/daily-maintenance.mjs';
 import { withRetry } from '../lib/retry.mjs';
 import { logError } from '../lib/log.mjs';
 import { runDailyBackup, cleanupOldBackups } from '../lib/backup.mjs';
+import { recordCronRun } from '../lib/cron-status.mjs';
 
 // Cron interno de mantenimiento (ver docs/AUDITORIA_MADUREZ_PRODUCTO_2026-09-12.md,
 // Automatización 35/100: "cero cron jobs... todo lo inteligente es manual o
@@ -134,6 +135,19 @@ export default async function handler(request, response) {
   // nombres en español y una frase corta - lo que Felipe necesita para
   // confirmar "corrió, e hizo esto" sin tener que interpretar el JSON.
   const failed = results.filter((item) => !item.ok);
+
+  // Constancia de que corrio, en una tabla que ningun navegador puede pisar
+  // (el aviso del Inicio lee de ahi). No es fatal si falla: el trabajo real
+  // del cron ya esta hecho.
+  try {
+    await recordCronRun(process.env, {
+      ok: failed.length === 0,
+      detail: { workspacesProcessed: results.length, workspacesFailed: failed.length, backupOk: backupSummary.ok },
+    }, nowISO);
+  } catch (error) {
+    logError('cron-daily-maintenance', 'failed at step "recordCronRun"', { ranAt: nowISO }, error);
+  }
+
   const tasksClosed = results.reduce((sum, item) => sum + (item.tasksClosed || 0), 0);
   const autoFollowupTasksCreated = results.reduce((sum, item) => sum + (item.autoFollowupTasksCreated || 0), 0);
   const hotLeadsCount = results.reduce((sum, item) => sum + (item.hotLeadsCount || 0), 0);

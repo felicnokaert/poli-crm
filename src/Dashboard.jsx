@@ -46,17 +46,23 @@ const CRON_STALE_HOURS = 36;
 
 // Indicador de salud del cron - nace directo del incidente real del
 // 14/09/2026: `CRON_SECRET` faltaba en Vercel, así que el mantenimiento
-// diario (esta misma señal, `dailySignals`) llevaba SEMANAS sin correr ni
-// una sola vez sin que nadie lo notara, porque "El sistema no generó tareas
-// automáticas hoy" (el mensaje de abajo) se ve idéntico tanto si el cron
-// corrió y no encontró nada, como si el cron nunca corrió. `dailySignals`
-// solo lo escribe el cron server-side (nunca el cliente - ver el comentario
-// en DashboardBase sobre `signalsAreFresh`), así que su `calculatedAt` es
-// la única fuente confiable de "¿corrió de verdad, o no?".
-function cronHealth(dailySignals) {
-  if (!dailySignals?.calculatedAt) return { ok: false, hoursSince: null };
-  const hoursSince = (Date.now() - new Date(dailySignals.calculatedAt).getTime()) / 3_600_000;
-  return { ok: hoursSince <= CRON_STALE_HOURS, hoursSince };
+// diario llevaba SEMANAS sin correr ni una sola vez sin que nadie lo notara,
+// porque "El sistema no generó tareas automáticas hoy" (el mensaje de abajo)
+// se ve idéntico tanto si el cron corrió y no encontró nada, como si nunca
+// corrió.
+//
+// Lee `cronStatus` (tabla crm_system_status, ver useCronStatus), que solo
+// escribe el servidor. Antes leía dailySignals.calculatedAt, pero ese campo
+// vive dentro de workspace_states.data, que cada navegador guarda completo:
+// una pestaña con estado viejo lo pisaba y daba un aviso falso de "7 días"
+// aunque el cron hubiera corrido todos los días (25/09/2026).
+//   undefined = todavía no se sabe / modo local -> no se avisa nada
+//   null      = nunca se registró una corrida
+function cronHealth(cronStatus) {
+  if (cronStatus === undefined) return { known: false, ok: true, hoursSince: null, lastRunFailed: false };
+  if (!cronStatus?.lastRunAt) return { known: true, ok: false, hoursSince: null, lastRunFailed: false };
+  const hoursSince = (Date.now() - new Date(cronStatus.lastRunAt).getTime()) / 3_600_000;
+  return { known: true, ok: hoursSince <= CRON_STALE_HOURS, hoursSince, lastRunFailed: cronStatus.ok === false };
 }
 
 // Indicador chico de auditabilidad (ver AUDITORIA_MADUREZ_PRODUCTO_2026-09-14-tarde):
@@ -66,19 +72,27 @@ function cronHealth(dailySignals) {
 // crearon HOY (por `createdAt`, no por `dueDate`, que puede quedar viejo si
 // una tarea sigue abierta) para que Felipe pueda notar de un vistazo si el
 // cron corrió y qué tan activo estuvo, sin tener que abrir cada tarea.
-function AutomationSummary({ tasks, dailySignals }) {
-  const { ok: cronOk, hoursSince } = cronHealth(dailySignals);
+function AutomationSummary({ tasks, cronStatus }) {
+  const { ok: cronOk, hoursSince, lastRunFailed } = cronHealth(cronStatus);
   if (!cronOk) {
     const sinceText = hoursSince === null
-      ? "todavía no corrió nunca en este workspace"
-      : `no corrió en las últimas ${Math.round(hoursSince / 24)} día(s)`;
+      ? "todavía no corrió nunca"
+      : `no corrió en las últimas ${Math.max(1, Math.round(hoursSince / 24))} día(s)`;
     return (
       <div className="automation-note is-warning">
         <CircleAlert size={15} />
         <span>
-          ⚠️ El mantenimiento diario {sinceText} - revisar Vercel → Cron Jobs
-          y la variable <code>CRON_SECRET</code>.
+          ⚠️ El mantenimiento diario {sinceText} - revisar Vercel → Cron Jobs,
+          la variable <code>CRON_SECRET</code> y el respaldo de GitHub Actions.
         </span>
+      </div>
+    );
+  }
+  if (lastRunFailed) {
+    return (
+      <div className="automation-note is-warning">
+        <CircleAlert size={15} />
+        <span>⚠️ La última corrida del mantenimiento diario terminó con errores en algún workspace - revisar los logs de Vercel.</span>
       </div>
     );
   }
@@ -370,6 +384,7 @@ function DashboardBase({
   inbox,
   myChannels,
   dailySignals,
+  cronStatus,
   onToggle,
   onOpenTask,
   onOpenInteraction,
@@ -455,7 +470,7 @@ function DashboardBase({
           </article>
         ))}
       </section>
-      <AutomationSummary tasks={tasks} dailySignals={dailySignals} />
+      <AutomationSummary tasks={tasks} cronStatus={cronStatus} />
       <section className="two-columns">
         <article className="panel">
           <div className="panel-head">

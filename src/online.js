@@ -71,6 +71,21 @@ export async function loadOnlineState(userId, allowedChannels = ['general']) {
   };
 }
 
+// Ultima corrida del mantenimiento diario, leida de una tabla que solo escribe
+// el servidor (ver supabase/migrations/20260925190000_add_crm_system_status.sql)
+// - a diferencia de workspace_states.data, ningun guardado del navegador puede
+// pisarla. Devuelve null si nunca se registro una corrida.
+export async function loadCronStatus() {
+  if (!supabase) return undefined;
+  const { data, error } = await supabase
+    .from('crm_system_status')
+    .select('last_run_at,ok')
+    .eq('key', 'daily-maintenance')
+    .maybeSingle();
+  if (error) throw error;
+  return data ? { lastRunAt: data.last_run_at, ok: data.ok } : null;
+}
+
 // Cada guardado del CRM pasa por acá. Si Supabase devuelve un 5xx pasajero
 // (o el PATCH ni siquiera llega a completarse por un corte de red), no tiene
 // sentido perder los cambios del usuario a la primera - se reintenta un par

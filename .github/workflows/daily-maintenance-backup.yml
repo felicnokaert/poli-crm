@@ -1,0 +1,27 @@
+name: Respaldo del cron diario (Vercel Hobby a veces no dispara solo)
+
+on:
+  schedule:
+    # 08:00 UTC = 05:00 ART. Corre ~2hs despues del cron nativo de Vercel
+    # (0 6 * * * en vercel.json) para no pisarlo si SI llego a disparar solo
+    # ese dia - buildFullDailyMaintenanceUpdate es idempotente por dia
+    # (calculatedAt), asi que llamarlo dos veces el mismo dia no hace nada
+    # de mas.
+    - cron: "0 8 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping-cron:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Disparar /api/cron-daily-maintenance
+        run: |
+          status=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            -X GET "https://poli-crm.vercel.app/api/cron-daily-maintenance" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          echo "HTTP status: $status"
+          cat /tmp/response.json
+          if [ "$status" != "200" ]; then
+            echo "El cron diario respondio $status en vez de 200."
+            exit 1
+          fi

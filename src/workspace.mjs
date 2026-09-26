@@ -143,7 +143,19 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
     profileName: local.profileName || remote.profileName || '',
     mergeLogs: mergeRecords(local.mergeLogs, remote.mergeLogs),
     duplicateReviewDecisions: mergeRecords(local.duplicateReviewDecisions, remote.duplicateReviewDecisions),
+    // dailySignals lo escribe SOLO el cron (servidor): el navegador nunca lo
+    // genera, asi que se conserva la version mas reciente en vez de
+    // descartarla (antes este merge lo tiraba y el proximo guardado del
+    // navegador lo borraba de la base).
+    ...newerDailySignals(local.dailySignals, remote.dailySignals),
   };
+}
+
+function newerDailySignals(local, remote) {
+  const localAt = String(local?.calculatedAt || '');
+  const remoteAt = String(remote?.calculatedAt || '');
+  const winner = localAt > remoteAt ? local : remote || local;
+  return winner ? { dailySignals: winner } : {};
 }
 
 // Fusión manual de dos fichas de cliente (Sección 5 de

@@ -216,7 +216,17 @@ export function useWorkspaceSync(data, setData) {
     setSyncStatus("Guardando…");
     const timer = setTimeout(() => {
       saveOnlineState(session.user.id, session.user.email, data)
-        .then(() => setSyncStatus("Sincronizado"))
+        .then((saved) => {
+          // Si mientras tanto el servidor (o otra pestaña) escribió algo, el
+          // guardado lo unió con lo local en vez de pisarlo: lo mostramos.
+          if (saved?.merged) {
+            setData((current) => {
+              const next = mergeWorkspaceState(current, saved.data);
+              return workspaceStatesEqual(current, next) ? current : next;
+            });
+          }
+          setSyncStatus("Sincronizado");
+        })
         .catch(() => setSyncStatus("Error de sincronización"));
     }, 700);
     return () => clearTimeout(timer);

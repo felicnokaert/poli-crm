@@ -3,7 +3,8 @@ import { filterDismissedEvents, isLegacyWhatsAppPreview } from './whatsapp-event
 import { whatsappContactIdentity, whatsappContactKey } from './whatsapp-threads.mjs';
 import { withRetry } from '../lib/retry.mjs';
 export { completeTasksThrough, mergeClients, mergeWorkspaceState, recordDeletions, recordDuplicateReviewDecision, restoreRecordId, undoClientMerge, validateWorkspaceStateShape, workspaceStatesEqual } from './workspace.mjs';
-import { validateWorkspaceStateShape } from './workspace.mjs';
+import { mergeWorkspaceState, validateWorkspaceStateShape } from './workspace.mjs';
+import { saveWithConcurrency } from './workspace-save.mjs';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -52,6 +53,7 @@ export async function loadOnlineState(userId, allowedChannels = ['general']) {
   if (eventsError) throw eventsError;
   if (statusError) throw statusError;
   const state = stateRow?.data || null;
+  if (stateRow?.updated_at) knownVersions.set(userId, stateRow.updated_at);
   const savedEvents = new Map((state?.inbox || []).map((item) => [item.event_id, item]));
   const ignored = new Map((state?.ignoredWhatsAppContacts || []).map((item) => [item.contactIdentity || whatsappContactIdentity({ customer_wa_id: item.customerWaId, customer_name: item.customerName }), item]));
   const inbox = filterDismissedEvents(events || [], state?.dismissedInboxEventIds || []).map((event) => {
@@ -91,28 +93,60 @@ export async function loadCronStatus() {
 // sentido perder los cambios del usuario a la primera - se reintenta un par
 // de veces con backoff acotado. Un 401/403 (sesión vencida, RLS) nunca se
 // reintenta: va a fallar exactamente igual y solo demoraría el error real.
+//
+// El guardado es con control de version (ver workspace-save.mjs): compara la
+// updated_at que este navegador vio por ultima vez. Si el servidor (tasks-
+// intake, cron) u otra pestaña escribieron mientras tanto, no pisa: une lo de
+// afuera con lo local y devuelve { data, merged } para que la UI lo adopte.
+const knownVersions = new Map();
+
+// PostgREST devuelve el error sin el status HTTP adentro; lo sumamos para que
+// withRetry pueda decidir si un fallo es reintentable.
+function checked({ data, error, status }) {
+  if (error) throw Object.assign(error, { httpStatus: status });
+  return data;
+}
+
 export async function saveOnlineState(userId, email, data) {
   // Validación de forma antes de gastar un round-trip (y reintentos) contra
   // Supabase: si `data` está corrupto, no tiene sentido reintentarlo, va a
   // fallar la validación exactamente igual las tres veces.
   validateWorkspaceStateShape(data);
   const result = await withRetry(async () => {
-    let outcome;
     try {
-      outcome = await supabase.from('workspace_states').upsert({
-        workspace_key: userId,
+      const saved = await saveWithConcurrency({
         data,
-        updated_by: userId,
-        updated_by_email: email,
-        updated_at: new Date().toISOString(),
+        version: knownVersions.get(userId),
+        tryUpdate: async (next, version) => {
+          const rows = checked(await supabase
+            .from('workspace_states')
+            .update({ data: next, updated_by: userId, updated_by_email: email, updated_at: new Date().toISOString() })
+            .eq('workspace_key', userId)
+            .eq('updated_at', version)
+            .select('updated_at'));
+          return rows?.length ? { ok: true, version: rows[0].updated_at } : { ok: false };
+        },
+        fetchRemote: async () => {
+          const row = checked(await supabase.from('workspace_states').select('data,updated_at').eq('workspace_key', userId).maybeSingle());
+          return row ? { data: row.data, version: row.updated_at } : null;
+        },
+        forceWrite: async (next) => {
+          const rows = checked(await supabase
+            .from('workspace_states')
+            .upsert({ workspace_key: userId, data: next, updated_by: userId, updated_by_email: email, updated_at: new Date().toISOString() })
+            .select('updated_at'));
+          return { version: rows?.[0]?.updated_at };
+        },
+        merge: mergeWorkspaceState,
       });
+      return { ok: true, saved };
     } catch (error) {
       // supabase-js puede rechazar la promesa directamente en cortes de red
-      // (fetch failed) en vez de resolver con { error }.
-      return { ok: false, threw: true, error };
+      // (fetch failed) en vez de resolver con { error }: sin httpStatus.
+      return { ok: false, status: error?.httpStatus, error, threw: error?.httpStatus === undefined };
     }
-    if (!outcome.error) return { ok: true };
-    return { ok: false, status: outcome.status, error: outcome.error };
   });
   if (!result.ok) throw result.error;
+  knownVersions.set(userId, result.saved.version);
+  return { data: result.saved.data, merged: result.saved.merged };
 }

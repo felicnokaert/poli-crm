@@ -81,6 +81,7 @@ input, select, textarea {
 input[type="checkbox"], input[type="radio"] {
   border: revert; border-radius: revert; padding: revert; background: revert; width: auto;
 }
+.product-query-input { width: 100%; box-sizing: border-box; resize: vertical; font-family: inherit; }
 input:focus, select:focus, textarea:focus {
   border-color: var(--color-focus-border);
   box-shadow: 0 0 0 3px #4b8d7915;

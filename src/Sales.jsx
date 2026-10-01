@@ -151,6 +151,24 @@ function GoalsPanel({ goals, sales, businessUnits, currentMonth, currentQuarter,
           <button type="button" className="icon-button" onClick={cancelEdit}>Cancelar edición</button>
         </p>
       )}
+      {draft.id && draft.period !== (draft.periodType === 'quarter' ? currentQuarter : currentMonth) && (
+        // Al editar un objetivo guardado, el selector "Este mes"/"Este
+        // trimestre" ya viene en esa posición - cambiarlo de nuevo a la misma
+        // opción no dispara onChange, así que el período interno se queda
+        // pisado en el valor viejo (ej. 2026-09) aunque hoy ya sea otro mes.
+        // Este aviso deja pasarlo al período real con un click, sin tener que
+        // cancelar y crear un objetivo nuevo (que dejaría el viejo duplicado).
+        <p className="empty-opportunities-inline goal-period-stale">
+          Este objetivo quedó cargado para <strong>{draft.period}</strong>, pero el {draft.periodType === 'quarter' ? 'trimestre' : 'mes'} actual es <strong>{draft.periodType === 'quarter' ? currentQuarter : currentMonth}</strong>.{" "}
+          <button
+            type="button"
+            className="icon-button"
+            onClick={() => updateDraft('period', draft.periodType === 'quarter' ? currentQuarter : currentMonth)}
+          >
+            Actualizar a {draft.periodType === 'quarter' ? currentQuarter : currentMonth}
+          </button>
+        </p>
+      )}
       <form className="goal-form" onSubmit={addGoal}>
         <select value={draft.periodType} onChange={(e) => selectPeriodType(e.target.value)}>
           <option value="month">Este mes</option>

@@ -7,7 +7,7 @@ import {
   buildAutoFollowupTasks,
   AUTO_HOT_LEAD_TASK_SOURCE,
   AUTO_COLD_QUOTE_TASK_SOURCE,
-  AUTO_STALE_CLIENT_TASK_SOURCE,
+  AUTO_STALE_CLIENT_TASK_SOURCE, MAX_AUTO_TASKS_PER_SOURCE_PER_RUN,
 } from "../src/daily-maintenance.mjs";
 
 // A propósito sin "precio"/"cotiz" en el texto: inferIntent (usado por
@@ -436,4 +436,21 @@ test("buildFullDailyMaintenanceUpdate también crea tareas de seguimiento para c
     result.nextState.tasks.filter((t) => t.source === AUTO_COLD_QUOTE_TASK_SOURCE).length,
     1,
   );
+});
+
+test("buildAutoFollowupTasks pone tope por corrida: 300 clientes sin contacto no generan 300 tareas", () => {
+  const clients = Array.from({ length: 300 }, (_, i) => ({ id: `c${i}`, company: `Cliente ${i}`, createdAt: "2026-08-01T00:00:00.000Z" }));
+  const result = buildAutoFollowupTasks({ clients, sales: [], inbox: [], tasks: [] }, "2026-10-06T06:00:00.000Z");
+  const created = result.nextState.tasks.filter((t) => t.source === AUTO_STALE_CLIENT_TASK_SOURCE);
+  assert.equal(created.length, MAX_AUTO_TASKS_PER_SOURCE_PER_RUN);
+});
+
+test("buildAutoFollowupTasks no recrea al dia siguiente la tarea de un cliente aunque ya este cerrada (cooldown)", () => {
+  const clients = [{ id: "c1", company: "Cliente 1", createdAt: "2026-08-01T00:00:00.000Z" }];
+  const first = buildAutoFollowupTasks({ clients, sales: [], inbox: [], tasks: [] }, "2026-10-06T06:00:00.000Z");
+  const closed = first.nextState.tasks.map((t) => ({ ...t, done: true }));
+  const nextDay = buildAutoFollowupTasks({ clients, sales: [], inbox: [], tasks: closed }, "2026-10-07T06:00:00.000Z");
+  assert.equal(nextDay.changed, false);
+  const afterCooldown = buildAutoFollowupTasks({ clients, sales: [], inbox: [], tasks: closed }, "2026-10-21T06:00:00.000Z");
+  assert.equal(afterCooldown.changed, true);
 });

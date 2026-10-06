@@ -28,6 +28,18 @@ export const AUTO_STALE_CLIENT_TASK_SOURCE = 'auto-stale-client';
 // motivo de source separado que las anteriores.
 export const AUTO_EXPIRED_QUOTE_TASK_SOURCE = 'auto-expired-quote';
 
+// Freno de seguridad (06/10/2026): el 30/09 casi toda la cartera (~964
+// clientes, importada a fines de agosto) cruzó los 30 días desde su alta a la
+// vez, y como el anti-duplicado solo miraba tareas ABIERTAS (al día siguiente
+// la tarea ya está cerrada), el cron creó una tarea por cliente TODOS los
+// días: ~11.800 tareas en una semana y el CRM quedó en blanco. Dos topes:
+//  - cooldown: si ya se creó una tarea de ese source+autoKey en los últimos
+//    AUTO_TASK_COOLDOWN_DAYS (abierta o cerrada) no se vuelve a crear.
+//  - tope por corrida: nunca más de MAX_AUTO_TASKS_PER_SOURCE_PER_RUN tareas
+//    nuevas de un mismo tipo, aunque la señal detecte cientos.
+export const AUTO_TASK_COOLDOWN_DAYS = 14;
+export const MAX_AUTO_TASKS_PER_SOURCE_PER_RUN = 15;
+
 function normalizedIdentity(value = '') {
   return String(value).trim().toLocaleLowerCase('es-AR');
 }
@@ -211,13 +223,25 @@ export function buildAutoFollowupTasks(state = EMPTY_STATE, nowISO = new Date().
       .map((task) => task.autoKey)
       .filter(Boolean),
   );
-  const openHotLeadKeys = openKeysBySource(AUTO_HOT_LEAD_TASK_SOURCE);
-  const openColdQuoteKeys = openKeysBySource(AUTO_COLD_QUOTE_TASK_SOURCE);
-  const openStaleClientKeys = openKeysBySource(AUTO_STALE_CLIENT_TASK_SOURCE);
-  const openExpiredQuoteKeys = openKeysBySource(AUTO_EXPIRED_QUOTE_TASK_SOURCE);
+  const cooldownStart = new Date(now.getTime() - AUTO_TASK_COOLDOWN_DAYS * 86400000).toISOString();
+  const blockedKeysBySource = (source) => {
+    const keys = openKeysBySource(source);
+    for (const task of tasks) {
+      if (task.source === source && task.autoKey && String(task.createdAt || '') >= cooldownStart) keys.add(task.autoKey);
+    }
+    return keys;
+  };
+  const openHotLeadKeys = blockedKeysBySource(AUTO_HOT_LEAD_TASK_SOURCE);
+  const openColdQuoteKeys = blockedKeysBySource(AUTO_COLD_QUOTE_TASK_SOURCE);
+  const openStaleClientKeys = blockedKeysBySource(AUTO_STALE_CLIENT_TASK_SOURCE);
+  const openExpiredQuoteKeys = blockedKeysBySource(AUTO_EXPIRED_QUOTE_TASK_SOURCE);
+  const createdBySource = {};
+  const reachedCap = (source) => (createdBySource[source] || 0) >= MAX_AUTO_TASKS_PER_SOURCE_PER_RUN;
+  const countCreated = (source) => { createdBySource[source] = (createdBySource[source] || 0) + 1; };
 
   const newTasks = [];
   for (const hotLead of hotLeads) {
+    if (reachedCap(AUTO_HOT_LEAD_TASK_SOURCE)) break;
     const autoKey = hotLeadAutoKey(hotLead);
     if (openHotLeadKeys.has(autoKey)) continue;
     openHotLeadKeys.add(autoKey); // evita crear dos tareas para el mismo contacto en la misma corrida
@@ -241,9 +265,11 @@ export function buildAutoFollowupTasks(state = EMPTY_STATE, nowISO = new Date().
       source: AUTO_HOT_LEAD_TASK_SOURCE,
       autoKey,
     });
+    countCreated(AUTO_HOT_LEAD_TASK_SOURCE);
   }
 
   for (const coldQuote of coldQuotes) {
+    if (reachedCap(AUTO_COLD_QUOTE_TASK_SOURCE)) break;
     const event = inbox.find((item) => item.event_id === coldQuote.eventId);
     const autoKey = coldQuoteAutoKey(coldQuote, event);
     if (openColdQuoteKeys.has(autoKey)) continue;
@@ -267,9 +293,11 @@ export function buildAutoFollowupTasks(state = EMPTY_STATE, nowISO = new Date().
       source: AUTO_COLD_QUOTE_TASK_SOURCE,
       autoKey,
     });
+    countCreated(AUTO_COLD_QUOTE_TASK_SOURCE);
   }
 
   for (const staleClient of staleClients) {
+    if (reachedCap(AUTO_STALE_CLIENT_TASK_SOURCE)) break;
     const autoKey = staleClientAutoKey(staleClient);
     if (!autoKey || openStaleClientKeys.has(autoKey)) continue;
     openStaleClientKeys.add(autoKey);
@@ -290,9 +318,11 @@ export function buildAutoFollowupTasks(state = EMPTY_STATE, nowISO = new Date().
       source: AUTO_STALE_CLIENT_TASK_SOURCE,
       autoKey,
     });
+    countCreated(AUTO_STALE_CLIENT_TASK_SOURCE);
   }
 
   for (const expiredQuote of expiredQuotes) {
+    if (reachedCap(AUTO_EXPIRED_QUOTE_TASK_SOURCE)) break;
     const autoKey = expiredQuoteAutoKey(expiredQuote);
     if (!autoKey || openExpiredQuoteKeys.has(autoKey)) continue;
     openExpiredQuoteKeys.add(autoKey);
@@ -313,6 +343,7 @@ export function buildAutoFollowupTasks(state = EMPTY_STATE, nowISO = new Date().
       source: AUTO_EXPIRED_QUOTE_TASK_SOURCE,
       autoKey,
     });
+    countCreated(AUTO_EXPIRED_QUOTE_TASK_SOURCE);
   }
 
   if (!newTasks.length) {

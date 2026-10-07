@@ -20,6 +20,7 @@ import {
   UserCog,
   FileCheck2,
   HelpCircle,
+  MapPin,
 } from "lucide-react";
 import { useConfirm } from "./ConfirmDialog";
 import { Splash, Spinner, PoliplastMark } from "./ui-primitives";
@@ -42,6 +43,7 @@ import { Clients, Contacts } from "./Clients";
 const TechnicalDocumentsAdmin = lazy(() =>
   import("./TechnicalDocuments").then((m) => ({ default: m.TechnicalDocumentsAdmin }))
 );
+const MapaCobertura = lazy(() => import("./MapaCobertura").then((m) => ({ default: m.MapaCobertura })));
 // Único de los cinco named exports de Academy.jsx que se usa acá - los
 // otros (CommercialKnowledge, Coach, QuickReplies, Training) son internos,
 // consumidos solo por el propio <Academy> - así que separarla en su propio
@@ -1355,6 +1357,7 @@ export default function App() {
     ["Cartera", [
       ["clients", "Empresas", Building2],
       ["contacts", "Contactos", Users],
+      ["map", "Mapa", MapPin],
     ]],
     ["Recursos", [
       ["academy", "Academia comercial", GraduationCap],
@@ -1702,6 +1705,11 @@ export default function App() {
               data={data}
               setData={setData}
             />
+          </Suspense>
+        )}
+        {view === "map" && (
+          <Suspense fallback={<Splash text="Cargando mapa…" />}>
+            <MapaCobertura clients={data.clients} />
           </Suspense>
         )}
         {view === "techdocs" && (

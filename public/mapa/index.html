@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cobertura de aplicadores · POLIOCHO</title>
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
+<link rel="stylesheet" href="styles.css?v=5">
+</head>
+<body>
+<div id="app">
+  <aside id="panel" aria-label="Panel de control">
+    <header>
+      <h1>Cobertura de aplicadores</h1>
+      <p class="sub">POLIOCHO · <span id="meta-export">cargando…</span></p>
+    </header>
+
+    <section>
+      <h2>Parámetros</h2>
+      <label class="fila">
+        <span>Habitantes por aplicador (X)</span>
+        <input id="p-x" type="number" min="1000" step="5000" value="200000">
+      </label>
+      <label class="fila">
+        <span>Cliente activo si compró en los últimos</span>
+        <select id="p-meses">
+          <option value="6">6 meses</option>
+          <option value="12" selected>12 meses</option>
+          <option value="24">24 meses</option>
+        </select>
+      </label>
+      <div class="fila dos">
+        <label><span>Faltan si índice &lt;</span><input id="p-bajo" type="number" min="0" step="0.05" value="0.75"></label>
+        <label><span>Sobresat. si índice &gt;</span><input id="p-alto" type="number" min="0" step="0.05" value="1.5"></label>
+      </div>
+      <label class="fila">
+        <span>Nivel del mapa</span>
+        <select id="p-nivel">
+          <option value="auto" selected>Automático (zoom)</option>
+          <option value="prov">Provincias</option>
+          <option value="dep">Departamentos</option>
+        </select>
+      </label>
+      <label class="fila check"><input id="p-pines" type="checkbox" checked> <span>Mostrar pines de clientes</span></label>
+      <label class="fila check" id="fila-aplicador" hidden>
+        <input id="p-aplicador" type="checkbox"> <span>Contar solo clientes marcados como aplicador</span>
+      </label>
+    </section>
+
+    <section>
+      <h2>Buscar cliente</h2>
+      <input id="f-buscar" type="search" placeholder="Razón social o CUIT" autocomplete="off">
+      <ul id="resultados" class="resultados"></ul>
+    </section>
+
+    <section>
+      <h2>Filtros</h2>
+      <label class="fila"><span>Producto</span><select id="f-producto"><option value="">Todos</option></select></label>
+      <label class="fila"><span>Provincia</span><select id="f-provincia"><option value="">Todas</option></select></label>
+      <label class="fila"><span>Pines</span>
+        <select id="f-estado"><option value="">Activos e inactivos</option><option value="activo">Solo activos</option><option value="inactivo">Solo inactivos</option></select>
+      </label>
+      <div class="fila dos">
+        <label><span>Última compra desde</span><input id="f-desde" type="date"></label>
+        <label><span>hasta</span><input id="f-hasta" type="date"></label>
+      </div>
+      <label class="fila"><span>Piso de esperados por zona (0 = sin piso)</span><input id="p-piso" type="number" min="0" step="0.5" value="0"></label>
+      <button id="f-limpiar" type="button" class="boton secundario">Limpiar filtros</button>
+    </section>
+
+    <section>
+      <h2>Ranking de zonas</h2>
+      <div class="tabs" role="tablist">
+        <button id="tab-deficit" class="activa" type="button">Mayor déficit</button>
+        <button id="tab-sobre" type="button">Sobresaturadas</button>
+      </div>
+      <ol id="ranking" class="ranking"></ol>
+      <button id="exportar" type="button" class="boton">Exportar ranking a Excel</button>
+    </section>
+
+    <section>
+      <h2>Leyenda</h2>
+      <ul id="leyenda" class="leyenda"></ul>
+    </section>
+
+    <section>
+      <h2>Resumen</h2>
+      <dl id="resumen" class="resumen"></dl>
+    </section>
+
+    <section>
+      <h2>Ubicación de clientes</h2>
+      <dl id="ubicacion" class="resumen"></dl>
+      <p id="ubicacion-motivo" class="sub"></p>
+    </section>
+
+    <footer>
+      Población: INDEC, Censo 2022 (definitivo). Límites: IGN.
+    </footer>
+  </aside>
+
+  <main>
+    <button id="toggle-panel" aria-label="Mostrar u ocultar panel">☰</button>
+    <div id="map"></div>
+    <div id="tooltip" role="status" hidden></div>
+  </main>
+</div>
+<script src="vendor/maplibre-gl-csp.js"></script>
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="app.js?v=5"></script>
+</body>
+</html>

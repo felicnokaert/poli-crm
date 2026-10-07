@@ -82,6 +82,7 @@ input[type="checkbox"], input[type="radio"] {
   border: revert; border-radius: revert; padding: revert; background: revert; width: auto;
 }
 .product-query-input { width: 100%; box-sizing: border-box; resize: vertical; font-family: inherit; }
+.mapa-cobertura-frame { width: 100%; height: calc(100vh - 240px); min-height: 520px; border: 1px solid var(--color-border-input); border-radius: var(--radius-md); background: #dfe7ee; }
 input:focus, select:focus, textarea:focus {
   border-color: var(--color-focus-border);
   box-shadow: 0 0 0 3px #4b8d7915;

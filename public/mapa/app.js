@@ -322,7 +322,7 @@ function htmlCliente(c) {
 
 function iniciarMapa() {
   // CSP del CRM: nada de CDNs ni blobs - el worker y las tipografias salen del propio sitio.
-  const base = location.origin + location.pathname.replace(/[^/]*$/, "");
+  const base = document.baseURI;
   maplibregl.setWorkerUrl(base + "vendor/maplibre-gl-csp-worker.js");
   const map = new maplibregl.Map({
     container: "map",

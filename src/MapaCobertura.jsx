@@ -97,7 +97,7 @@ function MapaCoberturaBase({ clients }) {
         <iframe
           ref={iframeRef}
           title="Mapa de cobertura de aplicadores"
-          src="/mapa/index.html"
+          src="/mapa"
           className="mapa-cobertura-frame"
         />
       </section>

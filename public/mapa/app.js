@@ -5,7 +5,17 @@ const CLASES = {
   faltan: { texto: "Faltan aplicadores", color: "#d9534f" },
   sin:    { texto: "Sin clientes",       color: "#b9c1c9" },
 };
-const PIN = { activo: "#7b3fe4", inactivo: "#6b7785" };
+const TIPOS = {
+  aplicador:  { texto: "Aplicador",          color: "#7b3fe4" },
+  inyeccion:  { texto: "Inyección",          color: "#0e9aa7" },
+  fabricante: { texto: "Fabricante",         color: "#c2185b" },
+  no_aplica:  { texto: "Compra y no aplica", color: "#8a6d3b" },
+  otro:       { texto: "Otro",               color: "#5d6b7a" },
+  sin:        { texto: "Sin clasificar",     color: "#9aa5b1" },
+};
+const PIN = { inactivo: "#b3bcc6" };
+const tipoDe = (c) => c.tipo || "sin";
+const expresionColorTipo = () => ["match", ["get", "tipo"], ...Object.entries(TIPOS).filter(([k]) => k !== "sin").flatMap(([k, v]) => [k, v.color]), TIPOS.sin.color];
 const PRECISION = {
   direccion: "Ubicado por domicilio",
   localidad: "Ubicado en el centro de la localidad",
@@ -40,6 +50,7 @@ function parametros() {
     bajo: Number($("p-bajo").value),
     alto: Number($("p-alto").value),
     soloAplicadores: $("p-aplicador").checked,
+    tipoPin: $("f-tipo").value,
     pines: $("p-pines").checked,
     nivel: $("p-nivel").value,
     piso: Math.max(0, Number($("p-piso").value) || 0),
@@ -51,11 +62,12 @@ function parametros() {
   };
 }
 
-/** Clientes que pasan los filtros de producto, rango de última compra y aplicador (afectan métricas y pines). */
-function clientesFiltrados() {
+/** Clientes que pasan los filtros. modo "metricas": semáforo/ranking (opcionalmente solo aplicadores); modo "pines": filtro por tipo. */
+function clientesFiltrados(modo = "pines") {
   const p = parametros();
   return estado.clientes.filter((c) => {
-    if (p.soloAplicadores && c.es_aplicador !== "si") return false;
+    if (modo === "metricas" && p.soloAplicadores && c.tipo !== "aplicador") return false;
+    if (modo === "pines" && p.tipoPin && tipoDe(c) !== p.tipoPin) return false;
     if (p.producto && !c.productos.some((pr) => pr.producto === p.producto)) return false;
     if (p.desde && !(c.ultima_compra && c.ultima_compra >= p.desde)) return false;
     if (p.hasta && !(c.ultima_compra && c.ultima_compra <= p.hasta)) return false;
@@ -83,7 +95,7 @@ function calcular() {
   const nuevo = (z, extra) => ({ id: z.id ?? z.cod, nombre: z.nombre, poblacion: z.poblacion, activos: 0, clientes: 0, kg: 0, ultima: null, ...extra });
   const prov = new Map(estado.zonas.provincias.map((z) => [z.cod, nuevo(z)]));
   const dep = new Map(estado.zonas.departamentos.map((z) => [z.id, nuevo(z, { provincia: prov.get(z.provincia_cod)?.nombre })]));
-  for (const c of clientesFiltrados()) {
+  for (const c of clientesFiltrados("metricas")) {
     if (!c.compro) continue;
     const kg = kgCliente(c, p.producto);
     const activo = c.ultima_compra >= corte;
@@ -113,6 +125,7 @@ function datosPines(corte) {
       geometry: { type: "Point", coordinates: [c.lon, c.lat] },
       properties: {
         doc: c.doc,
+        tipo: tipoDe(c),
         activo: c.compro && c.ultima_compra >= corte ? 1 : 0,
         aprox: c.precision === "provincia" || c.precision === "departamento" ? 1 : 0,
       },
@@ -153,8 +166,8 @@ function renderLeyenda() {
     sin: "Sin clientes activos (0)",
   };
   $("leyenda").innerHTML = Object.entries(CLASES).map(([k, v]) => `<li><i style="background:${v.color}"></i>${t[k]}</li>`).join("") +
-    `<li><i class="pin" style="background:${PIN.activo}"></i>Cliente activo (pin)</li>` +
-    `<li><i class="pin" style="background:${PIN.inactivo}"></i>Cliente inactivo (pin)</li>`;
+    Object.values(TIPOS).map((t) => `<li><i class="pin" style="background:${t.color}"></i>Pin activo: ${t.texto}</li>`).join("") +
+    `<li><i class="pin" style="background:${PIN.inactivo}"></i>Pin de cliente inactivo (cualquier tipo)</li>`;
 }
 
 function renderResumen({ prov, dep }) {
@@ -218,6 +231,52 @@ function exportarExcel() {
   XLSX.writeFile(wb, `ranking_cobertura_${nivel}_${estado.meta.fecha_export}.xlsx`);
 }
 
+/* ---- Revisión de clasificación (correcciones manuales) ---- */
+/* La correccion manual se guarda en el CRM (no en el navegador): se la avisamos a la
+ * pagina que nos contiene y ella la escribe en la ficha del cliente. Un tipo vacio
+ * significa "volver al automatico". */
+function cambiarTipo(doc, tipo, nota) {
+  const c = estado.porDoc.get(doc);
+  if (window.parent !== window) window.parent.postMessage({ tipo: "mapa:tipo", doc, tipoCliente: tipo || "", nota: nota || "" }, location.origin);
+  c.tipo = tipo || c.tipo_auto || null;
+  c.tipo_origen = tipo ? "manual" : (c.tipo_auto ? "auto" : null);
+  c.tipo_nota = nota;
+  clearTimeout(estado.tRev);
+  estado.tRev = setTimeout(pintar, 250);
+}
+
+function renderRevisar() {
+  const q = $("rev-buscar").value.trim().toUpperCase();
+  const qd = q.replace(/\D/g, "");
+  const filtro = $("rev-filtro").value;
+  const lista = estado.clientes.filter((c) => c.compro)
+    .filter((c) => !q || c.razon_social.toUpperCase().includes(q) || (qd.length >= 3 && c.doc.includes(qd)))
+    .filter((c) => !filtro || (filtro === "sin" ? !c.tipo : filtro === "manual" ? c.tipo_origen === "manual" : c.tipo_origen === "auto"))
+    .map((c) => ({ c, kg: kgCliente(c) })).sort((a, b) => b.kg - a.kg);
+  const opciones = (sel) => `<option value="">(automático)</option>` +
+    Object.entries(TIPOS).filter(([k]) => k !== "sin").map(([k, v]) => `<option value="${k}"${k === sel ? " selected" : ""}>${v.texto}</option>`).join("");
+  $("rev-info").textContent = `${lista.length} clientes con compras, ordenados por kilos. Lo que elijas queda marcado como manual y no lo pisa la regla automática.`;
+  $("rev-filas").innerHTML = lista.slice(0, 400).map(({ c, kg }) => `<tr class="${c.tipo_origen === "manual" ? "manual" : ""}" data-doc="${esc(c.doc)}">
+    <td><b>${esc(c.razon_social)}</b><br><small>${esc(c.cuit)} · ${esc(c.localidad || "sin localidad")}, ${esc(c.provincia)}</small></td>
+    <td>${c.productos.slice(0, 3).map((p) => esc(p.producto)).join(", ")}</td>
+    <td class="num">${nf0.format(kg)}</td><td>${fmtFecha(c.ultima_compra)}</td>
+    <td><select>${opciones(c.tipo_origen === "manual" ? c.tipo : "")}</select><small>${c.tipo_origen !== "manual" ? "Auto: " + (TIPOS[tipoDe(c)].texto) : ""}</small></td>
+    <td><input type="text" value="${esc(c.tipo_nota || "")}" placeholder="Motivo (opcional)"></td></tr>`).join("");
+}
+
+function descargarCorrecciones() {
+  const filas = [["doc", "razon_social", "tipo", "nota"]];
+  for (const c of estado.clientes) {
+    if (c.tipo_origen === "manual") filas.push([c.doc, c.razon_social, c.tipo, c.tipo_nota || ""]);
+  }
+  const csv = filas.map((f) => f.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
+  a.download = "clasificacion_clientes.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 /* ---- Filtros y buscador ---- */
 function poblarFiltros() {
   const kgPorProd = new Map();
@@ -244,7 +303,7 @@ function irAProvincia() {
 function abrirCliente(c) {
   if (c.lat == null) return;
   estado.map.flyTo({ center: [c.lon, c.lat], zoom: Math.max(estado.map.getZoom(), 10) });
-  new maplibregl.Popup({ maxWidth: "320px", offset: 10 }).setLngLat([c.lon, c.lat]).setHTML(htmlCliente(c)).addTo(estado.map);
+  abrirFicha(c.doc, [c.lon, c.lat]);
   $("app").classList.remove("abierto");
 }
 
@@ -305,8 +364,8 @@ function htmlCliente(c) {
   const mail = c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : "—";
   return `<div class="cliente">
     <h3>${esc(c.razon_social)}</h3>
-    <span class="estado" style="background:${activo ? PIN.activo : PIN.inactivo}">${c.compro ? (activo ? "Activo" : "Inactivo") : "Solo cotizó"}</span>
-    ${c.es_aplicador === "si" ? '<span class="estado" style="background:#3c9d5d">Aplicador</span>' : ""}
+    <span class="estado" style="background:${activo ? "#3c9d5d" : PIN.inactivo}">${c.compro ? (activo ? "Activo" : "Inactivo") : "Solo cotizó"}</span>
+    <span class="estado" style="background:${TIPOS[tipoDe(c)].color}">${TIPOS[tipoDe(c)].texto}${c.tipo_origen === "manual" ? " (manual)" : ""}</span>
     <table>
       <tr><td>CUIT/DNI</td><td>${esc(c.cuit)}</td></tr>
       <tr><td>Teléfono</td><td>${tel}</td></tr>
@@ -316,8 +375,38 @@ function htmlCliente(c) {
       <tr><td>Facturas</td><td>${c.n_facturas}</td></tr>
       <tr><td>Productos</td><td>${productos || "—"}</td></tr>
     </table>
+    ${c.tipo_nota ? `<p class="nota">${esc(c.tipo_nota)}</p>` : ""}
     <p class="${aprox ? "aprox" : "nota"}">${PRECISION[c.precision] || "Sin ubicación"}${aprox && c.motivo_aprox ? ": " + MOTIVO[c.motivo_aprox] : ""}.</p>
   </div>`;
+}
+
+/** Ficha de un cliente en un popup. */
+function abrirFicha(doc, lngLat) {
+  const c = estado.porDoc.get(doc);
+  if (!c) return;
+  if (estado.popup) estado.popup.remove();
+  estado.popup = new maplibregl.Popup({ maxWidth: "320px", offset: 10 }).setLngLat(lngLat).setHTML(htmlCliente(c)).addTo(estado.map);
+}
+
+/** Lista de varios clientes en el mismo lugar; tocar uno abre su ficha. */
+function abrirLista(docs, lngLat) {
+  const corte = estado.metricas.corte;
+  const clientes = docs.map((d) => estado.porDoc.get(d)).filter(Boolean)
+    .sort((a, b) => (b.ultima_compra || "").localeCompare(a.ultima_compra || ""));
+  const filas = clientes.map((c) => {
+    const kg = c.productos.reduce((s, p) => s + p.kg, 0);
+    const activo = c.compro && c.ultima_compra >= corte;
+    return `<li data-doc="${esc(c.doc)}"><i style="background:${activo ? TIPOS[tipoDe(c)].color : PIN.inactivo}"></i>
+      <span><b>${esc(c.razon_social)}</b><small>${TIPOS[tipoDe(c)].texto} · ${esc(c.localidad || "sin localidad")} · últ. compra ${fmtFecha(c.ultima_compra)} · ${nf0.format(kg)} kg</small></span></li>`;
+  }).join("");
+  if (estado.popup) estado.popup.remove();
+  const popup = new maplibregl.Popup({ maxWidth: "340px", offset: 10 }).setLngLat(lngLat)
+    .setHTML(`<div class="lista"><h3>${clientes.length} clientes en este lugar</h3><ul>${filas}</ul></div>`).addTo(estado.map);
+  popup.getElement().querySelector("ul").addEventListener("click", (e) => {
+    const li = e.target.closest("li[data-doc]");
+    if (li) abrirFicha(li.dataset.doc, lngLat);
+  });
+  estado.popup = popup;
 }
 
 function iniciarMapa() {
@@ -341,7 +430,7 @@ function iniciarMapa() {
     map.fitBounds([[-74, -56], [-53, -21.5]], { padding: 20, animate: false });
     map.addSource("provincias", { type: "geojson", data: estado.provGeo });
     map.addSource("departamentos", { type: "geojson", data: estado.depGeo });
-    map.addSource("clientes", { type: "geojson", data: { type: "FeatureCollection", features: [] }, cluster: true, clusterMaxZoom: 9, clusterRadius: 38 });
+    map.addSource("clientes", { type: "geojson", data: { type: "FeatureCollection", features: [] }, cluster: true, clusterMaxZoom: 14, clusterRadius: 38 });
     map.addLayer({ id: "prov-relleno", type: "fill", source: "provincias", paint: { "fill-color": colorClase, "fill-opacity": 0.85 } });
     map.addLayer({ id: "dep-relleno", type: "fill", source: "departamentos", paint: { "fill-color": colorClase, "fill-opacity": 0.85 } });
     map.addLayer({ id: "dep-borde", type: "line", source: "departamentos", paint: { "line-color": "#ffffff", "line-width": 0.4 } });
@@ -359,7 +448,7 @@ function iniciarMapa() {
     map.addLayer({
       id: "pines", type: "circle", source: "clientes", filter: ["!", ["has", "point_count"]],
       paint: {
-        "circle-color": ["case", ["==", ["get", "activo"], 1], PIN.activo, PIN.inactivo],
+        "circle-color": ["case", ["==", ["get", "activo"], 1], expresionColorTipo(), PIN.inactivo],
         "circle-radius": 6.5, "circle-stroke-width": 2,
         "circle-stroke-color": ["case", ["==", ["get", "aprox"], 1], "#f0a30a", "#ffffff"],
         "circle-opacity": ["case", ["==", ["get", "aprox"], 1], 0.65, 1],
@@ -389,13 +478,20 @@ function iniciarMapa() {
     }
     map.on("click", "pines-cluster", (e) => {
       const f = map.queryRenderedFeatures(e.point, { layers: ["pines-cluster"] })[0];
-      map.getSource("clientes").getClusterExpansionZoom(f.properties.cluster_id).then((z) => map.easeTo({ center: f.geometry.coordinates, zoom: z + 0.5 }));
+      const src = map.getSource("clientes");
+      src.getClusterExpansionZoom(f.properties.cluster_id).then((z) => {
+        if (z <= 11) return map.easeTo({ center: f.geometry.coordinates, zoom: z + 0.5 });
+        // no se separan más: listar todos los clientes del grupo
+        src.getClusterLeaves(f.properties.cluster_id, 200, 0).then((hojas) => abrirLista(hojas.map((h) => h.properties.doc), f.geometry.coordinates));
+      });
     });
     map.on("click", "pines", (e) => {
-      const c = estado.porDoc.get(e.features[0].properties.doc);
-      if (!c) return;
+      const r = 8; // pines casi superpuestos: se listan todos
+      const cerca = map.queryRenderedFeatures([[e.point.x - r, e.point.y - r], [e.point.x + r, e.point.y + r]], { layers: ["pines"] });
+      const docs = [...new Set(cerca.map((f) => f.properties.doc))];
       $("tooltip").hidden = true;
-      new maplibregl.Popup({ maxWidth: "320px", offset: 10 }).setLngLat(e.features[0].geometry.coordinates).setHTML(htmlCliente(c)).addTo(map);
+      if (docs.length > 1) return abrirLista(docs, e.features[0].geometry.coordinates);
+      abrirFicha(docs[0], e.features[0].geometry.coordinates);
     });
     for (const id of ["pines", "pines-cluster"]) {
       map.on("mouseenter", id, () => { map.getCanvas().style.cursor = "pointer"; $("tooltip").hidden = true; });
@@ -441,12 +537,24 @@ async function cargar() {
   estado.depGeo = dep;
   estado.porDoc = new Map(estado.clientes.map((c) => [c.doc, c]));
   $("meta-export").textContent = `datos al ${fmtFecha(estado.meta.fecha_export)}`;
-  $("fila-aplicador").hidden = !estado.clientes.some((c) => c.es_aplicador);
+  $("fila-aplicador").hidden = !estado.clientes.some((c) => c.tipo);
   poblarFiltros();
   renderLeyenda();
   iniciarMapa();
 }
 
+$("abrir-revisar").addEventListener("click", () => { renderRevisar(); $("revisar").hidden = false; });
+$("rev-cerrar").addEventListener("click", () => { $("revisar").hidden = true; });
+$("revisar").addEventListener("click", (e) => { if (e.target.id === "revisar") $("revisar").hidden = true; });
+$("rev-buscar").addEventListener("input", renderRevisar);
+$("rev-filtro").addEventListener("change", renderRevisar);
+$("rev-csv").addEventListener("click", descargarCorrecciones);
+$("rev-filas").addEventListener("change", (e) => {
+  const tr = e.target.closest("tr[data-doc]");
+  if (!tr) return;
+  cambiarTipo(tr.dataset.doc, tr.querySelector("select").value, tr.querySelector("input").value.trim());
+  tr.classList.toggle("manual", !!tr.querySelector("select").value);
+});
 $("f-buscar").addEventListener("input", buscar);
 $("resultados").addEventListener("click", (e) => { const li = e.target.closest("li"); if (li) abrirCliente(estado.porDoc.get(li.dataset.doc)); });
 $("tab-deficit").addEventListener("click", () => { $("tab-deficit").classList.add("activa"); $("tab-sobre").classList.remove("activa"); renderRanking(); });
@@ -454,7 +562,7 @@ $("tab-sobre").addEventListener("click", () => { $("tab-sobre").classList.add("a
 $("exportar").addEventListener("click", exportarExcel);
 $("f-provincia").addEventListener("change", irAProvincia);
 $("f-limpiar").addEventListener("click", () => {
-  for (const id of ["f-producto", "f-provincia", "f-estado", "f-desde", "f-hasta"]) $(id).value = "";
+  for (const id of ["f-producto", "f-provincia", "f-estado", "f-tipo", "f-desde", "f-hasta"]) $(id).value = "";
   irAProvincia(); renderLeyenda(); pintar();
 });
 $("ranking").addEventListener("click", (e) => {

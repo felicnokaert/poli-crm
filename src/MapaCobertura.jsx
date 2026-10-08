@@ -29,7 +29,7 @@ function guardarCache(cache) {
 // /mapa/ (estático, con su propia CSP); los clientes se calculan acá, con la
 // sesión, y se le mandan por postMessage - nunca hay un archivo público con
 // CUIT, teléfonos o emails. Ver public/mapa/app.js (esperarClientes).
-function MapaCoberturaBase({ clients }) {
+function MapaCoberturaBase({ clients, onSetClientType }) {
   const iframeRef = useRef(null);
   const [listo, setListo] = useState(false);
   const [estado, setEstado] = useState({ fase: "ubicando", detalle: "Ubicando clientes…" });
@@ -64,10 +64,14 @@ function MapaCoberturaBase({ clients }) {
       if (event.origin !== window.location.origin) return;
       if (event.source !== iframeRef.current?.contentWindow) return;
       if (event.data?.tipo === "mapa:listo") setListo(true);
+      // El mapa avisa una correccion manual de tipo; se guarda en la ficha del cliente.
+      if (event.data?.tipo === "mapa:tipo" && typeof event.data.doc === "string") {
+        onSetClientType?.(event.data.doc, String(event.data.tipoCliente || ""), String(event.data.nota || ""));
+      }
     }
     window.addEventListener("message", alMensaje);
     return () => window.removeEventListener("message", alMensaje);
-  }, []);
+  }, [onSetClientType]);
 
   useEffect(() => {
     if (!listo || !mapClients) return;

@@ -3,6 +3,7 @@
 // salen de `client.polio8` (importación POLIOCHO) o, si no hay, de los campos
 // lastPurchase/totalPurchases que ya traía la base.
 import { normClave, provinciaCanonica } from './georef.mjs';
+import { resolverTipo } from './client-type.mjs';
 
 const soloDigitos = (valor) => String(valor ?? '').replace(/\D/g, '');
 
@@ -27,8 +28,13 @@ function productosDe(polio8) {
 }
 
 // Antes de ubicar: arma el cliente con todos los campos menos lat/lon/depto_id/precision.
+// Identidad del cliente en el mapa: CUIT/DNI sin guiones; si no tiene, su id del CRM.
+export function docDe(crm = {}) {
+  return soloDigitos(crm.cuit) || String(crm.id || '');
+}
+
 export function toMapClient(crm = {}) {
-  const doc = soloDigitos(crm.cuit) || String(crm.id || '');
+  const doc = docDe(crm);
   if (!doc) return null;
   const polio8 = crm.polio8 || null;
   const facturado = polio8 ? polio8.invoiced === true : true;
@@ -38,6 +44,8 @@ export function toMapClient(crm = {}) {
   const compro = Boolean(ultimaCompra) || (polio8 && !facturado && crm.purchaseWithoutInvoice === true);
   const provincia = provinciaCanonica(crm.province);
   const sinFactura = polio8 && !facturado;
+  const productos = productosDe(polio8);
+  const tipo = resolverTipo(productos, { tipoCliente: crm.tipoCliente, tipoClienteNota: crm.tipoClienteNota });
   return {
     doc,
     cuit: formatCuit(doc),
@@ -56,8 +64,10 @@ export function toMapClient(crm = {}) {
     n_facturas: nCompras,
     n_cotizaciones: sinFactura ? Number(polio8.documents) || 0 : 0,
     ultima_cotizacion: sinFactura ? fechaPolio : null,
-    productos: productosDe(polio8),
-    es_aplicador: crm.esAplicador === 'si' || crm.esAplicador === 'no' ? crm.esAplicador : null,
+    productos,
+    ...tipo,
+    // Compatibilidad: si el cliente ya traia esAplicador cargado a mano y no hay tipo, se respeta.
+    es_aplicador: tipo.es_aplicador ?? (crm.esAplicador === 'si' || crm.esAplicador === 'no' ? crm.esAplicador : null),
   };
 }
 

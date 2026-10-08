@@ -61,6 +61,8 @@ import { WhatsAppInbox } from "./WhatsAppInbox";
 import { ClientDetail } from "./ClientDetail";
 import { ShortcutsHelp } from "./ShortcutsHelp";
 import { useCronStatus } from "./hooks/useCronStatus";
+import { conTipoManual } from "./client-type.mjs";
+import { docDe } from "./map-clients-adapter.mjs";
 import { CLASSIFICATIONS } from "./knowledge";
 import {
   mergeClients,
@@ -1342,6 +1344,16 @@ export default function App() {
     setShowTaskForm(false);
   }
 
+  // Correccion manual del tipo de cliente hecha desde el mapa (Cartera > Mapa): se guarda en
+  // la ficha (tipoCliente / tipoClienteNota). Va dentro del mismo JSON del workspace, sin
+  // tabla ni migracion nueva; updatedAt hace que gane en cualquier fusion con otra pestana.
+  const setClientType = useCallback((doc, tipoCliente, nota) => {
+    setData((current) => ({
+      ...current,
+      clients: (current.clients || []).map((client) => (docDe(client) === doc ? conTipoManual(client, tipoCliente, nota) : client)),
+    }));
+  }, []);
+
   const navGroups = [
     ["Ventas", [
       ["dashboard", "Inicio", LayoutDashboard],
@@ -1709,7 +1721,7 @@ export default function App() {
         )}
         {view === "map" && (
           <Suspense fallback={<Splash text="Cargando mapa…" />}>
-            <MapaCobertura clients={data.clients} />
+            <MapaCobertura clients={data.clients} onSetClientType={setClientType} />
           </Suspense>
         )}
         {view === "techdocs" && (

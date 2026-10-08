@@ -8,7 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Cobertura de aplicadores · POLIOCHO</title>
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
-<link rel="stylesheet" href="styles.css?v=5">
+<link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
 <div id="app">
@@ -46,7 +46,7 @@
       </label>
       <label class="fila check"><input id="p-pines" type="checkbox" checked> <span>Mostrar pines de clientes</span></label>
       <label class="fila check" id="fila-aplicador" hidden>
-        <input id="p-aplicador" type="checkbox"> <span>Contar solo clientes marcados como aplicador</span>
+        <input id="p-aplicador" type="checkbox" checked> <span>Semáforo y ranking: contar solo aplicadores</span>
       </label>
     </section>
 
@@ -59,6 +59,7 @@
     <section>
       <h2>Filtros</h2>
       <label class="fila"><span>Producto</span><select id="f-producto"><option value="">Todos</option></select></label>
+      <label class="fila"><span>Tipo de cliente (pines)</span><select id="f-tipo"><option value="">Todos</option><option value="aplicador">Aplicadores</option><option value="inyeccion">Inyección</option><option value="fabricante">Fabricantes</option><option value="no_aplica">Compra y no aplica</option><option value="otro">Otros</option><option value="sin">Sin clasificar</option></select></label>
       <label class="fila"><span>Provincia</span><select id="f-provincia"><option value="">Todas</option></select></label>
       <label class="fila"><span>Pines</span>
         <select id="f-estado"><option value="">Activos e inactivos</option><option value="activo">Solo activos</option><option value="inactivo">Solo inactivos</option></select>
@@ -69,6 +70,12 @@
       </div>
       <label class="fila"><span>Piso de esperados por zona (0 = sin piso)</span><input id="p-piso" type="number" min="0" step="0.5" value="0"></label>
       <button id="f-limpiar" type="button" class="boton secundario">Limpiar filtros</button>
+    </section>
+
+    <section>
+      <h2>Clasificación</h2>
+      <p class="sub">Corregí a mano quién es aplicador, inyección, fabricante o compra y no aplica.</p>
+      <button id="abrir-revisar" type="button" class="boton secundario">Revisar clasificación</button>
     </section>
 
     <section>
@@ -107,9 +114,23 @@
     <div id="map"></div>
     <div id="tooltip" role="status" hidden></div>
   </main>
+<div id="revisar" hidden>
+  <div class="caja" role="dialog" aria-label="Revisar clasificación">
+    <header><h2>Revisar clasificación de clientes</h2><button id="rev-cerrar" type="button" aria-label="Cerrar">✕</button></header>
+    <div class="barra">
+      <input id="rev-buscar" type="search" placeholder="Buscar razón social o CUIT">
+      <select id="rev-filtro">
+        <option value="">Todos</option><option value="auto">Solo automáticos</option><option value="manual">Corregidos a mano</option><option value="sin">Sin clasificar</option>
+      </select>
+      <button id="rev-csv" type="button" class="boton">Descargar correcciones (CSV)</button>
+    </div>
+    <p id="rev-info" class="sub"></p>
+    <div class="tabla"><table><thead><tr><th>Cliente</th><th>Compra principalmente</th><th>Kg</th><th>Última compra</th><th>Tipo</th><th>Nota</th></tr></thead><tbody id="rev-filas"></tbody></table></div>
+  </div>
+</div>
 </div>
 <script src="vendor/maplibre-gl-csp.js"></script>
 <script src="vendor/xlsx.full.min.js"></script>
-<script src="app.js?v=5"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>

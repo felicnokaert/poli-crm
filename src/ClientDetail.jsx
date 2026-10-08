@@ -236,6 +236,23 @@ export function ClientDetail({
                 </select>
               </label>
               <label>
+                Tipo de cliente (mapa)
+                {/* Marca a la persona como aplicador/inyección/etc.: el mapa de cobertura
+                    (Cartera > Mapa) le pone pin y lo cuenta en el alcance según su
+                    Provincia y Ciudad. "Automático" usa lo que compra (ver client-type.mjs). */}
+                <select
+                  value={draft.tipoCliente || ""}
+                  onChange={(event) => setDraft({ ...draft, tipoCliente: event.target.value })}
+                >
+                  <option value="">Automático (según lo que compra)</option>
+                  <option value="aplicador">Aplicador</option>
+                  <option value="inyeccion">Inyección</option>
+                  <option value="fabricante">Fabricante</option>
+                  <option value="no_aplica">Compra y no aplica</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </label>
+              <label>
                 Tipo de registro
                 <select {...field("sourceType")}>
                   <option>Cliente histórico</option>

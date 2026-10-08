@@ -42,8 +42,10 @@
           <option value="auto" selected>Automático (zoom)</option>
           <option value="prov">Provincias</option>
           <option value="dep">Departamentos</option>
+          <option value="alc">Alcance por ciudades</option>
         </select>
       </label>
+      <label class="fila"><span>Radio de alcance de cada aplicador (km, vista "Alcance")</span><input id="p-radio" type="number" min="10" max="500" step="10" value="100"></label>
       <label class="fila check"><input id="p-pines" type="checkbox" checked> <span>Mostrar pines de clientes</span></label>
       <label class="fila check" id="fila-aplicador" hidden>
         <input id="p-aplicador" type="checkbox" checked> <span>Semáforo y ranking: contar solo aplicadores</span>
@@ -76,6 +78,14 @@
       <h2>Clasificación</h2>
       <p class="sub">Corregí a mano quién es aplicador, inyección, fabricante o compra y no aplica.</p>
       <button id="abrir-revisar" type="button" class="boton secundario">Revisar clasificación</button>
+    </section>
+
+    <section id="seccion-alcance" hidden>
+      <h2>Alcance por ciudades</h2>
+      <p class="sub">Cuenta los aplicadores activos, con ubicación fiable, a hasta el radio elegido en línea recta (no por ruta). Cada habitante se cuenta una sola vez. Población: gobiernos locales, Censo 2022.</p>
+      <dl id="alc-resumen" class="resumen"></dl>
+      <h3>Ciudades sin cobertura (mayor población)</h3>
+      <ol id="alc-ranking" class="ranking"></ol>
     </section>
 
     <section>
@@ -131,6 +141,8 @@
 </div>
 <script src="vendor/maplibre-gl-csp.js"></script>
 <script src="vendor/xlsx.full.min.js"></script>
+<script src="vendor/turf.min.js"></script>
+<script type="module" src="alcance.mjs"></script>
 <script src="app.js?v=7"></script>
 </body>
 </html>

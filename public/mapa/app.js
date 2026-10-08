@@ -53,6 +53,7 @@ function parametros() {
     tipoPin: $("f-tipo").value,
     pines: $("p-pines").checked,
     nivel: $("p-nivel").value,
+    radio: Math.min(500, Math.max(10, Number($("p-radio").value) || 100)),
     piso: Math.max(0, Number($("p-piso").value) || 0),
     producto: $("f-producto").value,
     provincia: $("f-provincia").value,
@@ -142,6 +143,7 @@ function pintar() {
   map.getSource("provincias").setData(estado.provGeo);
   map.getSource("departamentos").setData(estado.depGeo);
   map.getSource("clientes").setData(datosPines(m.corte));
+  renderAlcance(m.corte);
   aplicarVisibilidad();
   renderResumen(m);
 }
@@ -149,16 +151,93 @@ function pintar() {
 function aplicarVisibilidad() {
   const p = parametros();
   const map = estado.map;
-  const usaDeptos = p.nivel === "dep" || (p.nivel === "auto" && map.getZoom() >= ZOOM_DEPTOS);
+  const alcance = p.nivel === "alc";
+  const usaDeptos = !alcance && (p.nivel === "dep" || (p.nivel === "auto" && map.getZoom() >= ZOOM_DEPTOS));
   map.setLayoutProperty("prov-relleno", "visibility", usaDeptos ? "none" : "visible");
   map.setLayoutProperty("dep-relleno", "visibility", usaDeptos ? "visible" : "none");
   map.setLayoutProperty("dep-borde", "visibility", usaDeptos ? "visible" : "none");
+  // En "Alcance" las provincias quedan de fondo neutro para que se vean la zona y las ciudades.
+  map.setPaintProperty("prov-relleno", "fill-color", alcance ? "#eef2f6" : expresionColorClase());
+  for (const id of ["alc-zona", "alc-zona-borde", "ciudades"]) map.setLayoutProperty(id, "visibility", alcance ? "visible" : "none");
   for (const id of ["pines", "pines-cluster", "pines-cluster-n"]) map.setLayoutProperty(id, "visibility", p.pines ? "visible" : "none");
+  $("seccion-alcance").hidden = !alcance;
   estado.nivelActual = usaDeptos ? "dep" : "prov";
+}
+
+/* ---- Alcance por ciudades (ver alcance.mjs): aplicadores activos, radio en linea recta ---- */
+const COLOR_ALCANCE = { sin: "#d9534f", uno: "#f0a30a", varios: "#3c9d5d" };
+const expresionColorClase = () => ["match", ["get", "clase"], "sobre", CLASES.sobre.color, "ok", CLASES.ok.color, "faltan", CLASES.faltan.color, CLASES.sin.color];
+
+function unionCirculos(aplicadores, radioKm) {
+  const vistos = new Set();
+  const circulos = [];
+  for (const a of aplicadores) {
+    const clave = a.lat.toFixed(2) + "," + a.lon.toFixed(2); // mismos puntos casi identicos: un solo circulo
+    if (vistos.has(clave)) continue;
+    vistos.add(clave);
+    circulos.push(turf.circle([a.lon, a.lat], radioKm, { steps: 48, units: "kilometers" }));
+  }
+  if (!circulos.length) return { type: "FeatureCollection", features: [] };
+  try {
+    let zona = circulos[0];
+    for (let i = 1; i < circulos.length; i++) zona = turf.union(zona, circulos[i]) || zona;
+    return { type: "FeatureCollection", features: [zona] };
+  } catch (e) {
+    console.warn("union de circulos fallo, se dibujan por separado", e);
+    return { type: "FeatureCollection", features: circulos };
+  }
+}
+
+function renderAlcance(corte) {
+  const p = parametros();
+  if (!estado.ciudades || !window.Alcance || p.nivel !== "alc") return;
+  const aplicadores = estado.clientes.filter((c) => window.Alcance.esAplicadorQueCuenta(c, corte)).map((c) => ({ lat: c.lat, lon: c.lon }));
+  const res = window.Alcance.calcularAlcance(estado.ciudades, aplicadores, p.radio);
+  estado.alcance = res;
+  const zona = unionCirculos(aplicadores, p.radio);
+  estado.map.getSource("alc-zona").setData(zona);
+  estado.map.getSource("ciudades").setData({
+    type: "FeatureCollection",
+    features: res.ciudades.filter((c) => c.ubicada).map((c) => ({
+      type: "Feature", geometry: { type: "Point", coordinates: [c.lon, c.lat] },
+      properties: { id: c.id, nombre: c.nombre, pob: c.pob, n: c.n, clase: window.Alcance.claseAlcance(c.n), aprox: c.aprox || 0 },
+    })),
+  });
+  const r = res.resumen;
+  $("alc-resumen").innerHTML = [
+    ["Aplicadores activos que cuentan", nf0.format(r.aplicadores)],
+    ["Radio de alcance", `${nf0.format(r.radioKm)} km (línea recta)`],
+    ["Población cubierta", `${nf1.format(r.pctCubierta)} %`],
+    ["Habitantes cubiertos", nf0.format(r.pobCubierta)],
+    ["Habitantes sin cobertura", nf0.format(r.pobSinCobertura)],
+    ["Ciudades cubiertas", `${nf0.format(r.ciudadesCubiertas)} de ${nf0.format(r.ciudadesUbicadas)}`],
+    ["Sin ubicar (no cuentan)", nf0.format(r.pobSinUbicar) + " hab."],
+  ].map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join("");
+  const sin = window.Alcance.rankingSinCobertura(res, { limite: 15 });
+  $("alc-ranking").innerHTML = sin.map((c) => `<li data-lon="${c.lon}" data-lat="${c.lat}"><b>${esc(c.nombre)}</b>
+    <small>${esc((estado.zonas.provincias.find((z) => z.cod === c.prov) || {}).nombre || "")} · ${nf0.format(c.pob)} hab.</small></li>`).join("") || "<li>Todas las ciudades tienen cobertura</li>";
+}
+
+function htmlCiudad(f) {
+  const n = f.properties.n;
+  const texto = n === 0 ? "Sin aplicadores al alcance" : n === 1 ? "1 aplicador al alcance" : `${n} aplicadores al alcance`;
+  return `<div class="cliente"><h3>${esc(f.properties.nombre)}</h3>
+    <span class="estado" style="background:${COLOR_ALCANCE[f.properties.clase]}">${texto}</span>
+    <table><tr><td>Población</td><td>${nf0.format(f.properties.pob)}</td></tr>
+    <tr><td>Radio</td><td>${nf0.format(parametros().radio)} km en línea recta</td></tr></table>
+    ${f.properties.aprox ? '<p class="aprox">Ubicación aproximada (centro del departamento).</p>' : ""}</div>`;
 }
 
 function renderLeyenda() {
   const p = parametros();
+  if (p.nivel === "alc") {
+    $("leyenda").innerHTML = [
+      ["#d9534f", "Ciudad sin aplicadores al alcance"], ["#f0a30a", "Ciudad con 1 aplicador al alcance"], ["#3c9d5d", "Ciudad con 2 o más aplicadores"],
+    ].map(([c, t]) => `<li><i class="pin" style="background:${c}"></i>${t}</li>`).join("") +
+      `<li><i style="background:#3c9d5d;opacity:.35"></i>Zona de cobertura (${nf0.format(p.radio)} km en línea recta)</li>` +
+      Object.values(TIPOS).map((t) => `<li><i class="pin" style="background:${t.color}"></i>Pin activo: ${t.texto}</li>`).join("");
+    return;
+  }
   const t = {
     sobre: `Sobresaturada (índice > ${nf2.format(p.alto)})`,
     ok: `Equilibrada (${nf2.format(p.bajo)} a ${nf2.format(p.alto)})`,
@@ -436,6 +515,19 @@ function iniciarMapa() {
     map.addLayer({ id: "dep-borde", type: "line", source: "departamentos", paint: { "line-color": "#ffffff", "line-width": 0.4 } });
     map.addLayer({ id: "prov-borde", type: "line", source: "provincias", paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.8, 7, 2] } });
     map.addLayer({ id: "zona-hover", type: "line", source: "provincias", paint: { "line-color": "#1c2733", "line-width": 2.5 }, filter: ["==", ["get", "zid"], ""] });
+    // Alcance por ciudades: zona (union de circulos) y una ciudad = un punto, tamano por poblacion.
+    map.addSource("alc-zona", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addSource("ciudades", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addLayer({ id: "alc-zona", type: "fill", source: "alc-zona", layout: { visibility: "none" }, paint: { "fill-color": "#3c9d5d", "fill-opacity": 0.2 } });
+    map.addLayer({ id: "alc-zona-borde", type: "line", source: "alc-zona", layout: { visibility: "none" }, paint: { "line-color": "#2f7d49", "line-width": 1.4 } });
+    map.addLayer({
+      id: "ciudades", type: "circle", source: "ciudades", layout: { visibility: "none" },
+      paint: {
+        "circle-color": ["match", ["get", "clase"], "sin", COLOR_ALCANCE.sin, "uno", COLOR_ALCANCE.uno, COLOR_ALCANCE.varios],
+        "circle-radius": ["interpolate", ["linear"], ["sqrt", ["get", "pob"]], 0, 2.5, 100, 3.5, 300, 7, 800, 14, 1250, 22],
+        "circle-opacity": 0.85, "circle-stroke-width": 1, "circle-stroke-color": "#ffffff",
+      },
+    });
     map.addLayer({
       id: "pines-cluster", type: "circle", source: "clientes", filter: ["has", "point_count"],
       paint: { "circle-color": "#1c2733", "circle-opacity": 0.8, "circle-radius": ["step", ["get", "point_count"], 12, 10, 16, 40, 22], "circle-stroke-color": "#fff", "circle-stroke-width": 1.5 },
@@ -497,6 +589,12 @@ function iniciarMapa() {
       map.on("mouseenter", id, () => { map.getCanvas().style.cursor = "pointer"; $("tooltip").hidden = true; });
       map.on("mouseleave", id, () => { map.getCanvas().style.cursor = ""; });
     }
+    map.on("click", "ciudades", (e) => {
+      if (map.queryRenderedFeatures(e.point, { layers: ["pines", "pines-cluster"] }).length) return; // los pines tienen prioridad
+      new maplibregl.Popup({ maxWidth: "300px", offset: 8 }).setLngLat(e.features[0].geometry.coordinates).setHTML(htmlCiudad(e.features[0])).addTo(map);
+    });
+    map.on("mouseenter", "ciudades", () => { map.getCanvas().style.cursor = "pointer"; });
+    map.on("mouseleave", "ciudades", () => { map.getCanvas().style.cursor = ""; });
     map.on("zoomend", () => { if (parametros().nivel === "auto") { aplicarVisibilidad(); renderRanking(); } });
     pintar();
   });
@@ -516,19 +614,35 @@ function esperarClientes() {
     window.addEventListener("message", (e) => {
       if (e.origin !== location.origin || !e.data || e.data.tipo !== "mapa:clientes") return;
       clearTimeout(limite);
-      resolve({ clientes: e.data.clientes, fecha_export: e.data.fecha_export });
+      const recibido = { clientes: e.data.clientes, fecha_export: e.data.fecha_export };
+      // La primera vez arranca el mapa; despues, cada cambio en el CRM (un cliente nuevo, uno
+      // marcado como aplicador, una ciudad editada) llega aca y actualiza los pines sin recargar.
+      if (estado.cargado) actualizarClientes(recibido); else resolve(recibido);
     });
     if (window.parent !== window) window.parent.postMessage({ tipo: "mapa:listo" }, location.origin);
   });
 }
 
+function actualizarClientes(recibido) {
+  estado.clientes = recibido.clientes;
+  estado.meta = { fecha_export: recibido.fecha_export };
+  estado.porDoc = new Map(estado.clientes.map((c) => [c.doc, c]));
+  $("meta-export").textContent = `datos al ${fmtFecha(estado.meta.fecha_export)}`;
+  $("fila-aplicador").hidden = !estado.clientes.some((c) => c.tipo);
+  if (estado.map && estado.map.isStyleLoaded()) {
+    clearTimeout(estado.tActualizar);
+    estado.tActualizar = setTimeout(pintar, 200);
+  }
+}
+
 async function cargar() {
   const leer = (u) => fetch(u).then((r) => { if (!r.ok) throw new Error(u); return r.json(); });
-  let prov, dep, recibido;
-  [recibido, estado.zonas, prov, dep] = await Promise.all([
+  let prov, dep, recibido, ciudades;
+  [recibido, estado.zonas, prov, dep, ciudades] = await Promise.all([
     esperarClientes(), leer("data/zonas.json"),
-    leer("data/provincias.geojson"), leer("data/departamentos.geojson"),
+    leer("data/provincias.geojson"), leer("data/departamentos.geojson"), leer("data/ciudades.json"),
   ]);
+  estado.ciudades = ciudades.ciudades;
   estado.clientes = recibido.clientes;
   estado.meta = { fecha_export: recibido.fecha_export };
   for (const f of prov.features) f.properties.zid = f.properties.in1;
@@ -541,6 +655,7 @@ async function cargar() {
   poblarFiltros();
   renderLeyenda();
   iniciarMapa();
+  estado.cargado = true;
 }
 
 $("abrir-revisar").addEventListener("click", () => { renderRevisar(); $("revisar").hidden = false; });
@@ -572,7 +687,11 @@ $("ranking").addEventListener("click", (e) => {
   const f = src.features.find((x) => x.properties.zid === li.dataset.id);
   if (f) { const b = limites(f.geometry); estado.map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 60, maxZoom: 9 }); $("app").classList.remove("abierto"); }
 });
-for (const id of ["p-x", "p-meses", "p-bajo", "p-alto", "p-aplicador", "p-pines", "p-nivel", "p-piso", "f-producto", "f-provincia", "f-estado", "f-desde", "f-hasta"]) {
+$("alc-ranking").addEventListener("click", (e) => {
+  const li = e.target.closest("li[data-lon]");
+  if (li) { estado.map.flyTo({ center: [Number(li.dataset.lon), Number(li.dataset.lat)], zoom: 8 }); $("app").classList.remove("abierto"); }
+});
+for (const id of ["p-x", "p-meses", "p-bajo", "p-alto", "p-aplicador", "p-pines", "p-nivel", "p-radio", "p-piso", "f-producto", "f-provincia", "f-estado", "f-desde", "f-hasta"]) {
   $(id).addEventListener("input", () => { if (estado.map && estado.map.isStyleLoaded()) { renderLeyenda(); pintar(); } });
 }
 $("toggle-panel").addEventListener("click", () => $("app").classList.toggle("abierto"));

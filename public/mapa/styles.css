@@ -74,3 +74,6 @@ input[type=search], input[type=date] { width: 100%; padding: 6px 8px; border: 1p
 #revisar td.num { text-align: right; font-variant-numeric: tabular-nums; }
 #revisar select, #revisar td input { width: 100%; min-width: 110px; }
 #revisar tr.manual td:first-child { border-left: 3px solid #f0a30a; }
+
+/* Mapa compartido por link (?t=): sin las herramientas internas del CRM. */
+body.publico .solo-crm { display: none !important; }

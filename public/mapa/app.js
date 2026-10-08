@@ -419,7 +419,7 @@ function htmlTooltip(z) {
       <tr><td>Aplicadores reales</td><td>${nf0.format(z.activos)}</td></tr>
       <tr><td>Diferencia</td><td>${dif}</td></tr>
       <tr><td>Índice</td><td>${nf2.format(z.indice)}</td></tr>
-      <tr><td>Kg facturados</td><td>${nf0.format(z.kg)}</td></tr>
+      ${veProductos() ? `<tr><td>Kg facturados</td><td>${nf0.format(z.kg)}</td></tr>` : ""}
       <tr><td>Última compra</td><td>${fmtFecha(z.ultima)}</td></tr>
     </table>`;
 }
@@ -435,6 +435,9 @@ function mostrarTooltip(e, z) {
   t.style.top = Math.max(8, y) + "px";
 }
 
+/* Mapa compartido (?t=TOKEN): estado.publico = { nombres, productos } viene de la foto publicada. */
+const veProductos = () => !estado.publico || estado.publico.productos;
+
 function htmlCliente(c) {
   const activo = c.compro && c.ultima_compra >= estado.metricas.corte;
   const productos = c.productos.slice(0, 4).map((p) => `${esc(p.producto)} (${nf0.format(p.kg)} kg, ${p.veces}×)`).join("<br>");
@@ -446,15 +449,15 @@ function htmlCliente(c) {
     <span class="estado" style="background:${activo ? "#3c9d5d" : PIN.inactivo}">${c.compro ? (activo ? "Activo" : "Inactivo") : "Solo cotizó"}</span>
     <span class="estado" style="background:${TIPOS[tipoDe(c)].color}">${TIPOS[tipoDe(c)].texto}${c.tipo_origen === "manual" ? " (manual)" : ""}</span>
     <table>
-      <tr><td>CUIT/DNI</td><td>${esc(c.cuit)}</td></tr>
+      ${estado.publico ? "" : `<tr><td>CUIT/DNI</td><td>${esc(c.cuit)}</td></tr>
       <tr><td>Teléfono</td><td>${tel}</td></tr>
-      <tr><td>Email</td><td>${mail}</td></tr>
+      <tr><td>Email</td><td>${mail}</td></tr>`}
       <tr><td>Localidad</td><td>${esc(c.localidad || "—")}, ${esc(c.provincia)}</td></tr>
       <tr><td>Última compra</td><td>${fmtFecha(c.ultima_compra)}</td></tr>
-      <tr><td>Facturas</td><td>${c.n_facturas}</td></tr>
-      <tr><td>Productos</td><td>${productos || "—"}</td></tr>
+      ${veProductos() ? `<tr><td>Facturas</td><td>${c.n_facturas}</td></tr>
+      <tr><td>Productos</td><td>${productos || "—"}</td></tr>` : ""}
     </table>
-    ${c.tipo_nota ? `<p class="nota">${esc(c.tipo_nota)}</p>` : ""}
+    ${c.tipo_nota && !estado.publico ? `<p class="nota">${esc(c.tipo_nota)}</p>` : ""}
     <p class="${aprox ? "aprox" : "nota"}">${PRECISION[c.precision] || "Sin ubicación"}${aprox && c.motivo_aprox ? ": " + MOTIVO[c.motivo_aprox] : ""}.</p>
   </div>`;
 }
@@ -476,7 +479,7 @@ function abrirLista(docs, lngLat) {
     const kg = c.productos.reduce((s, p) => s + p.kg, 0);
     const activo = c.compro && c.ultima_compra >= corte;
     return `<li data-doc="${esc(c.doc)}"><i style="background:${activo ? TIPOS[tipoDe(c)].color : PIN.inactivo}"></i>
-      <span><b>${esc(c.razon_social)}</b><small>${TIPOS[tipoDe(c)].texto} · ${esc(c.localidad || "sin localidad")} · últ. compra ${fmtFecha(c.ultima_compra)} · ${nf0.format(kg)} kg</small></span></li>`;
+      <span><b>${esc(c.razon_social)}</b><small>${TIPOS[tipoDe(c)].texto} · ${esc(c.localidad || "sin localidad")} · últ. compra ${fmtFecha(c.ultima_compra)}${veProductos() ? ` · ${nf0.format(kg)} kg` : ""}</small></span></li>`;
   }).join("");
   if (estado.popup) estado.popup.remove();
   const popup = new maplibregl.Popup({ maxWidth: "340px", offset: 10 }).setLngLat(lngLat)
@@ -607,7 +610,8 @@ function esperarClientes() {
   const token = new URLSearchParams(location.search).get("t");
   if (token) {
     return fetch("/api/mapa-publico?t=" + encodeURIComponent(token), { cache: "no-store" })
-      .then((r) => { if (!r.ok) throw new Error(r.status === 404 ? "este mapa ya no está disponible" : "http " + r.status); return r.json(); });
+      .then((r) => { if (!r.ok) throw new Error(r.status === 404 ? "este mapa ya no está disponible" : "http " + r.status); return r.json(); })
+      .then((foto) => { estado.publico = foto.publico || { nombres: false, productos: false }; document.body.classList.add("publico"); return foto; });
   }
   return new Promise((resolve, reject) => {
     const limite = setTimeout(() => reject(new Error("el CRM no envió los datos")), 20000);

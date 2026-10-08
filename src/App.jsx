@@ -1721,7 +1721,7 @@ export default function App() {
         )}
         {view === "map" && (
           <Suspense fallback={<Splash text="Cargando mapa…" />}>
-            <MapaCobertura clients={data.clients} onSetClientType={setClientType} />
+            <MapaCobertura clients={data.clients} onSetClientType={setClientType} userEmail={session?.user?.email} />
           </Suspense>
         )}
         {view === "techdocs" && (

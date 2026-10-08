@@ -82,6 +82,11 @@ input[type="checkbox"], input[type="radio"] {
   border: revert; border-radius: revert; padding: revert; background: revert; width: auto;
 }
 .product-query-input { width: 100%; box-sizing: border-box; resize: vertical; font-family: inherit; }
+.mapa-share { padding: 10px 0 14px; display: grid; gap: 8px; }
+.mapa-share .check { display: flex; gap: 8px; align-items: center; }
+.mapa-share-lista { width: 100%; border-collapse: collapse; font-size: 13px; }
+.mapa-share-lista th, .mapa-share-lista td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--color-border-input); }
+.panel-head-actions { display: flex; align-items: center; gap: 10px; }
 .mapa-cobertura-frame { width: 100%; height: calc(100vh - 240px); min-height: 520px; border: 1px solid var(--color-border-input); border-radius: var(--radius-md); background: #dfe7ee; }
 input:focus, select:focus, textarea:focus {
   border-color: var(--color-focus-border);

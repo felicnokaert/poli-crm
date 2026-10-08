@@ -3,7 +3,7 @@
  * Diseño y presupuestos de velocidad: docs/DESIGN_MAPA.md. Los colores salen de las variables de styles.css. */
 const perf = { t0: performance.now(), marcas: {} };
 const marcar = (nombre) => { perf.marcas[nombre] = Math.round(performance.now() - perf.t0); performance.mark("mapa:" + nombre); };
-const DATOS_V = "2"; // sube con cada regeneración de data/ (rompe la caché del navegador)
+const DATOS_V = "3"; // sube con cada regeneración de data/ (rompe la caché del navegador)
 
 const css = getComputedStyle(document.documentElement);
 const v = (nombre) => css.getPropertyValue(nombre).trim();
@@ -538,7 +538,7 @@ const PUNTOS_CIUDAD = []; // el puntito junto al nombre (en Alcance lo reemplaza
 const geoCiudades = () => ({
   type: "FeatureCollection",
   features: estado.ciudades.filter((c) => c.lat != null).map((c) => ({
-    type: "Feature", geometry: { type: "Point", coordinates: [c.lon, c.lat] }, properties: { id: c.id, nombre: c.nombre, pob: c.pob, aprox: c.aprox || 0 },
+    type: "Feature", geometry: { type: "Point", coordinates: [c.lon, c.lat] }, properties: { id: c.id, nombre: c.nombre, pob: c.pob, pobEt: c.rural ? 0 : c.pob, aprox: c.aprox || 0 }, // pobEt: las zonas rurales se rotulan solo con zoom profundo
   })),
 });
 const geoEtiquetas = () => ({
@@ -564,7 +564,7 @@ function agregarEtiquetas(map) {
   });
   ETIQUETAS_CAPAS.push("et-prov", "et-dep");
   TRAMOS_CIUDAD.forEach(([min, max, zoom], i) => {
-    const filtro = ["all", [">=", ["get", "pob"], min], ["<", ["get", "pob"], max]];
+    const filtro = ["all", [">=", ["get", "pobEt"], min], ["<", ["get", "pobEt"], max]];
     map.addLayer({
       id: `punto-ciudad-${i}`, type: "circle", source: "ciudades", minzoom: zoom, filter: filtro,
       paint: { "circle-radius": i < 2 ? 3.6 : 2.6, "circle-color": v("--etiqueta-ciudad"), "circle-stroke-width": 1, "circle-stroke-color": v("--halo") },
@@ -833,10 +833,11 @@ async function cargar() {
   ]);
   marcar("datos");
   paso("Dibujando el mapa…");
-  estado.ciudades = ciudades.ciudades;
+  // Nombres como se dicen (Mar del Plata, no "General Pueyrredón"); ver nombres-ciudad.mjs.
+  estado.nombreProv = new Map(estado.zonas.provincias.map((z) => [z.cod, z.nombre]));
+  estado.ciudades = window.NombresCiudad ? window.NombresCiudad.nombresAmigables(ciudades.ciudades, (cod) => estado.nombreProv.get(cod)) : ciudades.ciudades;
   estado.clientes = recibido.clientes;
   estado.meta = { fecha_export: recibido.fecha_export };
-  estado.nombreProv = new Map(estado.zonas.provincias.map((z) => [z.cod, z.nombre]));
   estado.nombreDep = new Map(estado.zonas.departamentos.map((z) => [z.id, z.nombre]));
   estado.provGeo = prov;
   estado.porDoc = new Map(estado.clientes.map((c) => [c.doc, c]));

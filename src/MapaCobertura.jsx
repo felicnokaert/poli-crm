@@ -115,6 +115,40 @@ function CompartirMapa({ mapClients, userEmail }) {
     await cargarShares();
   }
 
+  // Eliminar saca la fila de la lista (y si el link seguía activo, también lo corta al instante).
+  async function eliminar(share) {
+    const activo = !share.revoked_at;
+    const aviso = activo
+      ? `¿Eliminar el link publicado el ${fechaCorta(share.created_at)}? Todavía está activo: va a dejar de funcionar para todos, de inmediato, y se borra de la lista.`
+      : `¿Eliminar de la lista el link publicado el ${fechaCorta(share.created_at)}? Ya no funcionaba.`;
+    if (!(await confirm(aviso, { danger: true, confirmLabel: "Eliminar" }))) return;
+    const { error } = await supabase.from("map_shares").delete().eq("id", share.id);
+    if (error) {
+      setEsError(true);
+      setMensaje(`No se pudo eliminar: ${error.message}`);
+      return;
+    }
+    setMensaje("");
+    await cargarShares();
+  }
+
+  // Limpia de una vez todos los que ya dejaron de compartirse (los activos no se tocan).
+  async function eliminarInactivos() {
+    const cantidad = shares.filter((share) => share.revoked_at).length;
+    if (!cantidad) return;
+    if (!(await confirm(`¿Eliminar de la lista los ${cantidad} links que ya dejaron de compartirse? Los que siguen activos no se tocan.`, { danger: true, confirmLabel: "Eliminar" }))) return;
+    const { error } = await supabase.from("map_shares").delete().not("revoked_at", "is", null);
+    if (error) {
+      setEsError(true);
+      setMensaje(`No se pudo eliminar: ${error.message}`);
+      return;
+    }
+    setMensaje("");
+    await cargarShares();
+  }
+
+  const inactivos = shares.filter((share) => share.revoked_at).length;
+
   return (
     <div className="mapa-share">
       <p className="sub">
@@ -140,20 +174,30 @@ function CompartirMapa({ mapClients, userEmail }) {
       )}
       {mensaje && <div className={`system-message ${esError ? "error" : ""}`} role="status">{mensaje}</div>}
       {shares.length > 0 && (
-        <table className="mapa-share-lista">
-          <thead><tr><th>Publicado</th><th>Por</th><th>Clientes</th><th>Estado</th><th /></tr></thead>
-          <tbody>
-            {shares.map((share) => (
-              <tr key={share.id}>
-                <td>{fechaCorta(share.created_at)}</td>
-                <td>{share.created_by_email || "—"}</td>
-                <td>{share.client_count}</td>
-                <td>{share.revoked_at ? `Dejó de compartirse el ${fechaCorta(share.revoked_at)}` : "Activo"}</td>
-                <td>{!share.revoked_at && <button type="button" className="danger-link" onClick={() => dejarDeCompartir(share)}>Dejar de compartir</button>}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <>
+          <table className="mapa-share-lista">
+            <thead><tr><th>Publicado</th><th>Por</th><th>Clientes</th><th>Estado</th><th /></tr></thead>
+            <tbody>
+              {shares.map((share) => (
+                <tr key={share.id}>
+                  <td>{fechaCorta(share.created_at)}</td>
+                  <td>{share.created_by_email || "—"}</td>
+                  <td>{share.client_count}</td>
+                  <td>{share.revoked_at ? `Dejó de compartirse el ${fechaCorta(share.revoked_at)}` : "Activo"}</td>
+                  <td className="mapa-share-acciones">
+                    {!share.revoked_at && <button type="button" className="danger-link" onClick={() => dejarDeCompartir(share)}>Dejar de compartir</button>}
+                    <button type="button" className="danger-link" onClick={() => eliminar(share)}>Eliminar</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {inactivos > 1 && (
+            <button type="button" className="secondary" onClick={eliminarInactivos}>
+              Eliminar los {inactivos} que ya no funcionan
+            </button>
+          )}
+        </>
       )}
     </div>
   );

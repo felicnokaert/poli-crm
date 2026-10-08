@@ -1,6 +1,7 @@
 // Link compartible del mapa de cobertura: genera el link secreto y la "foto" publica.
-// Lo que se publica pasa SIEMPRE por buildPublicSnapshot: una lista blanca de campos. CUIT,
-// telefono, email, domicilio y notas internas no salen nunca, ni con ninguna opcion.
+// Lo que se publica pasa SIEMPRE por buildPublicSnapshot: una lista blanca de campos. Email,
+// domicilio y notas internas no salen nunca, ni con ninguna opcion. CUIT y telefono salen solo si
+// quien publica lo tilda (opciones cuit / telefono), y para personas fisicas ademas datosPersonas.
 const TEXTO_TIPO = {
   aplicador: 'Aplicador', inyeccion: 'Inyección', fabricante: 'Fabricante', no_aplica: 'Cliente', otro: 'Cliente',
 };
@@ -8,6 +9,9 @@ const TEXTO_TIPO = {
 export const OPCIONES_POR_DEFECTO = Object.freeze({
   nombres: true, // razon social de EMPRESAS (CUIT 30/33/34)
   nombresPersonas: false, // nombre de personas fisicas (CUIT 20/23/24/27 o DNI): apagado por defecto
+  cuit: false, // CUIT de empresas: solo si quien publica lo tilda
+  telefono: false, // telefono/celular de empresas: solo si quien publica lo tilda
+  datosPersonas: false, // extiende cuit/telefono a PERSONAS FISICAS (datos personales): tilda aparte
   productos: false, // productos, kilos y cantidad de facturas
   soloAplicadores: false,
 });
@@ -39,10 +43,15 @@ export function buildPublicSnapshot(mapClients = [], opciones = {}, fechaExport 
   const elegibles = mapClients.filter((c) => c.compro && c.lat != null && c.lon != null
     && (!config.soloAplicadores || c.tipo === 'aplicador'));
   const clientes = elegibles.map((c, index) => {
-    const mostrarNombre = config.nombres && (config.nombresPersonas || !esPersonaFisica(c));
+    const persona = esPersonaFisica(c);
+    const mostrarNombre = config.nombres && (config.nombresPersonas || !persona);
+    const contactoPermitido = !persona || config.datosPersonas; // CUIT/telefono de una persona = dato personal
+    const conCuit = config.cuit && contactoPermitido;
     return {
-      doc: `p${index + 1}`, // identificador opaco: no es el CUIT
-      cuit: '', tipo_doc: '', email: '', telefono: '', domicilio: '', cp: '',
+      doc: `p${index + 1}`, // identificador opaco: la identidad del cliente en la foto NO es su CUIT
+      cuit: conCuit ? c.cuit : '', tipo_doc: conCuit ? c.tipo_doc : '',
+      telefono: config.telefono && contactoPermitido ? c.telefono : '',
+      email: '', domicilio: '', cp: '',
       razon_social: mostrarNombre ? c.razon_social : `${TEXTO_TIPO[c.tipo] || 'Cliente'} ${index + 1}`,
       provincia_cod: c.provincia_cod, provincia: c.provincia, localidad: c.localidad,
       compro: true, ultima_compra: c.ultima_compra,
@@ -55,6 +64,6 @@ export function buildPublicSnapshot(mapClients = [], opciones = {}, fechaExport 
   return {
     clientes,
     fecha_export: fechaExport,
-    publico: { nombres: Boolean(config.nombres), productos: Boolean(config.productos) },
+    publico: { nombres: Boolean(config.nombres), productos: Boolean(config.productos), cuit: Boolean(config.cuit), telefono: Boolean(config.telefono) },
   };
 }

@@ -153,11 +153,23 @@ function CompartirMapa({ mapClients, userEmail }) {
     <div className="mapa-share">
       <p className="sub">
         Crea un link que <b>cualquiera con el link puede ver</b>, sin entrar al CRM. Publica una foto de hoy: si después
-        cambian los clientes, hay que publicar de nuevo. <b>Nunca incluye CUIT, teléfonos, emails ni domicilios</b>, y
-        solo entran clientes que compraron y tienen ubicación.
+        cambian los clientes, hay que publicar de nuevo. <b>Nunca incluye emails ni domicilios</b>, y solo entran
+        clientes que compraron y tienen ubicación. El CUIT y el teléfono salen <b>solo si los tildás</b>.
       </p>
       <label className="check"><input type="checkbox" checked={opciones.nombres} onChange={cambiar("nombres")} /> Mostrar nombres de empresas</label>
       <label className="check"><input type="checkbox" checked={opciones.nombresPersonas} onChange={cambiar("nombresPersonas")} /> Mostrar también nombres de personas físicas (por defecto, ocultos)</label>
+      <label className="check"><input type="checkbox" checked={opciones.cuit} onChange={cambiar("cuit")} /> Mostrar el CUIT</label>
+      <label className="check"><input type="checkbox" checked={opciones.telefono} onChange={cambiar("telefono")} /> Mostrar el teléfono / celular (con link a WhatsApp)</label>
+      {(opciones.cuit || opciones.telefono) && (
+        <>
+          <label className="check"><input type="checkbox" checked={opciones.datosPersonas} onChange={cambiar("datosPersonas")} /> Incluir también el de <b>personas físicas</b> (son datos personales)</label>
+          <div className="system-message error" role="note">
+            Cualquiera que tenga el link va a ver {[opciones.cuit && "el CUIT", opciones.telefono && "el teléfono"].filter(Boolean).join(" y ")} de
+            {opciones.datosPersonas ? " todos los clientes publicados, empresas y personas" : " las empresas publicadas"}. Compartilo solo con quien corresponda;
+            si lo reenvían, no hay forma de controlarlo (sí podés dejar de compartirlo después).
+          </div>
+        </>
+      )}
       <label className="check"><input type="checkbox" checked={opciones.productos} onChange={cambiar("productos")} /> Mostrar productos, kilos y facturas</label>
       <label className="check"><input type="checkbox" checked={opciones.soloAplicadores} onChange={cambiar("soloAplicadores")} /> Publicar solo aplicadores</label>
       <div className="list-toolbar">

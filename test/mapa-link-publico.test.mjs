@@ -31,7 +31,7 @@ test('el hash del navegador y el del servidor coinciden', async () => {
   assert.equal(await hashTokenHex(token, webcrypto), hashShareToken(token));
 });
 
-test('buildPublicSnapshot NUNCA expone CUIT, telefono, email, domicilio ni notas internas', () => {
+test('buildPublicSnapshot, sin tildar nada, NO expone CUIT, telefono, email, domicilio ni notas internas', () => {
   const snap = buildPublicSnapshot([cliente()], { nombres: true, productos: true });
   const texto = JSON.stringify(snap);
   for (const secreto of ['30709718661', '30-70971866-1', 'secreto@acme.com', '1155551234', 'Calle Falsa', 'nota interna']) {
@@ -39,7 +39,7 @@ test('buildPublicSnapshot NUNCA expone CUIT, telefono, email, domicilio ni notas
   }
   assert.equal(snap.clientes[0].doc, 'p1'); // id opaco
   assert.equal(snap.clientes[0].razon_social, 'ACME SRL');
-  assert.deepEqual(snap.publico, { nombres: true, productos: true });
+  assert.deepEqual(snap.publico, { nombres: true, productos: true, cuit: false, telefono: false });
 });
 
 test('buildPublicSnapshot: solo compradores ubicados; prospectos y sin lat no entran', () => {
@@ -120,4 +120,46 @@ test('api/mapa-publico: solo GET, token invalido responde 404 y nunca cachea', a
   assert.equal(malo.statusCode, 404);
   assert.match(malo.headers['Cache-Control'], /no-store/);
   assert.match(malo.headers['X-Robots-Tag'], /noindex/);
+});
+
+// ---- CUIT y teléfono: solo si quien publica los tilda ----
+test('por defecto el CUIT y el teléfono NO salen (cuit/telefono apagados)', () => {
+  const snap = buildPublicSnapshot([cliente()], { nombres: true });
+  assert.equal(snap.clientes[0].cuit, '');
+  assert.equal(snap.clientes[0].telefono, '');
+  assert.deepEqual(snap.publico, { nombres: true, productos: false, cuit: false, telefono: false });
+});
+
+test('con cuit y telefono tildados salen para EMPRESAS, y nunca email, domicilio ni notas', () => {
+  const empresa = cliente({ doc: '30709718661', cuit: '30-70971866-1', telefono: '1155551234' });
+  const snap = buildPublicSnapshot([empresa], { cuit: true, telefono: true });
+  assert.equal(snap.clientes[0].cuit, '30-70971866-1');
+  assert.equal(snap.clientes[0].tipo_doc, 'CUIT');
+  assert.equal(snap.clientes[0].telefono, '1155551234');
+  assert.equal(snap.clientes[0].doc, 'p1'); // la identidad en la foto sigue siendo opaca
+  assert.deepEqual(snap.publico, { nombres: true, productos: false, cuit: true, telefono: true });
+  const texto = JSON.stringify(snap);
+  for (const secreto of ['secreto@acme.com', 'Calle Falsa', 'nota interna']) assert.equal(texto.includes(secreto), false, `se filtró: ${secreto}`);
+});
+
+test('se pueden publicar solo el CUIT o solo el teléfono', () => {
+  const soloCuit = buildPublicSnapshot([cliente()], { cuit: true });
+  assert.equal(soloCuit.clientes[0].cuit, '30-70971866-1');
+  assert.equal(soloCuit.clientes[0].telefono, '');
+  const soloTel = buildPublicSnapshot([cliente()], { telefono: true });
+  assert.equal(soloTel.clientes[0].cuit, '');
+  assert.equal(soloTel.clientes[0].telefono, '1155551234');
+});
+
+test('CUIT y teléfono de PERSONAS FÍSICAS requieren la tilda aparte (datosPersonas)', () => {
+  const persona = cliente({ doc: '20123456786', cuit: '20-12345678-6', tipo_doc: 'CUIT', razon_social: 'JUAN PEREZ', telefono: '1166667777' });
+  const sinTilda = buildPublicSnapshot([persona], { cuit: true, telefono: true });
+  assert.equal(sinTilda.clientes[0].cuit, '');
+  assert.equal(sinTilda.clientes[0].telefono, '');
+  assert.equal(JSON.stringify(sinTilda).includes('20-12345678-6'), false);
+  assert.equal(JSON.stringify(sinTilda).includes('1166667777'), false);
+  const conTilda = buildPublicSnapshot([persona], { cuit: true, telefono: true, datosPersonas: true });
+  assert.equal(conTilda.clientes[0].cuit, '20-12345678-6');
+  assert.equal(conTilda.clientes[0].telefono, '1166667777');
+  assert.equal(conTilda.clientes[0].razon_social, 'Aplicador 1'); // el nombre sigue oculto: es otra opción
 });

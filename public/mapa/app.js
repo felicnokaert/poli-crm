@@ -348,7 +348,7 @@ function renderRevisar() {
   const qd = q.replace(/\D/g, "");
   const filtro = $("rev-filtro").value;
   const lista = estado.clientes.filter((c) => c.compro)
-    .filter((c) => !q || c.razon_social.toUpperCase().includes(q) || (qd.length >= 3 && c.doc.includes(qd)))
+    .filter((c) => !q || c.razon_social.toUpperCase().includes(q) || (qd.length >= 3 && (c.doc.includes(qd) || (veCuit(c) && String(c.cuit).replace(/D/g, "").includes(qd)))))
     .filter((c) => !filtro || (filtro === "sin" ? !c.tipo : filtro === "manual" ? c.tipo_origen === "manual" : c.tipo_origen === "auto"))
     .map((c) => ({ c, kg: kgCliente(c) })).sort((a, b) => b.kg - a.kg);
   const opciones = (sel) => `<option value="">(automático)</option>` +
@@ -408,9 +408,12 @@ function abrirCliente(c) {
 function buscar() {
   const q = $("f-buscar").value.trim().toUpperCase();
   const qd = q.replace(/\D/g, "");
-  const res = q.length < 2 ? [] : estado.clientes.filter((c) => c.razon_social.toUpperCase().includes(q) || (qd.length >= 3 && c.doc.includes(qd))).slice(0, 8);
+  const res = q.length < 2 ? [] : estado.clientes.filter((c) => c.razon_social.toUpperCase().includes(q) || (qd.length >= 3 && (c.doc.includes(qd) || (veCuit(c) && String(c.cuit).replace(/D/g, "").includes(qd))))).slice(0, 8);
   // En el CRM se ve CUIT y celular a mano; en el mapa compartido nunca (la foto publicada no los trae).
-  const contacto = (c) => (estado.publico ? "" : `${esc(c.cuit)}${c.telefono ? " · " + esc(c.telefono) : ""} · `);
+  const contacto = (c) => {
+    const partes = [veCuit(c) && c.cuit ? esc(c.cuit) : "", veTelefono(c) && c.telefono ? esc(c.telefono) : ""].filter(Boolean);
+    return partes.length ? partes.join(" · ") + " · " : "";
+  };
   $("resultados").innerHTML = res.map((c) => `<li data-doc="${esc(c.doc)}"><b>${esc(c.razon_social)}</b><small>${contacto(c)}${esc(c.localidad || "sin localidad")}, ${esc(c.provincia)}</small></li>`).join("");
 }
 
@@ -458,6 +461,9 @@ function mostrarTooltip(e, z) {
 
 /* Mapa compartido (?t=TOKEN): estado.publico = { nombres, productos } viene de la foto publicada. */
 const veProductos = () => !estado.publico || estado.publico.productos;
+// CUIT y teléfono: en el CRM siempre; en el link público solo si quien publicó los tildó (y el cliente los trae).
+const veCuit = (c) => !estado.publico || Boolean(estado.publico.cuit && c.cuit);
+const veTelefono = (c) => !estado.publico || Boolean(estado.publico.telefono && c.telefono);
 
 function htmlCliente(c) {
   const activo = c.compro && c.ultima_compra >= estado.metricas.corte;
@@ -475,9 +481,9 @@ function htmlCliente(c) {
     <span class="estado" style="background:${activo ? v("--success") : PIN.inactivo}">${c.compro ? (activo ? "Activo" : "Inactivo") : "Solo cotizó"}</span>
     <span class="estado" style="background:${TIPOS[tipoDe(c)].color}">${TIPOS[tipoDe(c)].texto}${c.tipo_origen === "manual" ? " (manual)" : ""}</span>
     <table>
-      ${estado.publico ? "" : `<tr><td>CUIT/DNI</td><td>${cuit}</td></tr>
-      <tr><td>Teléfono</td><td>${tel}</td></tr>
-      <tr><td>Email</td><td>${mail}</td></tr>`}
+      ${veCuit(c) ? `<tr><td>CUIT/DNI</td><td>${cuit}</td></tr>` : ""}
+      ${veTelefono(c) ? `<tr><td>Teléfono</td><td>${tel}</td></tr>` : ""}
+      ${estado.publico ? "" : `<tr><td>Email</td><td>${mail}</td></tr>`}
       <tr><td>Localidad</td><td>${esc(c.localidad || "—")}, ${esc(c.provincia)}</td></tr>
       <tr><td>Última compra</td><td>${fmtFecha(c.ultima_compra)}</td></tr>
       ${veProductos() ? `<tr><td>Facturas</td><td>${c.n_facturas}</td></tr>
@@ -505,7 +511,7 @@ function abrirLista(docs, lngLat) {
     const kg = c.productos.reduce((s, p) => s + p.kg, 0);
     const activo = c.compro && c.ultima_compra >= corte;
     return `<li data-doc="${esc(c.doc)}"><i style="background:${activo ? TIPOS[tipoDe(c)].color : PIN.inactivo}"></i>
-      <span><b>${esc(c.razon_social)}</b><small>${TIPOS[tipoDe(c)].texto} · ${esc(c.localidad || "sin localidad")} · últ. compra ${fmtFecha(c.ultima_compra)}${veProductos() ? ` · ${nf0.format(kg)} kg` : ""}${estado.publico ? "" : ` · ${esc(c.cuit)}${c.telefono ? " · " + esc(c.telefono) : ""}`}</small></span></li>`;
+      <span><b>${esc(c.razon_social)}</b><small>${TIPOS[tipoDe(c)].texto} · ${esc(c.localidad || "sin localidad")} · últ. compra ${fmtFecha(c.ultima_compra)}${veProductos() ? ` · ${nf0.format(kg)} kg` : ""}${[veCuit(c) && c.cuit ? esc(c.cuit) : "", veTelefono(c) && c.telefono ? esc(c.telefono) : ""].filter(Boolean).map((t) => " · " + t).join("")}</small></span></li>`;
   }).join("");
   if (estado.popup) estado.popup.remove();
   const popup = new maplibregl.Popup({ maxWidth: "340px", offset: 10 }).setLngLat(lngLat)
@@ -788,7 +794,7 @@ function esperarClientes() {
   if (token) {
     return fetch("/api/mapa-publico?t=" + encodeURIComponent(token), { cache: "no-store" })
       .then((r) => { if (!r.ok) throw new Error(r.status === 404 ? "este mapa ya no está disponible" : "http " + r.status); return r.json(); })
-      .then((foto) => { estado.publico = foto.publico || { nombres: false, productos: false }; document.body.classList.add("publico"); return foto; });
+      .then((foto) => { estado.publico = foto.publico || { nombres: false, productos: false, cuit: false, telefono: false }; document.body.classList.add("publico"); return foto; });
   }
   return new Promise((resolve, reject) => {
     const limite = setTimeout(() => reject(new Error("el CRM no envió los datos")), 20000);

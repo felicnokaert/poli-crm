@@ -62,6 +62,7 @@ import { ClientDetail } from "./ClientDetail";
 import { ShortcutsHelp } from "./ShortcutsHelp";
 import { useCronStatus } from "./hooks/useCronStatus";
 import { conTipoManual } from "./client-type.mjs";
+import { aplicarUbicaciones } from "./client-location.mjs";
 import { docDe } from "./map-clients-adapter.mjs";
 import { CLASSIFICATIONS } from "./knowledge";
 import {
@@ -1354,6 +1355,12 @@ export default function App() {
     }));
   }, []);
 
+  // Ubicaciones cargadas en bloque desde una planilla (Cartera > Mapa > Pendientes de ubicación).
+  // El plan ya viene filtrado a campos vacíos; updatedAt hace que gane en cualquier fusión.
+  const applyClientLocations = useCallback((cambios) => {
+    setData((current) => ({ ...current, clients: aplicarUbicaciones(current.clients || [], cambios) }));
+  }, []);
+
   const navGroups = [
     ["Ventas", [
       ["dashboard", "Inicio", LayoutDashboard],
@@ -1721,7 +1728,7 @@ export default function App() {
         )}
         {view === "map" && (
           <Suspense fallback={<Splash text="Cargando mapa…" />}>
-            <MapaCobertura clients={data.clients} onSetClientType={setClientType} userEmail={session?.user?.email} />
+            <MapaCobertura clients={data.clients} onSetClientType={setClientType} onApplyLocations={applyClientLocations}userEmail={session?.user?.email} />
           </Suspense>
         )}
         {view === "techdocs" && (

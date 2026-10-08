@@ -5,6 +5,8 @@ import { buildMapClients, clientsToLocate } from "./map-clients-adapter.mjs";
 import { nuevoCache, ubicarClientes } from "./georef.mjs";
 import { OPCIONES_POR_DEFECTO, buildPublicSnapshot, generateShareToken, hashTokenHex } from "./map-share.mjs";
 import { onlineConfigured, supabase } from "./online.js";
+import { pendientesDeUbicacion } from "./client-location.mjs";
+import { PendientesUbicacion } from "./PendientesUbicacion";
 
 const CACHE_KEY = "poli-georef-cache-v1";
 
@@ -219,12 +221,13 @@ function CompartirMapa({ mapClients, userEmail }) {
 // /mapa/ (estático, con su propia CSP); los clientes se calculan acá, con la
 // sesión, y se le mandan por postMessage - nunca hay un archivo público con
 // CUIT, teléfonos o emails. Ver public/mapa/app.js (esperarClientes).
-function MapaCoberturaBase({ clients, onSetClientType, userEmail }) {
+function MapaCoberturaBase({ clients, onSetClientType, onApplyLocations, userEmail }) {
   const iframeRef = useRef(null);
   const [listo, setListo] = useState(false);
   const [estado, setEstado] = useState({ fase: "ubicando", detalle: "Ubicando clientes…" });
   const [mapClients, setMapClients] = useState(null);
   const [compartirAbierto, setCompartirAbierto] = useState(false);
+  const [pendientesAbierto, setPendientesAbierto] = useState(false);
 
   const base = useMemo(() => buildMapClients(clients || []), [clients]);
 
@@ -274,6 +277,7 @@ function MapaCoberturaBase({ clients, onSetClientType, userEmail }) {
 
   const conPin = mapClients ? mapClients.filter((c) => c.lat != null).length : 0;
   const compradores = base.filter((c) => c.compro).length;
+  const sinUbicar = useMemo(() => pendientesDeUbicacion(clients || []).length, [clients]);
 
   return (
     <div className="content-stack">
@@ -288,6 +292,9 @@ function MapaCoberturaBase({ clients, onSetClientType, userEmail }) {
             </p>
           </div>
           <div className="panel-head-actions">
+            <button type="button" className="secondary" onClick={() => setPendientesAbierto((abierto) => !abierto)}>
+              Pendientes de ubicación ({sinUbicar})
+            </button>
             {onlineConfigured && (
               <button type="button" className="secondary" onClick={() => setCompartirAbierto((abierto) => !abierto)}>
                 <Share2 size={15} /> Compartir mapa
@@ -296,6 +303,7 @@ function MapaCoberturaBase({ clients, onSetClientType, userEmail }) {
             <MapPin size={22} />
           </div>
         </div>
+        {pendientesAbierto && <PendientesUbicacion clients={clients} onApplyLocations={onApplyLocations} />}
         {compartirAbierto && <CompartirMapa mapClients={mapClients} userEmail={userEmail} />}
         <iframe
           ref={iframeRef}

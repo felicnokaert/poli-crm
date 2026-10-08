@@ -29,6 +29,9 @@ export function normClave(value = '') {
 const PROV_POR_CLAVE = new Map(Object.entries(PROVINCIAS).map(([cod, nombre]) => [normClave(nombre), { cod, nombre }]));
 PROV_POR_CLAVE.set('CAPITAL FEDERAL', { cod: '02', nombre: PROVINCIAS['02'] });
 PROV_POR_CLAVE.set('CABA', { cod: '02', nombre: PROVINCIAS['02'] });
+// Variantes que traen los sistemas de facturación y las planillas (Contabilium, Excel propio).
+for (const variante of ['C.A.B.A.', 'CIUDAD AUTONOMA DE BUENOS AIRES', 'CAP. FEDERAL', 'CAPITAL']) PROV_POR_CLAVE.set(normClave(variante), { cod: '02', nombre: PROVINCIAS['02'] });
+for (const variante of ['BS AS', 'BS. AS.', 'BS.AS.', 'PROVINCIA DE BUENOS AIRES', 'PCIA DE BUENOS AIRES', 'PCIA. DE BUENOS AIRES']) PROV_POR_CLAVE.set(normClave(variante), { cod: '06', nombre: PROVINCIAS['06'] });
 PROV_POR_CLAVE.set('TIERRA DEL FUEGO ANTARTIDA E ISLAS DEL ATLANTICO SUR', { cod: '94', nombre: PROVINCIAS['94'] });
 
 export function provinciaCanonica(texto) {

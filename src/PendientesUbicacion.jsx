@@ -2,8 +2,9 @@ import { useMemo, useRef, useState } from "react";
 import { Download, Upload } from "lucide-react";
 import { formatCuit } from "./map-clients-adapter.mjs";
 import {
-  decodificarTexto, filasPlanilla, leerUbicaciones, pendientesDeUbicacion, planearUbicaciones, resumenPendientes,
+  decodificarTexto, filasPlanilla, leerUbicaciones, pendientesDeUbicacion, planearCiudadesPorCodigoPostal, planearUbicaciones, resumenPendientes,
 } from "./client-location.mjs";
+import { cargarTablaCodigosPostales } from "./codigo-postal.mjs";
 
 const LIBRERIA = "/mapa/vendor/xlsx.full.min.js"; // la misma que usa el mapa; se carga solo al usarla
 
@@ -77,9 +78,31 @@ export function PendientesUbicacion({ clients, onApplyLocations }) {
       const lectura = leerUbicaciones(filas);
       if (lectura.error) throw new Error(lectura.error);
       if (!lectura.registros.length) throw new Error("La planilla no tiene filas con CUIT.");
-      setPlan({ ...planearUbicaciones(clients || [], lectura.registros), nombreArchivo: archivo.name, filas: lectura.registros.length, sinDocumento: lectura.sinDocumento });
+      // La tabla de códigos postales es un complemento: si no se puede bajar, la planilla se carga igual.
+      const tablaCP = await cargarTablaCodigosPostales().catch(() => null);
+      setPlan({ ...planearUbicaciones(clients || [], lectura.registros, { tablaCP }), nombreArchivo: archivo.name, filas: lectura.registros.length, sinDocumento: lectura.sinDocumento });
     } catch (error) {
       setAviso({ texto: `No se pudo leer la planilla: ${error.message}`, error: true });
+    } finally {
+      setTrabajando(false);
+    }
+  }
+
+  // Sin planilla: usa el código postal que los clientes ya tienen cargado para completar la ciudad.
+  async function previsualizarCodigosPostales() {
+    setTrabajando(true);
+    setPlan(null);
+    setAviso({ texto: "", error: false });
+    try {
+      const tablaCP = await cargarTablaCodigosPostales();
+      const nuevo = planearCiudadesPorCodigoPostal(clients || [], tablaCP);
+      if (!nuevo.cambios.length) {
+        setAviso({ texto: "No hay clientes para completar por código postal: los que tienen código postal ya tienen ciudad, o el código no alcanza para asegurarla.", error: false });
+      } else {
+        setPlan({ ...nuevo, nombreArchivo: "los códigos postales ya cargados", filas: 0, sinDocumento: 0, soloCodigoPostal: true });
+      }
+    } catch (error) {
+      setAviso({ texto: error.message, error: true });
     } finally {
       setTrabajando(false);
     }
@@ -110,6 +133,9 @@ export function PendientesUbicacion({ clients, onApplyLocations }) {
         <button type="button" className="primary" onClick={() => entradaRef.current?.click()} disabled={trabajando}>
           <Upload size={15} /> Cargar ubicaciones (Excel / CSV)
         </button>
+        <button type="button" className="secondary" onClick={previsualizarCodigosPostales} disabled={trabajando || !resumen.sinCiudad}>
+          Completar ciudad por código postal
+        </button>
         <input ref={entradaRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={leerArchivo} aria-label="Planilla con ubicaciones" />
       </div>
       {aviso.texto && <div className={`system-message ${aviso.error ? "error" : ""}`} role="status">{aviso.texto}</div>}
@@ -117,10 +143,11 @@ export function PendientesUbicacion({ clients, onApplyLocations }) {
         <div className="system-message" role="status">
           <p><b>Vista previa de «{plan.nombreArchivo}»</b> (todavía no se guardó nada)</p>
           <ul>
-            <li>{plan.filas} filas con CUIT en la planilla.</li>
+            {!plan.soloCodigoPostal && <li>{plan.filas} filas con CUIT en la planilla.</li>}
+            {plan.porCodigoPostal > 0 && <li>{plan.porCodigoPostal} ciudades se completan por <b>código postal</b> (solo códigos con una ciudad clara; Capital Federal, siempre).</li>}
             <li><b>{plan.cambios.length}</b> clientes se van a completar
               {Object.keys(plan.porCampo).length > 0 && ` (${Object.entries(plan.porCampo).map(([campo, n]) => `${n} ${campo}`).join(", ")})`}.</li>
-            <li>{plan.sinNovedad} ya tenían esos datos.</li>
+            <li>{plan.sinNovedad} sin cambios (ya estaban completos o no hay un dato seguro para completar).</li>
             {plan.sinCliente.length > 0 && <li>{plan.sinCliente.length} CUIT de la planilla no están en el CRM (se ignoran).</li>}
             {plan.sinDocumento > 0 && <li>{plan.sinDocumento} filas sin CUIT válido (se ignoran).</li>}
             {plan.provinciasDesconocidas.length > 0 && (

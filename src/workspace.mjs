@@ -141,6 +141,8 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
     tasksClosedThrough: [local.tasksClosedThrough || '', remote.tasksClosedThrough || ''].sort().at(-1) || '',
     primaryChannel: local.primaryChannel || remote.primaryChannel || 'general',
     profileName: local.profileName || remote.profileName || '',
+    ...(local.weeklyTargets || remote.weeklyTargets ? { weeklyTargets: local.weeklyTargets || remote.weeklyTargets } : {}),
+    ...(local.welcomeDismissed || remote.welcomeDismissed ? { welcomeDismissed: true } : {}),
     mergeLogs: mergeRecords(local.mergeLogs, remote.mergeLogs),
     duplicateReviewDecisions: mergeRecords(local.duplicateReviewDecisions, remote.duplicateReviewDecisions),
     // dailySignals lo escribe SOLO el cron (servidor): el navegador nunca lo

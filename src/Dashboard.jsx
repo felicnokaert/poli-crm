@@ -1,4 +1,5 @@
 import { memo, useEffect, useState } from "react";
+import { resolveWeeklyTargets } from "./weekly-targets.mjs";
 import {
   BarChart3,
   CalendarCheck,
@@ -375,6 +376,41 @@ export function DayMode({
   );
 }
 
+// Primeros pasos para un espacio recién creado (ver shouldShowWelcome en
+// src/weekly-targets.mjs). Desaparece sola apenas hay datos o al cerrarla.
+function WelcomePanel({ name, onNavigate, onNewInteraction, onDismiss }) {
+  const steps = [
+    ["1", "Cargá tus clientes", "Sumá las empresas con las que trabajás.", "Ir a Empresas", () => onNavigate("clients")],
+    ["2", "Registrá una conversación", "Anotá un contacto reciente y el sistema te propone el próximo paso.", "Registrar conversación", onNewInteraction],
+    ["3", "Poné tus metas", "Definí cuántos contactos y propuestas querés lograr por semana.", "Ir a Perfil", () => onNavigate("profile")],
+  ];
+  return (
+    <section className="panel">
+      <div className="panel-head">
+        <div>
+          <span className="eyebrow">Primeros pasos</span>
+          <h2>{name ? `Bienvenido/a, ${name}` : "Bienvenido/a"}</h2>
+        </div>
+      </div>
+      <p>Este es tu espacio personal: lo que cargues acá lo ves solo vos. Tres pasos para arrancar:</p>
+      <div className="day-mode-list">
+        {steps.map(([number, title, text, action, onClick]) => (
+          <div className="day-mode-item" key={number}>
+            <div>
+              <strong>{number}. {title}</strong>
+              <p>{text}</p>
+            </div>
+            <button type="button" className="secondary" onClick={onClick}>{action}</button>
+          </div>
+        ))}
+      </div>
+      <div className="modal-actions">
+        <button type="button" className="link-button" onClick={onDismiss}>Ya entendí, ocultar esto</button>
+      </div>
+    </section>
+  );
+}
+
 function DashboardBase({
   metrics,
   tasks,
@@ -390,7 +426,13 @@ function DashboardBase({
   onOpenInteraction,
   onOpenEvent,
   onNavigate,
+  weeklyTargets,
+  showWelcome,
+  welcomeName,
+  onDismissWelcome,
+  onNewInteraction,
 }) {
+  const targets = resolveWeeklyTargets(weeklyTargets);
   const clientsById = new Map(clients.map((client) => [client.id, client]));
   const now = today();
   // Si el cron server-side ya calculó las señales de hoy (dailySignals en el
@@ -423,9 +465,9 @@ function DashboardBase({
     latestByContact.push(interaction);
   }
   const cards = [
-    ["Contactos esta semana", metrics.contacts, "Meta: 15", MessageCircle],
-    ["Contactos efectivos", metrics.effective, "Meta: 8–10", CheckCircle2],
-    ["Propuestas activas", metrics.proposals, "Meta: 2–3", BarChart3],
+    ["Contactos esta semana", metrics.contacts, `Meta: ${targets.contacts}`, MessageCircle],
+    ["Contactos efectivos", metrics.effective, `Meta: ${targets.effective}`, CheckCircle2],
+    ["Propuestas activas", metrics.proposals, `Meta: ${targets.proposals}`, BarChart3],
     [
       "Seguimientos vencidos",
       metrics.overdue,
@@ -447,6 +489,14 @@ function DashboardBase({
   ];
   return (
     <div className="content-stack">
+      {showWelcome && (
+        <WelcomePanel
+          name={welcomeName}
+          onNavigate={onNavigate}
+          onNewInteraction={onNewInteraction}
+          onDismiss={onDismissWelcome}
+        />
+      )}
       <DayMode
         overdueTasks={overdueTasks}
         dueTodayTasks={dueTodayTasks}

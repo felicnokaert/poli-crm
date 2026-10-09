@@ -5,6 +5,7 @@
 //   3. planearUbicaciones / aplicarUbicaciones: completa SOLO los campos vacíos, sin pisar lo cargado a mano.
 import { normClave, provinciaCanonica } from './georef.mjs';
 import { docDe, isoFromCrmDate } from './map-clients-adapter.mjs';
+import { ciudadPorCodigoPostal } from './codigo-postal.mjs';
 
 const soloDigitos = (valor) => String(valor ?? '').replace(/\D/g, '');
 const texto = (valor) => String(valor ?? '').trim();
@@ -111,7 +112,9 @@ export function leerUbicaciones(filas = []) {
 // ---- 3. Plan de cambios ----
 const ETIQUETAS = { province: 'provincia', city: 'localidad', address: 'domicilio', postalCode: 'código postal', phone: 'teléfono', email: 'email' };
 
-export function planearUbicaciones(clients = [], registros = []) {
+// `tablaCP` (opcional, ver codigo-postal.mjs): si a un cliente le falta la ciudad pero hay código postal y
+// provincia, se completa con la ciudad de alta confianza de ese código. Nunca pisa una ciudad ya cargada.
+export function planearUbicaciones(clients = [], registros = [], { tablaCP = null } = {}) {
   const porDoc = new Map();
   for (const client of clients) {
     const doc = docDe(client);
@@ -136,12 +139,18 @@ export function planearUbicaciones(clients = [], registros = []) {
     if (registro.postalCode && !texto(client.postalCode)) nuevo.postalCode = registro.postalCode;
     if (registro.phone && !texto(client.phone)) nuevo.phone = registro.phone;
     if (registro.email && !texto(client.email)) nuevo.email = registro.email;
-    if (Object.keys(nuevo).length) cambios.push({ doc: registro.doc, nombre: texto(client.legalName) || texto(client.company), nuevo });
+    let viaCP = false;
+    if (!nuevo.city && ciudadVacia(client.city)) {
+      const ciudad = ciudadPorCodigoPostal(tablaCP, nuevo.province || client.province, nuevo.postalCode || client.postalCode);
+      if (ciudad) { nuevo.city = ciudad; viaCP = true; }
+    }
+    if (Object.keys(nuevo).length) cambios.push({ doc: registro.doc, nombre: texto(client.legalName) || texto(client.company), nuevo, viaCP });
     else sinNovedad += 1;
   }
   const porCampo = {};
   for (const cambio of cambios) for (const campo of Object.keys(cambio.nuevo)) porCampo[ETIQUETAS[campo]] = (porCampo[ETIQUETAS[campo]] || 0) + 1;
-  return { cambios, sinCliente, sinNovedad, porCampo, provinciasDesconocidas: [...provinciasDesconocidas.entries()].map(([nombre, cantidad]) => ({ nombre, cantidad })) };
+  const porCodigoPostal = cambios.filter((cambio) => cambio.viaCP).length;
+  return { cambios, sinCliente, sinNovedad, porCampo, porCodigoPostal, provinciasDesconocidas: [...provinciasDesconocidas.entries()].map(([nombre, cantidad]) => ({ nombre, cantidad })) };
 }
 
 // Aplica el plan sobre la lista de clientes (devuelve una lista nueva; no toca la original).
@@ -165,4 +174,10 @@ export function decodificarTexto(bytes) {
     contenido = new TextDecoder('windows-1252').decode(datos);
   }
   return contenido.replace(/^﻿/, '');
+}
+
+// Solo con lo que los clientes ya tienen cargado: completa la ciudad por código postal (botón del panel).
+export function planearCiudadesPorCodigoPostal(clients = [], tablaCP = null) {
+  const registros = clients.filter((client) => docDe(client)).map((client) => ({ doc: docDe(client), address: '', city: '', province: '', postalCode: '', phone: '', email: '' }));
+  return planearUbicaciones(clients, registros, { tablaCP });
 }

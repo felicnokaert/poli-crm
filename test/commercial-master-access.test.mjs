@@ -12,6 +12,6 @@ test('Penosil and Juan cannot access General\'s commercial master by accident', 
   assert.equal(canAccessCommercialMaster('juan@grupopoliplast.com.ar'), false);
 });
 
-test('unknown emails default to General (same fallback as channelsForEmail), not open to everyone blindly', () => {
-  assert.equal(canAccessCommercialMaster('nadie@grupopoliplast.com.ar'), true);
+test('unknown emails have no channels, so they cannot reach General\'s commercial master', () => {
+  assert.equal(canAccessCommercialMaster('nadie@grupopoliplast.com.ar'), false);
 });

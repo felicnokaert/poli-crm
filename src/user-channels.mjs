@@ -14,6 +14,9 @@ const USER_CHANNELS = {
   'info@grupopoliplast.com.ar': ['penosil'],
 };
 
+// Quien no está en la lista (cuentas nuevas, pruebas) no tiene ningún canal:
+// usa el CRM con su propio espacio, pero no ve chats de WhatsApp de nadie.
+// Debe coincidir con public.user_allowed_channels() en la base.
 export function channelsForEmail(email) {
-  return USER_CHANNELS[String(email || '').trim().toLowerCase()] || ['general'];
+  return USER_CHANNELS[String(email || '').trim().toLowerCase()] || [];
 }

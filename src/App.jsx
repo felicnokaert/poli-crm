@@ -1559,7 +1559,7 @@ export default function App() {
             <h1>{nav.find(([id]) => id === view)?.[1]}</h1>
           </div>
           <div className="top-actions">
-            {(() => {
+            {myChannels.length > 0 && (() => {
               const activeChannel = myChannels.includes(data.primaryChannel) ? data.primaryChannel : myChannels[0];
               const channelInfo = displayedChannel(activeChannel);
               return (

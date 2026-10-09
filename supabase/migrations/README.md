@@ -34,6 +34,7 @@ en Supabase.
 | `20260904052554_workspace_states_per_user_isolation.sql` | **Sin doc** — reconstruida de la policy real | Reemplaza el espacio compartido por un workspace por usuario. |
 | `20260904163344_whatsapp_events_channel_rls.sql` | **Sin doc** — reconstruida de `pg_proc`/`pg_policies` reales | Reparto de canales de WhatsApp (general/juan/penosil) por usuario. |
 | `20260904165259_remove_penosil_from_felipe_channels.sql` | **Sin doc** — reconstruida | Ajusta `user_allowed_channels()`: felipe ya no ve el canal `penosil`. |
+| `20261009180000_user_allowed_channels_default_empty.sql` | Esta ronda (multiusuario, etapa 1) | `user_allowed_channels()`: cuentas sin asignar ya no heredan el canal `general` (devuelve vacío). |
 | `20260907153133_mercadolibre.sql` | `docs/MIGRACION_MERCADOLIBRE.sql` (commit `19c8d16`) | `mercadolibre_accounts`, `mercadolibre_items`. |
 | `20260910204355_base_tecnica_technical_documents.sql` | `docs/MIGRACION_BASE_TECNICA.sql` (commit `9260f6b`), primera parte | `technical_documents`, `technical_document_history`, `is_poliplast_crm_admin()`. |
 | `20260910204437_base_tecnica_harden_function_execute.sql` | `docs/MIGRACION_BASE_TECNICA.sql`, parte final (mismo commit) | Registrada aparte en el remoto; separada acá para que coincida 1:1 con `list_migrations`. |

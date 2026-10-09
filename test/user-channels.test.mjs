@@ -12,12 +12,12 @@ test('channelsForEmail ignora mayúsculas y espacios al buscar la cuenta', () =>
   assert.deepEqual(channelsForEmail('  Juan@GrupoPoliplast.com.ar  '), ['juan']);
 });
 
-test('channelsForEmail cae a "general" para un email sin asignación explícita', () => {
-  assert.deepEqual(channelsForEmail('alguien-nuevo@grupopoliplast.com.ar'), ['general']);
+test('channelsForEmail no da ningún canal a un email sin asignación explícita', () => {
+  assert.deepEqual(channelsForEmail('alguien-nuevo@grupopoliplast.com.ar'), []);
 });
 
-test('channelsForEmail cae a "general" para valores vacíos o inválidos', () => {
-  assert.deepEqual(channelsForEmail(''), ['general']);
-  assert.deepEqual(channelsForEmail(undefined), ['general']);
-  assert.deepEqual(channelsForEmail(null), ['general']);
+test('channelsForEmail no da ningún canal para valores vacíos o inválidos', () => {
+  assert.deepEqual(channelsForEmail(''), []);
+  assert.deepEqual(channelsForEmail(undefined), []);
+  assert.deepEqual(channelsForEmail(null), []);
 });

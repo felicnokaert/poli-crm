@@ -346,6 +346,7 @@ function DataSettingsBase({ data, setData, session, syncStatus }) {
   ];
   return (
     <div className="content-stack">
+      {myChannels.length > 0 && (
       <section className="panel">
         <div className="panel-head">
           <div>
@@ -387,6 +388,7 @@ function DataSettingsBase({ data, setData, session, syncStatus }) {
           </button>
         )}
       </section>
+      )}
       {myChannels.includes('general') && (
         <section className="panel">
           <div className="panel-head">

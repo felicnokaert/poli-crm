@@ -1,3 +1,4 @@
+import { safeEqual } from '../lib/safe-equal.mjs';
 import { buildFullDailyMaintenanceUpdate } from '../src/daily-maintenance.mjs';
 import { withRetry } from '../lib/retry.mjs';
 import { logError } from '../lib/log.mjs';
@@ -22,7 +23,7 @@ function authorized(request) {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false; // fail-safe: sin secret configurado, nunca corre.
   const authorization = request.headers.authorization || '';
-  return authorization === `Bearer ${secret}`;
+  return safeEqual(authorization, `Bearer ${secret}`);
 }
 
 // Lectura simple (GET), sin efectos secundarios - segura para reintentar

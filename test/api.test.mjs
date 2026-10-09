@@ -80,3 +80,33 @@ test('permanent inbox deletion requires an authenticated user', async () => {
   assert.equal(response.statusCode, 401);
   assert.equal(response.payload.error, 'Sesión no autorizada.');
 });
+
+test('permanent inbox deletion rejects a signed-in user outside the corporate domain', async () => {
+  const previous = { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_SERVICE_ROLE_KEY, fetch: globalThis.fetch };
+  process.env.SUPABASE_URL = 'https://example.supabase.co';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-key';
+  const calls = [];
+  globalThis.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), method: options.method || 'GET' });
+    return { ok: true, json: async () => ({ id: 'u1', email: 'persona@gmail.com' }) };
+  };
+  try {
+    const response = responseRecorder();
+    await inboxDelete({ method: 'POST', headers: { authorization: 'Bearer user-token' }, body: { eventIds: ['event-1'] } }, response);
+    assert.equal(response.statusCode, 401);
+    assert.equal(calls.some((call) => call.method === 'DELETE'), false);
+  } finally {
+    globalThis.fetch = previous.fetch;
+    if (previous.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = previous.url;
+    if (previous.key === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = previous.key;
+  }
+});
+
+test('safeEqual compara secretos sin aceptar vacíos ni largos distintos', async () => {
+  const { safeEqual } = await import('../lib/safe-equal.mjs');
+  assert.equal(safeEqual('abc', 'abc'), true);
+  assert.equal(safeEqual('abc', 'abd'), false);
+  assert.equal(safeEqual('abc', 'abcd'), false);
+  assert.equal(safeEqual('', ''), false);
+  assert.equal(safeEqual(undefined, 'abc'), false);
+});

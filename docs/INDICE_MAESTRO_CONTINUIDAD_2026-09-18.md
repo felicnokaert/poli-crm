@@ -144,3 +144,13 @@ Claude completó el ensayo el 16/09/2026 usando los documentos publicados en Git
 - Cotizador: transferido; su QA comercial real permanece como trabajo de producto, no como falla de transferencia.
 
 **Migración global estimada: 95%.** Los únicos cierres administrativos restantes son Google Drive y la verificación de automatizaciones de la otra computadora. El QA del cotizador es la siguiente actividad operativa prioritaria, pero no invalida el handoff.
+
+## 9. Actualización 2026-10-09 (verificada)
+
+Los datos de la sección 4 quedaron viejos. Estado verificado hoy:
+
+- CRM `main`: `14d2748` (merge de `feat/bundle-lazy-vistas`), desplegado en Vercel.
+- Suite: 550/550; build limpio.
+- Índice de madurez: 84,4 % (11ª ronda); duodécima en
+  `docs/AUDITORIA_MADUREZ_PRODUCTO_2026-10-09-duodecima.md`.
+- Bundle de PDF: ya estaba en carga diferida; chunk de entrada 358,8 kB.

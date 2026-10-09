@@ -1,3 +1,4 @@
+import { safeEqual } from '../lib/safe-equal.mjs';
 import crypto from 'node:crypto';
 import { persistEvents } from '../lib/storage.mjs';
 
@@ -16,7 +17,7 @@ export default async function handler(request, response) {
   if (request.method !== 'POST') return response.status(405).json({ ok: false });
   const expected = process.env.COPILOT_SIMULATOR_TOKEN;
   const received = request.headers.authorization?.replace(/^Bearer\s+/i, '');
-  if (!expected || received !== expected) return response.status(401).json({ ok: false });
+  if (!safeEqual(received, expected)) return response.status(401).json({ ok: false });
 
   const body = request.body;
   if (!body || typeof body !== 'object' || Array.isArray(body)) {

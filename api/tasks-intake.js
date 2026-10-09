@@ -1,3 +1,4 @@
+import { safeEqual } from '../lib/safe-equal.mjs';
 import { withRetry } from '../lib/retry.mjs';
 import { logError } from '../lib/log.mjs';
 import { buildIntakeTask, insertIntakeTaskAtomically, validateTaskIntakePayload } from '../lib/tasks-intake.mjs';
@@ -17,7 +18,7 @@ function authorized(request) {
   const secret = process.env.TASKS_API_SECRET;
   if (!secret) return false; // fail-safe: sin secret configurado, nunca acepta escrituras.
   const authorization = request.headers.authorization || '';
-  return authorization === `Bearer ${secret}`;
+  return safeEqual(authorization, `Bearer ${secret}`);
 }
 
 async function workspaceExists(environment, workspaceKey, fetchImpl = fetch) {

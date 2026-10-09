@@ -52,6 +52,7 @@ const DataSettings = lazy(() => import("./DataSettings").then((m) => ({ default:
 import { InteractionDetail } from "./Interactions";
 import { ProjectBoardGateway, Dashboard } from "./Dashboard";
 import { useCronStatus } from "./hooks/useCronStatus";
+import { shouldShowWelcome } from "./weekly-targets.mjs";
 import { conTipoManual } from "./client-type.mjs";
 import { aplicarUbicaciones } from "./client-location.mjs";
 import { docDe } from "./map-clients-adapter.mjs";
@@ -442,6 +443,11 @@ export default function App() {
     setSelectedClientId(null);
     setShowTaskForm(true);
   }
+
+  const dismissWelcome = useCallback(() => {
+    setData((current) => ({ ...current, welcomeDismissed: true }));
+  }, [setData]);
+  const openNewInteractionForm = useCallback(() => setShowForm(true), []);
 
   const toggleTask = useCallback((id) => {
     const stamp = new Date().toISOString();
@@ -1623,6 +1629,11 @@ export default function App() {
             sales={data.sales || EMPTY_ARRAY}
             inbox={data.inbox || EMPTY_ARRAY}
             myChannels={myChannels}
+            weeklyTargets={data.weeklyTargets}
+            showWelcome={shouldShowWelcome(data)}
+            welcomeName={data.profileName}
+            onDismissWelcome={dismissWelcome}
+            onNewInteraction={openNewInteractionForm}
             dailySignals={data.dailySignals}
             cronStatus={cronStatus}
             onToggle={toggleTask}

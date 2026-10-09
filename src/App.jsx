@@ -38,8 +38,6 @@ import {
   today,
 } from "./app-shared";
 import { Tasks, TaskList, TaskDetail, TaskForm } from "./Tasks";
-import { Pipeline } from "./Pipeline";
-import { Clients, Contacts } from "./Clients";
 const TechnicalDocumentsAdmin = lazy(() =>
   import("./TechnicalDocuments").then((m) => ({ default: m.TechnicalDocumentsAdmin }))
 );
@@ -49,17 +47,10 @@ const MapaCobertura = lazy(() => import("./MapaCobertura").then((m) => ({ defaul
 // consumidos solo por el propio <Academy> - así que separarla en su propio
 // chunk no arrastra nada que este archivo necesite.
 const Academy = lazy(() => import("./Academy").then((m) => ({ default: m.Academy })));
-import { TestCleanupPanel, Profile } from "./Settings";
 import { LoginScreen } from "./Login";
 const DataSettings = lazy(() => import("./DataSettings").then((m) => ({ default: m.DataSettings })));
-import { InteractionForm } from "./InteractionForm";
 import { InteractionDetail } from "./Interactions";
-import { ProjectBoardGateway, DayMode, Dashboard } from "./Dashboard";
-import { Conversations } from "./Conversations";
-import { LegacyInboxRow, InboxRow, CopilotSuggestionPanel, InboxDraftModal } from "./InboxComponents";
-import { WhatsAppInbox } from "./WhatsAppInbox";
-import { ClientDetail } from "./ClientDetail";
-import { ShortcutsHelp } from "./ShortcutsHelp";
+import { ProjectBoardGateway, Dashboard } from "./Dashboard";
 import { useCronStatus } from "./hooks/useCronStatus";
 import { conTipoManual } from "./client-type.mjs";
 import { aplicarUbicaciones } from "./client-location.mjs";
@@ -74,6 +65,22 @@ import {
 } from "./online";
 import { inferIntent } from "./commercial-intelligence.mjs";
 const Sales = lazy(() => import("./Sales"));
+// Vistas y modales que no se ven al abrir la app (la entrada es Hoy/dashboard):
+// cada una va a su propio chunk y se baja al entrar por primera vez. Login,
+// Dashboard, Tasks e Interactions quedan estáticos porque Dashboard y
+// ClientDetail los comparten (TaskList, InteractionRow).
+const lazyNamed = (loader, name) => lazy(() => loader().then((m) => ({ default: m[name] })));
+const Pipeline = lazyNamed(() => import("./Pipeline"), "Pipeline");
+const Clients = lazyNamed(() => import("./Clients"), "Clients");
+const Contacts = lazyNamed(() => import("./Clients"), "Contacts");
+const Conversations = lazyNamed(() => import("./Conversations"), "Conversations");
+const WhatsAppInbox = lazyNamed(() => import("./WhatsAppInbox"), "WhatsAppInbox");
+const Profile = lazyNamed(() => import("./Settings"), "Profile");
+const TestCleanupPanel = lazyNamed(() => import("./Settings"), "TestCleanupPanel");
+const InteractionForm = lazyNamed(() => import("./InteractionForm"), "InteractionForm");
+const InboxDraftModal = lazyNamed(() => import("./InboxComponents"), "InboxDraftModal");
+const ClientDetail = lazyNamed(() => import("./ClientDetail"), "ClientDetail");
+const ShortcutsHelp = lazyNamed(() => import("./ShortcutsHelp"), "ShortcutsHelp");
 import { moveCard, reorderList } from "./board-model.mjs";
 import {
   isIgnoredWhatsAppContact,
@@ -1626,33 +1633,37 @@ export default function App() {
           />
         )}
         {view === "conversations" && (
-          <Conversations
-            items={data.interactions}
-            clients={data.clients}
-            onOpen={setSelectedInteractionId}
-            onOpenClient={setSelectedClientId}
-          />
+          <Suspense fallback={<Splash text="Cargando conversaciones…" />}>
+            <Conversations
+              items={data.interactions}
+              clients={data.clients}
+              onOpen={setSelectedInteractionId}
+              onOpenClient={setSelectedClientId}
+            />
+          </Suspense>
         )}
         {view === "inbox" && (
-          <WhatsAppInbox
-            items={data.inbox}
-            statusEvents={outboundStatusEvents}
-            clients={data.clients}
-            onClassify={classifyInbox}
-            onDraft={openInboxDraft}
-            onOpen={openInboxContact}
-            onArchive={archiveInbox}
-            onRestore={restoreInbox}
-            onDelete={deleteInbox}
-            onDeleteLegacy={deleteLegacyInbox}
-            onDeleteAllLegacy={deleteAllLegacyInbox}
-            onExclude={excludeInboxContact}
-            onRestoreCommercial={restoreCommercialContact}
-            onBatchClassify={batchClassifyInbox}
-            onBatchArchive={batchArchiveInbox}
-            onBatchExclude={batchExcludeInbox}
-            onBatchDelete={batchDeleteInbox}
-          />
+          <Suspense fallback={<Splash text="Cargando bandeja…" />}>
+            <WhatsAppInbox
+              items={data.inbox}
+              statusEvents={outboundStatusEvents}
+              clients={data.clients}
+              onClassify={classifyInbox}
+              onDraft={openInboxDraft}
+              onOpen={openInboxContact}
+              onArchive={archiveInbox}
+              onRestore={restoreInbox}
+              onDelete={deleteInbox}
+              onDeleteLegacy={deleteLegacyInbox}
+              onDeleteAllLegacy={deleteAllLegacyInbox}
+              onExclude={excludeInboxContact}
+              onRestoreCommercial={restoreCommercialContact}
+              onBatchClassify={batchClassifyInbox}
+              onBatchArchive={batchArchiveInbox}
+              onBatchExclude={batchExcludeInbox}
+              onBatchDelete={batchDeleteInbox}
+            />
+          </Suspense>
         )}
         {view === "tasks" && (
           <Tasks
@@ -1663,13 +1674,15 @@ export default function App() {
           />
         )}
         {view === "pipeline" && (
-          <Pipeline
-            clients={pipelineClients}
-            onOpenClient={setSelectedClientId}
-            onChangeStage={changeClientStage}
-            onDelete={deleteClient}
-            onAdd={addPipelineClient}
-          />
+          <Suspense fallback={<Splash text="Cargando pipeline…" />}>
+            <Pipeline
+              clients={pipelineClients}
+              onOpenClient={setSelectedClientId}
+              onChangeStage={changeClientStage}
+              onDelete={deleteClient}
+              onAdd={addPipelineClient}
+            />
+          </Suspense>
         )}
         {view === "sales" && (
           <Suspense fallback={<Splash text="Cargando ventas…" />}>
@@ -1693,28 +1706,32 @@ export default function App() {
           <ProjectBoardGateway />
         )}
         {view === "clients" && (
-          <Clients
-            clients={filteredClients}
-            query={query}
-            setQuery={setQuery}
-            searchInputRef={searchInputRef}
-            onOpenClient={setSelectedClientId}
-            onMergeClients={mergeClient}
-            mergeLogs={data.mergeLogs || EMPTY_ARRAY}
-            onUndoMerge={undoMerge}
-            duplicateReviewDecisions={data.duplicateReviewDecisions || EMPTY_ARRAY}
-            onMarkNotDuplicate={markNotDuplicate}
-            onPostponeDuplicate={postponeDuplicate}
-          />
+          <Suspense fallback={<Splash text="Cargando clientes…" />}>
+            <Clients
+              clients={filteredClients}
+              query={query}
+              setQuery={setQuery}
+              searchInputRef={searchInputRef}
+              onOpenClient={setSelectedClientId}
+              onMergeClients={mergeClient}
+              mergeLogs={data.mergeLogs || EMPTY_ARRAY}
+              onUndoMerge={undoMerge}
+              duplicateReviewDecisions={data.duplicateReviewDecisions || EMPTY_ARRAY}
+              onMarkNotDuplicate={markNotDuplicate}
+              onPostponeDuplicate={postponeDuplicate}
+            />
+          </Suspense>
         )}
         {view === "contacts" && (
-          <Contacts
-            clients={data.clients}
-            query={query}
-            setQuery={setQuery}
-            searchInputRef={searchInputRef}
-            onOpenClient={setSelectedClientId}
-          />
+          <Suspense fallback={<Splash text="Cargando contactos…" />}>
+            <Contacts
+              clients={data.clients}
+              query={query}
+              setQuery={setQuery}
+              searchInputRef={searchInputRef}
+              onOpenClient={setSelectedClientId}
+            />
+          </Suspense>
         )}
         {view === "academy" && (
           <Suspense fallback={<Splash text="Cargando academia…" />}>
@@ -1737,10 +1754,14 @@ export default function App() {
           </Suspense>
         )}
         {view === "profile" && (
-          <Profile data={data} setData={setData} session={session} />
+          <Suspense fallback={<Splash text="Cargando perfil…" />}>
+            <Profile data={data} setData={setData} session={session} />
+          </Suspense>
         )}
         {view === "settings" && (
-          <TestCleanupPanel data={data} setData={setData} session={session} />
+          <Suspense fallback={<Splash text="Cargando ajustes…" />}>
+            <TestCleanupPanel data={data} setData={setData} session={session} />
+          </Suspense>
         )}
         {view === "settings" && (
           <Suspense fallback={<Splash text="Cargando datos…" />}>
@@ -1754,6 +1775,7 @@ export default function App() {
         )}
       </main>
 
+      <Suspense fallback={null}>
       {showForm && (
         <InteractionForm
           form={form}
@@ -1848,6 +1870,7 @@ export default function App() {
       {showShortcutsHelp && (
         <ShortcutsHelp onClose={() => setShowShortcutsHelp(false)} />
       )}
+      </Suspense>
     </div>
   );
 }

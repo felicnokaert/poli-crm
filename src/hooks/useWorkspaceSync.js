@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
-import { CHANNELS, initialState, today } from "../app-shared";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CHANNELS, initialState, registerChannels, today } from "../app-shared";
 import {
   completeTasksThrough,
+  loadMyChannels,
   loadOnlineState,
   mergeWorkspaceState,
   onlineConfigured,
@@ -9,7 +10,7 @@ import {
   supabase,
   workspaceStatesEqual,
 } from "../online";
-import { channelsForEmail } from "../user-channels.mjs";
+import { resolveChannels } from "../user-channels.mjs";
 import { isIgnoredWhatsAppContact } from "../whatsapp-threads.mjs";
 import { findClientByWhatsApp } from "../client-contacts.mjs";
 
@@ -103,7 +104,14 @@ export function useWorkspaceSync(data, setData) {
   // evita que Dashboard/Clients/Academy (que reciben myChannels como prop)
   // pierdan su React.memo cada vez que App() re-renderiza por otro motivo.
   const email = session?.user?.email;
-  const myChannels = useMemo(() => channelsForEmail(email), [email]);
+  // Canales de la tabla whatsapp_channels (se cargan al iniciar sesion). Se
+  // memoiza por contenido: para quien no cambia (Felipe: ['general'] antes y
+  // despues) el array conserva su identidad y no re-renderiza nada de mas.
+  const [channelRows, setChannelRows] = useState([]);
+  const channelsKey = resolveChannels(email, channelRows).join(",");
+  const myChannels = useMemo(() => (channelsKey ? channelsKey.split(",") : []), [channelsKey]);
+  const channelsRef = useRef(myChannels);
+  channelsRef.current = myChannels;
   const [authReady, setAuthReady] = useState(!onlineConfigured);
   const [remoteReady, setRemoteReady] = useState(false);
   const [syncStatus, setSyncStatus] = useState(
@@ -140,9 +148,19 @@ export function useWorkspaceSync(data, setData) {
     }
     let active = true;
     setSyncStatus("Sincronizando…");
-    loadOnlineState(session.user.id, myChannels)
+    // Primero los canales (si falla o la tabla no existe, queda el mapa fijo
+    // de siempre) y recien despues el estado, que filtra eventos por canal.
+    loadMyChannels(session.user.email)
+      .catch(() => [])
+      .then((rows) => {
+        if (!active) return null;
+        registerChannels(rows);
+        setChannelRows(rows);
+        channelsRef.current = resolveChannels(session.user.email, rows);
+        return loadOnlineState(session.user.id, channelsRef.current);
+      })
       .then((loaded) => {
-        if (!active) return;
+        if (!loaded || !active) return;
         const { nextState, dirty, statusEvents } = reconcileLoadedWorkspaceState(loaded);
         if (dirty) {
           saveOnlineState(session.user.id, session.user.email, nextState).catch(() => {});
@@ -162,7 +180,7 @@ export function useWorkspaceSync(data, setData) {
         ({ new: event }) => {
           if (
             event.direction !== "inbound" ||
-            !myChannels.includes(event.channel) ||
+            !channelsRef.current.includes(event.channel) ||
             ["unread_preview", "unread_notice"].includes(event.message_type)
           )
             return;

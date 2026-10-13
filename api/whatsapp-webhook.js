@@ -1,3 +1,4 @@
+import { buildPhoneMap, fetchChannelRows } from '../lib/channels.mjs';
 import { normalizeWebhook, verifyMetaSignature, verifyMetaVerifyToken } from '../lib/whatsapp.mjs';
 import { persistEvents } from '../lib/storage.mjs';
 import { logError } from '../lib/log.mjs';
@@ -62,11 +63,7 @@ export default async function handler(request, response) {
     return response.status(400).json({ ok: false, error: 'unexpected_payload_shape' });
   }
 
-  const phoneMap = {
-    [process.env.WHATSAPP_GENERAL_PHONE_ID]: 'general',
-    [process.env.WHATSAPP_PENOSIL_PHONE_ID]: 'penosil',
-    [process.env.WHATSAPP_JUAN_PHONE_ID]: 'juan',
-  };
+  const phoneMap = buildPhoneMap(process.env, await fetchChannelRows(process.env));
   const events = normalizeWebhook(payload, phoneMap);
   try {
     const result = await persistEvents(events);

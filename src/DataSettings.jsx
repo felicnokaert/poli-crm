@@ -383,10 +383,17 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
             {message}
           </div>
         )}
-        {myChannels.length > 1 && (
-          <button type="button" className="link-button" disabled={connecting} onClick={startWhatsAppConnection}>
-            + Conectar un número nuevo
-          </button>
+        {myChannels.length > 0 && (
+          <>
+            <p className="muted">
+              ¿Meta dice "Sin conexión" para tu número? Conectalo acá: se abre Meta, elegís
+              "conectar una cuenta existente de WhatsApp Business" y seguís los pasos. Al
+              terminar, el CRM te muestra el ID del número.
+            </p>
+            <button type="button" className="link-button" disabled={connecting} onClick={startWhatsAppConnection}>
+              Conectar mi número con Meta
+            </button>
+          </>
         )}
       </section>
       )}

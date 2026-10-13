@@ -1422,6 +1422,9 @@ export default function App() {
 
   function displayedChannel(key) {
     const status = readiness?.channels?.[key];
+    // Un canal sin ficha (no deberia pasar: registerChannels las completa)
+    // no debe tirar abajo la pantalla entera.
+    if (!CHANNELS[key]) return { name: key, number: "", color: "#475569", status: "Sin configurar", statusTone: "offline" };
     if (!status) return CHANNELS[key];
     if (status.inboundEvents > 0)
       return {
@@ -1781,6 +1784,7 @@ export default function App() {
               setData={setData}
               session={session}
               syncStatus={syncStatus}
+              myChannels={myChannels}
             />
           </Suspense>
         )}

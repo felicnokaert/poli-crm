@@ -35,6 +35,23 @@ export const CHANNELS = {
   email: { name: "Email", number: "", profile: "", color: "#6b5aa6" },
 };
 
+// Suma a CHANNELS los canales definidos en la tabla whatsapp_channels. Los
+// historicos (general, penosil, juan) conservan su ficha de siempre; solo se
+// agregan los que no existen todavia.
+export function registerChannels(rows = []) {
+  for (const row of Array.isArray(rows) ? rows : []) {
+    if (!row?.channel_key || CHANNELS[row.channel_key]) continue;
+    CHANNELS[row.channel_key] = {
+      name: row.label || row.channel_key,
+      number: row.display_number || "",
+      profile: "",
+      color: row.color || "#475569",
+      status: "Configurado",
+      statusTone: "waiting",
+    };
+  }
+}
+
 export function profileInitials(nameOrEmail = "") {
   const local = String(nameOrEmail).split("@")[0] || "";
   const parts = local.split(/[\s._-]+/).filter(Boolean);

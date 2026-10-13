@@ -34,6 +34,21 @@ export const supabase = onlineConfigured
 // Penosil, ni viceversa.
 const NO_ROWS = { data: [], error: null };
 
+// Canales de WhatsApp donde esta persona figura como miembro (tabla
+// whatsapp_channels). Felipe puede leer todas las filas por ser admin, por eso
+// se filtra por pertenencia en vez de confiar solo en la RLS.
+export async function loadMyChannels(email) {
+  const normalized = String(email || '').trim().toLowerCase();
+  if (!normalized) return [];
+  const { data, error } = await supabase
+    .from('whatsapp_channels')
+    .select('channel_key,label,display_number,color')
+    .contains('member_emails', [normalized])
+    .order('channel_key');
+  if (error) throw error;
+  return data || [];
+}
+
 export async function loadOnlineState(userId, allowedChannels = ['general']) {
   const hasChannels = allowedChannels.length > 0;
   const [{ data: stateRow, error: stateError }, { data: events, error: eventsError }, { data: statusEvents, error: statusError }] = await Promise.all([

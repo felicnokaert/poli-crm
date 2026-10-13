@@ -21,15 +21,16 @@ import {
 import { clientsToCsv, mergeClientsCsv } from "./client-csv.mjs";
 import { readFileSmart } from "./text-decode.mjs";
 import { FAMILIES } from "./families.mjs";
-import { channelsForEmail } from "./user-channels.mjs";
+import { channelsForEmail, isChannelAdmin } from "./user-channels.mjs";
+import { ChannelsAdmin } from "./ChannelsAdmin";
 import { CHANNELS, initialState, today } from "./app-shared";
 
 // `data` y `session` llegan como la misma referencia mientras nadie edita
 // nada acá - sin memo, cualquier otro estado ajeno de App.jsx (abrir el
 // modal de tarea, tipear en el buscador de otra pantalla, el tick de
 // syncStatus) volvía a renderizar todo este panel sin ningún prop distinto.
-function DataSettingsBase({ data, setData, session, syncStatus }) {
-  const myChannels = channelsForEmail(session?.user?.email);
+function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myChannelsProp }) {
+  const myChannels = myChannelsProp || channelsForEmail(session?.user?.email);
   const [message, setMessage] = useState("");
   const [messageIsError, setMessageIsError] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -389,6 +390,7 @@ function DataSettingsBase({ data, setData, session, syncStatus }) {
         )}
       </section>
       )}
+      {onlineConfigured && isChannelAdmin(session?.user?.email) && <ChannelsAdmin />}
       {myChannels.includes('general') && (
         <section className="panel">
           <div className="panel-head">

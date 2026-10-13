@@ -20,3 +20,20 @@ const USER_CHANNELS = {
 export function channelsForEmail(email) {
   return USER_CHANNELS[String(email || '').trim().toLowerCase()] || [];
 }
+
+// Canales finales de una persona: los de la tabla whatsapp_channels (donde
+// figura como miembro) sumados a los del mapa fijo de arriba. El mapa fijo es
+// una red de seguridad: si la tabla no responde (o aun no existe), las cuentas
+// historicas siguen viendo lo mismo que siempre. Los datos en si los decide la
+// base (RLS de whatsapp_events), asi que esto solo gobierna que muestra la UI.
+export function resolveChannels(email, rows = []) {
+  const fromTable = (Array.isArray(rows) ? rows : []).map((row) => row?.channel_key).filter(Boolean);
+  return [...new Set([...channelsForEmail(email), ...fromTable])];
+}
+
+// Quien puede administrar canales en pantalla. La autoridad real es la policy
+// de la base (is_poliplast_channel_admin); esto solo decide si se muestra el panel.
+const CHANNEL_ADMINS = ['felipe@grupopoliplast.com.ar', 'felipecnokaert@gmail.com'];
+export function isChannelAdmin(email) {
+  return CHANNEL_ADMINS.includes(String(email || '').trim().toLowerCase());
+}

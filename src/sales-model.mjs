@@ -3,22 +3,9 @@ export const SALES_UNITS = {
   Poliocho: { rate: 0.01, invoicePoints: ['0003'] },
 };
 
-// Unidades por defecto para un workspace nuevo (editables por el usuario en
-// Ventas > Objetivos - CUIT, razón social, nombre fantasía, comisión y
-// puntos de venta). El formulario guarda la comisión como porcentaje
-// (ej: 3), acá se guarda como fracción para no repetir la cuenta en cada
-// cálculo.
-export function defaultBusinessUnits() {
-  return Object.entries(SALES_UNITS).map(([name, unit]) => ({
-    id: name,
-    name,
-    legalName: '',
-    cuit: '',
-    ratePct: unit.rate * 100,
-    invoicePoints: [...unit.invoicePoints],
-  }));
-}
-
+// Las unidades de negocio las carga cada usuario en Ventas > Configuración
+// (CUIT, razón social, nombre fantasía, comisión y puntos de venta). El
+// formulario guarda la comisión como porcentaje (ej: 3).
 // Convierte la lista editable de unidades a la forma {nombre: {rate, invoicePoints}}
 // que usan saleCommission/normalizedSale. Los workspaces creados antes de
 // incorporar esta configuracion llegan con una lista vacia: en ese caso deben
@@ -37,9 +24,9 @@ export function pointOfSaleMapFrom(units = {}) {
 }
 
 export function unitsMapFrom(businessUnits) {
-  const source = Array.isArray(businessUnits) && businessUnits.length
-    ? businessUnits
-    : defaultBusinessUnits();
+  // Cada usuario define sus propias unidades: una cuenta nueva arranca sin
+  // ninguna (antes heredaba Poliplast y Poliocho, que son de Felipe).
+  const source = Array.isArray(businessUnits) ? businessUnits : [];
   const map = {};
   for (const unit of source) {
     if (!unit?.name) continue;
@@ -82,7 +69,7 @@ export function netAmountInUsd(sale, fallbackRate) {
   return 0;
 }
 
-export function blankSale(defaultUnit = 'Poliplast', defaultPointOfSale = '0006') {
+export function blankSale(defaultUnit = '', defaultPointOfSale = '') {
   const now = new Date();
   return {
     id: '',

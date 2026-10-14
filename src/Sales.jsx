@@ -1,6 +1,6 @@
 import { memo, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CalendarCheck, CheckCircle2, Download, FileUp, Pencil, Plus, ReceiptText, Target, Trash2, X } from 'lucide-react';
-import { blankSale, computeGoalProgress, defaultBusinessUnits, duplicateSale, GOAL_METRICS, netAmountInArs, normalizedSale, pointOfSaleMapFrom, quarterKey, saleCommission, salesToCsv, unitsMapFrom } from './sales-model.mjs';
+import { blankSale, computeGoalProgress, duplicateSale, GOAL_METRICS, netAmountInArs, normalizedSale, pointOfSaleMapFrom, quarterKey, saleCommission, salesToCsv, unitsMapFrom } from './sales-model.mjs';
 import { FAMILIES } from './families.mjs';
 import { useConfirm } from './ConfirmDialog';
 
@@ -341,14 +341,15 @@ function SalesBase({ items, goals, businessUnits, clients, onSaveGoal, onDeleteG
         <div><span className="eyebrow">Resultado comercial</span><h2>Ventas realizadas</h2><p>Registro manual de Facturas y COT, o subí uno o varios PDF: los vas a poder revisar y editar todos juntos en una tabla antes de guardar. La comisión se calcula sobre el importe neto sin IVA (sin impuesto interno) convertido a pesos si la factura vino en dólares.</p></div>
         <div className="panel-head-actions">
           <input ref={fileInputRef} type="file" accept="application/pdf" multiple hidden onChange={handlePdfSelected}/>
-          <button type="button" className="secondary" onClick={() => fileInputRef.current?.click()} disabled={importing}><FileUp size={16}/> {importing ? 'Leyendo…' : 'Subir PDF'}</button>
+          <button type="button" className="secondary" onClick={() => fileInputRef.current?.click()} disabled={importing || !unitNames.length} title={unitNames.length ? undefined : 'Primero creá tu unidad de negocio'}><FileUp size={16}/> {importing ? 'Leyendo…' : 'Subir PDF'}</button>
           <label className="secondary upload-button">
             <FileUp size={16}/> Importar histórico
             <input type="file" accept="application/json,.json" hidden onChange={handleHistoricalJsonSelected}/>
           </label>
-          <button className="primary" onClick={() => setEditing(blankSale(unitNames[0], units[unitNames[0]]?.invoicePoints[0]))}><Plus size={16}/> Registrar venta</button>
+          <button className="primary" disabled={!unitNames.length} title={unitNames.length ? undefined : 'Primero creá tu unidad de negocio'} onClick={() => setEditing(blankSale(unitNames[0], units[unitNames[0]]?.invoicePoints[0]))}><Plus size={16}/> Registrar venta</button>
         </div>
       </div>
+      {!unitNames.length && <p className="form-notice">Para registrar ventas, primero creá tu unidad de negocio más abajo (nombre, comisión y puntos de venta).</p>}
       {importProgress && <p className="form-notice">Leyendo {importProgress.done + 1} de {importProgress.total}: {importProgress.name}</p>}
       {bulkFailed.length > 0 && (
         <p className="form-warning">
@@ -539,7 +540,7 @@ function blankBusinessUnit() {
 }
 
 function BusinessUnitsPanel({ businessUnits, onSave, onDelete }) {
-  const units = Array.isArray(businessUnits) && businessUnits.length ? businessUnits : defaultBusinessUnits();
+  const units = Array.isArray(businessUnits) ? businessUnits : [];
   const [editing, setEditing] = useState(null);
   const [pointDraft, setPointDraft] = useState('');
 

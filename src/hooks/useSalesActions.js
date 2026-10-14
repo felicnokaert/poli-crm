@@ -1,6 +1,5 @@
 import { useCallback } from "react";
 import { recordDeletions } from "../online";
-import { defaultBusinessUnits } from "../sales-model.mjs";
 
 // Agrupa las acciones de la pantalla Ventas: altas/bajas de ventas, objetivos
 // y unidades de negocio. Se agrupan porque las tres operan sobre las mismas
@@ -79,9 +78,7 @@ export function useSalesActions(data, setData, confirm) {
 
   const saveBusinessUnit = useCallback((unit) => {
     setData((current) => {
-      const existing = Array.isArray(current.businessUnits) && current.businessUnits.length
-        ? current.businessUnits
-        : defaultBusinessUnits();
+      const existing = Array.isArray(current.businessUnits) ? current.businessUnits : [];
       const index = existing.findIndex((item) => item.id === unit.id);
       const businessUnits = index === -1
         ? [...existing, unit]
@@ -93,9 +90,7 @@ export function useSalesActions(data, setData, confirm) {
   const deleteBusinessUnit = useCallback(async (id) => {
     if (!(await confirm("¿Eliminar esta unidad de negocio? Las ventas ya cargadas con esta unidad no se modifican.", { danger: true, confirmLabel: "Eliminar" }))) return;
     setData((current) => {
-      const existing = Array.isArray(current.businessUnits) && current.businessUnits.length
-        ? current.businessUnits
-        : defaultBusinessUnits();
+      const existing = Array.isArray(current.businessUnits) ? current.businessUnits : [];
       return recordDeletions({ ...current, businessUnits: existing.filter((item) => item.id !== id) }, { businessUnits: [id] });
     });
   }, [confirm, setData]);

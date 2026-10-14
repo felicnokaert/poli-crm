@@ -12,10 +12,10 @@ test('mantiene las comisiones historicas si el workspace todavia no tiene unidad
   assert.equal(saleCommission({ unit: 'Poliocho', netAmount: 100000 }, {}), 1000);
 });
 
-test('ofrece las unidades historicas al registrar una venta en un workspace antiguo', () => {
-  assert.deepEqual(Object.keys(unitsMapFrom([])), ['Poliplast', 'Poliocho']);
-  assert.equal(unitsMapFrom([]).Poliplast.rate, 0.03);
-  assert.deepEqual(unitsMapFrom([]).Poliocho.invoicePoints, ['0003']);
+test('una cuenta nueva arranca sin unidades de negocio: cada usuario carga las suyas', () => {
+  assert.deepEqual(unitsMapFrom([]), {});
+  assert.deepEqual(unitsMapFrom(undefined), {});
+  assert.deepEqual(Object.keys(unitsMapFrom([{ name: 'Mi unidad', ratePct: 2, invoicePoints: ['0001'] }])), ['Mi unidad']);
 });
 
 test('pointOfSaleMapFrom lets a newly added business unit be recognized when importing PDFs', () => {

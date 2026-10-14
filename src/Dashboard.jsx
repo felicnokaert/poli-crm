@@ -411,6 +411,78 @@ function WelcomePanel({ name, onNavigate, onNewInteraction, onDismiss }) {
   );
 }
 
+// Número que sube de 0 al valor real al cargar. Sin animación si el usuario
+// pidió menos movimiento, si no hay requestAnimationFrame o si no es un número.
+function CountUp({ value }) {
+  const target = Number(value);
+  const animable =
+    Number.isFinite(target) &&
+    target > 0 &&
+    typeof window !== "undefined" &&
+    typeof window.requestAnimationFrame === "function" &&
+    !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const [shown, setShown] = useState(target);
+  useEffect(() => {
+    if (!animable) {
+      setShown(target);
+      return undefined;
+    }
+    let frame;
+    const start = performance.now();
+    const duration = 700;
+    const step = (time) => {
+      const progress = Math.min(1, (time - start) / duration);
+      setShown(Math.round(target * (1 - (1 - progress) ** 3)));
+      if (progress < 1) frame = window.requestAnimationFrame(step);
+    };
+    frame = window.requestAnimationFrame(step);
+    return () => window.cancelAnimationFrame(frame);
+  }, [target, animable]);
+  return <>{animable ? shown : value}</>;
+}
+
+function greetingFor(date = new Date()) {
+  const hour = date.getHours();
+  if (hour < 12) return "Buen día";
+  if (hour < 20) return "Buenas tardes";
+  return "Buenas noches";
+}
+
+// Saludo + resumen del día + las tres tareas más urgentes, arriba de todo.
+function DayHero({ name, overdueTasks, dueTodayTasks, hotLeads, tasks, onOpenTask, onToggle }) {
+  const date = new Date();
+  const dateLabel = date.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+  const urgent = [...overdueTasks]
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+    .concat(dueTodayTasks)
+    .slice(0, 3);
+  const pending = tasks.filter((task) => !task.done).length;
+  const parts = [];
+  if (overdueTasks.length) parts.push(`${overdueTasks.length} vencida${overdueTasks.length === 1 ? "" : "s"}`);
+  if (dueTodayTasks.length) parts.push(`${dueTodayTasks.length} para hoy`);
+  if (hotLeads.length) parts.push(`${hotLeads.length} mensaje${hotLeads.length === 1 ? "" : "s"} caliente${hotLeads.length === 1 ? "" : "s"} sin responder`);
+  const summary = parts.length
+    ? `Hoy tenés ${parts.join(", ")}.`
+    : pending
+      ? `Sin urgencias. Tenés ${pending} tarea${pending === 1 ? "" : "s"} pendiente${pending === 1 ? "" : "s"}.`
+      : "Todo al día. Buen momento para prospectar o registrar conversaciones.";
+  return (
+    <section className="panel day-hero">
+      <div className="day-hero-head">
+        <span className="eyebrow">{dateLabel}</span>
+        <h2>{greetingFor(date)}{name ? `, ${name}` : ""}</h2>
+        <p>{summary}</p>
+      </div>
+      {urgent.length > 0 && (
+        <div className="day-hero-urgent">
+          <span className="day-mode-subhead">Lo más urgente</span>
+          <TaskList items={urgent} onToggle={onToggle} onOpen={onOpenTask} emptyText="" />
+        </div>
+      )}
+    </section>
+  );
+}
+
 function DashboardBase({
   metrics,
   tasks,
@@ -497,6 +569,17 @@ function DashboardBase({
           onDismiss={onDismissWelcome}
         />
       )}
+      {!showWelcome && (
+        <DayHero
+          name={welcomeName}
+          overdueTasks={overdueTasks}
+          dueTodayTasks={dueTodayTasks}
+          hotLeads={hotLeads}
+          tasks={tasks}
+          onOpenTask={onOpenTask}
+          onToggle={onToggle}
+        />
+      )}
       <DayMode
         overdueTasks={overdueTasks}
         dueTodayTasks={dueTodayTasks}
@@ -515,7 +598,7 @@ function DashboardBase({
           <article className={`metric-card${urgent ? " is-urgent" : ""}`} key={label}>
             <Icon size={20} />
             <span>{label}</span>
-            <strong>{value}</strong>
+            <strong><CountUp value={value} /></strong>
             <small>{note}</small>
           </article>
         ))}

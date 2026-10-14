@@ -576,3 +576,11 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .scope-picker { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end; }
 .scope-picker label { display: grid; gap: 4px; font-size: 13px; color: #555; }
 @media (max-width: 760px) { .scope-picker { grid-template-columns: 1fr; } }
+
+/* Inicio: saludo y tareas urgentes */
+.day-hero { border-left: 4px solid var(--brand-red, #ed1c24); }
+.day-hero-head h2 { margin: 2px 0 4px; text-transform: none; }
+.day-hero-head p { margin: 0; color: var(--brand-gray, #999b9e); font-size: 1.02rem; }
+.day-hero-head .eyebrow { text-transform: capitalize; }
+.day-hero-urgent { margin-top: 14px; }
+.metric-card strong { font-variant-numeric: tabular-nums; }

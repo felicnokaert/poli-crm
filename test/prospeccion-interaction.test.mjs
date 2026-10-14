@@ -86,7 +86,7 @@ describe("Prospeccion.jsx - interacción real", () => {
     ];
     globalThis.fetch = async (url, options) => {
       calls.push({ url, body: JSON.parse(options.body) });
-      return { ok: true, json: async () => ({ ok: true, count: results.length, truncated: false, results }) };
+      return { ok: true, json: async () => ({ ok: true, count: results.length, truncated: false, stats: { returned: 2, withPhone: 1, withWebsite: 0 }, ms: 3400, attempts: 1, endpoint: "overpass-api.de", results }) };
     };
     try {
       const snapshots = await mount({ clients: [], prospects: [], prospectSearches: [], prospectSwitches: {} }, { cities: CITIES, session: { access_token: "t" } });
@@ -100,27 +100,40 @@ describe("Prospeccion.jsx - interacción real", () => {
       assert.equal(snapshots.at(-1).prospectSearches.length, 1);
       assert.equal(snapshots.at(-1).prospectSearches[0].zoneId, "1");
       assert.equal(snapshots.at(-1).prospectSearches[0].found, 2);
+      assert.ok(screen.getByText("Córdoba · OpenStreetMap devolvió 2 (1 con teléfono, 0 con sitio web) · 2 nuevos, 0 repetidos · 3,4 s."));
+      assert.equal(snapshots.at(-1).prospectSearches[0].ms, 3400);
+      assert.equal(snapshots.at(-1).prospectSearches[0].endpoint, "overpass-api.de");
+      fireEvent.click(screen.getByText(/Historial de búsquedas \(1\)/));
+      assert.ok(screen.getByText("3,4 s"));
 
       // misma zona otra vez: lo ya cargado no se duplica
       fireEvent.click(screen.getByText("Buscar en Córdoba"));
       await waitFor(() => assert.equal(snapshots.at(-1).prospectSearches.length, 2));
       assert.equal(snapshots.at(-1).prospects.length, 2);
-      assert.ok(screen.getByText(/0 nuevos para vos \(2 ya estaban cargados\)/));
+      assert.ok(screen.getByText(/OpenStreetMap devolvió 2 \(1 con teléfono, 0 con sitio web\) · 0 nuevos, 2 repetidos/));
+      const second = snapshots.at(-1).prospectSearches.at(-1);
+      assert.deepEqual([second.returned, second.withPhone, second.withWebsite, second.fresh, second.repeated], [2, 1, 0, 0, 2]);
     } finally {
       globalThis.fetch = original;
     }
   });
 
-  test("si la búsqueda falla se muestra el motivo y no se anota como hecha", async () => {
+  test("si la búsqueda falla se muestra el motivo, queda en el historial y la zona sigue pendiente", async () => {
     const original = globalThis.fetch;
-    globalThis.fetch = async () => ({ ok: false, json: async () => ({ error: "No se pudo consultar OpenStreetMap (timeout). Probá de nuevo en un rato." }) });
+    const reason = "OpenStreetMap tardó demasiado en responder. Probá con una zona más chica, con menos rubros o un poco más tarde. (se probaron 2 servidores)";
+    globalThis.fetch = async () => ({ ok: false, json: async () => ({ error: reason, kind: "timeout", attempts: 2, ms: 26000 }) });
     try {
       const snapshots = await mount({ clients: [], prospects: [], prospectSearches: [] }, { cities: CITIES, session: { access_token: "t" } });
       fireEvent.change(screen.getByLabelText("Familia de hoy"), { target: { value: "Penosil" } });
       fireEvent.click(await waitFor(() => screen.getAllByText(/· Pendiente/)[0]));
       fireEvent.click(screen.getByText(/^Buscar en /));
-      await waitFor(() => screen.getByText(/No se pudo consultar OpenStreetMap/));
-      assert.equal(snapshots.length, 0);
+      await waitFor(() => assert.ok(screen.getAllByText((text) => text.includes(reason)).length >= 1));
+      const logged = snapshots.at(-1).prospectSearches[0];
+      assert.deepEqual([logged.status, logged.failed, logged.ms], ["error", true, 26000]);
+      assert.equal(snapshots.at(-1).prospects.length, 0);
+      assert.ok(screen.getAllByText(/· Pendiente/).length > 0, "la zona sigue pendiente");
+      fireEvent.click(screen.getByText(/Historial de búsquedas \(1\)/));
+      assert.ok(screen.getAllByText(/^Error: OpenStreetMap tardó demasiado/).length >= 1);
     } finally {
       globalThis.fetch = original;
     }

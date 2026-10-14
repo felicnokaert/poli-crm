@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildOverpassQuery, normalizeOverpass, safeWord, searchOverpass } from '../lib/prospect-osm.mjs';
+import { buildOverpassQuery, normalizeOverpass, safeWord, searchOverpass, summarizeResults } from '../lib/prospect-osm.mjs';
 import handler from '../api/prospeccion.js';
 
 // Forma de respuesta de Overpass (nodes con lat/lon, ways con center). Es un
@@ -48,15 +48,53 @@ test('normaliza la respuesta: descarta sin nombre y repetidos, y toma el primer 
   assert.equal(results[1].instagram, 'corralonnorte');
 });
 
-test('si el primer servidor falla pasa al segundo; si fallan todos devuelve un mensaje claro', async () => {
+test('si el primer servidor falla pasa al segundo y cuenta los intentos', async () => {
   const calls = [];
   const http = async (url) => { calls.push(url); return calls.length === 1 ? { ok: false, status: 504, json: async () => ({}) } : { ok: true, status: 200, json: async () => SAMPLE }; };
-  const ok = await searchOverpass('q', http, ['https://a', 'https://b']);
+  const ok = await searchOverpass('q', http, ['https://a.test/x', 'https://b.test/x']);
   assert.equal(ok.ok, true);
-  assert.deepEqual(calls, ['https://a', 'https://b']);
-  const down = await searchOverpass('q', async () => { throw new Error('timeout'); }, ['https://a']);
-  assert.equal(down.ok, false);
-  assert.match(down.error, /No se pudo consultar OpenStreetMap \(timeout\)/);
+  assert.deepEqual(calls, ['https://a.test/x', 'https://b.test/x']);
+  assert.equal(ok.attempts, 2);
+  assert.equal(ok.endpoint, 'b.test');
+  assert.ok(ok.ms >= 0);
+});
+
+test('cada falla tiene un mensaje claro en español (qué pasó y qué hacer)', async () => {
+  const status = (code) => async () => ({ ok: false, status: code, json: async () => ({}) });
+  const limited = await searchOverpass('q', status(429), ['https://a', 'https://b']);
+  assert.equal(limited.kind, 'rate_limit');
+  assert.match(limited.error, /limitando las consultas.*Esperá uno o dos minutos.*se probaron 2 servidores/);
+  assert.equal((await searchOverpass('q', status(504), ['https://a'])).kind, 'timeout');
+  assert.match((await searchOverpass('q', status(504), ['https://a'])).error, /tardó demasiado.*zona más chica/);
+  assert.equal((await searchOverpass('q', status(502), ['https://a'])).kind, 'server');
+  const down = await searchOverpass('q', async () => { throw new Error('ECONNRESET'); }, ['https://a']);
+  assert.equal(down.kind, 'network');
+  assert.match(down.error, /No se pudo conectar con OpenStreetMap/);
+});
+
+test('una consulta rechazada (4xx) no se reintenta con otro servidor', async () => {
+  let calls = 0;
+  const result = await searchOverpass('q', async () => { calls += 1; return { ok: false, status: 400, json: async () => ({}) }; }, ['https://a', 'https://b']);
+  assert.equal(calls, 1);
+  assert.equal(result.kind, 'rejected');
+  assert.match(result.error, /rechazó la consulta \(error 400\)/);
+});
+
+test('el tiempo agotado (abort) y el aviso "Query timed out" pasan al servidor alternativo', async () => {
+  const hung = (url, options) => new Promise((_, reject) => options.signal.addEventListener('abort', () => reject(Object.assign(new Error('abort'), { name: 'AbortError' }))));
+  const slow = await searchOverpass('q', hung, ['https://a'], [20]);
+  assert.equal(slow.kind, 'timeout');
+  let call = 0;
+  const remark = async () => { call += 1; return { ok: true, status: 200, json: async () => (call === 1 ? { elements: [], remark: 'runtime error: Query timed out in "query" at line 3' } : SAMPLE) }; };
+  const recovered = await searchOverpass('q', remark, ['https://a', 'https://b']);
+  assert.equal(recovered.ok, true);
+  assert.equal(recovered.attempts, 2);
+});
+
+test('resume cuántos resultados devolvió la fuente, con teléfono y con sitio web', () => {
+  const results = normalizeOverpass(SAMPLE);
+  assert.deepEqual(summarizeResults(results), { returned: 2, withPhone: 1, withWebsite: 1 });
+  assert.deepEqual(summarizeResults([]), { returned: 0, withPhone: 0, withWebsite: 0 });
 });
 
 function response() {
@@ -83,6 +121,9 @@ test('el endpoint exige usuario corporativo y valida zona y rubros', async () =>
     assert.equal(good.statusCode, 200);
     assert.equal(good.body.count, 2);
     assert.equal(good.body.radiusKm, 12);
+    assert.deepEqual(good.body.stats, { returned: 2, withPhone: 1, withWebsite: 1 });
+    assert.equal(good.body.attempts, 1);
+    assert.equal(typeof good.body.ms, 'number');
     assert.equal(good.body.results[0].province, 'Entre Ríos');
   } finally {
     globalThis.fetch = original.fetch;

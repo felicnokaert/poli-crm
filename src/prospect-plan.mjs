@@ -69,7 +69,7 @@ export function addDaysIso(isoDate, days) {
 
 // Estado de una zona para una familia, según el registro de búsquedas.
 export function zoneStatus(family, zoneId, searches = [], today = new Date().toISOString().slice(0, 10)) {
-  const entries = searches.filter((item) => item.family === family && item.zoneId === zoneId).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const entries = searches.filter((item) => item.family === family && item.zoneId === zoneId && !item.failed).sort((a, b) => String(a.date).localeCompare(String(b.date)));
   if (!entries.length) return { status: 'Pendiente', found: 0, lastDate: '' };
   const found = entries.reduce((sum, item) => sum + (Number(item.found) || 0), 0);
   const last = entries.at(-1);

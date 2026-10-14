@@ -64,6 +64,36 @@ function ProspectRow({ prospect, check, onMark, onOpenClient, onDelete }) {
   );
 }
 
+const seconds = (ms) => `${(Number(ms || 0) / 1000).toFixed(1).replace('.', ',')} s`;
+
+// Una línea para comparar la fuente (por ejemplo contra Google Maps).
+export function searchSummary({ zoneName, returned, withPhone, withWebsite, fresh, repeated, inCrm, ms, truncated }) {
+  return `${zoneName} · OpenStreetMap devolvió ${returned} (${withPhone} con teléfono, ${withWebsite} con sitio web) · ${fresh} nuevos, ${repeated} repetidos${inCrm ? ` (${inCrm} ya están en tu CRM)` : ''} · ${seconds(ms)}.${truncated ? ' Había más: probá con otros rubros para ver el resto.' : ''}`;
+}
+
+function SearchHistory({ searches }) {
+  const rows = [...searches].sort((a, b) => String(b.createdAt || b.date).localeCompare(String(a.createdAt || a.date))).slice(0, 20);
+  if (!rows.length) return null;
+  return (
+    <details>
+      <summary>Historial de búsquedas ({searches.length})</summary>
+      <table>
+        <thead><tr><th>Fecha</th><th>Familia</th><th>Zona</th><th>Fuente</th><th>Devolvió</th><th>Con teléfono</th><th>Con web</th><th>Nuevos</th><th>Repetidos</th><th>Tiempo</th><th>Resultado</th></tr></thead>
+        <tbody>
+          {rows.map((item) => (
+            <tr key={item.id}>
+              <td>{item.date}</td><td>{item.family}</td><td>{item.zoneName}</td><td>{item.source}</td>
+              <td>{item.returned ?? '–'}</td><td>{item.withPhone ?? '–'}</td><td>{item.withWebsite ?? '–'}</td>
+              <td>{item.fresh ?? item.found ?? '–'}</td><td>{item.repeated ?? '–'}</td><td>{item.ms != null ? seconds(item.ms) : '–'}</td>
+              <td>{item.status === 'error' ? `Error: ${item.error}` : item.exhausted ? 'Zona agotada por ahora' : 'Ok'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </details>
+  );
+}
+
 function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, cities: citiesProp }) {
   const prospects = Array.isArray(data.prospects) ? data.prospects : EMPTY;
   const clients = Array.isArray(data.clients) ? data.clients : EMPTY;
@@ -170,6 +200,9 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     if (!rubros.length) { setMessage('Elegí al menos un rubro para buscar.'); return; }
     setSearching(true);
     setMessage('');
+    const startedAt = Date.now();
+    const base = { id: crypto.randomUUID(), family: planFamily, zoneId: zone.id, zoneName: zone.nombre, province: provinces[zone.prov] || '', date: new Date().toISOString().slice(0, 10), source: 'OpenStreetMap' };
+    const logSearch = (entry) => setData((current) => ({ ...current, prospectSearches: [...(Array.isArray(current.prospectSearches) ? current.prospectSearches : []), { ...base, createdAt: new Date().toISOString(), ...entry }] }));
     try {
       const response = await fetch('/api/prospeccion', {
         method: 'POST',
@@ -177,22 +210,33 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         body: JSON.stringify({ lat: zone.lat, lon: zone.lon, population: zone.pob, zoneName: zone.nombre, province: provinces[zone.prov] || '', family: planFamily, rubros }),
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || 'No se pudo hacer la búsqueda.');
+      if (!response.ok) {
+        const reason = payload.error || 'No se pudo hacer la búsqueda.';
+        logSearch({ status: 'error', failed: true, found: 0, error: reason, ms: payload.ms ?? Date.now() - startedAt });
+        setMessage(`${zone.nombre}: ${reason}`);
+        return;
+      }
       const known = new Set(prospects.map((item) => item.osmId).filter(Boolean));
-      const fresh = (payload.results || []).filter((item) => !known.has(item.osmId));
+      const results = payload.results || [];
+      const fresh = results.filter((item) => !known.has(item.osmId));
       const now = new Date().toISOString();
       const made = fresh.map((row) => blankProspect({ ...row, competitor: isCompetitor(row.company) }, { id: crypto.randomUUID(), now }));
+      const inCrm = made.filter((item) => matchProspect(item, clients).status === 'Ya en el CRM').length;
+      const stats = payload.stats || { returned: results.length, withPhone: results.filter((item) => item.phone).length, withWebsite: results.filter((item) => item.website).length };
+      const ms = payload.ms ?? Date.now() - startedAt;
       setData((current) => ({
         ...current,
         prospects: [...(Array.isArray(current.prospects) ? current.prospects : []), ...made],
         prospectSearches: [...(Array.isArray(current.prospectSearches) ? current.prospectSearches : []), {
-          id: crypto.randomUUID(), family: planFamily, zoneId: zone.id, zoneName: zone.nombre, province: provinces[zone.prov] || '',
-          date: now.slice(0, 10), found: made.length, source: 'OpenStreetMap', createdAt: now,
+          ...base, createdAt: now, status: 'ok', found: made.length, returned: stats.returned, withPhone: stats.withPhone, withWebsite: stats.withWebsite,
+          fresh: made.length, repeated: results.length - made.length, inCrm, ms, attempts: payload.attempts || 1, endpoint: payload.endpoint || '', truncated: Boolean(payload.truncated),
         }],
       }));
-      setMessage(`${zone.nombre}: OpenStreetMap devolvió ${payload.count}, ${made.length} nuevos para vos${payload.count - made.length ? ` (${payload.count - made.length} ya estaban cargados)` : ''}.${payload.truncated ? ' Había más: probá con otros rubros para ver el resto.' : ''} Revisá las etiquetas de duplicado.`);
+      setMessage(searchSummary({ zoneName: zone.nombre, returned: stats.returned, withPhone: stats.withPhone, withWebsite: stats.withWebsite, fresh: made.length, repeated: results.length - made.length, inCrm, ms, truncated: payload.truncated }));
     } catch (error) {
-      setMessage(error.message || 'No se pudo hacer la búsqueda.');
+      const reason = 'No se pudo hacer la búsqueda. Revisá tu conexión y probá de nuevo.';
+      logSearch({ status: 'error', failed: true, found: 0, error: reason, ms: Date.now() - startedAt });
+      setMessage(`${zone.nombre}: ${error?.message && !/fetch|network/i.test(error.message) ? error.message : reason}`);
     } finally {
       setSearching(false);
     }
@@ -369,6 +413,8 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
           <ProspectRow key={item.id} prospect={item} check={checks.get(item.id) || { status: 'Nuevo', matches: [] }} onMark={mark} onOpenClient={onOpenClient} onDelete={remove} />
         ))}
       </div>
+
+      <SearchHistory searches={searches} />
 
       {coverage.length > 0 && (
         <>

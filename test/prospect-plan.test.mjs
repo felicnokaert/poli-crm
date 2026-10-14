@@ -86,3 +86,8 @@ test('si la familia del foco se pausa, el plan vuelve a rotar y nunca sugiere un
   const allPaused = Object.fromEntries(rotationFamilies().map((key) => [key, false]));
   assert.deepEqual([currentFocus(new Date(), allPaused).family, currentFocus(new Date(), allPaused).label], ['', 'sin familias activas']);
 });
+
+test('una búsqueda que falló no cuenta como zona recorrida', () => {
+  const log = [{ family: 'Penosil', zoneId: '9', date: '2026-10-14', found: 0, failed: true }];
+  assert.equal(zoneStatus('Penosil', '9', log, '2026-10-14').status, 'Pendiente');
+});

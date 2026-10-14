@@ -1,5 +1,5 @@
 import { authenticatedCorporateUser } from '../lib/corporate-auth.mjs';
-import { buildOverpassQuery, normalizeOverpass, radiusForPopulation, safeWord, searchOverpass } from '../lib/prospect-osm.mjs';
+import { buildOverpassQuery, normalizeOverpass, radiusForPopulation, safeWord, searchOverpass, summarizeResults } from '../lib/prospect-osm.mjs';
 
 // Lupa de Prospección: busca comercios en OpenStreetMap por zona y rubros y
 // devuelve prospectos listos para cargar. Solo lecturas; no guarda nada.
@@ -21,12 +21,15 @@ export default async function handler(request, response) {
   const radiusKm = Math.min(Number(body.radiusKm) || radiusForPopulation(Number(body.population)), 30);
   const query = buildOverpassQuery({ lat, lon, radiusKm, rubros });
   const result = await searchOverpass(query);
-  if (!result.ok) return response.status(502).json({ error: result.error });
+  if (!result.ok) return response.status(502).json({ error: result.error, kind: result.kind, attempts: result.attempts, ms: result.ms });
 
   const results = normalizeOverpass(result.data, {
     zoneName: safeWord(body.zoneName || ''),
     province: safeWord(body.province || ''),
     family: safeWord(body.family || ''),
   });
-  return response.status(200).json({ ok: true, source: 'OpenStreetMap', radiusKm, count: results.length, truncated: (result.data?.elements || []).length >= 200, results });
+  return response.status(200).json({
+    ok: true, source: 'OpenStreetMap', radiusKm, count: results.length, truncated: (result.data?.elements || []).length >= 200,
+    stats: summarizeResults(results), attempts: result.attempts, ms: result.ms, endpoint: result.endpoint, results,
+  });
 }

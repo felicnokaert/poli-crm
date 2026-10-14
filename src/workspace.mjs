@@ -134,6 +134,7 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
     businessUnits: liveRecords('businessUnits'),
     prospects: liveRecords('prospects'),
     prospectSearches: liveRecords('prospectSearches'),
+    ...(local.prospectFocus || remote.prospectFocus ? { prospectFocus: local.prospectFocus || remote.prospectFocus } : {}),
     ...(local.prospectSwitches || remote.prospectSwitches ? { prospectSwitches: { ...(remote.prospectSwitches || {}), ...(local.prospectSwitches || {}) } } : {}),
     deletedRecordIds,
     dismissedInboxEventIds,

@@ -91,3 +91,22 @@ export function suggestZones(family, cities, searches = [], { count = 3, today }
   const inProgress = withStatus.filter((item) => item.status === 'En curso');
   return [...pending, ...inProgress].slice(0, count);
 }
+
+// Lunes (YYYY-MM-DD) de la semana de una fecha.
+export function weekStart(date = new Date()) {
+  const local = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const offset = (local.getDay() + 6) % 7;
+  local.setDate(local.getDate() - offset);
+  return `${local.getFullYear()}-${String(local.getMonth() + 1).padStart(2, '0')}-${String(local.getDate()).padStart(2, '0')}`;
+}
+
+// Foco vigente del plan. Si el usuario fijó una familia para la semana y sigue
+// activa, manda; si no (o si la pausó), rota una familia por día hábil.
+// Nunca devuelve una familia pausada.
+export function currentFocus(date = new Date(), switches = {}, focus = null) {
+  if (focus?.family && focus.weekStart === weekStart(date) && familyIsActive(focus.family, switches)) {
+    return { mode: 'foco', family: focus.family, label: `esta semana: ${focus.family}` };
+  }
+  const family = familyForDate(date, switches);
+  return { mode: 'rotacion', family, label: family ? `rotación diaria, hoy: ${family}` : 'sin familias activas' };
+}

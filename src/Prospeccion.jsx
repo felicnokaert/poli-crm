@@ -7,7 +7,7 @@ import {
 import { matchProspect } from './prospect-dedupe.mjs';
 import { markProspect } from './prospect-convert.mjs';
 import { parseProspectsText } from './prospect-import.mjs';
-import { DAILY_TARGET, familyForDate, scopeDescription, suggestZones, zoneStatus, zonesForFamily } from './prospect-plan.mjs';
+import { DAILY_TARGET, currentFocus, scopeDescription, weekStart, suggestZones, zoneStatus, zonesForFamily } from './prospect-plan.mjs';
 
 const DAILY_LIST_SIZE = 40;
 const EMPTY = [];
@@ -76,7 +76,8 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const [form, setForm] = useState(null);
   const [cities, setCities] = useState(citiesProp || []);
   const [provinces, setProvinces] = useState({});
-  const [planFamily, setPlanFamily] = useState(() => familyForDate(new Date(), switches));
+  const focus = useMemo(() => currentFocus(new Date(), switches, data.prospectFocus), [switches, data.prospectFocus]);
+  const [planFamily, setPlanFamily] = useState(focus.family);
   const [zone, setZone] = useState(null);
   const [zoneQuery, setZoneQuery] = useState('');
   const [rubrosText, setRubrosText] = useState('');
@@ -96,6 +97,10 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     }).catch(() => {});
     return () => { cancelled = true; };
   }, [citiesProp]);
+
+  useEffect(() => {
+    if (!familyIsActive(planFamily, switches) && focus.family) setPlanFamily(focus.family);
+  }, [planFamily, switches, focus.family]);
 
   useEffect(() => {
     setRubrosText((familyConfig(planFamily)?.rubros || []).join(', '));
@@ -215,6 +220,11 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     setData((current) => ({ ...current, prospectSwitches: { ...(current.prospectSwitches || {}), [key]: !familyIsActive(key, current.prospectSwitches) } }));
   }
 
+  function setFocus(family) {
+    setData((current) => ({ ...current, prospectFocus: family ? { family, weekStart: weekStart(new Date()) } : null }));
+    if (family) setPlanFamily(family);
+  }
+
   function buildDailyList() {
     const eligible = prospects
       .filter((item) => item.state === 'No contactado' && !item.competitor && checks.get(item.id)?.status === 'Nuevo' && familyIsActive(item.family, switches))
@@ -254,6 +264,13 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       <div className="panel">
         <h3>Plan de hoy</h3>
         <p className="muted">Una familia por día, recorriendo el país zona por zona sin repetir. Meta: entre {DAILY_TARGET.min} y {DAILY_TARGET.max} contactos nuevos por día (hoy cargaste {loadedToday} de {planFamily || 'esta familia'}).</p>
+        <p><strong>Foco vigente: {focus.label}.</strong> {focus.mode === 'foco' ? 'Vale hasta el domingo.' : 'Podés fijar una familia para toda la semana.'}</p>
+        <label>Foco de la semana
+          <select aria-label="Foco de la semana" value={focus.mode === 'foco' ? focus.family : ''} onChange={(event) => setFocus(event.target.value)}>
+            <option value="">Rotación diaria</option>
+            {PROSPECT_FAMILIES.filter((item) => familyIsActive(item.key, switches)).map((item) => <option key={item.key}>{item.key}</option>)}
+          </select>
+        </label>
         <div className="panel-head-actions">
           <label>Familia de hoy
             <select aria-label="Familia de hoy" value={planFamily} onChange={(event) => setPlanFamily(event.target.value)}>

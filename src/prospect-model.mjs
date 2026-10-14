@@ -21,7 +21,8 @@ export const CONVERTING_STATES = ['Contactado', 'Con interés'];
 // Familias que se prospectan. `crmFamily` es la familia con la que queda la
 // Empresa en el CRM (Planchas y Química no existen como familia del CRM).
 // `active:false` = pausada (Pisos y Almohadas). Los rubros son el punto de
-// partida de la búsqueda y se editan, no son reglas cerradas.
+// partida de la búsqueda y se editan, no son reglas cerradas. Pisos, Almohadas y
+// Baldes arrancan pausadas; cualquier usuario puede activarlas o pausarlas.
 export const PROSPECT_FAMILIES = [
   { key: 'Penosil', crmFamily: 'Penosil', active: true, rubros: ['ferretería', 'corralón', 'materiales de construcción', 'pinturería', 'distribuidora ferretera'] },
   { key: 'Carrozados', crmFamily: 'Carrozados', active: true, rubros: ['carrocería', 'furgón térmico', 'motorhome', 'acoplado'] },
@@ -31,7 +32,7 @@ export const PROSPECT_FAMILIES = [
   { key: 'PURMAC', crmFamily: 'PURMAC', active: true, rubros: ['aplicador de poliuretano proyectado', 'impermeabilización', 'pintura industrial'] },
   { key: 'Poliurea', crmFamily: 'Poliurea', active: true, rubros: ['aplicador de poliurea', 'impermeabilización', 'pintura industrial'] },
   { key: 'Poliuretano', crmFamily: 'Poliuretano', active: true, rubros: ['colchones', 'tapicería', 'aplicador de poliuretano'] },
-  { key: 'Baldes', crmFamily: 'Baldes', active: true, rubros: ['heladería', 'cervecería', 'destilería', 'café de especialidad', 'panadería', 'dulces y conservas', 'growshop', 'hidroponia'] },
+  { key: 'Baldes', crmFamily: 'Baldes', active: false, rubros: ['heladería', 'cervecería', 'destilería', 'café de especialidad', 'panadería', 'dulces y conservas', 'growshop', 'hidroponia'] },
   { key: 'Química', crmFamily: 'Otra', active: true, rubros: ['industria con tambores', 'mantas calefactoras', 'agitadores'] },
   { key: 'EPP', crmFamily: 'EPP', active: true, venta_cruzada: true, rubros: [] },
   { key: 'Pisos', crmFamily: 'Pisos', active: false, rubros: [] },

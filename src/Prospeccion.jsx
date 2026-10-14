@@ -83,8 +83,8 @@ function ProspectRow({ prospect, check, onMark, onOpenClient, onDelete, onEnrich
 const seconds = (ms) => `${(Number(ms || 0) / 1000).toFixed(1).replace('.', ',')} s`;
 
 // Una línea para comparar la fuente (por ejemplo contra Google Maps).
-export function searchSummary({ zoneName, returned, withPhone, withWebsite, fresh, repeated, inCrm, ms, truncated }) {
-  return `${zoneName} · OpenStreetMap devolvió ${returned} (${withPhone} con teléfono, ${withWebsite} con sitio web) · ${fresh} nuevos, ${repeated} repetidos${inCrm ? ` (${inCrm} ya están en tu CRM)` : ''} · ${seconds(ms)}.${truncated ? ' Había más: probá con otros rubros para ver el resto.' : ''}`;
+export function searchSummary({ source = 'OpenStreetMap', zoneName, returned, withPhone, withWebsite, fresh, repeated, inCrm, ms, truncated }) {
+  return `${zoneName} · ${source} devolvió ${returned} (${withPhone} con teléfono, ${withWebsite} con sitio web) · ${fresh} nuevos, ${repeated} repetidos${inCrm ? ` (${inCrm} ya están en tu CRM)` : ''} · ${seconds(ms)}.${truncated ? ' Había más: probá con otros rubros para ver el resto.' : ''}`;
 }
 
 function SearchHistory({ searches }) {
@@ -129,6 +129,16 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const [zoneQuery, setZoneQuery] = useState('');
   const [rubrosText, setRubrosText] = useState('');
   const [searching, setSearching] = useState(false);
+  // Google Maps solo aparece si el servidor lo tiene activado (apagado por defecto).
+  const [sources, setSources] = useState(['OpenStreetMap']);
+  const [source, setSource] = useState('OpenStreetMap');
+  useEffect(() => {
+    if (!session?.access_token || typeof fetch !== 'function') return;
+    fetch('/api/prospeccion', { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'sources' }) })
+      .then((response) => response.json())
+      .then((payload) => { if (Array.isArray(payload?.sources) && payload.sources.includes('OpenStreetMap')) setSources(payload.sources); })
+      .catch(() => {});
+  }, [session?.access_token]);
   const searches = Array.isArray(data.prospectSearches) ? data.prospectSearches : EMPTY;
 
   useEffect(() => {
@@ -244,13 +254,13 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     setSearching(true);
     setMessage('');
     const startedAt = Date.now();
-    const base = { id: crypto.randomUUID(), family: planFamily, zoneId: zone.id, zoneName: zone.nombre, province: provinces[zone.prov] || '', date: new Date().toISOString().slice(0, 10), source: 'OpenStreetMap' };
+    const base = { id: crypto.randomUUID(), family: planFamily, zoneId: zone.id, zoneName: zone.nombre, province: provinces[zone.prov] || '', date: new Date().toISOString().slice(0, 10), source };
     const logSearch = (entry) => setData((current) => ({ ...current, prospectSearches: [...(Array.isArray(current.prospectSearches) ? current.prospectSearches : []), { ...base, createdAt: new Date().toISOString(), ...entry }] }));
     try {
       const response = await fetch('/api/prospeccion', {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lat: zone.lat, lon: zone.lon, population: zone.pob, zoneName: zone.nombre, province: provinces[zone.prov] || '', family: planFamily, rubros }),
+        body: JSON.stringify({ lat: zone.lat, lon: zone.lon, population: zone.pob, source, zoneName: zone.nombre, province: provinces[zone.prov] || '', family: planFamily, rubros }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -259,9 +269,9 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         setMessage(`${zone.nombre}: ${reason}`);
         return;
       }
-      const known = new Set(prospects.map((item) => item.osmId).filter(Boolean));
+      const known = new Set(prospects.flatMap((item) => [item.osmId, item.googleId]).filter(Boolean));
       const results = payload.results || [];
-      const fresh = results.filter((item) => !known.has(item.osmId));
+      const fresh = results.filter((item) => !known.has(item.osmId || item.googleId));
       const now = new Date().toISOString();
       const made = fresh.map((row) => blankProspect({ ...row, competitor: isCompetitor(row.company) }, { id: crypto.randomUUID(), now }));
       const inCrm = made.filter((item) => matchProspect(item, clients).status === 'Ya en el CRM').length;
@@ -275,7 +285,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
           fresh: made.length, repeated: results.length - made.length, inCrm, ms, attempts: payload.attempts || 1, endpoint: payload.endpoint || '', truncated: Boolean(payload.truncated),
         }],
       }));
-      setMessage(searchSummary({ zoneName: zone.nombre, returned: stats.returned, withPhone: stats.withPhone, withWebsite: stats.withWebsite, fresh: made.length, repeated: results.length - made.length, inCrm, ms, truncated: payload.truncated }));
+      setMessage(searchSummary({ source, zoneName: zone.nombre, returned: stats.returned, withPhone: stats.withPhone, withWebsite: stats.withWebsite, fresh: made.length, repeated: results.length - made.length, inCrm, ms, truncated: payload.truncated }));
     } catch (error) {
       const reason = 'No se pudo hacer la búsqueda. Revisá tu conexión y probá de nuevo.';
       logSearch({ status: 'error', failed: true, found: 0, error: reason, ms: Date.now() - startedAt });
@@ -411,6 +421,13 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         <label>Rubros a buscar (separados por coma)
           <input value={rubrosText} onChange={(event) => setRubrosText(event.target.value)} />
         </label>
+        {sources.length > 1 && (
+          <label>Fuente
+            <select aria-label="Fuente de la búsqueda" value={source} onChange={(event) => setSource(event.target.value)}>
+              {sources.map((item) => <option key={item}>{item}</option>)}
+            </select>
+          </label>
+        )}
         <div className="panel-head-actions">
           <button type="button" className="primary" disabled={!zone || searching || !session?.access_token} onClick={runSearch}>
             <Search size={16} /> {searching ? 'Buscando…' : zone ? `Buscar en ${zone.nombre}` : 'Elegí una zona'}

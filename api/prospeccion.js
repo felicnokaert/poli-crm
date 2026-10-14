@@ -1,5 +1,6 @@
 import { authenticatedCorporateUser } from '../lib/corporate-auth.mjs';
 import { enrichWebsite } from '../lib/prospect-enrich.mjs';
+import { googleConfig, normalizeGoogle, searchGoogle, takeQuota } from '../lib/prospect-google.mjs';
 import { buildOverpassQuery, normalizeOverpass, radiusForPopulation, safeWord, searchOverpass, summarizeResults } from '../lib/prospect-osm.mjs';
 
 // Lupa de Prospección: busca comercios en OpenStreetMap por zona y rubros y
@@ -10,6 +11,10 @@ export default async function handler(request, response) {
   if (!user) return response.status(401).json({ error: 'Acceso corporativo requerido.' });
 
   const body = request.body || {};
+  if (body.action === 'sources') {
+    const google = googleConfig();
+    return response.status(200).json({ ok: true, sources: ['OpenStreetMap', ...(google.enabled ? ['Google Maps'] : [])], googleDailyCap: google.enabled ? google.cap : 0 });
+  }
   if (body.action === 'enrich') {
     const result = await enrichWebsite(String(body.website || ''));
     return response.status(result.ok ? 200 : 422).json(result);
@@ -24,6 +29,19 @@ export default async function handler(request, response) {
   if (!rubros.length) return response.status(400).json({ error: 'Elegí al menos un rubro.' });
 
   const radiusKm = Math.min(Number(body.radiusKm) || radiusForPopulation(Number(body.population)), 30);
+  if (body.source === 'Google Maps') {
+    // Apagado por defecto: sin configuración completa no se consulta nada.
+    if (!googleConfig().enabled) return response.status(403).json({ error: 'La búsqueda en Google Maps está desactivada.', kind: 'off' });
+    const quota = await takeQuota();
+    if (!quota.ok) {
+      const error = quota.reason === 'cap' ? `Se alcanzó el tope diario de ${quota.cap} búsquedas en Google Maps. Mañana se renueva; mientras tanto usá OpenStreetMap.` : 'No se pudo verificar el tope diario de Google Maps, así que no se consultó.';
+      return response.status(429).json({ error, kind: 'cap' });
+    }
+    const found = await searchGoogle({ query: rubros.join(' OR '), lat, lon, radiusKm });
+    if (!found.ok) return response.status(502).json({ error: found.error, kind: 'network', attempts: 1, ms: found.ms });
+    const googleResults = normalizeGoogle(found.data, { zoneName: safeWord(body.zoneName || ''), province: safeWord(body.province || ''), family: safeWord(body.family || '') });
+    return response.status(200).json({ ok: true, source: 'Google Maps', radiusKm, count: googleResults.length, truncated: false, stats: summarizeResults(googleResults), attempts: 1, ms: found.ms, endpoint: 'places.googleapis.com', results: googleResults });
+  }
   const query = buildOverpassQuery({ lat, lon, radiusKm, rubros });
   const result = await searchOverpass(query);
   if (!result.ok) return response.status(502).json({ error: result.error, kind: result.kind, attempts: result.attempts, ms: result.ms });

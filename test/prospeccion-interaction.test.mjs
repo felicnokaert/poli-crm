@@ -87,7 +87,9 @@ describe("Prospeccion.jsx - interacción real", () => {
       { company: "Corralón Norte", family: "Penosil", rubro: "corralón", city: "Córdoba", province: "Córdoba", osmId: "way/2", source: "OpenStreetMap" },
     ];
     globalThis.fetch = async (url, options) => {
-      calls.push({ url, body: JSON.parse(options.body) });
+      const body = JSON.parse(options.body);
+      if (body.action === "sources") return { ok: true, json: async () => ({ ok: true, sources: ["OpenStreetMap"] }) };
+      calls.push({ url, body });
       return { ok: true, json: async () => ({ ok: true, count: results.length, truncated: false, stats: { returned: 2, withPhone: 1, withWebsite: 0 }, ms: 3400, attempts: 1, endpoint: "overpass-api.de", results }) };
     };
     try {

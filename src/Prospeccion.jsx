@@ -6,7 +6,8 @@ import {
 } from './prospect-model.mjs';
 import { matchProspect } from './prospect-dedupe.mjs';
 import { markProspect } from './prospect-convert.mjs';
-import { parseProspectsText } from './prospect-import.mjs';
+import { buildImportPlan, parseProspectsText } from './prospect-import.mjs';
+import { readFileSmart } from './text-decode.mjs';
 import { DAILY_TARGET, currentFocus, scopeDescription, weekStart, suggestZones, zoneStatus, zonesForFamily } from './prospect-plan.mjs';
 
 const DAILY_LIST_SIZE = 40;
@@ -103,6 +104,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const [dailyList, setDailyList] = useState(null);
   const [message, setMessage] = useState('');
   const [importText, setImportText] = useState('');
+  const [importPlan, setImportPlan] = useState(null);
   const [form, setForm] = useState(null);
   const [cities, setCities] = useState(citiesProp || []);
   const [provinces, setProvinces] = useState({});
@@ -173,12 +175,31 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     setMessage('Prospecto cargado.');
   }
 
-  function submitImport() {
-    const { rows, ignored, error } = parseProspectsText(importText);
-    if (error) { setMessage(error); return; }
-    const added = addProspects(rows, 'Importación');
+  // Paso 1: leer la lista y mostrar la vista previa (todavía no se guarda nada).
+  function analyzeImport(text) {
+    const { rows, ignored, error } = parseProspectsText(text);
+    if (error) { setMessage(error); setImportPlan(null); return; }
+    setImportPlan({ ...buildImportPlan(rows, clients, prospects), ignored });
+    setMessage('');
+  }
+
+  async function importFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    try { analyzeImport(await readFileSmart(file)); } catch { setMessage('No se pudo leer el archivo. Probá guardarlo como CSV o pegá las filas.'); }
+  }
+
+  // Paso 2: confirmar. Entran las nuevas y las posibles duplicadas (con su etiqueta);
+  // las que ya están en el CRM o ya cargadas se omiten.
+  function confirmImport() {
+    if (!importPlan) return;
+    const made = importPlan.toImport;
+    setData((current) => ({ ...current, prospects: [...(Array.isArray(current.prospects) ? current.prospects : []), ...made] }));
+    const skipped = importPlan.counts.enCrm + importPlan.counts.yaCargadas;
+    setMessage(`Se importaron ${made.length} prospectos como "No contactado" (fuente: importado).${skipped ? ` Se omitieron ${skipped} que ya estaban en el CRM o ya cargadas.` : ''}`);
+    setImportPlan(null);
     setImportText('');
-    setMessage(`Se cargaron ${added} prospectos${ignored ? ` (${ignored} filas sin nombre se ignoraron)` : ''}. Revisá las etiquetas de duplicado antes de contactar.`);
   }
 
   function mark(prospectId, nextState, outcome) {
@@ -387,10 +408,39 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       )}
 
       <details>
-        <summary><FileUp size={14} /> Pegar una lista de prospectos</summary>
-        <p className="muted">Pegá la tabla con encabezados en la primera fila (Empresa, Teléfono, Sitio web, Localidad, Provincia, Familia, Rubro…).</p>
+        <summary><FileUp size={14} /> Importar o pegar una lista de prospectos</summary>
+        <p className="muted">Subí un CSV o pegá las filas copiadas de la planilla, con los encabezados en la primera fila (Nombre empresa, Familia, Subfamilia, provincia, ciudad, Maquina, Proveedor, telefono, email, Estado, Comercial, Contacto, observaciones, Fecha de seguimiento, Tipo entidad, Producto / propuesta, Estado comercial, Valor potencial, Próxima acción, Fecha próxima acción). Antes de guardar vas a ver cuántas son nuevas, cuántas ya están en el CRM y cuántas son posibles duplicadas.</p>
+        <label className="secondary upload-button"><FileUp size={14} /> Elegir un CSV
+          <input type="file" accept=".csv,.txt,text/csv" hidden aria-label="Archivo de prospectos" onChange={importFile} />
+        </label>
         <textarea rows={5} value={importText} onChange={(event) => setImportText(event.target.value)} aria-label="Lista de prospectos" />
-        <button type="button" className="secondary" disabled={!importText.trim()} onClick={submitImport}>Cargar la lista</button>
+        <button type="button" className="secondary" disabled={!importText.trim()} onClick={() => analyzeImport(importText)}>Revisar lista</button>
+        {importPlan && (
+          <div className="panel">
+            <h3>Vista previa de la importación</h3>
+            <p>
+              {importPlan.counts.total} filas: <strong>{importPlan.counts.nuevas} nuevas</strong>, {importPlan.counts.enCrm} ya en el CRM,
+              {' '}{importPlan.counts.posibles} posibles duplicadas, {importPlan.counts.yaCargadas} ya cargadas como prospecto
+              {importPlan.ignored ? `, ${importPlan.ignored} sin nombre (se ignoran)` : ''}.
+            </p>
+            <table>
+              <thead><tr><th>Empresa</th><th>Familia</th><th>Ciudad</th><th>Cruce</th></tr></thead>
+              <tbody>
+                {importPlan.items.slice(0, 15).map((item) => (
+                  <tr key={item.prospect.id}>
+                    <td>{item.prospect.company}</td><td>{item.prospect.family || item.prospect.imported?.familyRaw || '–'}</td><td>{item.prospect.city || '–'}</td>
+                    <td>{item.status}{item.match ? ` · ${item.match.name}` : ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {importPlan.items.length > 15 && <p className="muted">Se muestran las primeras 15 de {importPlan.items.length}.</p>}
+            <div className="panel-head-actions">
+              <button type="button" className="primary" disabled={!importPlan.toImport.length} onClick={confirmImport}>Confirmar importación ({importPlan.toImport.length})</button>
+              <button type="button" className="secondary" onClick={() => setImportPlan(null)}>Cancelar</button>
+            </div>
+          </div>
+        )}
       </details>
 
       <div className="panel-head-actions">

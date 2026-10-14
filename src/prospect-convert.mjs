@@ -5,7 +5,7 @@
 import { familyConfig, CONVERTING_STATES, setProspectState } from './prospect-model.mjs';
 import { matchProspect } from './prospect-dedupe.mjs';
 
-const FILLABLE = ['phone', 'email', 'website', 'province', 'city', 'address', 'instagram', 'facebook'];
+const FILLABLE = ['phone', 'email', 'website', 'province', 'city', 'address', 'instagram', 'facebook', 'contact', 'machine', 'currentSupplier', 'notes'];
 
 function fillEmpty(client, prospect) {
   const next = { ...client };
@@ -15,12 +15,26 @@ function fillEmpty(client, prospect) {
   return next;
 }
 
+// Observaciones de la planilla + lo que quedó pendiente (propuesta, próxima acción).
+function notesFrom(prospect) {
+  const imported = prospect.imported || {};
+  return [
+    prospect.notes,
+    imported.proposal && `Producto / propuesta: ${imported.proposal}`,
+    imported.potentialValue && `Valor potencial: ${imported.potentialValue}`,
+    imported.nextAction && `Próxima acción: ${imported.nextAction}${imported.nextDate ? ` (${imported.nextDate})` : ''}`,
+  ].filter(Boolean).join(' · ');
+}
+
 export function clientFromProspect(prospect, { id, businessUnit = '', now = new Date().toISOString() } = {}) {
   const family = familyConfig(prospect.family)?.crmFamily || 'Sin definir';
   return {
     id,
     company: prospect.company,
-    contact: '',
+    contact: prospect.contact || '',
+    machine: prospect.machine || '',
+    currentSupplier: prospect.currentSupplier || '',
+    notes: notesFrom(prospect),
     phone: prospect.phone || '',
     email: prospect.email || '',
     website: prospect.website || '',

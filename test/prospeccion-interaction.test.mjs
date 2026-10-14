@@ -7,6 +7,7 @@ import { loadJsxModule } from "./helpers/load-jsx.mjs";
 afterEach(cleanup);
 
 describe("Prospeccion.jsx - interacción real", () => {
+  const paragraph = (pattern) => screen.getByText((_, node) => node.tagName === "P" && pattern.test(node.textContent.replace(/\s+/g, " ")));
   async function mount(initial, extra = {}) {
     const mod = await loadJsxModule("src/Prospeccion.jsx");
     const snapshots = [];
@@ -36,12 +37,13 @@ describe("Prospeccion.jsx - interacción real", () => {
 
   test("pegar una lista etiqueta como 'Ya en el CRM' al que ya es cliente", async () => {
     await mount({ clients: [{ id: "c1", company: "PIERANDREI S.A.", city: "Paraná" }], prospects: [] });
-    fireEvent.click(screen.getByText(/Pegar una lista de prospectos/));
+    fireEvent.click(screen.getByText(/Importar o pegar una lista de prospectos/));
     fireEvent.change(screen.getByLabelText("Lista de prospectos"), { target: { value: "Empresa;Localidad\nPierandrei;Parana\nFerretería Sur;Colón" } });
-    fireEvent.click(screen.getByText("Cargar la lista"));
+    fireEvent.click(screen.getByText("Revisar lista"));
+    await waitFor(() => paragraph(/2 filas: 1 nuevas, 1 ya en el CRM, 0 posibles duplicadas/));
+    fireEvent.click(screen.getByText("Confirmar importación (1)"));
     await waitFor(() => screen.getByText("Ferretería Sur"));
-    assert.ok(screen.getByText("Ya en el CRM"));
-    assert.ok(screen.getByText("Nuevo"));
+    assert.equal(screen.queryByText(/^Pierandrei$/), null, "la que ya es cliente no se carga como prospecto");
   });
 
   test("marcar Contactado pasa el prospecto a Empresas y no se duplica al repetir", async () => {
@@ -179,5 +181,55 @@ describe("Prospeccion.jsx - interacción real", () => {
     assert.equal(snapshots.at(-1).prospectSearches.length, 1);
     assert.ok(screen.getByText("Ferretería Uno"));
     assert.ok(screen.getByText("Cobertura por familia y localidad"));
+  });
+
+  const RELEVAMIENTO = [
+    "Nombre empresa;Familia;Subfamilia;provincia;ciudad;Maquina;Proveedor;telefono;email;Estado;Comercial;Contacto;observaciones;Fecha de seguimiento;Tipo entidad;Producto / propuesta;Estado comercial;Valor potencial;Próxima acción;Fecha próxima acción",
+    "Optimall;Planchas de PUR;Aislantes;Buenos Aires;Mar del Plata;Pegadora;Argenpur;+54 223 4000000;ventas@optimall.com;Relevado;Felipe;Marcos;Compra por pallet;2026-10-20;Fabricante;Plancha 1000x1100;Prospecto;USD 5000;Llamar;2026-10-21",
+    "Astori Estructuras;PRFV;;Santa Fe;Rosario;;;;;;;;;;;;;;;",
+  ].join("\n");
+
+  test("la importación muestra la vista previa con las columnas de RELEVAMIENTO y recién al confirmar carga los prospectos", async () => {
+    const snapshots = await mount({ clients: [], prospects: [] }, { cities: CITIES });
+    fireEvent.click(screen.getByText(/Importar o pegar una lista de prospectos/));
+    fireEvent.change(screen.getByLabelText("Lista de prospectos"), { target: { value: RELEVAMIENTO } });
+    fireEvent.click(screen.getByText("Revisar lista"));
+    await waitFor(() => paragraph(/2 filas: 2 nuevas, 0 ya en el CRM, 0 posibles duplicadas, 0 ya cargadas como prospecto/));
+    assert.equal(snapshots.length, 0, "todavía no se guardó nada");
+    fireEvent.click(screen.getByText("Confirmar importación (2)"));
+    await waitFor(() => assert.equal(snapshots.at(-1).prospects.length, 2));
+    const [optimall, astori] = snapshots.at(-1).prospects;
+    assert.deepEqual([optimall.state, optimall.source, optimall.family], ["No contactado", "importado", "Planchas"]);
+    assert.equal(astori.family, "Resinplast", "PRFV se prospecta bajo Resinplast");
+    assert.equal(optimall.contact, "Marcos");
+    assert.equal(optimall.currentSupplier, "Argenpur");
+    assert.equal(optimall.imported.proposal, "Plancha 1000x1100");
+    assert.equal(optimall.competitor, false);
+  });
+
+  test("la importación detecta repetidas dentro del archivo, posibles duplicadas y ya cargadas", async () => {
+    await mount({
+      clients: [{ id: "c1", company: "Silvacom S.R.L.", city: "" }],
+      prospects: [{ id: "p0", company: "Corralón Norte", family: "Penosil", city: "Colón", state: "No contactado", source: "x" }],
+    }, { cities: CITIES });
+    fireEvent.click(screen.getByText(/Importar o pegar una lista de prospectos/));
+    fireEvent.change(screen.getByLabelText("Lista de prospectos"), {
+      target: { value: "Empresa;Ciudad\nSILVACOM;Concordia\nCorralón Norte S.A.;Colón\nFerretería Sur;Paraná\nFerretería Sur S.R.L.;Paraná" },
+    });
+    fireEvent.click(screen.getByText("Revisar lista"));
+    await waitFor(() => paragraph(/4 filas: 1 nuevas, 0 ya en el CRM, 1 posibles duplicadas, 2 ya cargadas como prospecto/));
+    fireEvent.click(screen.getByText("Confirmar importación (2)"));
+    await waitFor(() => screen.getByText(/Se importaron 2 prospectos como "No contactado" \(fuente: importado\)\. Se omitieron 2/));
+  });
+
+  test("también se puede subir un archivo CSV y ver la misma vista previa", async () => {
+    await mount({ clients: [], prospects: [] }, { cities: CITIES });
+    fireEvent.click(screen.getByText(/Importar o pegar una lista de prospectos/));
+    const file = new File(["Nombre empresa;Familia;ciudad\r\nFerretería Uno;Penosil;Paraná\r\nCorralón Dos;Penosil;Colón"], "relevamiento.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Archivo de prospectos"), { target: { files: [file] } });
+    await waitFor(() => paragraph(/2 filas: 2 nuevas/));
+    assert.ok(screen.getByText("Confirmar importación (2)"));
+    fireEvent.click(screen.getByText("Cancelar"));
+    assert.equal(screen.queryByText("Confirmar importación (2)"), null);
   });
 });

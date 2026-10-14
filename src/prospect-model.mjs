@@ -79,6 +79,11 @@ export function blankProspect(fields = {}, { id, now = new Date().toISOString() 
     email: '',
     instagram: '',
     facebook: '',
+    contact: '',
+    machine: '',
+    currentSupplier: '',
+    notes: '',
+    imported: null,
     osmId: '',
     lat: null,
     lon: null,
@@ -104,4 +109,19 @@ export function possibleWhatsAppLink(phone = '') {
 export function setProspectState(prospect, state, outcome = '', now = new Date().toISOString(), user = '') {
   if (!PROSPECT_STATES.includes(state)) return prospect;
   return { ...prospect, state, outcome, markedBy: user || prospect.markedBy || '', markedAt: now, updatedAt: now };
+}
+
+// Familia de prospección a partir de lo que dice una planilla ("PRFV",
+// "Planchas de PUR", "carrozados imperpur"...). Si no se reconoce devuelve ''.
+const FAMILY_ALIASES = {
+  prfv: 'Resinplast', 'fibra de vidrio': 'Resinplast', 'planchas de pur': 'Planchas', 'plancha de poliuretano': 'Planchas',
+  'planchas de poliuretano': 'Planchas', plancha: 'Planchas', poliuretanos: 'Poliuretano', quimica: 'Química',
+  'carrozados sin imperpur': 'Carrozados Imperpur', imperpur: 'Carrozados Imperpur',
+};
+
+export function prospectFamilyKey(value = '') {
+  const text = plain(value);
+  if (!text) return '';
+  const direct = PROSPECT_FAMILIES.find((item) => plain(item.key) === text);
+  return direct?.key || FAMILY_ALIASES[text] || '';
 }

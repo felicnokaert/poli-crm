@@ -14,7 +14,6 @@ function ProspeccionMapaBase({ data, onOpenClient, cities: citiesProp, provinces
   const [provinces, setProvinces] = useState({});
   const [geo, setGeo] = useState(geoProp || null);
   const [filters, setFilters] = useState({ unit: '', family: '', state: '', province: '', city: '', from: '', to: '' });
-  const [includeClients, setIncludeClients] = useState(false);
   const [view, setView] = useState({ x: 0, y: 0, w: MAP_SIZE.width });
   const [selected, setSelected] = useState(null);
   const [deficitFamily, setDeficitFamily] = useState('Penosil');
@@ -44,7 +43,7 @@ function ProspeccionMapaBase({ data, onOpenClient, cities: citiesProp, provinces
     return city ? { lat: city.lat, lon: city.lon } : null;
   }, [index, provinces]);
 
-  const { points, unlocated } = useMemo(() => mapPoints({ prospects, clients, includeClients, locate }), [prospects, clients, includeClients, locate]);
+  const { points, unlocated } = useMemo(() => mapPoints({ prospects, locate }), [prospects, locate]);
   const shown = useMemo(() => filterPoints(points, filters), [points, filters]);
   const scale = MAP_SIZE.width / view.w;
   const clusters = useMemo(() => clusterPoints(shown, 14 / scale), [shown, scale]);
@@ -85,7 +84,7 @@ function ProspeccionMapaBase({ data, onOpenClient, cities: citiesProp, provinces
         <div>
           <span className="eyebrow">Cartera</span>
           <h2>Mapa de prospección</h2>
-          <p>Dónde buscaste y qué pasó con cada prospecto. Es independiente del mapa de cobertura de POLIOCHO: no mezcla sus datos.</p>
+          <p>Dónde buscaste y qué pasó con cada prospecto. Muestra solo prospectos de las demás familias; los clientes y aplicadores de POLIOCHO siguen en el mapa de cobertura, sin mezclarse.</p>
         </div>
         <MapPin size={20} />
       </div>
@@ -102,7 +101,6 @@ function ProspeccionMapaBase({ data, onOpenClient, cities: citiesProp, provinces
         <select aria-label="Estado del mapa" value={filters.state} onChange={(event) => set('state', event.target.value)}>
           <option value="">Todos los estados</option>
           {PROSPECT_STATES.map((item) => <option key={item}>{item}</option>)}
-          {includeClients && <option>Cliente</option>}
         </select>
         <select aria-label="Provincia del mapa" value={filters.province} onChange={(event) => set('province', event.target.value)}>
           <option value="">Todas las provincias</option>
@@ -111,11 +109,10 @@ function ProspeccionMapaBase({ data, onOpenClient, cities: citiesProp, provinces
         <input aria-label="Localidad del mapa" placeholder="Localidad" value={filters.city} onChange={(event) => set('city', event.target.value)} />
         <label>Desde <input type="date" aria-label="Desde" value={filters.from} onChange={(event) => set('from', event.target.value)} /></label>
         <label>Hasta <input type="date" aria-label="Hasta" value={filters.to} onChange={(event) => set('to', event.target.value)} /></label>
-        <label className="checkbox-field"><input type="checkbox" checked={includeClients} onChange={(event) => setIncludeClients(event.target.checked)} /> Mostrar clientes del CRM</label>
       </div>
       <p className="muted">
         {shown.length} pines{unlocated ? ` · ${unlocated} prospectos sin ubicar (les falta la localidad o no se reconoce)` : ''}.
-        {' '}{Object.entries(STATE_COLORS).filter(([state]) => state !== 'Cliente' || includeClients).map(([state, color]) => (
+        {' '}{Object.entries(STATE_COLORS).filter(([state]) => state !== 'Cliente').map(([state, color]) => (
           <span key={state}><i style={{ background: color, display: 'inline-block', width: 10, height: 10, borderRadius: 5, margin: '0 4px 0 10px' }} />{state}</span>
         ))}
       </p>

@@ -40,7 +40,7 @@ test('los pines salen de los prospectos y los sin ubicar se cuentan aparte', () 
   assert.equal(result.points[0].unit, unitOfFamily('Penosil'));
 });
 
-test('los clientes del CRM solo aparecen si se pide y sin repetir los ya vinculados', () => {
+test('los clientes del CRM solo se pueden pedir explícitamente (el mapa de prospección no los pide)', () => {
   const prospects = [{ id: 'a', company: 'A', family: 'Penosil', state: 'Contactado', lat: -31, lon: -60, linkedClientId: 'c1' }];
   const clients = [
     { id: 'c1', company: 'A', family: 'Penosil', lat: -31, lon: -60 },
@@ -100,6 +100,12 @@ describe('ProspeccionMapa.jsx', () => {
     assert.ok(screen.getByText(/0 pines/));
     assert.ok(screen.getByText(/todavía no tiene datos: se ordena por población/));
     assert.ok(screen.getAllByText('Ciudad de Buenos Aires').length >= 1);
+  });
+
+  test('no ofrece mezclar los clientes del CRM en el mapa', async () => {
+    await mount({ clients: [{ id: 'c1', company: 'Aplicador', family: 'PURMAC', city: 'Córdoba', province: 'Córdoba' }], prospects: [] });
+    assert.equal(screen.queryByText(/Mostrar clientes del CRM/), null);
+    assert.ok(screen.getByText(/0 pines/));
   });
 
   test('un prospecto ubicado por su ciudad aparece y el filtro de estado lo oculta', async () => {

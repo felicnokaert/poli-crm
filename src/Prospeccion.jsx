@@ -318,7 +318,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const [familyFilter, setFamilyFilter] = useState('Todas');
   const [stateFilter, setStateFilter] = useState('Todos');
   const [dailyList, setDailyList] = useState(null);
-  const [listView, setListView] = useState('planilla');
+  const [listView, setListView] = useState('cola');
   const [searchFilter, setSearchFilter] = useState(null);
   const [detailId, setDetailId] = useState(null);
   const [skipped, setSkipped] = useState([]);

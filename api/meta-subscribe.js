@@ -1,5 +1,5 @@
 import { authenticatedCorporateUser } from '../lib/corporate-auth.mjs';
-import { diagnoseMeta } from '../lib/meta-diagnose.mjs';
+import { diagnoseMeta, repairWebhook, webhookStatus } from '../lib/meta-diagnose.mjs';
 
 const WABAS = {
   general: '1620643669067135',
@@ -21,6 +21,10 @@ const DIAGNOSE_ONLY = {
   resinplast: '2513542480059337',
 };
 
+const WEBHOOK_URL = 'https://poli-crm.vercel.app/api/whatsapp-webhook';
+// App "Agente Poliplast", la que recibe los webhooks de WhatsApp.
+const WABA_APP_ID = '857121580457426';
+
 export default async function handler(request, response) {
   if (request.method !== 'POST') return response.status(405).json({ error: 'Método no permitido.' });
   const user = await authenticatedCorporateUser(request);
@@ -29,7 +33,16 @@ export default async function handler(request, response) {
 
   if (request.body?.action === 'diagnose') {
     const report = await diagnoseMeta({ token: process.env.META_SYSTEM_USER_TOKEN, wabas: { ...WABAS, ...DIAGNOSE_ONLY } });
-    return response.status(200).json({ ok: true, ...report });
+    const webhook = await webhookStatus({ appId: report.token?.appId, appSecret: process.env.META_APP_SECRET, expectedUrl: WEBHOOK_URL });
+    return response.status(200).json({ ok: true, ...report, webhook });
+  }
+
+  // Deja el webhook de la app apuntando de nuevo al CRM (URL + campo `messages`).
+  if (request.body?.action === 'repair-webhook') {
+    const appId = process.env.META_APP_ID || WABA_APP_ID;
+    const result = await repairWebhook({ appId, appSecret: process.env.META_APP_SECRET, callbackUrl: WEBHOOK_URL, verifyToken: process.env.WHATSAPP_VERIFY_TOKEN });
+    if (!result.ok) return response.status(502).json({ error: `Meta no aceptó el cambio: ${result.error}` });
+    return response.status(200).json({ ok: true, callbackUrl: WEBHOOK_URL });
   }
 
   const channel = request.body?.channel;

@@ -44,3 +44,28 @@ test('diagnoseMeta resume token y cuentas sin exponer el token', async () => {
   assert.match(penosil.account.error, /does not exist/);
   assert.equal(JSON.stringify(report).includes(secret), false);
 });
+
+import { repairWebhook, webhookStatus } from '../lib/meta-diagnose.mjs';
+
+test('webhookStatus informa URL, campos y si el secreto sigue vigente', async () => {
+  const calls = [];
+  const http = async (url) => { calls.push(url); return { ok: true, json: async () => ({ data: [{ object: 'whatsapp_business_account', callback_url: 'https://x/api/whatsapp-webhook', active: true, fields: [{ name: 'messages' }] }] }) }; };
+  const out = await webhookStatus({ appId: '1', appSecret: 's', expectedUrl: 'https://x/api/whatsapp-webhook', http });
+  assert.deepEqual(out, { subscribed: true, active: true, callbackUrl: 'https://x/api/whatsapp-webhook', urlOk: true, fields: ['messages'], messagesField: true });
+  assert.match(calls[0], /\/1\/subscriptions\?access_token=1%7Cs$/);
+  const rejected = await webhookStatus({ appId: '1', appSecret: 'mal', http: async () => ({ ok: false, status: 400, json: async () => ({ error: { message: 'Error validating client secret.' } }) }) });
+  assert.equal(rejected.secretRejected, true);
+  assert.match((await webhookStatus({ appId: '', appSecret: '' })).error, /Falta/);
+  const none = await webhookStatus({ appId: '1', appSecret: 's', http: async () => ({ ok: true, json: async () => ({ data: [] }) }) });
+  assert.equal(none.subscribed, false);
+});
+
+test('repairWebhook reenvía URL, campo messages y token de verificación', async () => {
+  let seen;
+  const out = await repairWebhook({ appId: '1', appSecret: 's', callbackUrl: 'https://x/hook', verifyToken: 'tok', http: async (url, init) => { seen = { url, init }; return { ok: true, json: async () => ({ success: true }) }; } });
+  assert.equal(out.ok, true);
+  assert.equal(seen.init.method, 'POST');
+  assert.match(seen.init.body, /object=whatsapp_business_account/);
+  assert.match(seen.init.body, /fields=messages/);
+  assert.equal((await repairWebhook({ appId: '1', appSecret: '', callbackUrl: 'x', verifyToken: 'y' })).ok, false);
+});

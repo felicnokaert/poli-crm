@@ -45,7 +45,11 @@ export default async function handler(request, response) {
   }
 
   const signature = request.headers['x-hub-signature-256'];
-  if (!verifyMetaSignature(rawBody, signature, process.env.META_APP_SECRET)) return response.status(401).json({ ok: false });
+  if (!verifyMetaSignature(rawBody, signature, process.env.META_APP_SECRET)) {
+    // Sin esto un rechazo es invisible: queda constancia (sin datos del mensaje) para poder diagnosticar.
+    logError('whatsapp-webhook', 'rejected: invalid or missing signature', { hasSignature: Boolean(signature), hasSecret: Boolean(process.env.META_APP_SECRET), bytes: rawBody.length });
+    return response.status(401).json({ ok: false });
+  }
 
   let payload;
   try {

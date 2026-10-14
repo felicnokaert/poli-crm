@@ -176,6 +176,25 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
     }
   }
 
+  async function repairMetaWebhook() {
+    if (!session?.access_token) return;
+    setConnecting(true);
+    try {
+      const response = await fetch("/api/meta-subscribe", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "repair-webhook" }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "No se pudo reparar el webhook.");
+      showMessage("Listo: Meta volvió a apuntar los mensajes al CRM. Mandá un mensaje de prueba al número de General.");
+    } catch (error) {
+      showError(error.message || "No se pudo reparar el webhook.");
+    } finally {
+      setConnecting(false);
+    }
+  }
+
   async function runMetaDiagnosis() {
     if (!session?.access_token) return;
     setConnecting(true);
@@ -420,6 +439,9 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
             <p>
               <button type="button" className="secondary" disabled={connecting} onClick={runMetaDiagnosis}>
                 Diagnóstico de conexión
+              </button>{" "}
+              <button type="button" className="secondary" disabled={connecting} onClick={repairMetaWebhook}>
+                Reparar recepción de mensajes
               </button>
             </p>
             {diagnosis && <pre className="muted" style={{ whiteSpace: "pre-wrap", userSelect: "all" }}>{diagnosis}</pre>}

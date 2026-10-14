@@ -584,3 +584,11 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .day-hero-head .eyebrow { text-transform: capitalize; }
 .day-hero-urgent { margin-top: 14px; }
 .metric-card strong { font-variant-numeric: tabular-nums; }
+
+/* Lectura automática de la conversación (sin IA paga) */
+.insight-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; font-size: 12px; }
+.insight-chip { padding: 2px 9px; border-radius: 999px; background: #29292912; color: #292929; font-weight: 600; }
+.insight-chip.readiness-high { background: #ed1c24; color: #fff; }
+.insight-chip.readiness-mid { background: #ed1c2420; color: #c9151c; }
+.insight-chip.mood-negativo { background: #292929; color: #fff; }
+.insight-next { color: #5b5d60; }

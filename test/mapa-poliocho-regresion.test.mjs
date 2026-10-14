@@ -12,13 +12,13 @@ import { buildMapClients } from '../src/map-clients-adapter.mjs';
 const sha = (path) => createHash('sha256').update(readFileSync(new URL(`../${path}`, import.meta.url))).digest('hex');
 
 const BASELINE = {
-  'public/mapa/app.js': '36890ec43fd5052288d4aa9d2e23e300e1e06e90c13ceec60fc2ec3d0f86472a',
+  'public/mapa/app.js': '67b6b5fb410ccb222fb5858c5031b47d99bc4f49ea317bdb188cb2c8e11bdebf',
   'public/mapa/alcance.mjs': '46af72300b46d1cbfa04642776e0568db8fd6881eefe82dd1489748f40c50548',
   'public/mapa/contacto.mjs': '23c7f5107a2ecc472cd7e9d1bcef5b912b80f4edb836d66f81b696d74a0fbf97',
   'public/mapa/nombres-ciudad.mjs': 'c294ef7eb55c7f70fbf77192dbbd588173a78ab03712a418f5744ad171ddb327',
   'public/mapa/index.html': 'ed1d929a8b196d066f4c607a51c488b6eea914e3ce24c5c4156e997bfb449bab',
   'public/mapa/styles.css': 'fc0a3c4fe9a7c68e94a737e1f5040ccb76de8584e635d348f4b5ad0231ec67c0',
-  'src/MapaCobertura.jsx': '46fd55546eea28926cf8e1511522abbdc27c9a95dd7822c124a09dfdcdc3a9cf',
+  'src/MapaCobertura.jsx': '5c2c57fd8ef90c83a543e3d735d020350318e47bb76e46241e9548a4973bccdb',
   'src/map-clients-adapter.mjs': 'da3ab7945c08173f12babb42ff50af779f454a5c0b5c7cc7f69fc7a92867001c',
 };
 

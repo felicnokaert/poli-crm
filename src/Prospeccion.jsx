@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { ExternalLink, FileUp, Plus, Search, Trash2 } from 'lucide-react';
 import {
-  PROSPECT_FAMILIES, PROSPECT_OUTCOMES, PROSPECT_STATES, blankProspect, familyConfig, familyIsActive,
+  PROSPECT_FAMILIES, PROSPECT_OUTCOMES, PROSPECT_STATES, blankProspect, familyConfig,
   isCompetitor, possibleWhatsAppLink,
 } from './prospect-model.mjs';
 import { matchProspect } from './prospect-dedupe.mjs';
@@ -9,8 +9,7 @@ import { markProspect } from './prospect-convert.mjs';
 import { buildImportPlan, parseProspectsText } from './prospect-import.mjs';
 import { readFileSmart } from './text-decode.mjs';
 import { applyEnrichment } from './prospect-enrich-apply.mjs';
-import { deficitRanking, familyPoints } from './prospect-coverage.mjs';
-import { DAILY_TARGET, currentFocus, scopeDescription, weekStart, suggestZones, zoneStatus, zonesForFamily } from './prospect-plan.mjs';
+import { DAILY_TARGET, currentFocus, scopeDescription, zoneStatus, zonesForFamily } from './prospect-plan.mjs';
 
 const DAILY_LIST_SIZE = 40;
 const EMPTY = [];
@@ -88,11 +87,11 @@ function prospectsCsv(rows) {
   return `\ufeff${[head.map(csvCell).join(';'), ...lines].join('\r\n')}`;
 }
 
-function downloadCsv(rows) {
+function downloadCsv(rows, name = '') {
   const url = URL.createObjectURL(new Blob([prospectsCsv(rows)], { type: 'text/csv;charset=utf-8' }));
   const link = document.createElement('a');
   link.href = url;
-  link.download = `prospectos-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = `${(name || `prospectos-${new Date().toISOString().slice(0, 10)}`).replace(/[^\p{L}\p{N}-]+/gu, '_')}.csv`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -142,30 +141,41 @@ export function searchSummary({ source = 'OpenStreetMap', zoneName, returned, wi
   return `${zoneName} · ${source} devolvió ${returned} (${withPhone} con teléfono, ${withWebsite} con sitio web) · ${fresh} nuevos, ${repeated} repetidos${inCrm ? ` (${inCrm} ya están en tu CRM)` : ''} · ${seconds(ms)}.${truncated ? ' Había más: probá con otros rubros para ver el resto.' : ''}`;
 }
 
-function SearchHistory({ searches }) {
-  const rows = [...searches].sort((a, b) => String(b.createdAt || b.date).localeCompare(String(a.createdAt || a.date))).slice(0, 20);
+function SearchHistory({ searches, prospects, activeId, onShow }) {
+  const rows = [...searches].sort((a, b) => String(b.createdAt || b.date).localeCompare(String(a.createdAt || a.date))).slice(0, 30);
   if (!rows.length) return null;
   return (
-    <details>
+    <details className="search-history" open={rows.length <= 3}>
       <summary>Historial de búsquedas ({searches.length})</summary>
-      <table>
-        <thead><tr><th>Fecha</th><th>Familia</th><th>Zona</th><th>Fuente</th><th>Devolvió</th><th>Con teléfono</th><th>Con web</th><th>Nuevos</th><th>Repetidos</th><th>Tiempo</th><th>Resultado</th></tr></thead>
-        <tbody>
-          {rows.map((item) => (
-            <tr key={item.id}>
-              <td>{item.date}</td><td>{item.family}</td><td>{item.zoneName}</td><td>{item.source}</td>
-              <td>{item.returned ?? '–'}</td><td>{item.withPhone ?? '–'}</td><td>{item.withWebsite ?? '–'}</td>
-              <td>{item.fresh ?? item.found ?? '–'}</td><td>{item.repeated ?? '–'}</td><td>{item.ms != null ? seconds(item.ms) : '–'}</td>
-              <td>{item.status === 'error' ? `Error: ${item.error}` : item.exhausted ? 'Zona agotada por ahora' : 'Ok'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="history-list">
+        {rows.map((item) => {
+          const found = prospects.filter((prospect) => prospect.searchId === item.id);
+          const failed = item.status === 'error';
+          return (
+            <article key={item.id} className={`history-card ${failed ? 'failed' : ''} ${activeId === item.id ? 'active' : ''}`}>
+              <div>
+                <strong>{item.zoneName}</strong>
+                <span className="muted small">{[item.province, item.family, item.date, item.source, item.ms != null ? seconds(item.ms) : ''].filter(Boolean).join(' · ')}</span>
+                <span>
+                  {failed ? <em className="badge warn">Error</em> : item.exhausted ? <em className="badge">Zona agotada por ahora</em> : <em className="badge ok">Ok</em>}
+                  {' '}{failed ? item.error : `Devolvió ${item.returned ?? '–'} · ${item.withPhone ?? '–'} con teléfono · ${item.withWebsite ?? '–'} con web · ${item.fresh ?? item.found ?? 0} nuevos · ${item.repeated ?? '–'} repetidos`}
+                </span>
+              </div>
+              {found.length > 0 && (
+                <div className="history-actions">
+                  <button type="button" className="secondary" onClick={() => onShow(activeId === item.id ? null : item.id)}>{activeId === item.id ? 'Ver todos' : `Ver ${found.length} resultados`}</button>
+                  <button type="button" className="secondary" onClick={() => downloadCsv(found, `busqueda-${item.zoneName}-${item.date}`)}>CSV</button>
+                </div>
+              )}
+            </article>
+          );
+        })}
+      </div>
     </details>
   );
 }
 
-function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, cities: citiesProp }) {
+function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, cities: citiesProp, provinces: provincesProp }) {
   const prospects = Array.isArray(data.prospects) ? data.prospects : EMPTY;
   const clients = Array.isArray(data.clients) ? data.clients : EMPTY;
   const switches = data.prospectSwitches || {};
@@ -173,12 +183,13 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const [stateFilter, setStateFilter] = useState('Todos');
   const [dailyList, setDailyList] = useState(null);
   const [listView, setListView] = useState('planilla');
+  const [searchFilter, setSearchFilter] = useState(null);
   const [message, setMessage] = useState('');
   const [importText, setImportText] = useState('');
   const [importPlan, setImportPlan] = useState(null);
   const [form, setForm] = useState(null);
   const [cities, setCities] = useState(citiesProp || []);
-  const [provinces, setProvinces] = useState({});
+  const [provinces, setProvinces] = useState(provincesProp || {});
   const focus = useMemo(() => currentFocus(new Date(), switches, data.prospectFocus), [switches, data.prospectFocus]);
   const [planFamily, setPlanFamily] = useState(focus.family);
   const [zone, setZone] = useState(null);
@@ -219,12 +230,6 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const today = new Date().toISOString().slice(0, 10);
   // Zonas sugeridas por déficit de cobertura (habitantes por cliente/prospecto de la
   // familia); si la familia todavía no tiene datos, por población.
-  const ranking = useMemo(() => {
-    if (!planFamily || !cities.length) return null;
-    const points = familyPoints(planFamily, { clients, prospects, cities, provinces });
-    return points.length ? deficitRanking(planFamily, cities, points) : null;
-  }, [planFamily, cities, clients, prospects, provinces]);
-  const suggestions = useMemo(() => (planFamily && cities.length ? suggestZones(planFamily, cities, searches, { count: 3, today, ranking }) : []), [planFamily, cities, searches, today, ranking]);
   const provinceCities = useMemo(() => (provSel ? cities.filter((item) => item.prov === provSel).sort((a, b) => b.pob - a.pob) : []), [provSel, cities]);
   const loadedToday = prospects.filter((item) => String(item.createdAt || '').slice(0, 10) === today && item.family === planFamily).length;
 
@@ -321,7 +326,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       const results = payload.results || [];
       const fresh = results.filter((item) => !known.has(item.osmId || item.googleId));
       const now = new Date().toISOString();
-      const made = fresh.map((row) => blankProspect({ ...row, competitor: isCompetitor(row.company) }, { id: crypto.randomUUID(), now }));
+      const made = fresh.map((row) => blankProspect({ ...row, searchId: base.id, competitor: isCompetitor(row.company) }, { id: crypto.randomUUID(), now }));
       const inCrm = made.filter((item) => matchProspect(item, clients).status === 'Ya en el CRM').length;
       const stats = payload.stats || { returned: results.length, withPhone: results.filter((item) => item.phone).length, withWebsite: results.filter((item) => item.website).length };
       const ms = payload.ms ?? Date.now() - startedAt;
@@ -403,7 +408,8 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     return [...table.values()].sort((a, b) => b.total - a.total).slice(0, 30);
   }, [prospects]);
 
-  const shown = dailyList ? visible.filter((item) => dailyList.includes(item.id)) : visible;
+  const bySearch = searchFilter ? visible.filter((item) => item.searchId === searchFilter) : visible;
+  const shown = dailyList ? bySearch.filter((item) => dailyList.includes(item.id)) : bySearch;
 
   return (
     <section className="panel">
@@ -438,16 +444,6 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
           </li>
           <li>
             <span className="step-title">2 · Zona</span>
-            <div className="zone-chips">
-              {suggestions.map(({ zone: item, status, habPorPunto }) => (
-                <button key={item.id} type="button" className={`zone-chip ${zone?.id === item.id ? 'selected' : ''}`} onClick={() => { setZone(item); setProvSel(item.prov); }}>
-                  <strong>{item.nombre}</strong>
-                  <span>{[provinces[item.prov], status, habPorPunto ? `${Math.round(habPorPunto).toLocaleString('es-AR')} hab/punto` : ''].filter(Boolean).join(' · ')}</span>
-                </button>
-              ))}
-              {cities.length === 0 && <span className="muted">Cargando zonas…</span>}
-            </div>
-            {cities.length > 0 && <span className="muted small">{ranking ? 'Orden: déficit de cobertura (habitantes por cliente o prospecto de la familia).' : 'Esta familia todavía no tiene datos: se ordena por población.'}</span>}
             <div className="zone-pickers">
               <label>Provincia
                 <select aria-label="Provincia" value={provSel} onChange={(event) => { setProvSel(event.target.value); setZone(null); }}>
@@ -458,10 +454,12 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
               <label>Ciudad
                 <select aria-label="Ciudad" value={zone && zone.prov === provSel ? zone.id : ''} disabled={!provSel} onChange={(event) => setZone(provinceCities.find((item) => item.id === event.target.value) || null)}>
                   <option value="">{provSel ? 'Elegí una ciudad' : 'Primero la provincia'}</option>
-                  {provinceCities.map((item) => <option key={item.id} value={item.id}>{item.nombre} · {zoneStatus(planFamily, item.id, searches, today).status}</option>)}
+                  {provinceCities.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
                 </select>
               </label>
             </div>
+            {cities.length === 0 && <span className="muted">Cargando zonas…</span>}
+            {zone && <p className="zone-picked"><strong>{zone.nombre}</strong>{provinces[zone.prov] ? `, ${provinces[zone.prov]}` : ''} · {zoneStatus(planFamily, zone.id, searches, today).status}</p>}
           </li>
           <li>
             <span className="step-title">3 · Qué buscar</span>
@@ -577,7 +575,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         </div>
       )}
 
-      <SearchHistory searches={searches} />
+      <SearchHistory searches={searches} prospects={prospects} activeId={searchFilter} onShow={setSearchFilter} />
 
       {coverage.length > 0 && (
         <>

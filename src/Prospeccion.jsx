@@ -475,7 +475,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   );
 
   return (
-    <section className="panel">
+    <section className="panel prospect-glass">
       <div className="panel-head">
         <div>
           <span className="eyebrow">Cartera</span>
@@ -611,6 +611,12 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
           </button>
           <button type="button" className="secondary" disabled={!zone} onClick={closeZone}>Terminé esta zona (por ahora)</button>
         </div>
+        {searching && (
+          <div className="search-progress" role="status" aria-live="polite">
+            <span className="bar" />
+            <p>Buscando en OpenStreetMap{zone ? ` (${zone.nombre})` : ''}… puede tardar hasta 1 minuto. Podés seguir usando el CRM; el resultado aparece acá y en el historial. Esta zona vuelve a estar disponible en {60} días.</p>
+          </div>
+        )}
 
       </div>
       {message && <div className="system-message">{message}</div>}

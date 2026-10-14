@@ -524,3 +524,29 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .research-job textarea { width: 100%; }
 .link-pill { display: inline-block; padding: 8px 12px; border-radius: 10px; text-decoration: none; font-size: 13px; }
 @media (max-width: 760px) { .research-form { grid-template-columns: 1fr; } }
+
+/* Prospección: estilo "glass" (solo esta sección). Sin transparencia ni movimiento si el sistema lo pide. */
+.prospect-glass { position: relative; background: linear-gradient(135deg, #eef5f1 0%, #e6eef8 45%, #f3ecf8 100%); border: 1px solid #ffffffaa; overflow: hidden; }
+.prospect-glass::before { content: ""; position: absolute; inset: -20% -10% auto auto; width: 520px; height: 520px; border-radius: 50%; background: radial-gradient(circle, #3b9b7a40, transparent 65%); pointer-events: none; animation: glass-drift 18s ease-in-out infinite alternate; }
+.prospect-glass > * { position: relative; }
+.prospect-glass .panel, .prospect-glass .history-card, .prospect-glass .prospect-steps > li, .prospect-glass .prospect-sheet, .prospect-glass .units-list .unit-card {
+  background: #ffffffb8; border: 1px solid #ffffffcc; box-shadow: 0 8px 30px #1f4d3a14, inset 0 1px 0 #ffffffdd;
+  -webkit-backdrop-filter: blur(14px) saturate(1.2); backdrop-filter: blur(14px) saturate(1.2);
+  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+  animation: glass-rise .5s ease both;
+}
+.prospect-glass .history-card:hover, .prospect-glass .unit-card:hover, .prospect-glass .prospect-steps > li:hover { transform: translateY(-2px); box-shadow: 0 14px 36px #1f4d3a24, inset 0 1px 0 #fff; }
+.prospect-glass .prospect-steps > li:nth-child(2) { animation-delay: .08s; }
+.prospect-glass .prospect-steps > li:nth-child(3) { animation-delay: .16s; }
+.prospect-glass .primary.big { background: linear-gradient(135deg, #1f7a5a, #2b6cb0); box-shadow: 0 8px 22px #1f7a5a55; transition: transform .2s ease, box-shadow .2s ease; }
+.prospect-glass .primary.big:hover:not(:disabled) { transform: translateY(-1px) scale(1.02); box-shadow: 0 12px 28px #1f7a5a77; }
+.search-progress { display: grid; gap: 8px; padding: 12px 14px; border-radius: 12px; background: #ffffffc8; border: 1px solid #1f7a5a33; }
+.search-progress p { margin: 0; font-size: 13px; color: var(--color-text-mid, #555); }
+.search-progress .bar { display: block; height: 6px; border-radius: 6px; background: #1f7a5a22; position: relative; overflow: hidden; }
+.search-progress .bar::after { content: ""; position: absolute; inset: 0 auto 0 -40%; width: 40%; border-radius: 6px; background: linear-gradient(90deg, transparent, #1f7a5a, #2b6cb0, transparent); animation: glass-scan 1.4s ease-in-out infinite; }
+@keyframes glass-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes glass-scan { to { inset-inline-start: 100%; } }
+@keyframes glass-drift { to { transform: translate(-60px, 40px) scale(1.15); } }
+@media (prefers-reduced-motion: reduce) { .prospect-glass *, .prospect-glass::before, .search-progress .bar::after { animation: none !important; transition: none !important; } }
+@media (prefers-reduced-transparency: reduce) { .prospect-glass .panel, .prospect-glass .history-card, .prospect-glass .prospect-steps > li, .prospect-glass .prospect-sheet, .prospect-glass .units-list .unit-card { background: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; } }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .prospect-glass .panel, .prospect-glass .history-card, .prospect-glass .prospect-steps > li { background: #fff; } }

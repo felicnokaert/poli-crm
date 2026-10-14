@@ -286,3 +286,28 @@ describe("Prospeccion.jsx - investigación profunda", () => {
     assert.equal(saved.source, "Investigación IA");
   });
 });
+
+describe("Prospeccion.jsx - historial borrable", () => {
+  test("borrar una búsqueda con sus no contactados deja registro de lo borrado y conserva los contactados", async () => {
+    const mod = await loadJsxModule("src/Prospeccion.jsx");
+    const snapshots = [];
+    const search = { id: "s1", family: "Penosil", zoneId: "1", zoneName: "Paraná", date: "2026-10-14", createdAt: "2026-10-14T10:00:00Z", status: "ok", returned: 2, fresh: 2 };
+    const prospects = [
+      { id: "p1", company: "Uno", family: "Penosil", state: "No contactado", source: "OpenStreetMap", searchId: "s1" },
+      { id: "p2", company: "Dos", family: "Penosil", state: "Contactado", source: "OpenStreetMap", searchId: "s1", linkedClientId: "c9" },
+    ];
+    function Wrapper() {
+      const [state, setState] = React.useState({ clients: [], prospects, prospectSearches: [search], researchJobs: [] });
+      const setData = (next) => setState((previous) => { const value = typeof next === "function" ? next(previous) : next; snapshots.push(value); return value; });
+      return React.createElement(mod.Prospeccion, { data: state, setData, userEmail: "a@b.com", onOpenClient: () => {}, cities: [], provinces: {} });
+    }
+    render(React.createElement(Wrapper));
+    fireEvent.click(screen.getByLabelText("Borrar búsqueda de Paraná"));
+    fireEvent.click(screen.getByText("Borrar también sus no contactados"));
+    await waitFor(() => assert.equal(snapshots.at(-1).prospectSearches.length, 0));
+    const last = snapshots.at(-1);
+    assert.deepEqual(last.prospects.map((item) => item.id), ["p2"]);
+    assert.ok(last.deletedRecordIds.prospectSearches.includes("s1"));
+    assert.ok(last.deletedRecordIds.prospects.includes("p1"));
+  });
+});

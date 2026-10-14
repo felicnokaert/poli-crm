@@ -5,6 +5,7 @@ import {
   isCompetitor, possibleWhatsAppLink,
 } from './prospect-model.mjs';
 import { matchProspect } from './prospect-dedupe.mjs';
+import { recordDeletions } from './workspace.mjs';
 import { markProspect } from './prospect-convert.mjs';
 import { buildImportPlan, parseProspectsText } from './prospect-import.mjs';
 import { AI_TOOLS, RESEARCH_COOLDOWN_DAYS, RESEARCH_MINUTES, buildResearchPrompt, exclusionNames } from './prospect-playbook.mjs';
@@ -142,7 +143,8 @@ export function searchSummary({ source = 'OpenStreetMap', zoneName, returned, wi
   return `${zoneName} · ${source} devolvió ${returned} (${withPhone} con teléfono, ${withWebsite} con sitio web) · ${fresh} nuevos, ${repeated} repetidos${inCrm ? ` (${inCrm} ya están en tu CRM)` : ''} · ${seconds(ms)}.${truncated ? ' Había más: probá con otros rubros para ver el resto.' : ''}`;
 }
 
-function SearchHistory({ searches, prospects, activeId, onShow }) {
+function SearchHistory({ searches, prospects, activeId, onShow, onDelete }) {
+  const [confirming, setConfirming] = useState('');
   const rows = [...searches].sort((a, b) => String(b.createdAt || b.date).localeCompare(String(a.createdAt || a.date))).slice(0, 30);
   if (!rows.length) return null;
   return (
@@ -164,12 +166,21 @@ function SearchHistory({ searches, prospects, activeId, onShow }) {
                 </span>
                 {!failed && item.returned === 0 && <span className="muted small">OpenStreetMap no devolvió comercios con esos rubros en esta zona: muchos comercios argentinos no están cargados ahí. Probá con otro rubro (ej. "ferretería") o una ciudad cercana más grande.</span>}
               </div>
-              {found.length > 0 && (
-                <div className="history-actions">
-                  <button type="button" className="secondary" onClick={() => onShow(activeId === item.id ? null : item.id)}>{activeId === item.id ? 'Ver todos' : `Ver ${found.length} resultados`}</button>
-                  <button type="button" className="secondary" onClick={() => downloadCsv(found, `busqueda-${item.zoneName}-${item.date}`)}>CSV</button>
-                </div>
-              )}
+              <div className="history-actions">
+                {found.length > 0 && <button type="button" className="secondary" onClick={() => onShow(activeId === item.id ? null : item.id)}>{activeId === item.id ? 'Ver todos' : `Ver ${found.length} resultados`}</button>}
+                {found.length > 0 && <button type="button" className="secondary" onClick={() => downloadCsv(found, `busqueda-${item.zoneName}-${item.date}`)}>CSV</button>}
+                {confirming === item.id ? (
+                  <>
+                    <button type="button" className="secondary" onClick={() => { onDelete(item.id, false); setConfirming(''); }}>Quitar sólo la búsqueda</button>
+                    {found.some((prospect) => prospect.state === 'No contactado' && !prospect.linkedClientId) && (
+                      <button type="button" className="primary" onClick={() => { onDelete(item.id, true); setConfirming(''); }}>Borrar también sus no contactados</button>
+                    )}
+                    <button type="button" className="secondary" onClick={() => setConfirming('')}>Cancelar</button>
+                  </>
+                ) : (
+                  <button type="button" className="secondary" aria-label={`Borrar búsqueda de ${item.zoneName}`} onClick={() => setConfirming(item.id)}><Trash2 size={14} /> Borrar</button>
+                )}
+              </div>
             </article>
           );
         })}
@@ -353,7 +364,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
           fresh: made.length, repeated: results.length - made.length, inCrm, ms, attempts: payload.attempts || 1, endpoint: payload.endpoint || '', radiusKm: payload.radiusKm ?? null, truncated: Boolean(payload.truncated),
         }],
       }));
-      setMessage(searchSummary({ source, zoneName: zone.nombre, returned: stats.returned, withPhone: stats.withPhone, withWebsite: stats.withWebsite, fresh: made.length, repeated: results.length - made.length, inCrm, ms, truncated: payload.truncated }));
+      setMessage(searchSummary({ source, zoneName: zone.nombre, returned: stats.returned, withPhone: stats.withPhone, withWebsite: stats.withWebsite, fresh: made.length, repeated: results.length - made.length, inCrm, ms, truncated: payload.truncated }) + (payload.warning ? ` ${payload.warning}` : ''));
     } catch (error) {
       const reason = 'No se pudo hacer la búsqueda. Revisá tu conexión y probá de nuevo.';
       logSearch({ status: 'error', failed: true, found: 0, error: reason, ms: Date.now() - startedAt });
@@ -399,7 +410,19 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   }
 
   function remove(prospectId) {
-    setData((current) => ({ ...current, prospects: (current.prospects || []).filter((item) => item.id !== prospectId) }));
+    setData((current) => recordDeletions({ ...current, prospects: (current.prospects || []).filter((item) => item.id !== prospectId) }, { prospects: [prospectId] }));
+  }
+
+  // Borra una búsqueda del historial; opcionalmente también los prospectos que trajo y siguen sin contactar.
+  function deleteSearch(searchId, withProspects) {
+    const doomed = withProspects ? prospects.filter((item) => item.searchId === searchId && item.state === 'No contactado' && !item.linkedClientId).map((item) => item.id) : [];
+    setData((current) => recordDeletions({
+      ...current,
+      prospectSearches: (current.prospectSearches || []).filter((item) => item.id !== searchId),
+      prospects: (current.prospects || []).filter((item) => !doomed.includes(item.id)),
+    }, { prospectSearches: [searchId], prospects: doomed }));
+    if (searchFilter === searchId) setSearchFilter(null);
+    setMessage(doomed.length ? `Se borró la búsqueda y ${doomed.length} prospectos sin contactar.` : 'Se borró la búsqueda del historial.');
   }
 
   // Lee el sitio de la propia empresa (con robots.txt) y completa solo lo que falta.
@@ -685,7 +708,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         </div>
       )}
 
-      <SearchHistory searches={searches} prospects={prospects} activeId={searchFilter} onShow={setSearchFilter} />
+      <SearchHistory searches={searches} prospects={prospects} activeId={searchFilter} onShow={setSearchFilter} onDelete={deleteSearch} />
 
       {coverage.length > 0 && (
         <>

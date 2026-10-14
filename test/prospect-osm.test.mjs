@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildOverpassQuery, normalizeOverpass, safeWord, searchOverpass, summarizeResults } from '../lib/prospect-osm.mjs';
+import { buildOverpassQuery, buildOverpassStages, normalizeOverpass, safeWord, searchOverpass, summarizeResults } from '../lib/prospect-osm.mjs';
 import handler from '../api/prospeccion.js';
 
 // Forma de respuesta de Overpass (nodes con lat/lon, ways con center). Es un
@@ -122,9 +122,40 @@ test('el endpoint exige usuario corporativo y valida zona y rubros', async () =>
     assert.equal(good.body.count, 2);
     assert.equal(good.body.radiusKm, 9);
     assert.deepEqual(good.body.stats, { returned: 2, withPhone: 1, withWebsite: 1 });
-    assert.equal(good.body.attempts, 1);
+    assert.equal(good.body.attempts, 2, 'una consulta por etiquetas y otra por nombre');
+    assert.equal(good.body.warning, '');
     assert.equal(typeof good.body.ms, 'number');
     assert.equal(good.body.results[0].province, 'Entre Ríos');
+  } finally {
+    globalThis.fetch = original.fetch;
+    process.env.SUPABASE_URL = original.url ?? '';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = original.key ?? '';
+  }
+});
+
+test('las etapas usan caja geográfica y reparten etiquetas y nombres', () => {
+  const stages = buildOverpassStages({ lat: -31.73, lon: -60.52, radiusKm: 9, rubros: ['ferretería', 'carrocería'] });
+  assert.match(stages.tags, /nwr\["shop"="hardware"\]\(-31\.8[0-9]+,-60\.6[0-9]+,-31\.6[0-9]+,-60\.4[0-9]+\);/);
+  assert.ok(!stages.tags.includes('name'));
+  assert.match(stages.names, /nwr\["name"~"f\[eé\]rr\[eé\]t\[eé\]r\|c\[aá\]rr\[oó\]c\[eé\]r",i\]\(/);
+  assert.equal(buildOverpassStages({ lat: -31, lon: -60, radiusKm: 5, rubros: ['astillero'] }).tags !== null, true);
+});
+
+test('si falla la búsqueda por nombre, igual se devuelve lo hallado por rubro con un aviso', async () => {
+  const original = { fetch: globalThis.fetch, url: process.env.SUPABASE_URL, key: process.env.SUPABASE_SERVICE_ROLE_KEY };
+  process.env.SUPABASE_URL = 'https://db.test';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'service';
+  globalThis.fetch = async (url, options) => {
+    if (String(url).includes('/auth/v1/user')) return { ok: true, json: async () => ({ email: 'marketing@grupopoliplast.com.ar' }) };
+    if (String(options?.body || '').includes('name')) return { ok: false, status: 504, json: async () => ({}) };
+    return { ok: true, status: 200, json: async () => SAMPLE };
+  };
+  try {
+    const res = response();
+    await handler({ method: 'POST', headers: { authorization: 'Bearer ok' }, body: { lat: -31.7, lon: -60.5, population: 250000, rubros: ['ferretería'] } }, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.count, 2);
+    assert.match(res.body.warning, /búsqueda por nombre no respondió/);
   } finally {
     globalThis.fetch = original.fetch;
     process.env.SUPABASE_URL = original.url ?? '';

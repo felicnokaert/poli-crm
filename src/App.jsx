@@ -96,7 +96,6 @@ import {
   clientSearchText,
   findClientByWhatsApp,
 } from "./client-contacts.mjs";
-import { defaultBusinessUnits } from "./sales-model.mjs";
 import { scoreTriage, suggestTriage } from "./commercial-triage.mjs";
 import { shouldCreateFollowup } from "./followup-policy.mjs";
 import { useWorkspaceSync } from "./hooks/useWorkspaceSync";

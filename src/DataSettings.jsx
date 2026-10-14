@@ -161,7 +161,7 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
           });
           const payload = await response.json();
           if (!response.ok)
-            throw new Error(payload.error || `No se pudo activar ${channel}.`);
+            throw new Error([payload.error || `No se pudo activar ${channel}.`, payload.details].filter(Boolean).join(" — Meta dice: "));
           return payload.channel;
         }),
       );

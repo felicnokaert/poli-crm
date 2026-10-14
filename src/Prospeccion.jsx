@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { ExternalLink, FileUp, Plus, Search, Trash2 } from 'lucide-react';
 import {
   PROSPECT_FAMILIES, PROSPECT_OUTCOMES, PROSPECT_STATES, blankProspect, familyConfig, familyIsActive,
@@ -7,6 +7,7 @@ import {
 import { matchProspect } from './prospect-dedupe.mjs';
 import { markProspect } from './prospect-convert.mjs';
 import { parseProspectsText } from './prospect-import.mjs';
+import { DAILY_TARGET, familyForDate, scopeDescription, suggestZones, zoneStatus, zonesForFamily } from './prospect-plan.mjs';
 
 const DAILY_LIST_SIZE = 40;
 const EMPTY = [];
@@ -63,7 +64,7 @@ function ProspectRow({ prospect, check, onMark, onOpenClient, onDelete }) {
   );
 }
 
-function ProspeccionBase({ data, setData, userEmail, onOpenClient }) {
+function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, cities: citiesProp }) {
   const prospects = Array.isArray(data.prospects) ? data.prospects : EMPTY;
   const clients = Array.isArray(data.clients) ? data.clients : EMPTY;
   const switches = data.prospectSwitches || {};
@@ -73,6 +74,42 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient }) {
   const [message, setMessage] = useState('');
   const [importText, setImportText] = useState('');
   const [form, setForm] = useState(null);
+  const [cities, setCities] = useState(citiesProp || []);
+  const [provinces, setProvinces] = useState({});
+  const [planFamily, setPlanFamily] = useState(() => familyForDate(new Date(), switches));
+  const [zone, setZone] = useState(null);
+  const [zoneQuery, setZoneQuery] = useState('');
+  const [rubrosText, setRubrosText] = useState('');
+  const [searching, setSearching] = useState(false);
+  const searches = Array.isArray(data.prospectSearches) ? data.prospectSearches : EMPTY;
+
+  useEffect(() => {
+    if (citiesProp || typeof fetch !== 'function') return undefined;
+    let cancelled = false;
+    Promise.all([
+      fetch('/mapa/data/ciudades.json').then((response) => response.json()),
+      fetch('/mapa/data/zonas.json').then((response) => response.json()),
+    ]).then(([citiesFile, zonesFile]) => {
+      if (cancelled) return;
+      setCities(citiesFile.ciudades || []);
+      setProvinces(Object.fromEntries((zonesFile.provincias || []).map((item) => [item.cod, item.nombre])));
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [citiesProp]);
+
+  useEffect(() => {
+    setRubrosText((familyConfig(planFamily)?.rubros || []).join(', '));
+    setZone(null);
+  }, [planFamily]);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const suggestions = useMemo(() => (planFamily && cities.length ? suggestZones(planFamily, cities, searches, { count: 3, today }) : []), [planFamily, cities, searches, today]);
+  const zoneMatches = useMemo(() => {
+    const query = zoneQuery.trim().toLocaleLowerCase('es-AR');
+    if (query.length < 3) return [];
+    return zonesForFamily(planFamily, cities).filter((item) => item.nombre.toLocaleLowerCase('es-AR').includes(query)).slice(0, 6);
+  }, [zoneQuery, planFamily, cities]);
+  const loadedToday = prospects.filter((item) => String(item.createdAt || '').slice(0, 10) === today && item.family === planFamily).length;
 
   const checks = useMemo(
     () => new Map(prospects.map((item) => [item.id, matchProspect(item, clients, prospects)])),
@@ -122,6 +159,54 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient }) {
     });
   }
 
+  async function runSearch() {
+    if (!zone || !session?.access_token) return;
+    const rubros = rubrosText.split(',').map((item) => item.trim()).filter(Boolean);
+    if (!rubros.length) { setMessage('Elegí al menos un rubro para buscar.'); return; }
+    setSearching(true);
+    setMessage('');
+    try {
+      const response = await fetch('/api/prospeccion', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat: zone.lat, lon: zone.lon, population: zone.pob, zoneName: zone.nombre, province: provinces[zone.prov] || '', family: planFamily, rubros }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'No se pudo hacer la búsqueda.');
+      const known = new Set(prospects.map((item) => item.osmId).filter(Boolean));
+      const fresh = (payload.results || []).filter((item) => !known.has(item.osmId));
+      const now = new Date().toISOString();
+      const made = fresh.map((row) => blankProspect({ ...row, competitor: isCompetitor(row.company) }, { id: crypto.randomUUID(), now }));
+      setData((current) => ({
+        ...current,
+        prospects: [...(Array.isArray(current.prospects) ? current.prospects : []), ...made],
+        prospectSearches: [...(Array.isArray(current.prospectSearches) ? current.prospectSearches : []), {
+          id: crypto.randomUUID(), family: planFamily, zoneId: zone.id, zoneName: zone.nombre, province: provinces[zone.prov] || '',
+          date: now.slice(0, 10), found: made.length, source: 'OpenStreetMap', createdAt: now,
+        }],
+      }));
+      setMessage(`${zone.nombre}: OpenStreetMap devolvió ${payload.count}, ${made.length} nuevos para vos${payload.count - made.length ? ` (${payload.count - made.length} ya estaban cargados)` : ''}.${payload.truncated ? ' Había más: probá con otros rubros para ver el resto.' : ''} Revisá las etiquetas de duplicado.`);
+    } catch (error) {
+      setMessage(error.message || 'No se pudo hacer la búsqueda.');
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  function closeZone() {
+    if (!zone) return;
+    const now = new Date().toISOString();
+    setData((current) => ({
+      ...current,
+      prospectSearches: [...(Array.isArray(current.prospectSearches) ? current.prospectSearches : []), {
+        id: crypto.randomUUID(), family: planFamily, zoneId: zone.id, zoneName: zone.nombre, province: provinces[zone.prov] || '',
+        date: now.slice(0, 10), found: 0, exhausted: true, source: 'Manual', createdAt: now,
+      }],
+    }));
+    setMessage(`${zone.nombre} quedó como "agotada por ahora" para ${planFamily}: se vuelve a ofrecer en 60 días.`);
+    setZone(null);
+  }
+
   function remove(prospectId) {
     setData((current) => ({ ...current, prospects: (current.prospects || []).filter((item) => item.id !== prospectId) }));
   }
@@ -162,11 +247,51 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient }) {
           <p>Empresas que todavía no son clientes. Al marcar un prospecto como Contactado o Con interés pasa a Empresas y desde ahí rige toda la lógica del CRM. Nunca se envían mensajes desde acá: el contacto es siempre manual.</p>
         </div>
         <div className="panel-head-actions">
-          <button type="button" className="secondary" disabled title="Pendiente: la búsqueda automática necesita acceso a OpenStreetMap desde el servidor"><Search size={16} /> Buscar (próximamente)</button>
           <button type="button" className="primary" onClick={() => setForm(blankProspect({ family: familyFilter !== 'Todas' ? familyFilter : '' }))}><Plus size={16} /> Cargar prospecto</button>
         </div>
       </div>
-      <p className="form-notice">La búsqueda automática todavía no está activa. Mientras tanto podés cargar prospectos a mano o pegar una lista (por ejemplo la hoja RELEVAMIENTO).</p>
+
+      <div className="panel">
+        <h3>Plan de hoy</h3>
+        <p className="muted">Una familia por día, recorriendo el país zona por zona sin repetir. Meta: entre {DAILY_TARGET.min} y {DAILY_TARGET.max} contactos nuevos por día (hoy cargaste {loadedToday} de {planFamily || 'esta familia'}).</p>
+        <div className="panel-head-actions">
+          <label>Familia de hoy
+            <select aria-label="Familia de hoy" value={planFamily} onChange={(event) => setPlanFamily(event.target.value)}>
+              {PROSPECT_FAMILIES.filter((item) => familyIsActive(item.key, switches)).map((item) => <option key={item.key}>{item.key}</option>)}
+            </select>
+          </label>
+          <span className="muted">Alcance: {scopeDescription(planFamily)}</span>
+        </div>
+        <div className="panel-head-actions">
+          {suggestions.map(({ zone: item, status }) => (
+            <button key={item.id} type="button" className={zone?.id === item.id ? 'primary' : 'secondary'} onClick={() => setZone(item)}>
+              {item.nombre}{provinces[item.prov] ? ` (${provinces[item.prov]})` : ''} · {status}
+            </button>
+          ))}
+          {cities.length === 0 && <span className="muted">Cargando zonas…</span>}
+        </div>
+        <label>Otra zona
+          <input value={zoneQuery} onChange={(event) => setZoneQuery(event.target.value)} placeholder="Escribí una ciudad (mínimo 3 letras)" />
+        </label>
+        {zoneMatches.length > 0 && (
+          <div className="panel-head-actions">
+            {zoneMatches.map((item) => (
+              <button key={item.id} type="button" className="secondary" onClick={() => { setZone(item); setZoneQuery(''); }}>
+                {item.nombre}{provinces[item.prov] ? ` (${provinces[item.prov]})` : ''} · {zoneStatus(planFamily, item.id, searches, today).status}
+              </button>
+            ))}
+          </div>
+        )}
+        <label>Rubros a buscar (separados por coma)
+          <input value={rubrosText} onChange={(event) => setRubrosText(event.target.value)} />
+        </label>
+        <div className="panel-head-actions">
+          <button type="button" className="primary" disabled={!zone || searching || !session?.access_token} onClick={runSearch}>
+            <Search size={16} /> {searching ? 'Buscando…' : zone ? `Buscar en ${zone.nombre}` : 'Elegí una zona'}
+          </button>
+          <button type="button" className="secondary" disabled={!zone} onClick={closeZone}>Terminé esta zona (por ahora)</button>
+        </div>
+      </div>
       {message && <div className="system-message">{message}</div>}
 
       <div className="units-list">

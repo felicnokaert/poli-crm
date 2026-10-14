@@ -1739,7 +1739,7 @@ export default function App() {
         )}
         {view === "prospecting" && (
           <Suspense fallback={<Splash text="Cargando prospección…" />}>
-            <Prospeccion data={data} setData={setData} userEmail={session?.user?.email} onOpenClient={setSelectedClientId} />
+            <Prospeccion data={data} setData={setData} userEmail={session?.user?.email} session={session} onOpenClient={setSelectedClientId} />
           </Suspense>
         )}
         {view === "contacts" && (

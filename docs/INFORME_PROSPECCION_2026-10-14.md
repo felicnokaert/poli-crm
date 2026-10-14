@@ -1,7 +1,7 @@
 # Informe: sección Prospección (primera entrega)
 
 Rama: `claude/stoic-shannon-ev5nma` (no está en `main`; nada llegó a producción).
-Tests: 590/590 (la base tenía 569). Build limpio.
+Tests: 604/604 (la base tenía 569). Build limpio.
 
 ## 1. Qué se construyó
 
@@ -11,6 +11,8 @@ Tests: 590/590 (la base tenía 569). Build limpio.
 | Detección de duplicados contra Empresas y contra otros prospectos: CUIT, teléfono (últimos 8 dígitos), sitio web (ignora redes sociales), nombre + localidad sin formas societarias, nombre parecido. Las dudosas se muestran como "Posible duplicado", nunca se ocultan | `src/prospect-dedupe.mjs` |
 | Conversión a Empresa: al marcar Contactado o Con interés se crea la ficha (etapa "Apertura", familia del CRM) y se vincula en los dos sentidos; si ya existía, se vincula y solo se completan campos vacíos; repetir la marca no duplica | `src/prospect-convert.mjs` |
 | Importador de listas (texto pegado o CSV con `;`, tab o `,`; encabezados como RELEVAMIENTO) | `src/prospect-import.mjs` |
+| **Plan de hoy**: una familia por día hábil en rotación (editable), zonas sugeridas de mayor a menor población (INDEC 2022), alcance por familia (Baldes: CABA y Buenos Aires; Carrozados Imperpur: hasta 250 km de Mar del Plata, sin CABA), memoria de zonas buscadas (Pendiente / En curso / Agotada por ahora, que se revisa a los 60 días) | `src/prospect-plan.mjs` |
+| **Lupa**: busca en OpenStreetMap por zona y rubros (radio según el tamaño de la ciudad), carga solo lo nuevo (por `osmId`), anota la búsqueda y muestra el motivo si falla | `lib/prospect-osm.mjs`, `api/prospeccion.js` (función 11 de 12), `vercel.json` (30 s) |
 | Pantalla Prospección (menú Cartera): carga manual, pegar lista, filtros por familia y estado, marcas del equipo, "lista del día" (hasta 40 nuevos, sin duplicados, de familias activas), cobertura por familia y localidad | `src/Prospeccion.jsx`, `src/App.jsx` |
 | Sincronización: `prospects` se guarda y fusiona como el resto de los registros del workspace | `src/workspace.mjs`, `src/online.js` |
 
@@ -27,7 +29,7 @@ Tests nuevos: duplicados (Pierandrei, Silvacom, CUIT/teléfono/web, el falso pos
 
 | Pendiente | Motivo |
 |---|---|
-| **Motor de búsqueda (OpenStreetMap / Overpass) y la prueba comparativa con las 40 de Entre Ríos** | **La red de la sesión en la nube bloquea `overpass-api.de` y `nominatim.openstreetmap.org` (403 del proxy).** No se simuló: el botón "Buscar" está deshabilitado con un aviso. Para habilitarlo hay que permitir esos dominios en el entorno de la sesión (Network access) |
+| **Probar la lupa contra OpenStreetMap real y medir cuántos resultados da** | El código está hecho y probado con respuestas de ejemplo armadas a mano, **no contra el servicio real**: la red del entorno de desarrollo bloquea `overpass-api.de` y `nominatim.openstreetmap.org`. Lo prueba Felipe desde el CRM. Si OpenStreetMap trae pocos resultados o sin teléfono, ese es el dato para decidir una segunda fuente |
 | Mapa de Prospección separado + prueba de regresión del mapa POLIOCHO | Etapa 6 sin empezar. Depende de tener prospectos con coordenadas (viene del motor de búsqueda) |
 | Enriquecimiento (redes, WhatsApp, email desde el sitio de la empresa) | Etapa 7 sin empezar. Requiere salida a internet |
 | Panel de aprendizaje, hipótesis, competencia | Etapas 8 y 9 sin empezar |
@@ -54,4 +56,5 @@ Tests nuevos: duplicados (Pierandrei, Silvacom, CUIT/teléfono/web, el falso pos
 1. Revisar la rama `claude/stoic-shannon-ev5nma` (o el PR si se abre).
 2. Probar con una cuenta de prueba (marketing@): menú Cartera → Prospección.
 3. Merge a `main` cuando esté conforme. No hay migraciones.
-4. Para habilitar la búsqueda: permitir `overpass-api.de` y `nominatim.openstreetmap.org` en el entorno y volver a pedir la etapa 3 con la prueba comparativa.
+4. Probar la lupa: Prospección > Plan de hoy > elegir una zona > Buscar. Anotar cuántos devuelve, cuántos con teléfono y cuántos eran duplicados.
+5. Pasar la prueba comparativa con las 40 de Entre Ríos (Paraná, Concordia, Gualeguaychú, Concepción del Uruguay, Colón, Gualeguay, Bovril) cuando haya acceso a la fuente de Google Maps de referencia.

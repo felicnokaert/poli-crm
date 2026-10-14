@@ -7,7 +7,7 @@ import { loadJsxModule } from "./helpers/load-jsx.mjs";
 afterEach(cleanup);
 
 describe("Prospeccion.jsx - interacción real", () => {
-  async function mount(initial) {
+  async function mount(initial, extra = {}) {
     const mod = await loadJsxModule("src/Prospeccion.jsx");
     const snapshots = [];
     function Wrapper() {
@@ -17,7 +17,7 @@ describe("Prospeccion.jsx - interacción real", () => {
         snapshots.push(value);
         return value;
       });
-      return React.createElement(mod.Prospeccion, { data: state, setData, userEmail: "marketing@grupopoliplast.com.ar", onOpenClient: () => {} });
+      return React.createElement(mod.Prospeccion, { data: state, setData, userEmail: "marketing@grupopoliplast.com.ar", onOpenClient: () => {}, ...extra });
     }
     render(React.createElement(Wrapper));
     return snapshots;
@@ -70,5 +70,69 @@ describe("Prospeccion.jsx - interacción real", () => {
     assert.ok(screen.getByText("Nuevo Uno"));
     assert.equal(screen.queryByText("Argenpur Sur"), null);
     assert.equal(screen.queryByText("Alm Pausada"), null);
+  });
+
+  const CITIES = [
+    { id: "1", nombre: "Córdoba", prov: "14", pob: 1505250, lat: -31.41, lon: -64.18 },
+    { id: "2", nombre: "Paraná", prov: "30", pob: 250000, lat: -31.73, lon: -60.52 },
+  ];
+
+  test("la lupa busca en la zona elegida, carga lo nuevo, anota la búsqueda y no repite lo ya cargado", async () => {
+    const original = globalThis.fetch;
+    const calls = [];
+    const results = [
+      { company: "Ferretería El Clavo", family: "Penosil", rubro: "ferretería", city: "Córdoba", province: "Córdoba", phone: "+54 351 4000000", osmId: "node/1", source: "OpenStreetMap" },
+      { company: "Corralón Norte", family: "Penosil", rubro: "corralón", city: "Córdoba", province: "Córdoba", osmId: "way/2", source: "OpenStreetMap" },
+    ];
+    globalThis.fetch = async (url, options) => {
+      calls.push({ url, body: JSON.parse(options.body) });
+      return { ok: true, json: async () => ({ ok: true, count: results.length, truncated: false, results }) };
+    };
+    try {
+      const snapshots = await mount({ clients: [], prospects: [], prospectSearches: [], prospectSwitches: {} }, { cities: CITIES, session: { access_token: "t" } });
+      fireEvent.change(screen.getByLabelText("Familia de hoy"), { target: { value: "Penosil" } });
+      fireEvent.click(await waitFor(() => screen.getByText(/^Córdoba · Pendiente/)));
+      fireEvent.click(screen.getByText("Buscar en Córdoba"));
+      await waitFor(() => assert.equal(snapshots.at(-1).prospects.length, 2));
+      assert.equal(calls[0].url, "/api/prospeccion");
+      assert.deepEqual(calls[0].body.rubros.slice(0, 2), ["ferretería", "corralón"]);
+      assert.equal(calls[0].body.family, "Penosil");
+      assert.equal(snapshots.at(-1).prospectSearches.length, 1);
+      assert.equal(snapshots.at(-1).prospectSearches[0].zoneId, "1");
+      assert.equal(snapshots.at(-1).prospectSearches[0].found, 2);
+
+      // misma zona otra vez: lo ya cargado no se duplica
+      fireEvent.click(screen.getByText("Buscar en Córdoba"));
+      await waitFor(() => assert.equal(snapshots.at(-1).prospectSearches.length, 2));
+      assert.equal(snapshots.at(-1).prospects.length, 2);
+      assert.ok(screen.getByText(/0 nuevos para vos \(2 ya estaban cargados\)/));
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  test("si la búsqueda falla se muestra el motivo y no se anota como hecha", async () => {
+    const original = globalThis.fetch;
+    globalThis.fetch = async () => ({ ok: false, json: async () => ({ error: "No se pudo consultar OpenStreetMap (timeout). Probá de nuevo en un rato." }) });
+    try {
+      const snapshots = await mount({ clients: [], prospects: [], prospectSearches: [] }, { cities: CITIES, session: { access_token: "t" } });
+      fireEvent.change(screen.getByLabelText("Familia de hoy"), { target: { value: "Penosil" } });
+      fireEvent.click(await waitFor(() => screen.getAllByText(/· Pendiente/)[0]));
+      fireEvent.click(screen.getByText(/^Buscar en /));
+      await waitFor(() => screen.getByText(/No se pudo consultar OpenStreetMap/));
+      assert.equal(snapshots.length, 0);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  test("'Terminé esta zona' la deja agotada y deja de sugerirse", async () => {
+    const snapshots = await mount({ clients: [], prospects: [], prospectSearches: [] }, { cities: CITIES, session: { access_token: "t" } });
+    fireEvent.change(screen.getByLabelText("Familia de hoy"), { target: { value: "Penosil" } });
+    fireEvent.click(await waitFor(() => screen.getByText(/^Córdoba · Pendiente/)));
+    fireEvent.click(screen.getByText("Terminé esta zona (por ahora)"));
+    await waitFor(() => assert.equal(snapshots.at(-1).prospectSearches[0].exhausted, true));
+    assert.equal(screen.queryByText(/^Córdoba · /), null);
+    assert.ok(screen.getByText(/^Paraná · Pendiente/));
   });
 });

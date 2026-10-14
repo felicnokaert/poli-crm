@@ -1,4 +1,5 @@
 import { authenticatedCorporateUser } from '../lib/corporate-auth.mjs';
+import { diagnoseMeta } from '../lib/meta-diagnose.mjs';
 
 const WABAS = {
   general: '1620643669067135',
@@ -13,6 +14,11 @@ export default async function handler(request, response) {
   const user = await authenticatedCorporateUser(request);
   if (!user) return response.status(401).json({ error: 'Acceso corporativo requerido.' });
   if (!process.env.META_SYSTEM_USER_TOKEN) return response.status(503).json({ error: 'Falta el acceso técnico de Meta.' });
+
+  if (request.body?.action === 'diagnose') {
+    const report = await diagnoseMeta({ token: process.env.META_SYSTEM_USER_TOKEN, wabas: WABAS });
+    return response.status(200).json({ ok: true, ...report });
+  }
 
   const channel = request.body?.channel;
   const wabaId = WABAS[channel];

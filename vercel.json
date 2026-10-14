@@ -6,7 +6,7 @@
     { "path": "/api/cron-daily-maintenance", "schedule": "0 6 * * *" }
   ],
   "functions": {
-    "api/prospeccion.js": { "maxDuration": 30 }
+    "api/prospeccion.js": { "maxDuration": 60 }
   },
   "rewrites": [
     { "source": "/api/readiness", "destination": "/api/health" }

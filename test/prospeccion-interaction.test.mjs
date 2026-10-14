@@ -7,7 +7,11 @@ import { loadJsxModule } from "./helpers/load-jsx.mjs";
 afterEach(cleanup);
 
 describe("Prospeccion.jsx - interacción real", () => {
-  const chip = (name) => screen.getAllByRole("button").find((node) => node.className.includes("zone-chip") && node.textContent.startsWith(name) && /Pendiente/.test(node.textContent));
+  const PROVINCES = { "14": "Córdoba", "30": "Entre Ríos" };
+  const pickZone = (provinceCode, cityId) => {
+    fireEvent.change(screen.getByLabelText("Provincia"), { target: { value: provinceCode } });
+    fireEvent.change(screen.getByLabelText("Ciudad"), { target: { value: cityId } });
+  };
   const paragraph = (pattern) => screen.getByText((_, node) => node.tagName === "P" && pattern.test(node.textContent.replace(/\s+/g, " ")));
   async function mount(initial, extra = {}) {
     const mod = await loadJsxModule("src/Prospeccion.jsx");
@@ -19,7 +23,7 @@ describe("Prospeccion.jsx - interacción real", () => {
         snapshots.push(value);
         return value;
       });
-      return React.createElement(mod.Prospeccion, { data: state, setData, userEmail: "marketing@grupopoliplast.com.ar", onOpenClient: () => {}, ...extra });
+      return React.createElement(mod.Prospeccion, { provinces: PROVINCES, data: state, setData, userEmail: "marketing@grupopoliplast.com.ar", onOpenClient: () => {}, ...extra });
     }
     render(React.createElement(Wrapper));
     return snapshots;
@@ -97,7 +101,7 @@ describe("Prospeccion.jsx - interacción real", () => {
     try {
       const snapshots = await mount({ clients: [], prospects: [], prospectSearches: [], prospectSwitches: {} }, { cities: CITIES, session: { access_token: "t" } });
       fireEvent.change(screen.getByLabelText("Familia de hoy"), { target: { value: "Penosil" } });
-      fireEvent.click(await waitFor(() => chip("Córdoba")));
+      pickZone("14", "1");
       fireEvent.click(screen.getByText("Buscar en Córdoba"));
       await waitFor(() => assert.equal(snapshots.at(-1).prospects.length, 2));
       assert.equal(calls[0].url, "/api/prospeccion");
@@ -110,7 +114,7 @@ describe("Prospeccion.jsx - interacción real", () => {
       assert.equal(snapshots.at(-1).prospectSearches[0].ms, 3400);
       assert.equal(snapshots.at(-1).prospectSearches[0].endpoint, "overpass-api.de");
       fireEvent.click(screen.getByText(/Historial de búsquedas \(1\)/));
-      assert.ok(screen.getByText("3,4 s"));
+      assert.ok(screen.getByText(/Devolvió 2 · 1 con teléfono/));
 
       // misma zona otra vez: lo ya cargado no se duplica
       fireEvent.click(screen.getByText("Buscar en Córdoba"));
@@ -131,15 +135,15 @@ describe("Prospeccion.jsx - interacción real", () => {
     try {
       const snapshots = await mount({ clients: [], prospects: [], prospectSearches: [] }, { cities: CITIES, session: { access_token: "t" } });
       fireEvent.change(screen.getByLabelText("Familia de hoy"), { target: { value: "Penosil" } });
-      fireEvent.click(await waitFor(() => screen.getAllByRole("button").find((node) => node.className.includes("zone-chip") && /Pendiente/.test(node.textContent))));
+      pickZone("14", "1");
       fireEvent.click(screen.getByText(/^Buscar en /));
       await waitFor(() => assert.ok(screen.getAllByText((text) => text.includes(reason)).length >= 1));
       const logged = snapshots.at(-1).prospectSearches[0];
       assert.deepEqual([logged.status, logged.failed, logged.ms], ["error", true, 26000]);
       assert.equal(snapshots.at(-1).prospects.length, 0);
-      assert.ok(screen.getAllByRole("button").some((node) => node.className.includes("zone-chip") && /Pendiente/.test(node.textContent)), "la zona sigue pendiente");
+      assert.ok(screen.getAllByText(/Pendiente/).length > 0, "la zona sigue pendiente");
       fireEvent.click(screen.getByText(/Historial de búsquedas \(1\)/));
-      assert.ok(screen.getAllByText(/^Error: OpenStreetMap tardó demasiado/).length >= 1);
+      assert.ok(screen.getAllByText((text) => text.includes("OpenStreetMap tardó demasiado")).length >= 2);
     } finally {
       globalThis.fetch = original;
     }
@@ -148,11 +152,10 @@ describe("Prospeccion.jsx - interacción real", () => {
   test("'Terminé esta zona' la deja agotada y deja de sugerirse", async () => {
     const snapshots = await mount({ clients: [], prospects: [], prospectSearches: [] }, { cities: CITIES, session: { access_token: "t" } });
     fireEvent.change(screen.getByLabelText("Familia de hoy"), { target: { value: "Penosil" } });
-    fireEvent.click(await waitFor(() => chip("Córdoba")));
+    pickZone("14", "1");
     fireEvent.click(screen.getByText("Terminé esta zona (por ahora)"));
     await waitFor(() => assert.equal(snapshots.at(-1).prospectSearches[0].exhausted, true));
-    assert.equal(screen.getAllByRole("button").some((node) => node.className.includes("zone-chip") && node.textContent.startsWith("Córdoba")), false);
-    assert.ok(chip("Paraná"));
+    assert.equal(screen.getByLabelText("Ciudad").value, "", "la zona cerrada se deselecciona");
   });
 
 

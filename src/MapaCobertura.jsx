@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapPin, Share2 } from "lucide-react";
 import { useConfirm } from "./ConfirmDialog";
-import { buildMapClients, clientsToLocate } from "./map-clients-adapter.mjs";
+import { buildMapClients, clientsToLocate, toMapClient } from "./map-clients-adapter.mjs";
 import { nuevoCache, ubicarClientes } from "./georef.mjs";
 import { OPCIONES_POR_DEFECTO, buildPublicSnapshot, generateShareToken, hashTokenHex } from "./map-share.mjs";
 import { onlineConfigured, supabase } from "./online.js";
@@ -236,7 +236,9 @@ function withOwnCoordinates(mapClients, prospects) {
 function MapaCoberturaBase({ clients: clientsProp, prospects, onSetClientType, onApplyLocations, userEmail, modo = "aplicadores" }) {
   const ventas = modo === "ventas";
   const prospectos = modo === "prospectos";
-  const clients = useMemo(() => (prospectos ? prospectsAsClients(prospects) : clientsProp), [prospectos, prospects, clientsProp]);
+  // Cada pestaña muestra lo suyo: aplicadores, el resto de los clientes, o prospectos.
+  const allClients = useMemo(() => (prospectos ? prospectsAsClients(prospects) : clientsProp), [prospectos, prospects, clientsProp]);
+  const clients = useMemo(() => (prospectos ? allClients : (allClients || []).filter((item) => (toMapClient(item)?.tipo === "aplicador") === !ventas)), [prospectos, allClients, ventas]);
   const iframeRef = useRef(null);
   const [listo, setListo] = useState(false);
   const [estado, setEstado] = useState({ fase: "ubicando", detalle: "Ubicando clientes…" });

@@ -945,6 +945,7 @@ for (const id of ["p-x", "p-meses", "p-bajo", "p-alto", "p-aplicador", "p-pines"
   $(id).addEventListener("input", () => { if (estado.map && estado.map.isStyleLoaded()) { renderLeyenda(); pintar(); } });
 }
 $("toggle-panel").addEventListener("click", () => $("app").classList.toggle("abierto"));
+if (VENTAS || PROSPECTOS) document.querySelector("#panel .sub").firstChild.textContent = "";
 if (PROSPECTOS) {
   document.body.classList.add("ventas", "prospectos");
   document.title = "Mapa de prospectos";

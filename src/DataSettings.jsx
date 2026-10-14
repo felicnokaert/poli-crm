@@ -34,6 +34,7 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
   const [message, setMessage] = useState("");
   const [messageIsError, setMessageIsError] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [diagnosis, setDiagnosis] = useState("");
   const [exportFamily, setExportFamily] = useState("Todas");
   const [pendingClientImport, setPendingClientImport] = useState(null);
   const [technicalImportPreview, setTechnicalImportPreview] = useState(null);
@@ -170,6 +171,27 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
       showError(
         error.message || "No se pudo sincronizar. Probá de nuevo en un momento.",
       );
+    } finally {
+      setConnecting(false);
+    }
+  }
+
+  async function runMetaDiagnosis() {
+    if (!session?.access_token) return;
+    setConnecting(true);
+    setDiagnosis("");
+    try {
+      const response = await fetch("/api/meta-subscribe", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "diagnose" }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "No se pudo consultar a Meta.");
+      const { ok: _ok, ...report } = payload;
+      setDiagnosis(JSON.stringify(report, null, 2));
+    } catch (error) {
+      showError(error.message || "No se pudo consultar a Meta.");
     } finally {
       setConnecting(false);
     }
@@ -393,6 +415,10 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
             <button type="button" className="link-button" disabled={connecting} onClick={startWhatsAppConnection}>
               Conectar mi número con Meta
             </button>
+            <button type="button" className="link-button" disabled={connecting} onClick={runMetaDiagnosis}>
+              Diagnóstico de conexión
+            </button>
+            {diagnosis && <pre className="muted" style={{ whiteSpace: "pre-wrap", userSelect: "all" }}>{diagnosis}</pre>}
           </>
         )}
       </section>

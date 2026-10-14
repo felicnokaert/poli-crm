@@ -1,7 +1,7 @@
 # Informe: sección Prospección (primera entrega)
 
 Rama: `claude/stoic-shannon-ev5nma` (no está en `main`; nada llegó a producción).
-Tests: 604/604 (la base tenía 569). Build limpio.
+Tests: 604/604 en la primera entrega (ver 657/657 en la segunda). Build limpio.
 
 ## 1. Qué se construyó
 
@@ -25,16 +25,33 @@ Tests nuevos: duplicados (Pierandrei, Silvacom, CUIT/teléfono/web, el falso pos
 3. **Carrozados Imperpur** es una búsqueda aparte; la Empresa queda en la familia `Imperpur`.
 4. La unidad de negocio de la Empresa convertida queda vacía (`businessUnit`): el CRM no tiene hoy ese campo en las fichas.
 
+## 2 bis. Segunda entrega (seis pasos pedidos, en orden, un commit por paso)
+
+Tests: 657/657, build limpio. Todo sigue en la rama; **nada en `main`**.
+
+| Paso | Qué quedó | Archivos clave |
+|---|---|---|
+| 1. Foco por familia | Interruptor por familia: Pisos, Almohadas y Baldes arrancan **pausadas**; el plan nunca sugiere una pausada; "Foco de la semana" (ej. Resinplast) y línea "Foco vigente". Pausar conserva el avance de cobertura | `src/prospect-model.mjs`, `src/prospect-plan.mjs`, `src/Prospeccion.jsx` |
+| 2. Diagnóstico por búsqueda | Cada búsqueda guarda devueltos / con teléfono / con web / nuevos / repetidos / ya en CRM / tiempo / intentos / servidor; resumen de una línea e historial; error claro en español y reintento con el segundo servidor de Overpass | `lib/prospect-osm.mjs`, `api/prospeccion.js` |
+| 3. Importador | CSV o filas pegadas con las columnas de RELEVAMIENTO; mismo cruce de duplicados; vista previa con conteos; entra como "No contactado", fuente "importado" | `src/prospect-import.mjs` |
+| 4. Mapa de Prospección | Pantalla propia (Cartera → Mapa de prospección), datos propios: pines por color de estado con agrupación, zoom, filtros (unidad, familia, estado, provincia, localidad, fechas) y tabla de **zonas con más déficit** (habitantes por prospecto/cliente de la familia en 50 km, mismo `calcularAlcance` del mapa de cobertura; sin datos, por población). **No muestra clientes del CRM**: los de POLIOCHO siguen solo en su mapa. Prueba de regresión con hashes de `public/mapa/*` | `src/prospect-map.mjs`, `src/ProspeccionMapa.jsx`, `src/prospect-coverage.mjs`, `test/mapa-poliocho-regresion.test.mjs` |
+| 5. Enriquecimiento | Botón por prospecto con sitio web: lee la portada y `/contacto` de **su propio sitio** y completa solo campos vacíos: Facebook, Instagram, mail y WhatsApp (link `wa.me` solo si es +54 9, siempre "posible", va a notas). Respeta `robots.txt`, User-Agent propio, 6 s, 400 KB, 3 redirecciones, bloquea redes privadas. No entra a Instagram ni Facebook. Sin función nueva (acción `enrich` de `api/prospeccion.js`) | `lib/prospect-enrich.mjs`, `src/prospect-enrich-apply.mjs` |
+| 6. Google Maps (opcional) | Adaptador Places **apagado**: exige `PROSPECT_GOOGLE_ENABLED=true` + `GOOGLE_PLACES_API_KEY` + `PROSPECT_GOOGLE_DAILY_CAP` (máx. 200) + claves de Supabase. El cupo se descuenta de forma atómica **antes** de consultar y falla cerrado. La interfaz solo muestra la fuente si el servidor la reporta activa. **No activado** | `lib/prospect-google.mjs`, `supabase/migrations/20261014180000_prospect_quota.sql` (**sin aplicar**) |
+
+Sin hacer, como se pidió: panel de aprendizaje, competencia, skills.
+
 ## 3. Pendiente y por qué
 
 | Pendiente | Motivo |
 |---|---|
-| **Probar la lupa contra OpenStreetMap real y medir cuántos resultados da** | El código está hecho y probado con respuestas de ejemplo armadas a mano, **no contra el servicio real**: la red del entorno de desarrollo bloquea `overpass-api.de` y `nominatim.openstreetmap.org`. Lo prueba Felipe desde el CRM. Si OpenStreetMap trae pocos resultados o sin teléfono, ese es el dato para decidir una segunda fuente |
-| Mapa de Prospección separado + prueba de regresión del mapa POLIOCHO | Etapa 6 sin empezar. Depende de tener prospectos con coordenadas (viene del motor de búsqueda) |
-| Enriquecimiento (redes, WhatsApp, email desde el sitio de la empresa) | Etapa 7 sin empezar. Requiere salida a internet |
-| Panel de aprendizaje, hipótesis, competencia | Etapas 8 y 9 sin empezar |
-| Higiene de datos en "dry run" (familias mal escritas, 258 "Sin definir", ~200 sin provincia) | No hay acceso a la exportación CSV; `canonicalFamily` ya cubre parte |
-| Tarjeta en Trello | No se pidió operar Trello en esta sesión |
+| **Probar la lupa contra OpenStreetMap real (Penosil en Paraná) y comparar con Google Maps (9 resultados, todos con teléfono)** | La red del entorno de desarrollo bloquea `overpass-api.de`; el motor está probado solo con respuestas armadas a mano. El resumen de cada búsqueda está pensado para esa comparación |
+| Confirmar `FAMILY_UNITS` (unidad de negocio por familia, filtro del mapa) | Los valores por defecto son una suposición (ej. Planchas → FOAM FACTORY, PURMAC/Poliurea → PURMAC) |
+| Confirmar si PURMAC/Poliurea (aplicadores) deben salir de la tabla de déficit | La tabla suma clientes del CRM de la familia elegida; si esas familias son los aplicadores de POLIOCHO, conviene excluirlas para no mezclar |
+| Radio de cobertura: 50 km en déficit vs 100 km por defecto del mapa de cobertura | Decisión de criterio; se cambia en `DEFAULT_COVERAGE_RADIUS_KM` |
+| Adaptador de Google: aplicar la migración y configurar variables | Solo si se decide activarlo (cuesta por consulta) |
+| Enriquecimiento probado solo con respuestas de ejemplo | Probar con 3 o 4 sitios reales de ferreterías |
+| Panel de aprendizaje, competencia, skills | Explícitamente postergado |
+| Higiene de datos (familias mal escritas, "Sin definir", sin provincia) | Sin acceso a la exportación |
 
 ## 4. Correcciones al prompt original
 
@@ -51,10 +68,10 @@ Tests nuevos: duplicados (Pierandrei, Silvacom, CUIT/teléfono/web, el falso pos
 - Una versión vieja del CRM abierta en el navegador no conoce `prospects` y, al guardar, podría descartarlos hasta que recargue (afecta solo prospectos, no clientes).
 - Los prospectos cargados quedan en el workspace real de quien los use: probar con datos de ejemplo.
 
-## 6. Cómo aprobar
+## 6. Pasos para publicar
 
-1. Revisar la rama `claude/stoic-shannon-ev5nma` (o el PR si se abre).
-2. Probar con una cuenta de prueba (marketing@): menú Cartera → Prospección.
-3. Merge a `main` cuando esté conforme. No hay migraciones.
-4. Probar la lupa: Prospección > Plan de hoy > elegir una zona > Buscar. Anotar cuántos devuelve, cuántos con teléfono y cuántos eran duplicados.
-5. Pasar la prueba comparativa con las 40 de Entre Ríos (Paraná, Concordia, Gualeguaychú, Concepción del Uruguay, Colón, Gualeguay, Bovril) cuando haya acceso a la fuente de Google Maps de referencia.
+1. Hacer la prueba real de la lupa en un preview de la rama (ojo: los endpoints de preview hablan con la base real; usar la cuenta de prueba). Anotar devueltos / con teléfono / nuevos del resumen de la búsqueda.
+2. Probar el importador con una lista chica y el botón de enriquecimiento con 3 o 4 sitios.
+3. Revisar el mapa de Prospección y confirmar `FAMILY_UNITS`.
+4. Confirmar con Felipe y recién entonces **merge a `main`** (= producción en Vercel). Sin migraciones obligatorias y sin variables nuevas. `vercel.json` suma `maxDuration` de 30 s para `api/prospeccion.js`. Hay 11 de 12 funciones en `api/`.
+5. Google Maps queda apagado. Para activarlo más adelante: aplicar `20261014180000_prospect_quota.sql`, definir las tres variables en Vercel y revisar el costo contra el tope diario.

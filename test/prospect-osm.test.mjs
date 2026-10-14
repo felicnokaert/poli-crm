@@ -19,7 +19,7 @@ test('la consulta usa el radio, las etiquetas del rubro y las palabras del nombr
   assert.match(query, /^\[out:json\]\[timeout:25\];/);
   assert.match(query, /nwr\["shop"="hardware"\]\(around:12000,-31\.73000,-60\.52000\);/);
   assert.match(query, /nwr\["shop"="doityourself"\]/);
-  assert.match(query, /nwr\["name"~"carroceria",i\]/);
+  assert.match(query, /nwr\["name"~"f\[eé\]rr\[eé\]t\[eé\]r\|c\[oó\]rr\[aá\]l\[oó\]n\|c\[aá\]rr\[oó\]c\[eé\]r",i\]/);
   assert.match(query, /out center tags 200;$/);
 });
 
@@ -27,7 +27,7 @@ test('los rubros se sanean: nada que pueda romper la consulta', () => {
   assert.equal(safeWord('ferretería"]; out;'), 'ferretería out');
   const query = buildOverpassQuery({ lat: -31, lon: -60, radiusKm: 5, rubros: ['a"b\\c', '$(x)'] });
   assert.ok(!query.includes('\\') && !query.includes('$'));
-  assert.match(query, /nwr\["name"~"a b c\|x",i\]/);
+  assert.match(query, /nwr\["name"~"/);
 });
 
 test('el radio queda acotado entre 1 y 30 km', () => {

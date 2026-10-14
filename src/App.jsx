@@ -73,6 +73,7 @@ const Sales = lazy(() => import("./Sales"));
 const lazyNamed = (loader, name) => lazy(() => loader().then((m) => ({ default: m[name] })));
 const Pipeline = lazyNamed(() => import("./Pipeline"), "Pipeline");
 const Clients = lazyNamed(() => import("./Clients"), "Clients");
+const Prospeccion = lazyNamed(() => import("./Prospeccion"), "Prospeccion");
 const Contacts = lazyNamed(() => import("./Clients"), "Contacts");
 const Conversations = lazyNamed(() => import("./Conversations"), "Conversations");
 const WhatsAppInbox = lazyNamed(() => import("./WhatsAppInbox"), "WhatsAppInbox");
@@ -1387,6 +1388,7 @@ export default function App() {
     ]],
     ["Cartera", [
       ["clients", "Empresas", Building2],
+      ["prospecting", "Prospección", Search],
       ["contacts", "Contactos", Users],
       ["map", "Mapa", MapPin],
     ]],
@@ -1733,6 +1735,11 @@ export default function App() {
               onMarkNotDuplicate={markNotDuplicate}
               onPostponeDuplicate={postponeDuplicate}
             />
+          </Suspense>
+        )}
+        {view === "prospecting" && (
+          <Suspense fallback={<Splash text="Cargando prospección…" />}>
+            <Prospeccion data={data} setData={setData} userEmail={session?.user?.email} onOpenClient={setSelectedClientId} />
           </Suspense>
         )}
         {view === "contacts" && (

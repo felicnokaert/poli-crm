@@ -1,5 +1,5 @@
-const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], boardLists: [], boardCards: [], salesGoals: [], businessUnits: [], deletedRecordIds: {}, dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '', tasksClosedThrough: '', primaryChannel: 'general', profileName: '', mergeLogs: [], duplicateReviewDecisions: [] };
-const RECORD_COLLECTIONS = ['clients', 'interactions', 'tasks', 'opportunities', 'sales', 'boardLists', 'boardCards', 'salesGoals', 'businessUnits'];
+const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], boardLists: [], boardCards: [], salesGoals: [], businessUnits: [], deletedRecordIds: {}, dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '', tasksClosedThrough: '', primaryChannel: 'general', profileName: '', mergeLogs: [], duplicateReviewDecisions: [], prospects: [] };
+const RECORD_COLLECTIONS = ['clients', 'interactions', 'tasks', 'opportunities', 'sales', 'boardLists', 'boardCards', 'salesGoals', 'businessUnits', 'prospects'];
 const OBSOLETE_PREVIEW_TYPES = new Set(['unread_preview', 'unread_notice', 'verified_unread_preview']);
 
 function normalizedCompany(value = '') {
@@ -132,6 +132,8 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
     boardCards: liveRecords('boardCards'),
     salesGoals: liveRecords('salesGoals'),
     businessUnits: liveRecords('businessUnits'),
+    prospects: liveRecords('prospects'),
+    ...(local.prospectSwitches || remote.prospectSwitches ? { prospectSwitches: { ...(remote.prospectSwitches || {}), ...(local.prospectSwitches || {}) } } : {}),
     deletedRecordIds,
     dismissedInboxEventIds,
     ignoredWhatsAppContacts: mergeRecords(local.ignoredWhatsAppContacts, remote.ignoredWhatsAppContacts, 'key'),
@@ -277,7 +279,7 @@ export function workspaceStatesEqual(left = EMPTY_STATE, right = EMPTY_STATE) {
 // más adelante, típicamente en producción). No son todos los campos de
 // EMPTY_STATE: los que son objetos a propósito (deletedRecordIds,
 // planChecks) o strings (primaryChannel, profileName, etc.) no aplican acá.
-const ARRAY_FIELDS = ['clients', 'interactions', 'tasks', 'inbox', 'opportunities', 'sales', 'dismissedInboxEventIds', 'ignoredWhatsAppContacts', 'boardLists', 'boardCards', 'salesGoals', 'businessUnits', 'mergeLogs', 'duplicateReviewDecisions'];
+const ARRAY_FIELDS = ['clients', 'interactions', 'tasks', 'inbox', 'opportunities', 'sales', 'dismissedInboxEventIds', 'ignoredWhatsAppContacts', 'boardLists', 'boardCards', 'salesGoals', 'businessUnits', 'mergeLogs', 'duplicateReviewDecisions', 'prospects'];
 
 // Red de seguridad, no un modelo de datos nuevo: solo confirma la forma
 // mínima esperada antes de persistir, sin tocar el contenido de cada campo

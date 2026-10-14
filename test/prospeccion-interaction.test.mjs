@@ -311,3 +311,41 @@ describe("Prospeccion.jsx - historial borrable", () => {
     assert.ok(last.deletedRecordIds.prospects.includes("p1"));
   });
 });
+
+describe("Prospeccion.jsx - cola de trabajo y ficha", () => {
+  async function mountWith(prospects) {
+    const mod = await loadJsxModule("src/Prospeccion.jsx");
+    const snapshots = [];
+    function Wrapper() {
+      const [state, setState] = React.useState({ clients: [], prospects, prospectSearches: [], researchJobs: [] });
+      const setData = (next) => setState((previous) => { const value = typeof next === "function" ? next(previous) : next; snapshots.push(value); return value; });
+      return React.createElement(mod.Prospeccion, { data: state, setData, userEmail: "a@b.com", onOpenClient: () => {}, cities: [], provinces: {} });
+    }
+    render(React.createElement(Wrapper));
+    return snapshots;
+  }
+  const rows = [
+    { id: "a", company: "Sin datos SA", family: "Penosil", state: "No contactado", source: "x", createdAt: "2026-10-01T00:00:00Z" },
+    { id: "b", company: "Completo SRL", family: "Penosil", state: "No contactado", source: "x", createdAt: "2026-10-02T00:00:00Z", phone: "3515550000", website: "b.com", email: "x@b.com" },
+  ];
+
+  test("la cola muestra primero el más completo, avanza al marcar y se puede saltar", async () => {
+    const snapshots = await mountWith(rows);
+    fireEvent.click(screen.getByText("Cola de trabajo"));
+    assert.ok(screen.getByRole("heading", { name: "Completo SRL" }));
+    fireEvent.click(screen.getByText("Saltar por hoy"));
+    await waitFor(() => screen.getByRole("heading", { name: "Sin datos SA" }));
+    fireEvent.click(screen.getByText("Con interés", { selector: "button" }));
+    await waitFor(() => assert.equal(snapshots.at(-1).prospects.find((item) => item.id === "a").state, "Con interés"));
+    await waitFor(() => screen.getByText(/No quedan prospectos pendientes/));
+  });
+
+  test("la ficha se abre desde la planilla, edita datos y los guarda", async () => {
+    const snapshots = await mountWith(rows);
+    fireEvent.click(screen.getByText("Sin datos SA"));
+    assert.ok(screen.getByRole("dialog", { name: "Ficha de Sin datos SA" }));
+    fireEvent.change(screen.getByLabelText("Teléfono"), { target: { value: "351 555 9999" } });
+    fireEvent.click(screen.getByText("Guardar cambios"));
+    await waitFor(() => assert.equal(snapshots.at(-1).prospects.find((item) => item.id === "a").phone, "351 555 9999"));
+  });
+});

@@ -48,3 +48,11 @@ test('una tabla markdown de una IA se importa con ciudad, provincia, rubro y evi
   assert.match(item.notes, /Tamaño: 4 sucursales/);
   assert.equal(item.source, 'importado');
 });
+
+test('el pedido le pide a la IA razonar las indicaciones y justificar inclusiones y descartes', () => {
+  const prompt = buildResearchPrompt({ family: 'Penosil', scope: 'Mendoza, San Rafael', notes: 'priorizar sucursales' });
+  assert.match(prompt, /RAZONAMIENTO/);
+  assert.match(prompt, /Por qué encaja/);
+  assert.match(prompt, /descartaste y por qué/);
+  assert.match(prompt, /priorizar sucursales/);
+});

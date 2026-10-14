@@ -516,3 +516,11 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .history-card.failed { border-color: #e9b8b8; background: #fff6f6; }
 .history-card.active { border-color: var(--color-forest, #1f4d3a); box-shadow: 0 0 0 2px #1f4d3a22; }
 .history-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+
+.research-panel { display: grid; gap: 14px; border: 2px solid #1f4d3a33; }
+.research-form { display: grid; grid-template-columns: 1fr 2fr 110px; gap: 12px; }
+.research-form label { display: grid; gap: 4px; font-size: 13px; color: var(--color-text-mid, #555); }
+.research-form .research-notes { grid-column: 1 / -1; }
+.research-job textarea { width: 100%; }
+.link-pill { display: inline-block; padding: 8px 12px; border-radius: 10px; text-decoration: none; font-size: 13px; }
+@media (max-width: 760px) { .research-form { grid-template-columns: 1fr; } }

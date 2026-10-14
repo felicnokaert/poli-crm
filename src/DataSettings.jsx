@@ -412,12 +412,16 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
               "conectar una cuenta existente de WhatsApp Business" y seguís los pasos. Al
               terminar, el CRM te muestra el ID del número.
             </p>
-            <button type="button" className="link-button" disabled={connecting} onClick={startWhatsAppConnection}>
-              Conectar mi número con Meta
-            </button>
-            <button type="button" className="link-button" disabled={connecting} onClick={runMetaDiagnosis}>
-              Diagnóstico de conexión
-            </button>
+            <p>
+              <button type="button" className="link-button" disabled={connecting} onClick={startWhatsAppConnection}>
+                Conectar mi número con Meta
+              </button>
+            </p>
+            <p>
+              <button type="button" className="secondary" disabled={connecting} onClick={runMetaDiagnosis}>
+                Diagnóstico de conexión
+              </button>
+            </p>
             {diagnosis && <pre className="muted" style={{ whiteSpace: "pre-wrap", userSelect: "all" }}>{diagnosis}</pre>}
           </>
         )}

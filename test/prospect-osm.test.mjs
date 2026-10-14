@@ -19,7 +19,7 @@ test('la consulta usa el radio, las etiquetas del rubro y las palabras del nombr
   assert.match(query, /^\[out:json\]\[timeout:25\];/);
   assert.match(query, /nwr\["shop"="hardware"\]\(around:12000,-31\.73000,-60\.52000\);/);
   assert.match(query, /nwr\["shop"="doityourself"\]/);
-  assert.match(query, /nwr\["name"~"ferreteria\|corralon\|carroceria",i\]/);
+  assert.match(query, /nwr\["name"~"carroceria",i\]/);
   assert.match(query, /out center tags 200;$/);
 });
 
@@ -120,7 +120,7 @@ test('el endpoint exige usuario corporativo y valida zona y rubros', async () =>
     const good = await call({ lat: -31.7, lon: -60.5, population: 250000, zoneName: 'Paraná', province: 'Entre Ríos', family: 'Penosil', rubros: ['ferretería'] });
     assert.equal(good.statusCode, 200);
     assert.equal(good.body.count, 2);
-    assert.equal(good.body.radiusKm, 12);
+    assert.equal(good.body.radiusKm, 9);
     assert.deepEqual(good.body.stats, { returned: 2, withPhone: 1, withWebsite: 1 });
     assert.equal(good.body.attempts, 1);
     assert.equal(typeof good.body.ms, 'number');

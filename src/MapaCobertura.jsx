@@ -221,8 +221,22 @@ function CompartirMapa({ mapClients, userEmail }) {
 // /mapa/ (estático, con su propia CSP); los clientes se calculan acá, con la
 // sesión, y se le mandan por postMessage - nunca hay un archivo público con
 // CUIT, teléfonos o emails. Ver public/mapa/app.js (esperarClientes).
-function MapaCoberturaBase({ clients, onSetClientType, onApplyLocations, userEmail, modo = "aplicadores" }) {
+// Los prospectos se ven con el mismo mapa: se convierten al formato de cliente del mapa.
+function prospectsAsClients(prospects = []) {
+  return prospects.map((item) => ({ id: item.id, company: item.company, email: item.email, phone: item.phone, address: item.address, province: item.province, city: item.city, family: item.family, prospectState: item.state }));
+}
+
+// Los prospectos que traen coordenadas exactas (de la búsqueda) las conservan en vez de usar el centro de su localidad.
+function withOwnCoordinates(mapClients, prospects) {
+  if (!prospects.length) return mapClients;
+  const own = new Map(prospects.filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lon)).map((item) => [String(item.id), item]));
+  return mapClients.map((item) => (own.has(item.doc) ? { ...item, lat: own.get(item.doc).lat, lon: own.get(item.doc).lon, precision: 'direccion', motivo_aprox: null } : item));
+}
+
+function MapaCoberturaBase({ clients: clientsProp, prospects, onSetClientType, onApplyLocations, userEmail, modo = "aplicadores" }) {
   const ventas = modo === "ventas";
+  const prospectos = modo === "prospectos";
+  const clients = useMemo(() => (prospectos ? prospectsAsClients(prospects) : clientsProp), [prospectos, prospects, clientsProp]);
   const iframeRef = useRef(null);
   const [listo, setListo] = useState(false);
   const [estado, setEstado] = useState({ fase: "ubicando", detalle: "Ubicando clientes…" });
@@ -240,7 +254,7 @@ function MapaCoberturaBase({ clients, onSetClientType, onApplyLocations, userEma
         const geo = await ubicarClientes(clientsToLocate(base), { cache });
         guardarCache(cache);
         if (!activo) return;
-        const completos = buildMapClients(clients || [], geo);
+        const completos = withOwnCoordinates(buildMapClients(clients || [], geo), prospectos ? prospects : []);
         setMapClients(completos);
         setEstado({ fase: "ok", detalle: "" });
       } catch (error) {
@@ -286,17 +300,19 @@ function MapaCoberturaBase({ clients, onSetClientType, onApplyLocations, userEma
         <div className="panel-head">
           <div>
             <span className="eyebrow">Solo para el equipo · requiere sesión</span>
-            <h2>{ventas ? "Mapa de ventas (sin aplicadores)" : "Mapa de aplicadores (RAPYP)"}</h2>
+            <h2>{prospectos ? "Mapa de prospectos" : ventas ? "Mapa de ventas (sin aplicadores)" : "Mapa de aplicadores (RAPYP)"}</h2>
             <p>
               {base.length} clientes ({compradores} con compra) · {mapClients ? `${conPin} con ubicación` : "ubicando…"}
               {estado.detalle ? ` · ${estado.detalle}` : ""}
             </p>
           </div>
           <div className="panel-head-actions">
-            <button type="button" className="secondary" onClick={() => setPendientesAbierto((abierto) => !abierto)}>
-              Pendientes de ubicación ({sinUbicar})
-            </button>
-            {onlineConfigured && !ventas && (
+            {!prospectos && (
+              <button type="button" className="secondary" onClick={() => setPendientesAbierto((abierto) => !abierto)}>
+                Pendientes de ubicación ({sinUbicar})
+              </button>
+            )}
+            {onlineConfigured && !ventas && !prospectos && (
               <button type="button" className="secondary" onClick={() => setCompartirAbierto((abierto) => !abierto)}>
                 <Share2 size={15} /> Compartir mapa
               </button>
@@ -308,8 +324,8 @@ function MapaCoberturaBase({ clients, onSetClientType, onApplyLocations, userEma
         {compartirAbierto && <CompartirMapa mapClients={mapClients} userEmail={userEmail} />}
         <iframe
           ref={iframeRef}
-          title={ventas ? "Mapa de ventas" : "Mapa de cobertura de aplicadores"}
-          src={ventas ? "/mapa?modo=ventas" : "/mapa"}
+          title={prospectos ? "Mapa de prospectos" : ventas ? "Mapa de ventas" : "Mapa de cobertura de aplicadores"}
+          src={prospectos ? "/mapa?modo=prospectos" : ventas ? "/mapa?modo=ventas" : "/mapa?modo=aplicadores"}
           className="mapa-cobertura-frame"
         />
       </section>

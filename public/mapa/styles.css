@@ -25,6 +25,8 @@
   --cob-sin: #ed1c24; --cob-uno: #f0a30a; --cob-varios: #2f8f5b; --cob-zona: #d9efe2; --cob-borde: #3f9a68;
   /* tipos de cliente (pines) y pin inactivo */
   --tipo-aplicador: #6d3fd6; --tipo-inyeccion: #0b8f9c; --tipo-fabricante: #c2185b; --tipo-no-aplica: #8a6d3b; --tipo-otro: #5d6b7a; --tipo-sin: #9aa5b1;
+  --estado-no-contactado: #7c8794; --estado-contactado: #2b6cb0; --estado-con-interes: #2f855a; --estado-sin-interes: #c53030;
+  --familia-1: #d9792b; --familia-2: #2b6cb0; --familia-3: #805ad5; --familia-4: #2f855a; --familia-5: #0987a0; --familia-6: #b83280; --familia-7: #c05621; --familia-8: #5a67d8; --familia-9: #d69e2e; --familia-10: #e53e3e;
   --pin-inactivo: #b3bcc6;
   /* nombres que usa el resto de este archivo */
   --bg: #f6f5f2; --panel: var(--surface); --texto: var(--text); --suave: var(--text-secondary); --borde: var(--border); --acento: var(--accent);
@@ -118,3 +120,5 @@ body.publico .solo-crm { display: none !important; }
 @media (prefers-reduced-motion: reduce) { #cargando { transition: none; } }
 
 body.ventas #fila-aplicador { display: none !important; }
+
+body.prospectos #fila-aplicador { display: none !important; }

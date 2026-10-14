@@ -80,6 +80,61 @@ function ProspectRow({ prospect, check, onMark, onOpenClient, onDelete, onEnrich
   );
 }
 
+const csvCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+
+function prospectsCsv(rows) {
+  const head = ['Empresa', 'Familia', 'Rubro', 'Direccion', 'Localidad', 'Provincia', 'Telefono', 'Sitio web', 'Email', 'Instagram', 'Facebook', 'Estado', 'Fuente'];
+  const lines = rows.map((item) => [item.company, item.family, item.rubro, item.address, item.city, item.province, item.phone, item.website, item.email, item.instagram, item.facebook, item.state, item.source].map(csvCell).join(';'));
+  return `\ufeff${[head.map(csvCell).join(';'), ...lines].join('\r\n')}`;
+}
+
+function downloadCsv(rows) {
+  const url = URL.createObjectURL(new Blob([prospectsCsv(rows)], { type: 'text/csv;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `prospectos-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+// Planilla: los prospectos como filas, para recorrerlos rápido y marcar el estado en el momento.
+function ProspectSheet({ rows, checks, onMark, onOpenClient, onDelete }) {
+  return (
+    <div className="prospect-sheet">
+      <table>
+        <thead><tr><th>Empresa</th><th>Rubro</th><th>Localidad</th><th>Teléfono</th><th>Sitio / redes</th><th>Estado</th><th>Cruce</th><th /></tr></thead>
+        <tbody>
+          {rows.map((item) => {
+            const check = checks.get(item.id) || { status: 'Nuevo', matches: [] };
+            const whatsapp = possibleWhatsAppLink(item.phone);
+            return (
+              <tr key={item.id} className={item.competitor ? 'competitor' : ''}>
+                <td><strong>{item.company}</strong>{item.competitor && <em className="badge warn"> Competencia</em>}<br /><span className="muted small">{[item.family, item.source].filter(Boolean).join(' · ')}</span></td>
+                <td>{item.rubro || '–'}</td>
+                <td>{[item.city, item.province].filter(Boolean).join(', ') || '–'}</td>
+                <td>{item.phone || '–'}{whatsapp && <> · <a href={whatsapp} target="_blank" rel="noreferrer">WhatsApp (posible)</a></>}</td>
+                <td className="wrap">
+                  {item.website ? <a href={/^https?:/.test(item.website) ? item.website : `https://${item.website}`} target="_blank" rel="noreferrer">sitio</a> : '–'}
+                  {item.instagram && <> · <a href={item.instagram} target="_blank" rel="noreferrer">Instagram</a></>}
+                  {item.facebook && <> · <a href={item.facebook} target="_blank" rel="noreferrer">Facebook</a></>}
+                  {item.email && <><br />{item.email}</>}
+                </td>
+                <td>
+                  <select aria-label={`Estado de ${item.company}`} value={item.state} onChange={(event) => onMark(item.id, event.target.value, '')}>
+                    {PROSPECT_STATES.map((state) => <option key={state}>{state}</option>)}
+                  </select>
+                </td>
+                <td><em className={statusClass(check.status)}>{check.status}</em>{item.linkedClientId && <> <button type="button" className="link-button" onClick={() => onOpenClient(item.linkedClientId)}>Abrir ficha</button></>}</td>
+                <td><button type="button" className="icon-button" aria-label={`Eliminar ${item.company}`} onClick={() => onDelete(item.id)}><Trash2 size={14} /></button></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 const seconds = (ms) => `${(Number(ms || 0) / 1000).toFixed(1).replace('.', ',')} s`;
 
 // Una línea para comparar la fuente (por ejemplo contra Google Maps).
@@ -117,6 +172,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const [familyFilter, setFamilyFilter] = useState('Todas');
   const [stateFilter, setStateFilter] = useState('Todos');
   const [dailyList, setDailyList] = useState(null);
+  const [listView, setListView] = useState('planilla');
   const [message, setMessage] = useState('');
   const [importText, setImportText] = useState('');
   const [importPlan, setImportPlan] = useState(null);
@@ -126,7 +182,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const focus = useMemo(() => currentFocus(new Date(), switches, data.prospectFocus), [switches, data.prospectFocus]);
   const [planFamily, setPlanFamily] = useState(focus.family);
   const [zone, setZone] = useState(null);
-  const [zoneQuery, setZoneQuery] = useState('');
+  const [provSel, setProvSel] = useState('');
   const [rubrosText, setRubrosText] = useState('');
   const [searching, setSearching] = useState(false);
   // Google Maps solo aparece si el servidor lo tiene activado (apagado por defecto).
@@ -156,10 +212,6 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   }, [citiesProp]);
 
   useEffect(() => {
-    if (!familyIsActive(planFamily, switches) && focus.family) setPlanFamily(focus.family);
-  }, [planFamily, switches, focus.family]);
-
-  useEffect(() => {
     setRubrosText((familyConfig(planFamily)?.rubros || []).join(', '));
     setZone(null);
   }, [planFamily]);
@@ -173,11 +225,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     return points.length ? deficitRanking(planFamily, cities, points) : null;
   }, [planFamily, cities, clients, prospects, provinces]);
   const suggestions = useMemo(() => (planFamily && cities.length ? suggestZones(planFamily, cities, searches, { count: 3, today, ranking }) : []), [planFamily, cities, searches, today, ranking]);
-  const zoneMatches = useMemo(() => {
-    const query = zoneQuery.trim().toLocaleLowerCase('es-AR');
-    if (query.length < 3) return [];
-    return zonesForFamily(planFamily, cities).filter((item) => item.nombre.toLocaleLowerCase('es-AR').includes(query)).slice(0, 6);
-  }, [zoneQuery, planFamily, cities]);
+  const provinceCities = useMemo(() => (provSel ? cities.filter((item) => item.prov === provSel).sort((a, b) => b.pob - a.pob) : []), [provSel, cities]);
   const loadedToday = prospects.filter((item) => String(item.createdAt || '').slice(0, 10) === today && item.family === planFamily).length;
 
   const checks = useMemo(
@@ -334,18 +382,9 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     }
   }
 
-  function toggleFamily(key) {
-    setData((current) => ({ ...current, prospectSwitches: { ...(current.prospectSwitches || {}), [key]: !familyIsActive(key, current.prospectSwitches) } }));
-  }
-
-  function setFocus(family) {
-    setData((current) => ({ ...current, prospectFocus: family ? { family, weekStart: weekStart(new Date()) } : null }));
-    if (family) setPlanFamily(family);
-  }
-
   function buildDailyList() {
     const eligible = prospects
-      .filter((item) => item.state === 'No contactado' && !item.competitor && checks.get(item.id)?.status === 'Nuevo' && familyIsActive(item.family, switches))
+      .filter((item) => item.state === 'No contactado' && !item.competitor && checks.get(item.id)?.status === 'Nuevo')
       .sort((a, b) => (Number(Boolean(b.phone)) + Number(Boolean(b.website))) - (Number(Boolean(a.phone)) + Number(Boolean(a.website))))
       .slice(0, DAILY_LIST_SIZE);
     setDailyList(eligible.map((item) => item.id));
@@ -385,7 +424,6 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
             <h3>Plan de hoy</h3>
             <p className="muted">Una familia por día, zona por zona sin repetir. Meta: {DAILY_TARGET.min} a {DAILY_TARGET.max} contactos nuevos por día (hoy cargaste {loadedToday} de {planFamily || 'esta familia'}).</p>
           </div>
-          <p className="prospect-focus"><strong>Foco vigente: {focus.label}.</strong> {focus.mode === 'foco' ? 'Vale hasta el domingo.' : 'Podés fijar una familia para toda la semana.'}</p>
         </div>
 
         <ol className="prospect-steps">
@@ -393,7 +431,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
             <span className="step-title">1 · Familia</span>
             <label className="sr-only-label">Familia de hoy
               <select aria-label="Familia de hoy" value={planFamily} onChange={(event) => setPlanFamily(event.target.value)}>
-                {PROSPECT_FAMILIES.filter((item) => familyIsActive(item.key, switches)).map((item) => <option key={item.key}>{item.key}</option>)}
+                {PROSPECT_FAMILIES.map((item) => <option key={item.key}>{item.key}</option>)}
               </select>
             </label>
             <span className="muted small">Alcance: {scopeDescription(planFamily)}</span>
@@ -402,7 +440,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
             <span className="step-title">2 · Zona</span>
             <div className="zone-chips">
               {suggestions.map(({ zone: item, status, habPorPunto }) => (
-                <button key={item.id} type="button" className={`zone-chip ${zone?.id === item.id ? 'selected' : ''}`} onClick={() => setZone(item)}>
+                <button key={item.id} type="button" className={`zone-chip ${zone?.id === item.id ? 'selected' : ''}`} onClick={() => { setZone(item); setProvSel(item.prov); }}>
                   <strong>{item.nombre}</strong>
                   <span>{[provinces[item.prov], status, habPorPunto ? `${Math.round(habPorPunto).toLocaleString('es-AR')} hab/punto` : ''].filter(Boolean).join(' · ')}</span>
                 </button>
@@ -410,19 +448,20 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
               {cities.length === 0 && <span className="muted">Cargando zonas…</span>}
             </div>
             {cities.length > 0 && <span className="muted small">{ranking ? 'Orden: déficit de cobertura (habitantes por cliente o prospecto de la familia).' : 'Esta familia todavía no tiene datos: se ordena por población.'}</span>}
-            <label>Otra zona
-              <input value={zoneQuery} onChange={(event) => setZoneQuery(event.target.value)} placeholder="Escribí una ciudad (mínimo 3 letras)" />
-            </label>
-            {zoneMatches.length > 0 && (
-              <div className="zone-chips">
-                {zoneMatches.map((item) => (
-                  <button key={item.id} type="button" className="zone-chip" onClick={() => { setZone(item); setZoneQuery(''); }}>
-                    <strong>{item.nombre}</strong>
-                    <span>{[provinces[item.prov], zoneStatus(planFamily, item.id, searches, today).status].filter(Boolean).join(' · ')}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="zone-pickers">
+              <label>Provincia
+                <select aria-label="Provincia" value={provSel} onChange={(event) => { setProvSel(event.target.value); setZone(null); }}>
+                  <option value="">Elegí una provincia</option>
+                  {Object.entries(provinces).sort((x, y) => x[1].localeCompare(y[1], 'es')).map(([cod, name]) => <option key={cod} value={cod}>{name}</option>)}
+                </select>
+              </label>
+              <label>Ciudad
+                <select aria-label="Ciudad" value={zone && zone.prov === provSel ? zone.id : ''} disabled={!provSel} onChange={(event) => setZone(provinceCities.find((item) => item.id === event.target.value) || null)}>
+                  <option value="">{provSel ? 'Elegí una ciudad' : 'Primero la provincia'}</option>
+                  {provinceCities.map((item) => <option key={item.id} value={item.id}>{item.nombre} · {zoneStatus(planFamily, item.id, searches, today).status}</option>)}
+                </select>
+              </label>
+            </div>
           </li>
           <li>
             <span className="step-title">3 · Qué buscar</span>
@@ -446,23 +485,6 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
           <button type="button" className="secondary" disabled={!zone} onClick={closeZone}>Terminé esta zona (por ahora)</button>
         </div>
 
-        <details className="prospect-settings">
-          <summary>Ajustes del plan (foco semanal y familias activas)</summary>
-          <label>Foco de la semana
-            <select aria-label="Foco de la semana" value={focus.mode === 'foco' ? focus.family : ''} onChange={(event) => setFocus(event.target.value)}>
-              <option value="">Rotación diaria</option>
-              {PROSPECT_FAMILIES.filter((item) => familyIsActive(item.key, switches)).map((item) => <option key={item.key}>{item.key}</option>)}
-            </select>
-          </label>
-          <div className="family-switches">
-            {PROSPECT_FAMILIES.map((family) => (
-              <label key={family.key} className="checkbox-field">
-                <input type="checkbox" checked={familyIsActive(family.key, switches)} onChange={() => toggleFamily(family.key)} />
-                {family.key}{familyIsActive(family.key, switches) ? '' : ' (pausada)'}
-              </label>
-            ))}
-          </div>
-        </details>
       </div>
       {message && <div className="system-message">{message}</div>}
 
@@ -538,12 +560,22 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       </div>
       {dailyList && <p className="form-notice">Lista del día: {dailyList.length} prospectos nuevos, sin duplicados, de familias activas y con más datos de contacto primero.</p>}
 
-      <div className="units-list">
-        {shown.length === 0 && <p className="muted">{prospects.length ? 'No hay prospectos con ese filtro.' : 'Todavía no cargaste prospectos.'}</p>}
-        {shown.map((item) => (
-          <ProspectRow key={item.id} prospect={item} check={checks.get(item.id) || { status: 'Nuevo', matches: [] }} onMark={mark} onOpenClient={onOpenClient} onDelete={remove} onEnrich={enrich} />
-        ))}
+      <div className="panel-head-actions">
+        <div className="segmented" role="tablist" aria-label="Vista de la lista">
+          <button type="button" role="tab" aria-selected={listView === 'planilla'} className={listView === 'planilla' ? 'selected' : ''} onClick={() => setListView('planilla')}>Planilla</button>
+          <button type="button" role="tab" aria-selected={listView === 'tarjetas'} className={listView === 'tarjetas' ? 'selected' : ''} onClick={() => setListView('tarjetas')}>Tarjetas</button>
+        </div>
+        <button type="button" className="secondary" disabled={!shown.length} onClick={() => downloadCsv(shown)}>Descargar CSV ({shown.length})</button>
       </div>
+      {shown.length === 0 && <p className="muted">{prospects.length ? 'No hay prospectos con ese filtro.' : 'Todavía no cargaste prospectos.'}</p>}
+      {listView === 'planilla' && shown.length > 0 && <ProspectSheet rows={shown} checks={checks} onMark={mark} onOpenClient={onOpenClient} onDelete={remove} />}
+      {listView === 'tarjetas' && (
+        <div className="units-list">
+          {shown.map((item) => (
+            <ProspectRow key={item.id} prospect={item} check={checks.get(item.id) || { status: 'Nuevo', matches: [] }} onMark={mark} onOpenClient={onOpenClient} onDelete={remove} onEnrich={enrich} />
+          ))}
+        </div>
+      )}
 
       <SearchHistory searches={searches} />
 

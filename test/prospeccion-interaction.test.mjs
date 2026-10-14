@@ -49,6 +49,7 @@ describe("Prospeccion.jsx - interacción real", () => {
 
   test("marcar Contactado pasa el prospecto a Empresas y no se duplica al repetir", async () => {
     const snapshots = await mount({ clients: [], prospects: [{ id: "p1", company: "Ferretería Sur", family: "Penosil", state: "No contactado", source: "Carga manual", city: "Colón" }] });
+    fireEvent.click(screen.getByText("Tarjetas"));
     fireEvent.click(screen.getAllByText("Contactado").find((node) => node.tagName === "BUTTON"));
     await waitFor(() => assert.equal(snapshots.at(-1).clients.length, 1));
     assert.equal(snapshots.at(-1).clients[0].family, "Penosil");
@@ -58,7 +59,7 @@ describe("Prospeccion.jsx - interacción real", () => {
     assert.equal(snapshots.at(-1).clients.length, 1);
   });
 
-  test("la lista del día excluye competidores, duplicados y familias pausadas", async () => {
+  test("la lista del día excluye competidores y duplicados", async () => {
     await mount({
       clients: [{ id: "c1", company: "Ya Cliente S.A.", city: "Paraná" }],
       prospects: [
@@ -69,10 +70,10 @@ describe("Prospeccion.jsx - interacción real", () => {
       ],
     });
     fireEvent.click(screen.getByText("Generar mi lista del día"));
-    await waitFor(() => screen.getByText(/Lista del día: 1 prospectos/));
+    await waitFor(() => screen.getByText(/Lista del día: 2 prospectos/));
     assert.ok(screen.getByText("Nuevo Uno"));
     assert.equal(screen.queryByText("Argenpur Sur"), null);
-    assert.equal(screen.queryByText("Alm Pausada"), null);
+    assert.ok(screen.getByText("Alm Pausada"), "todas las familias están disponibles");
   });
 
   const CITIES = [
@@ -150,41 +151,12 @@ describe("Prospeccion.jsx - interacción real", () => {
     fireEvent.click(await waitFor(() => chip("Córdoba")));
     fireEvent.click(screen.getByText("Terminé esta zona (por ahora)"));
     await waitFor(() => assert.equal(snapshots.at(-1).prospectSearches[0].exhausted, true));
-    assert.equal(screen.queryByText(/^Córdoba · /), null);
+    assert.equal(screen.getAllByRole("button").some((node) => node.className.includes("zone-chip") && node.textContent.startsWith("Córdoba")), false);
     assert.ok(chip("Paraná"));
   });
 
-  test("el foco vigente se ve en el plan y se puede fijar una familia para la semana", async () => {
-    const snapshots = await mount({ clients: [], prospects: [], prospectSearches: [] }, { cities: CITIES });
-    assert.ok(screen.getByText(/Foco vigente: rotación diaria, hoy: /));
-    fireEvent.change(screen.getByLabelText("Foco de la semana"), { target: { value: "Resinplast" } });
-    await waitFor(() => screen.getByText(/Foco vigente: esta semana: Resinplast/));
-    assert.equal(snapshots.at(-1).prospectFocus.family, "Resinplast");
-    assert.equal(screen.getByLabelText("Familia de hoy").value, "Resinplast");
-  });
 
-  test("las familias pausadas no se ofrecen en el plan y Baldes arranca pausada", async () => {
-    await mount({ clients: [], prospects: [], prospectSearches: [] }, { cities: CITIES });
-    const options = () => [...screen.getByLabelText("Familia de hoy").querySelectorAll("option")].map((node) => node.textContent);
-    assert.ok(!options().includes("Baldes") && !options().includes("Pisos") && !options().includes("Almohadas"));
-    assert.ok(options().includes("Resinplast"));
-    fireEvent.click(screen.getByLabelText(/^Resinplast/));
-    await waitFor(() => assert.ok(!options().includes("Resinplast")));
-    fireEvent.click(screen.getByLabelText(/^Baldes/));
-    await waitFor(() => assert.ok(options().includes("Baldes")));
-  });
 
-  test("pausar una familia no borra su avance de cobertura", async () => {
-    const searches = [{ id: "s1", family: "Penosil", zoneId: "1", zoneName: "Córdoba", date: "2026-10-14", found: 12 }];
-    const prospectsList = [{ id: "p1", company: "Ferretería Uno", family: "Penosil", city: "Córdoba", state: "Contactado", source: "x" }];
-    const snapshots = await mount({ clients: [], prospects: prospectsList, prospectSearches: searches }, { cities: CITIES });
-    fireEvent.click(screen.getByLabelText(/^Penosil/));
-    await waitFor(() => assert.equal(snapshots.at(-1).prospectSwitches.Penosil, false));
-    assert.equal(snapshots.at(-1).prospects.length, 1);
-    assert.equal(snapshots.at(-1).prospectSearches.length, 1);
-    assert.ok(screen.getByText("Ferretería Uno"));
-    assert.ok(screen.getByText("Cobertura por familia y localidad"));
-  });
 
   const RELEVAMIENTO = [
     "Nombre empresa;Familia;Subfamilia;provincia;ciudad;Maquina;Proveedor;telefono;email;Estado;Comercial;Contacto;observaciones;Fecha de seguimiento;Tipo entidad;Producto / propuesta;Estado comercial;Valor potencial;Próxima acción;Fecha próxima acción",
@@ -256,6 +228,7 @@ describe("Prospeccion.jsx - enriquecimiento", () => {
         return React.createElement(mod.Prospeccion, { data: state, setData, userEmail: "a@b.com", session: { access_token: "t" }, onOpenClient: () => {} });
       }
       render(React.createElement(Wrapper));
+      fireEvent.click(screen.getByText("Tarjetas"));
       fireEvent.click(screen.getByText("Buscar redes y contacto en su sitio"));
       await waitFor(() => screen.getByText(/Agregado desde su sitio: Instagram\./));
       const saved = snapshots.at(-1).prospects[0];

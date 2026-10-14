@@ -31,6 +31,7 @@ describe("Prospeccion.jsx - interacción real", () => {
 
   test("una cuenta nueva arranca vacía y puede cargar un prospecto a mano", async () => {
     const snapshots = await mount({ clients: [], prospects: [] });
+    fireEvent.click(screen.getByText("Planilla"));
     assert.ok(screen.getByText("Todavía no cargaste prospectos."));
     fireEvent.click(screen.getByText("Cargar prospecto"));
     fireEvent.change(screen.getByLabelText("Empresa"), { target: { value: "Corralón Norte" } });
@@ -73,6 +74,7 @@ describe("Prospeccion.jsx - interacción real", () => {
         { id: "d", company: "Alm Pausada", family: "Almohadas", state: "No contactado", source: "x" },
       ],
     });
+    fireEvent.click(screen.getByText("Planilla"));
     fireEvent.click(screen.getByText("Generar mi lista del día"));
     await waitFor(() => screen.getByText(/Lista del día: 2 prospectos/));
     assert.ok(screen.getByText("Nuevo Uno"));
@@ -342,6 +344,7 @@ describe("Prospeccion.jsx - cola de trabajo y ficha", () => {
 
   test("la ficha se abre desde la planilla, edita datos y los guarda", async () => {
     const snapshots = await mountWith(rows);
+    fireEvent.click(screen.getByText("Planilla"));
     fireEvent.click(screen.getByText("Sin datos SA"));
     assert.ok(screen.getByRole("dialog", { name: "Ficha de Sin datos SA" }));
     fireEvent.change(screen.getByLabelText("Teléfono"), { target: { value: "351 555 9999" } });

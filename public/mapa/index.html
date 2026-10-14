@@ -6,7 +6,7 @@
 <base href="/mapa/">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Cobertura de aplicadores · POLIOCHO</title>
+<title>Mapa de aplicadores · RAPYP</title>
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
 <link rel="preload" href="fonts/dm-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css?v=8">
@@ -15,7 +15,7 @@
 <div id="app">
   <aside id="panel" aria-label="Panel de control">
     <header>
-      <h1>Cobertura de aplicadores</h1>
+      <h1>Aplicadores · RAPYP</h1>
       <p class="sub">POLIOCHO · <span id="meta-export">cargando…</span></p>
     </header>
 
@@ -63,7 +63,7 @@
     <section>
       <h2>Filtros</h2>
       <label class="fila"><span>Producto</span><select id="f-producto"><option value="">Todos</option></select></label>
-      <label class="fila"><span>Tipo de cliente (pines)</span><select id="f-tipo"><option value="">Todos</option><option value="aplicador">Aplicadores</option><option value="inyeccion">Inyección</option><option value="fabricante">Fabricantes</option><option value="no_aplica">Compra y no aplica</option><option value="otro">Otros</option><option value="sin">Sin clasificar</option></select></label>
+      <label class="fila"><span>Tipo de cliente (pines)</span><select id="f-tipo"><option value="">Todos</option><option value="aplicador" selected>Aplicadores</option><option value="inyeccion">Inyección</option><option value="fabricante">Fabricantes</option><option value="no_aplica">Compra y no aplica</option><option value="otro">Otros</option><option value="sin">Sin clasificar</option></select></label>
       <label class="fila"><span>Provincia</span><select id="f-provincia"><option value="">Todas</option></select></label>
       <label class="fila"><span>Pines</span>
         <select id="f-estado"><option value="">Activos e inactivos</option><option value="activo">Solo activos</option><option value="inactivo">Solo inactivos</option></select>

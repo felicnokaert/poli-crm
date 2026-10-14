@@ -12,7 +12,7 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 // unidades de negocio incluidas. Nada se auto-completa con datos de otra
 // cuenta; cada usuario carga lo suyo desde cero (ver unitsMapFrom en
 // sales-model.mjs para cómo se resuelve un businessUnits vacío).
-const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], deletedRecordIds: {}, boardLists: [], boardCards: [], salesGoals: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '', tasksClosedThrough: '', primaryChannel: 'general', profileName: '', businessUnits: [], mergeLogs: [], duplicateReviewDecisions: [] };
+const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], deletedRecordIds: {}, boardLists: [], boardCards: [], salesGoals: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '', tasksClosedThrough: '', primaryChannel: 'general', profileName: '', businessUnits: [], mergeLogs: [], duplicateReviewDecisions: [], prospects: [], prospectSearches: [] };
 
 function threadKey(event) {
   return whatsappContactKey(event);

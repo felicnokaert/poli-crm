@@ -7,6 +7,7 @@ import {
 import { matchProspect } from './prospect-dedupe.mjs';
 import { recordDeletions } from './workspace.mjs';
 import { buildQueue, missingContact } from './prospect-queue.mjs';
+import { contactQuality } from './prospect-contact.mjs';
 import { markProspect } from './prospect-convert.mjs';
 import { buildImportPlan, parseProspectsText } from './prospect-import.mjs';
 import { AI_TOOLS, RESEARCH_COOLDOWN_DAYS, RESEARCH_MINUTES, buildResearchPrompt, exclusionNames } from './prospect-playbook.mjs';
@@ -153,7 +154,8 @@ const FICHA_FIELDS = [
 function ProspectDetail({ prospect, check, onClose, onSave, onMark, onEnrich, onOpenClient, onDelete }) {
   const [form, setForm] = useState({ ...prospect });
   const [note, setNote] = useState('');
-  const whatsapp = possibleWhatsAppLink(form.phone);
+  const quality = contactQuality(form);
+  const whatsapp = possibleWhatsAppLink(form.phone) || quality.phone?.whatsapp || '';
   const dirty = FICHA_FIELDS.some(([key]) => (form[key] || '') !== (prospect[key] || '')) || (form.notes || '') !== (prospect.notes || '') || form.family !== prospect.family;
   return (
     <aside className="prospect-drawer" role="dialog" aria-label={`Ficha de ${prospect.company}`}>
@@ -179,6 +181,7 @@ function ProspectDetail({ prospect, check, onClose, onSave, onMark, onEnrich, on
           {form.instagram && <a className="secondary link-pill" href={form.instagram} target="_blank" rel="noreferrer">Instagram</a>}
           {form.facebook && <a className="secondary link-pill" href={form.facebook} target="_blank" rel="noreferrer">Facebook</a>}
         </div>
+        {quality.notes.length > 0 && <p className="muted small contact-quality">{quality.notes.join(' · ')}.</p>}
         {missingContact(form).length > 0 && <p className="muted small">Falta: {missingContact(form).join(', ')}.</p>}
         <div className="form-grid">
           <label>Familia
@@ -224,7 +227,8 @@ function ProspectQueue({ queue, byId, checks, onMark, onSkip, onOpen, onEnrich }
   const current = byId.get(queue[0]);
   if (!current) return <p className="muted">No quedan prospectos pendientes con estos filtros. Preparé una investigación o hacé una búsqueda rápida para sumar más.</p>;
   const check = checks.get(current.id) || { status: 'Nuevo', matches: [] };
-  const whatsapp = possibleWhatsAppLink(current.phone);
+  const quality = contactQuality(current);
+  const whatsapp = possibleWhatsAppLink(current.phone) || quality.phone?.whatsapp || '';
   const missing = missingContact(current);
   return (
     <article className="queue-card">
@@ -241,6 +245,7 @@ function ProspectQueue({ queue, byId, checks, onMark, onSkip, onOpen, onEnrich }
         {current.instagram && <a className="secondary link-pill" href={current.instagram} target="_blank" rel="noreferrer">Instagram</a>}
         {current.facebook && <a className="secondary link-pill" href={current.facebook} target="_blank" rel="noreferrer">Facebook</a>}
       </div>
+      {quality.notes.length > 0 && <p className="muted small contact-quality">{quality.notes.join(' · ')}.</p>}
       {missing.length > 0 && <p className="muted small">Falta: {missing.join(', ')}. {current.website ? 'Probá "Buscar redes y contacto" antes de contactar.' : ''}</p>}
       <div className="panel-head-actions">
         <button type="button" className="primary big" onClick={() => { onMark(current.id, 'Contactado', ''); setOutcome(''); }}>Contactado</button>

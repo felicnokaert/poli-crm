@@ -352,3 +352,18 @@ describe("Prospeccion.jsx - cola de trabajo y ficha", () => {
     await waitFor(() => assert.equal(snapshots.at(-1).prospects.find((item) => item.id === "a").phone, "351 555 9999"));
   });
 });
+
+describe("Prospeccion.jsx - control de contacto", () => {
+  test("la cola avisa si el teléfono tiene un problema de formato y ofrece WhatsApp si es celular", async () => {
+    const mod = await loadJsxModule("src/Prospeccion.jsx");
+    const prospects = [{ id: "z", company: "Corralón Z", family: "Penosil", state: "No contactado", source: "x", createdAt: "2026-10-01T00:00:00Z", phone: "0351 15 555 1234", email: "info@corralonz.com.ar" }];
+    function Wrapper() {
+      const [state, setState] = React.useState({ clients: [], prospects, prospectSearches: [], researchJobs: [] });
+      return React.createElement(mod.Prospeccion, { data: state, setData: setState, userEmail: "a@b.com", onOpenClient: () => {}, cities: [], provinces: {} });
+    }
+    render(React.createElement(Wrapper));
+    assert.ok(screen.getByText(/Teléfono: celular/));
+    assert.ok(screen.getByText(/formato válido/));
+    assert.ok(screen.getByText("WhatsApp (posible)"));
+  });
+});

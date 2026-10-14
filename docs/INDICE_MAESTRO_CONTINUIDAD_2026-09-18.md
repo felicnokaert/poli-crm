@@ -154,3 +154,8 @@ Los datos de la sección 4 quedaron viejos. Estado verificado hoy:
 - Índice de madurez: 84,4 % (11ª ronda); duodécima en
   `docs/AUDITORIA_MADUREZ_PRODUCTO_2026-10-09-duodecima.md`.
 - Bundle de PDF: ya estaba en carga diferida; chunk de entrada 358,8 kB.
+
+## 10. Actualización 2026-10-14
+
+Estado verificado de WhatsApp y Meta (qué funciona, qué se descartó, qué sigue y los
+textos para pedir acceso avanzado): `docs/WHATSAPP_META_ESTADO_2026-10-14.md`.

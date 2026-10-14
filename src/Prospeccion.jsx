@@ -6,6 +6,7 @@ import {
 } from './prospect-model.mjs';
 import { matchProspect } from './prospect-dedupe.mjs';
 import { recordDeletions } from './workspace.mjs';
+import { buildQueue, missingContact } from './prospect-queue.mjs';
 import { markProspect } from './prospect-convert.mjs';
 import { buildImportPlan, parseProspectsText } from './prospect-import.mjs';
 import { AI_TOOLS, RESEARCH_COOLDOWN_DAYS, RESEARCH_MINUTES, buildResearchPrompt, exclusionNames } from './prospect-playbook.mjs';
@@ -99,7 +100,7 @@ function downloadCsv(rows, name = '') {
 }
 
 // Planilla: los prospectos como filas, para recorrerlos rápido y marcar el estado en el momento.
-function ProspectSheet({ rows, checks, onMark, onOpenClient, onDelete }) {
+function ProspectSheet({ rows, checks, onMark, onOpenClient, onDelete, onOpen }) {
   return (
     <div className="prospect-sheet">
       <table>
@@ -110,7 +111,7 @@ function ProspectSheet({ rows, checks, onMark, onOpenClient, onDelete }) {
             const whatsapp = possibleWhatsAppLink(item.phone);
             return (
               <tr key={item.id} className={item.competitor ? 'competitor' : ''}>
-                <td><strong>{item.company}</strong>{item.competitor && <em className="badge warn"> Competencia</em>}<br /><span className="muted small">{[item.family, item.source].filter(Boolean).join(' · ')}</span></td>
+                <td><button type="button" className="link-button" onClick={() => onOpen(item.id)}><strong>{item.company}</strong></button>{item.competitor && <em className="badge warn"> Competencia</em>}<br /><span className="muted small">{[item.family, item.source].filter(Boolean).join(' · ')}</span></td>
                 <td>{item.rubro || '–'}</td>
                 <td>{[item.city, item.province].filter(Boolean).join(', ') || '–'}</td>
                 <td>{item.phone || '–'}{whatsapp && <> · <a href={whatsapp} target="_blank" rel="noreferrer">WhatsApp (posible)</a></>}</td>
@@ -133,6 +134,127 @@ function ProspectSheet({ rows, checks, onMark, onOpenClient, onDelete }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+// Suma una provincia o localidad al texto del alcance ("todo el país" se reemplaza).
+function addToScope(scope = '', name = '') {
+  if (!name) return scope;
+  const parts = String(scope).split(',').map((part) => part.trim()).filter((part) => part && !/^todo el pa[ií]s$/i.test(part));
+  return [...new Set([...parts, name])].join(', ');
+}
+
+const FICHA_FIELDS = [
+  ['company', 'Empresa'], ['rubro', 'Rubro'], ['address', 'Dirección'], ['city', 'Localidad'], ['province', 'Provincia'],
+  ['phone', 'Teléfono'], ['email', 'Mail'], ['website', 'Sitio web'], ['instagram', 'Instagram'], ['facebook', 'Facebook'], ['contact', 'Persona de contacto'],
+];
+
+// Ficha del prospecto: todo lo que se sabe, editable, y desde dónde salió.
+function ProspectDetail({ prospect, check, onClose, onSave, onMark, onEnrich, onOpenClient, onDelete }) {
+  const [form, setForm] = useState({ ...prospect });
+  const [note, setNote] = useState('');
+  const whatsapp = possibleWhatsAppLink(form.phone);
+  const dirty = FICHA_FIELDS.some(([key]) => (form[key] || '') !== (prospect[key] || '')) || (form.notes || '') !== (prospect.notes || '') || form.family !== prospect.family;
+  return (
+    <aside className="prospect-drawer" role="dialog" aria-label={`Ficha de ${prospect.company}`}>
+      <div className="drawer-head">
+        <div>
+          <span className="eyebrow">Ficha del prospecto</span>
+          <h3>{prospect.company}</h3>
+          <span className="muted small">{[prospect.family, prospect.rubro, [prospect.city, prospect.province].filter(Boolean).join(', ')].filter(Boolean).join(' · ')}</span>
+        </div>
+        <button type="button" className="secondary" onClick={onClose}>Cerrar</button>
+      </div>
+      <div className="drawer-body">
+        <p>
+          <em className={statusClass(check.status)}>{check.status}</em>{' '}
+          {check.matches[0] && <>con <strong>{check.matches[0].name}</strong> ({check.matches[0].signals.map((item) => item.label).join(', ')})</>}
+          {prospect.competitor && <em className="badge warn"> Competencia</em>}
+        </p>
+        <div className="drawer-quick">
+          {form.phone && <a className="secondary link-pill" href={`tel:${String(form.phone).replace(/[^\d+]/g, '')}`}>Llamar</a>}
+          {whatsapp && <a className="secondary link-pill" href={whatsapp} target="_blank" rel="noreferrer">WhatsApp (posible)</a>}
+          {form.email && <a className="secondary link-pill" href={`mailto:${form.email}`}>Escribir mail</a>}
+          {form.website && <a className="secondary link-pill" href={/^https?:/.test(form.website) ? form.website : `https://${form.website}`} target="_blank" rel="noreferrer">Sitio web</a>}
+          {form.instagram && <a className="secondary link-pill" href={form.instagram} target="_blank" rel="noreferrer">Instagram</a>}
+          {form.facebook && <a className="secondary link-pill" href={form.facebook} target="_blank" rel="noreferrer">Facebook</a>}
+        </div>
+        {missingContact(form).length > 0 && <p className="muted small">Falta: {missingContact(form).join(', ')}.</p>}
+        <div className="form-grid">
+          <label>Familia
+            <select value={form.family || ''} onChange={(event) => setForm({ ...form, family: event.target.value })}>
+              <option value="">Sin definir</option>
+              {PROSPECT_FAMILIES.map((item) => <option key={item.key}>{item.key}</option>)}
+            </select>
+          </label>
+          {FICHA_FIELDS.map(([key, label]) => (
+            <label key={key}>{label}<input value={form[key] || ''} onChange={(event) => setForm({ ...form, [key]: event.target.value })} /></label>
+          ))}
+          <label className="span-2">Notas y evidencia
+            <textarea rows={4} value={form.notes || ''} onChange={(event) => setForm({ ...form, notes: event.target.value })} />
+          </label>
+          <label className="span-2">Agregar una nota
+            <input value={note} onChange={(event) => setNote(event.target.value)} placeholder="ej. hablé con Marta, pide catálogo" />
+          </label>
+        </div>
+        <div className="panel-head-actions">
+          <button type="button" className="primary" disabled={!dirty && !note.trim()} onClick={() => { onSave(prospect.id, { ...form, notes: [form.notes, note.trim() && `${new Date().toLocaleDateString('es-AR')}: ${note.trim()}`].filter(Boolean).join('\n') }); setNote(''); }}>Guardar cambios</button>
+          {prospect.website && !/(facebook|instagram|wa\.me)/i.test(prospect.website) && <button type="button" className="secondary" onClick={() => onEnrich(prospect)}>Buscar redes y contacto en su sitio</button>}
+        </div>
+        <h4>Estado</h4>
+        <div className="panel-head-actions">
+          {PROSPECT_STATES.map((state) => <button key={state} type="button" className={prospect.state === state ? 'primary' : 'secondary'} onClick={() => onMark(prospect.id, state, '')}>{state}</button>)}
+        </div>
+        <p className="muted small">
+          Fuente: {prospect.source}{prospect.createdAt ? ` · cargado el ${String(prospect.createdAt).slice(0, 10)}` : ''}
+          {prospect.markedBy ? ` · última marca: ${prospect.markedBy}${prospect.markedAt ? ` el ${String(prospect.markedAt).slice(0, 10)}` : ''}` : ''}
+          {prospect.enrichedAt ? ` · enriquecido el ${String(prospect.enrichedAt).slice(0, 10)}` : ''}
+        </p>
+        {prospect.linkedClientId && <button type="button" className="link-button" onClick={() => onOpenClient(prospect.linkedClientId)}><ExternalLink size={12} /> Abrir la ficha en Empresas</button>}
+        <button type="button" className="danger-link" onClick={() => { onDelete(prospect.id); onClose(); }}>Eliminar prospecto</button>
+      </div>
+    </aside>
+  );
+}
+
+// Cola de trabajo: de a uno, el más prometedor primero; marcar o saltar y pasa al siguiente.
+function ProspectQueue({ queue, byId, checks, onMark, onSkip, onOpen, onEnrich }) {
+  const [outcome, setOutcome] = useState('');
+  const [note, setNote] = useState('');
+  const current = byId.get(queue[0]);
+  if (!current) return <p className="muted">No quedan prospectos pendientes con estos filtros. Preparé una investigación o hacé una búsqueda rápida para sumar más.</p>;
+  const check = checks.get(current.id) || { status: 'Nuevo', matches: [] };
+  const whatsapp = possibleWhatsAppLink(current.phone);
+  const missing = missingContact(current);
+  return (
+    <article className="queue-card">
+      <div className="queue-count"><strong>{queue.length}</strong> pendientes · siguiente</div>
+      <h3>{current.company}</h3>
+      <p className="muted">{[current.family, current.rubro, [current.city, current.province].filter(Boolean).join(', ')].filter(Boolean).join(' · ') || 'Sin datos de rubro o zona'}</p>
+      <p><em className={statusClass(check.status)}>{check.status}</em>{check.matches[0] && <> con <strong>{check.matches[0].name}</strong></>} <span className="muted small">· Fuente: {current.source}</span></p>
+      {current.notes && <p className="queue-notes">{current.notes}</p>}
+      <div className="drawer-quick">
+        {current.phone && <a className="secondary link-pill" href={`tel:${String(current.phone).replace(/[^\d+]/g, '')}`}>Llamar {current.phone}</a>}
+        {whatsapp && <a className="secondary link-pill" href={whatsapp} target="_blank" rel="noreferrer">WhatsApp (posible)</a>}
+        {current.email && <a className="secondary link-pill" href={`mailto:${current.email}`}>{current.email}</a>}
+        {current.website && <a className="secondary link-pill" href={/^https?:/.test(current.website) ? current.website : `https://${current.website}`} target="_blank" rel="noreferrer">Sitio web</a>}
+        {current.instagram && <a className="secondary link-pill" href={current.instagram} target="_blank" rel="noreferrer">Instagram</a>}
+        {current.facebook && <a className="secondary link-pill" href={current.facebook} target="_blank" rel="noreferrer">Facebook</a>}
+      </div>
+      {missing.length > 0 && <p className="muted small">Falta: {missing.join(', ')}. {current.website ? 'Probá "Buscar redes y contacto" antes de contactar.' : ''}</p>}
+      <div className="panel-head-actions">
+        <button type="button" className="primary big" onClick={() => { onMark(current.id, 'Contactado', ''); setOutcome(''); }}>Contactado</button>
+        <button type="button" className="primary big" onClick={() => { onMark(current.id, 'Con interés', ''); setOutcome(''); }}>Con interés</button>
+        <select aria-label="Motivo si no tiene interés" value={outcome} onChange={(event) => setOutcome(event.target.value)}>
+          <option value="">Motivo (opcional)</option>
+          {PROSPECT_OUTCOMES.map((item) => <option key={item}>{item}</option>)}
+        </select>
+        <button type="button" className="secondary" onClick={() => { onMark(current.id, 'Sin interés', outcome); setOutcome(''); }}>Sin interés</button>
+        <button type="button" className="secondary" onClick={() => onSkip(current.id)}>Saltar por hoy</button>
+        <button type="button" className="secondary" onClick={() => onOpen(current.id)}>Abrir ficha</button>
+        {current.website && !/(facebook|instagram|wa\.me)/i.test(current.website) && <button type="button" className="secondary" onClick={() => onEnrich(current)}>Buscar redes y contacto</button>}
+      </div>
+    </article>
   );
 }
 
@@ -198,6 +320,8 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const [dailyList, setDailyList] = useState(null);
   const [listView, setListView] = useState('planilla');
   const [searchFilter, setSearchFilter] = useState(null);
+  const [detailId, setDetailId] = useState(null);
+  const [skipped, setSkipped] = useState([]);
   const [research, setResearch] = useState({ family: '', scope: 'todo el país', count: 20, notes: '' });
   const [importJobId, setImportJobId] = useState(null);
   const [jobText, setJobText] = useState({});
@@ -409,6 +533,12 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     try { await navigator.clipboard.writeText(job.prompt); setMessage('Pedido copiado. Pegalo en la IA y activá su modo de investigación avanzada.'); if (job.status === 'Preparada') setJobStatus(job.id, 'En curso'); } catch { setMessage('No se pudo copiar: abrí "Ver el pedido" y copialo a mano.'); }
   }
 
+  function saveProspect(prospectId, fields) {
+    const now = new Date().toISOString();
+    setData((current) => ({ ...current, prospects: (current.prospects || []).map((item) => (item.id === prospectId ? { ...item, ...fields, id: item.id, updatedAt: now } : item)) }));
+    setMessage('Cambios guardados en la ficha.');
+  }
+
   function remove(prospectId) {
     setData((current) => recordDeletions({ ...current, prospects: (current.prospects || []).filter((item) => item.id !== prospectId) }, { prospects: [prospectId] }));
   }
@@ -468,6 +598,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   }, [prospects]);
 
   const bySearch = searchFilter ? visible.filter((item) => item.searchId === searchFilter) : visible;
+  const prospectsById = useMemo(() => new Map(prospects.map((item) => [item.id, item])), [prospects]);
   const shown = dailyList ? bySearch.filter((item) => dailyList.includes(item.id)) : bySearch;
 
   const importPreview = importPlan && (
@@ -497,6 +628,9 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     </div>
   );
 
+  const queue = buildQueue(bySearch, checks, { skipped });
+  const detail = detailId ? prospectsById.get(detailId) : null;
+
   return (
     <section className="panel prospect-glass">
       <div className="panel-head">
@@ -524,8 +658,23 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
             </select>
           </label>
           <label>Alcance
-            <input aria-label="Alcance de la investigación" value={research.scope} onChange={(event) => setResearch({ ...research, scope: event.target.value })} placeholder="todo el país, o provincias: Mendoza, Córdoba…" />
+            <input aria-label="Alcance de la investigación" value={research.scope} onChange={(event) => setResearch({ ...research, scope: event.target.value })} placeholder="todo el país, o provincias y localidades" />
           </label>
+          <div className="scope-picker">
+            <label>Sumar provincia
+              <select aria-label="Agregar provincia al alcance" value={research.scopeProv || ''} onChange={(event) => setResearch({ ...research, scopeProv: event.target.value, scope: addToScope(research.scope, provinces[event.target.value]) })}>
+                <option value="">Agregar una provincia</option>
+                {Object.entries(provinces).sort((x, y) => x[1].localeCompare(y[1], 'es')).map(([cod, name]) => <option key={cod} value={cod}>{name}</option>)}
+              </select>
+            </label>
+            <label>Sumar localidad
+              <select aria-label="Agregar localidad al alcance" disabled={!research.scopeProv} value="" onChange={(event) => setResearch({ ...research, scope: addToScope(research.scope, event.target.value) })}>
+                <option value="">{research.scopeProv ? 'Agregar una localidad' : 'Primero la provincia'}</option>
+                {cities.filter((item) => item.prov === research.scopeProv).sort((x, y) => y.pob - x.pob).map((item) => <option key={item.id} value={item.nombre}>{item.nombre}</option>)}
+              </select>
+            </label>
+            <button type="button" className="secondary" onClick={() => setResearch({ ...research, scope: 'todo el país', scopeProv: '' })}>Todo el país</button>
+          </div>
           <label>Cantidad
             <input type="number" min="5" max="50" value={research.count} onChange={(event) => setResearch({ ...research, count: event.target.value })} />
           </label>
@@ -693,13 +842,15 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
 
       <div className="panel-head-actions">
         <div className="segmented" role="tablist" aria-label="Vista de la lista">
+          <button type="button" role="tab" aria-selected={listView === 'cola'} className={listView === 'cola' ? 'selected' : ''} onClick={() => setListView('cola')}>Cola de trabajo</button>
           <button type="button" role="tab" aria-selected={listView === 'planilla'} className={listView === 'planilla' ? 'selected' : ''} onClick={() => setListView('planilla')}>Planilla</button>
           <button type="button" role="tab" aria-selected={listView === 'tarjetas'} className={listView === 'tarjetas' ? 'selected' : ''} onClick={() => setListView('tarjetas')}>Tarjetas</button>
         </div>
         <button type="button" className="secondary" disabled={!shown.length} onClick={() => downloadCsv(shown)}>Descargar CSV ({shown.length})</button>
       </div>
-      {shown.length === 0 && <p className="muted">{prospects.length ? 'No hay prospectos con ese filtro.' : 'Todavía no cargaste prospectos.'}</p>}
-      {listView === 'planilla' && shown.length > 0 && <ProspectSheet rows={shown} checks={checks} onMark={mark} onOpenClient={onOpenClient} onDelete={remove} />}
+      {listView === 'cola' && <ProspectQueue queue={queue} byId={prospectsById} checks={checks} onMark={mark} onSkip={(id) => setSkipped((list) => [...list, id])} onOpen={setDetailId} onEnrich={async (prospect) => setMessage(await enrich(prospect))} />}
+      {listView !== 'cola' && shown.length === 0 && <p className="muted">{prospects.length ? 'No hay prospectos con ese filtro.' : 'Todavía no cargaste prospectos.'}</p>}
+      {listView === 'planilla' && shown.length > 0 && <ProspectSheet rows={shown} checks={checks} onMark={mark} onOpenClient={onOpenClient} onDelete={remove} onOpen={setDetailId} />}
       {listView === 'tarjetas' && (
         <div className="units-list">
           {shown.map((item) => (
@@ -722,6 +873,13 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
             </tbody>
           </table>
         </>
+      )}
+      {detail && (
+        <ProspectDetail
+          key={detail.id} prospect={detail} check={checks.get(detail.id) || { status: 'Nuevo', matches: [] }}
+          onClose={() => setDetailId(null)} onSave={saveProspect} onMark={mark} onOpenClient={onOpenClient} onDelete={remove}
+          onEnrich={async (prospect) => setMessage(await enrich(prospect))}
+        />
       )}
     </section>
   );

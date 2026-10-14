@@ -50,7 +50,7 @@ export function playbookFor(family) {
   };
 }
 
-export const RESEARCH_COLUMNS = ['Empresa', 'Rubro', 'Ubicación (ciudad, provincia)', 'Tamaño estimado', 'Evidencia (con link a la fuente)', 'Teléfono', 'Sitio web', 'Email', 'Instagram / Facebook'];
+export const RESEARCH_COLUMNS = ['Empresa', 'Rubro', 'Ubicación (ciudad, provincia)', 'Tamaño estimado', 'Evidencia (con link a la fuente)', 'Por qué encaja (1 frase)', 'Teléfono', 'Sitio web', 'Email', 'Instagram / Facebook'];
 
 // Nombres que la IA no debe repetir: Empresas del CRM y prospectos ya cargados.
 export function exclusionNames(clients = [], prospects = []) {
@@ -81,12 +81,14 @@ export function buildResearchPrompt({ family, scope = 'todo el país', count = 2
     ...(book.extra ? ['', book.extra] : []),
     ...(notes.trim() ? ['', `INDICACIONES EXTRA: ${notes.trim()}`] : []),
     '',
+    'RAZONAMIENTO (hacelo antes de buscar y mostralo al principio, breve): 1) reformulá con tus palabras qué empresa estamos buscando y cuál NO; 2) definí 3 a 5 criterios de inclusión que se puedan verificar; 3) listá las búsquedas que vas a hacer (por rubro, por zona y por producto); 4) si una indicación es ambigua, elegí la interpretación más razonable y aclarala.',
+    '',
     'CÓMO INVESTIGAR: buscá en Google, Google Maps, sitios web de las empresas, LinkedIn, Instagram, Facebook, directorios industriales (Guía Industrial Argentina, Kompass, cámaras del sector) y noticias. Confirmá la señal en el sitio o redes de cada empresa antes de incluirla.',
     '',
     'REGLAS: no inventes datos ni cifras; si algo no se encuentra, dejá la celda vacía. Cada fila debe tener la fuente (link) que la respalda. Si no estás seguro de que encaje, marcalo como "verificar".',
     '',
     `ENTREGA: una tabla con estas columnas exactas: ${RESEARCH_COLUMNS.join(' | ')}.`,
-    'Al final, repetí la misma tabla como CSV separado por punto y coma dentro de un bloque de código, para poder importarlo.',
+    'Después de la tabla, listá las empresas que descartaste y por qué (una línea cada una). Por último, repetí la misma tabla como CSV separado por punto y coma dentro de un bloque de código, para poder importarlo.',
   ];
   return lines.join('\n');
 }

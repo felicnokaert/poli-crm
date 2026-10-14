@@ -1,7 +1,7 @@
 import { authenticatedCorporateUser } from '../lib/corporate-auth.mjs';
 import { enrichWebsite } from '../lib/prospect-enrich.mjs';
 import { googleConfig, normalizeGoogle, searchGoogle, takeQuota } from '../lib/prospect-google.mjs';
-import { buildOverpassQuery, normalizeOverpass, radiusForPopulation, safeWord, searchOverpass, summarizeResults } from '../lib/prospect-osm.mjs';
+import { OVERPASS_ENDPOINTS, STAGE_TIMEOUTS_MS, buildOverpassStages, normalizeOverpass, radiusForPopulation, safeWord, searchOverpass, summarizeResults } from '../lib/prospect-osm.mjs';
 
 // Lupa de Prospección: busca comercios en OpenStreetMap por zona y rubros y
 // devuelve prospectos listos para cargar. Solo lecturas; no guarda nada.
@@ -42,9 +42,23 @@ export default async function handler(request, response) {
     const googleResults = normalizeGoogle(found.data, { zoneName: safeWord(body.zoneName || ''), province: safeWord(body.province || ''), family: safeWord(body.family || '') });
     return response.status(200).json({ ok: true, source: 'Google Maps', radiusKm, count: googleResults.length, truncated: false, stats: summarizeResults(googleResults), attempts: 1, ms: found.ms, endpoint: 'places.googleapis.com', results: googleResults });
   }
-  const query = buildOverpassQuery({ lat, lon, radiusKm, rubros });
-  const result = await searchOverpass(query);
-  if (!result.ok) return response.status(502).json({ error: result.error, kind: result.kind, attempts: result.attempts, ms: result.ms });
+  const stages = buildOverpassStages({ lat, lon, radiusKm, rubros });
+  const endpoints = OVERPASS_ENDPOINTS.slice(0, 2); // 2 servidores por etapa: entra en los 60 s de la función
+  const runs = [];
+  for (const name of ['tags', 'names']) {
+    if (stages[name]) runs.push({ name, result: await searchOverpass(stages[name], fetch, endpoints, STAGE_TIMEOUTS_MS[name]) });
+  }
+  const worked = runs.filter((run) => run.result.ok);
+  const attempts = runs.reduce((sum, run) => sum + run.result.attempts, 0);
+  const ms = runs.reduce((sum, run) => sum + run.result.ms, 0);
+  if (!worked.length) {
+    const last = runs.at(-1).result;
+    return response.status(502).json({ error: last.error, kind: last.kind, attempts, ms });
+  }
+  const seen = new Set();
+  const elements = worked.flatMap((run) => run.result.data?.elements || []).filter((element) => { const key = `${element.type}/${element.id}`; if (seen.has(key)) return false; seen.add(key); return true; });
+  const failedStage = runs.find((run) => !run.result.ok);
+  const result = { data: { elements }, attempts, ms, endpoint: worked[0].result.endpoint };
 
   const results = normalizeOverpass(result.data, {
     zoneName: safeWord(body.zoneName || ''),
@@ -54,5 +68,6 @@ export default async function handler(request, response) {
   return response.status(200).json({
     ok: true, source: 'OpenStreetMap', radiusKm, count: results.length, truncated: (result.data?.elements || []).length >= 200,
     stats: summarizeResults(results), attempts: result.attempts, ms: result.ms, endpoint: result.endpoint, results,
+    warning: failedStage ? `La búsqueda por nombre no respondió a tiempo (${failedStage.name === 'names' ? 'solo se usaron los rubros con etiqueta' : 'solo se usaron las palabras del nombre'}). Probá de nuevo más tarde para completar.` : '',
   });
 }

@@ -225,6 +225,7 @@ export default function App() {
   } = useWorkspaceSync(data, setData);
   const cronStatus = useCronStatus(session);
   const [view, setView] = useState("dashboard");
+  const [mapTab, setMapTab] = useState("aplicadores");
   const [collapsedNavGroups, setCollapsedNavGroups] = useNavGroups(NAV_GROUP_NAMES);
   const [showForm, setShowForm] = useState(false);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
@@ -1391,8 +1392,7 @@ export default function App() {
       ["clients", "Empresas", Building2],
       ["prospecting", "Prospección", Search],
       ["contacts", "Contactos", Users],
-      ["map", "Mapa de aplicadores (RAPYP)", MapPin],
-      ["prospect-map", "Mapa de ventas (resto)", MapPin],
+      ["map", "Mapa", MapPin],
     ]],
     ["Recursos", [
       ["academy", "Academia comercial", GraduationCap],
@@ -1766,14 +1766,18 @@ export default function App() {
           </Suspense>
         )}
         {view === "map" && (
-          <Suspense fallback={<Splash text="Cargando mapa…" />}>
-            <MapaCobertura clients={data.clients} onSetClientType={setClientType} onApplyLocations={applyClientLocations}userEmail={session?.user?.email} />
-          </Suspense>
-        )}
-        {view === "prospect-map" && (
-          <Suspense fallback={<Splash text="Cargando mapa de prospección…" />}>
-            <ProspeccionMapa data={data} onOpenClient={setSelectedClientId} />
-          </Suspense>
+          <>
+            <div className="segmented" role="tablist" aria-label="Tipo de mapa" style={{ marginBottom: 12, width: "fit-content" }}>
+              {[["aplicadores", "Aplicadores (RAPYP)"], ["ventas", "Ventas (sin aplicadores)"], ["prospectos", "Prospectos"]].map(([key, label]) => (
+                <button key={key} type="button" role="tab" aria-selected={mapTab === key} className={mapTab === key ? "selected" : ""} onClick={() => setMapTab(key)}>{label}</button>
+              ))}
+            </div>
+            <Suspense fallback={<Splash text="Cargando mapa…" />}>
+              {mapTab === "aplicadores" && <MapaCobertura key="aplicadores" clients={data.clients} onSetClientType={setClientType} onApplyLocations={applyClientLocations} userEmail={session?.user?.email} />}
+              {mapTab === "ventas" && <MapaCobertura key="ventas" modo="ventas" clients={data.clients} onSetClientType={setClientType} onApplyLocations={applyClientLocations} userEmail={session?.user?.email} />}
+              {mapTab === "prospectos" && <ProspeccionMapa data={data} onOpenClient={setSelectedClientId} />}
+            </Suspense>
+          </>
         )}
         {view === "techdocs" && (
           <Suspense fallback={<Splash text="Cargando base técnica…" />}>

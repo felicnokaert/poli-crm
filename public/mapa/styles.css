@@ -116,3 +116,5 @@ body.publico .solo-crm { display: none !important; }
 .copiar:focus-visible, .ctrl-pais:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .maplibregl-popup-content { border-radius: 12px; font-family: var(--font-ui); }
 @media (prefers-reduced-motion: reduce) { #cargando { transition: none; } }
+
+body.ventas #fila-aplicador { display: none !important; }

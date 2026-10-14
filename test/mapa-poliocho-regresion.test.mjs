@@ -12,14 +12,14 @@ import { buildMapClients } from '../src/map-clients-adapter.mjs';
 const sha = (path) => createHash('sha256').update(readFileSync(new URL(`../${path}`, import.meta.url))).digest('hex');
 
 const BASELINE = {
-  'public/mapa/app.js': '0d370689a3de380dfef37b0f8f586cef32107d754d92c8d27e2bfabacb2c8afe',
+  'public/mapa/app.js': '36890ec43fd5052288d4aa9d2e23e300e1e06e90c13ceec60fc2ec3d0f86472a',
   'public/mapa/alcance.mjs': '46af72300b46d1cbfa04642776e0568db8fd6881eefe82dd1489748f40c50548',
   'public/mapa/contacto.mjs': '23c7f5107a2ecc472cd7e9d1bcef5b912b80f4edb836d66f81b696d74a0fbf97',
   'public/mapa/nombres-ciudad.mjs': 'c294ef7eb55c7f70fbf77192dbbd588173a78ab03712a418f5744ad171ddb327',
   'public/mapa/index.html': 'ed1d929a8b196d066f4c607a51c488b6eea914e3ce24c5c4156e997bfb449bab',
-  'public/mapa/styles.css': 'aae310f81e5e7800318b72a2ed0518ac566b93291be9d2d4092d63d7e2fcd459',
-  'src/MapaCobertura.jsx': '118abd81d494e936d55dd69311f48f307b2e5c0ad0fe918b8a13dda8cab7f2a7',
-  'src/map-clients-adapter.mjs': 'fe3b000076e8c91adaae46f4e07f0a92d5db51ddb374c69875c36aa7da42e03e',
+  'public/mapa/styles.css': 'fc0a3c4fe9a7c68e94a737e1f5040ccb76de8584e635d348f4b5ad0231ec67c0',
+  'src/MapaCobertura.jsx': '46fd55546eea28926cf8e1511522abbdc27c9a95dd7822c124a09dfdcdc3a9cf',
+  'src/map-clients-adapter.mjs': 'da3ab7945c08173f12babb42ff50af779f454a5c0b5c7cc7f69fc7a92867001c',
 };
 
 test('los archivos del mapa de aplicadores (RAPYP) no cambiaron', () => {
@@ -31,7 +31,10 @@ test('el mapa de POLIOCHO recibe solo las empresas, nunca los prospectos', () =>
   const line = app.split('\n').find((item) => item.includes('<MapaCobertura '));
   assert.ok(line && line.includes('clients={data.clients}'));
   assert.ok(!/prospect/i.test(line));
-  assert.ok(!/prospect/i.test(app.split('\n').filter((item) => item.includes('<MapaCobertura ')).join('')));
+  // Solo la pestaña Prospectos recibe prospectos; las de aplicadores y ventas reciben únicamente empresas.
+  const lines = app.split('\n').filter((item) => item.includes('<MapaCobertura '));
+  assert.equal(lines.filter((item) => /prospects=/.test(item)).length, 1);
+  assert.ok(lines.filter((item) => !item.includes('modo="prospectos"')).every((item) => !/prospect/i.test(item)));
   const result = buildMapClients([{ id: 'c1', company: 'X', family: 'Penosil', city: 'Córdoba' }]);
   assert.ok(JSON.stringify(result).indexOf('prospect') === -1);
 });

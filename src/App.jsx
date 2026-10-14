@@ -74,7 +74,6 @@ const lazyNamed = (loader, name) => lazy(() => loader().then((m) => ({ default: 
 const Pipeline = lazyNamed(() => import("./Pipeline"), "Pipeline");
 const Clients = lazyNamed(() => import("./Clients"), "Clients");
 const Prospeccion = lazyNamed(() => import("./Prospeccion"), "Prospeccion");
-const ProspeccionMapa = lazyNamed(() => import("./ProspeccionMapa"), "ProspeccionMapa");
 const Contacts = lazyNamed(() => import("./Clients"), "Contacts");
 const Conversations = lazyNamed(() => import("./Conversations"), "Conversations");
 const WhatsAppInbox = lazyNamed(() => import("./WhatsAppInbox"), "WhatsAppInbox");
@@ -1775,7 +1774,7 @@ export default function App() {
             <Suspense fallback={<Splash text="Cargando mapa…" />}>
               {mapTab === "aplicadores" && <MapaCobertura key="aplicadores" clients={data.clients} onSetClientType={setClientType} onApplyLocations={applyClientLocations} userEmail={session?.user?.email} />}
               {mapTab === "ventas" && <MapaCobertura key="ventas" modo="ventas" clients={data.clients} onSetClientType={setClientType} onApplyLocations={applyClientLocations} userEmail={session?.user?.email} />}
-              {mapTab === "prospectos" && <ProspeccionMapa data={data} onOpenClient={setSelectedClientId} />}
+              {mapTab === "prospectos" && <MapaCobertura key="prospectos" modo="prospectos" prospects={data.prospects || []} clients={[]} onSetClientType={setClientType} onApplyLocations={applyClientLocations} userEmail={session?.user?.email} />}
             </Suspense>
           </>
         )}

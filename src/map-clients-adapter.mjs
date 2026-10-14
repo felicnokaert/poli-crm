@@ -51,6 +51,7 @@ export function toMapClient(crm = {}) {
     cuit: formatCuit(doc),
     tipo_doc: doc.length === 11 ? 'CUIT' : 'DNI',
     familia: String(crm.family || '').trim(),
+    estado: String(crm.prospectState || ''), // solo en el mapa de prospectos
     razon_social: String(crm.legalName || crm.company || '').trim() || 'Sin nombre',
     email: crm.email || '',
     telefono: crm.phone || '',

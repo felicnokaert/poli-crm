@@ -43,7 +43,18 @@ const nf2 = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2, minimumFr
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 /* Modo "ventas" (?modo=ventas): el mismo mapa pero con los clientes que NO son aplicadores, sin semáforo ni ranking de aplicadores. */
-const VENTAS = new URLSearchParams(location.search).get("modo") === "ventas";
+const MODO = new URLSearchParams(location.search).get("modo");
+const VENTAS = MODO === "ventas";
+const PROSPECTOS = MODO === "prospectos"; // pestaña Prospectos: prospectos coloreados por estado
+const ESTADOS_PROSPECTO = { "No contactado": "--estado-no-contactado", Contactado: "--estado-contactado", "Con interés": "--estado-con-interes", "Sin interés": "--estado-sin-interes" };
+const SOLO_APLICADORES = MODO === "aplicadores"; // pestaña Aplicadores (RAPYP) del CRM: solo clientes tipo aplicador
+const NUM_COLORES_FAMILIA = 10;
+const colorFamilia = (familia) => {
+  const lista = estado.familias || [];
+  const i = lista.indexOf(familia);
+  return i < 0 ? v("--tipo-sin") : v(`--familia-${(i % NUM_COLORES_FAMILIA) + 1}`);
+};
+const entraEnEsteMapa = (c) => (PROSPECTOS ? true : VENTAS ? c.tipo !== "aplicador" : SOLO_APLICADORES ? c.tipo === "aplicador" : true);
 const estado = { clientes: [], zonas: null, meta: null, provGeo: null, depGeo: null, metricas: { prov: new Map(), dep: new Map() } };
 
 function fechaCorte(exportISO, meses) {
@@ -98,7 +109,7 @@ function clasificar(z, p) {
   const base = Math.max(z.esperados, p.piso);
   z.indice = base > 0 ? z.activos / base : 0;
   z.diferencia = z.activos - z.esperados; // < 0: faltan, > 0: sobran
-  z.clase = VENTAS ? (z.activos === 0 ? "sin" : "ok") : z.activos === 0 ? "sin" : z.indice > p.alto ? "sobre" : z.indice >= p.bajo ? "ok" : "faltan";
+  z.clase = VENTAS || PROSPECTOS ? "sin" : z.activos === 0 ? "sin" : z.indice > p.alto ? "sobre" : z.indice >= p.bajo ? "ok" : "faltan";
 }
 
 /** Métricas por provincia y por departamento con los parámetros actuales. */
@@ -131,6 +142,7 @@ function datosPines(corte) {
     features: clientesFiltrados().filter((c) => {
       if (c.lat == null) return false;
       if (p.provincia && c.provincia_cod !== p.provincia) return false;
+      if (PROSPECTOS) return !p.estadoPin || c.estado === p.estadoPin;
       const activo = c.compro && c.ultima_compra >= corte;
       return !p.estadoPin || (p.estadoPin === "activo") === activo;
     }).map((c) => ({
@@ -139,7 +151,8 @@ function datosPines(corte) {
       properties: {
         doc: c.doc,
         tipo: tipoDe(c),
-        activo: c.compro && c.ultima_compra >= corte ? 1 : 0,
+        color: PROSPECTOS ? v(ESTADOS_PROSPECTO[c.estado] || "--tipo-sin") : colorFamilia(c.familia),
+        activo: PROSPECTOS || (c.compro && c.ultima_compra >= corte) ? 1 : 0,
         aprox: c.precision === "provincia" || c.precision === "departamento" ? 1 : 0,
       },
     })),
@@ -252,6 +265,15 @@ function htmlCiudad(f) {
 
 function renderLeyenda() {
   const p = parametros();
+  if (PROSPECTOS) {
+    $("leyenda").innerHTML = Object.entries(ESTADOS_PROSPECTO).map(([n, c]) => `<li><i class="pin" style="background:${v(c)}"></i>${n}</li>`).join("");
+    return;
+  }
+  if (VENTAS) {
+    $("leyenda").innerHTML = (estado.familias || []).map((f) => `<li><i class="pin" style="background:${colorFamilia(f)}"></i>${esc(f)}</li>`).join("") +
+      `<li><i class="pin" style="background:${PIN.inactivo}"></i>Cliente inactivo (cualquier familia)</li>`;
+    return;
+  }
   if (p.nivel === "alc") {
     $("leyenda").innerHTML = [
       [COLOR_ALCANCE.sin, "Ciudad sin aplicadores al alcance"], [COLOR_ALCANCE.uno, "Ciudad con 1 aplicador al alcance"], [COLOR_ALCANCE.varios, "Ciudad con 2 o más aplicadores"],
@@ -272,6 +294,33 @@ function renderLeyenda() {
 }
 
 function renderResumen({ prov, dep }) {
+  if (PROSPECTOS) {
+    const lista = clientesFiltrados();
+    const filas = [["Prospectos (con los filtros)", nf0.format(lista.length)]];
+    for (const n of Object.keys(ESTADOS_PROSPECTO)) filas.push([n, nf0.format(lista.filter((c) => c.estado === n).length)]);
+    const porFamilia = new Map();
+    for (const c of lista) porFamilia.set(c.familia || "Sin definir", (porFamilia.get(c.familia || "Sin definir") || 0) + 1);
+    for (const [f, n] of [...porFamilia.entries()].sort((a, b) => b[1] - a[1])) filas.push([f, nf0.format(n)]);
+    $("resumen").innerHTML = filas.map(([a, b]) => `<dt>${esc(a)}</dt><dd>${b}</dd>`).join("");
+    renderUbicacion();
+    return;
+  }
+  if (VENTAS) {
+    const lista = clientesFiltrados();
+    const corte = fechaCorte(estado.meta.fecha_export, parametros().meses);
+    const porFamilia = new Map();
+    for (const c of lista) {
+      const f = c.familia || "Sin definir";
+      const fila = porFamilia.get(f) || { n: 0, activos: 0, kg: 0 };
+      fila.n += 1; if (c.compro && c.ultima_compra >= corte) fila.activos += 1; fila.kg += kgCliente(c, "");
+      porFamilia.set(f, fila);
+    }
+    const filas = [["Clientes (con los filtros)", nf0.format(lista.length)], ["Con alguna compra", nf0.format(lista.filter((c) => c.compro).length)], ["Activos", nf0.format(lista.filter((c) => c.compro && c.ultima_compra >= corte).length)]];
+    for (const [f, fila] of [...porFamilia.entries()].sort((a, b) => b[1].n - a[1].n)) filas.push([f, `${nf0.format(fila.n)} (${nf0.format(fila.activos)} activos${fila.kg ? `, ${nf0.format(fila.kg)} kg` : ""})`]);
+    $("resumen").innerHTML = filas.map(([a, b]) => `<dt>${esc(a)}</dt><dd>${b}</dd>`).join("");
+    renderUbicacion();
+    return;
+  }
   const z = [...prov.values()];
   const suma = (k) => z.reduce((s, v) => s + v[k], 0);
   const cuenta = (c) => z.filter((v) => v.clase === c).length;
@@ -385,7 +434,10 @@ function poblarFiltros() {
   for (const c of estado.clientes) for (const pr of c.productos) kgPorProd.set(pr.producto, (kgPorProd.get(pr.producto) || 0) + pr.kg);
   const prods = [...kgPorProd.entries()].sort((a, b) => b[1] - a[1]).map(([n]) => n);
   $("f-producto").innerHTML = '<option value="">Todos</option>' + prods.map((n) => `<option>${esc(n)}</option>`).join("");
-  const familias = [...new Set(estado.clientes.map((c) => c.familia).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
+  const conteo = new Map();
+  for (const c of estado.clientes) if (c.familia) conteo.set(c.familia, (conteo.get(c.familia) || 0) + 1);
+  const familias = [...conteo.entries()].sort((a, b) => b[1] - a[1]).map(([n]) => n);
+  estado.familias = familias;
   $("f-familia").innerHTML = '<option value="">Todas</option>' + familias.map((n) => `<option>${esc(n)}</option>`).join("");
   $("f-provincia").innerHTML = '<option value="">Todas</option>' + estado.zonas.provincias.map((z) => `<option value="${z.cod}">${esc(z.nombre)}</option>`).join("");
 }
@@ -484,15 +536,15 @@ function htmlCliente(c) {
   const cuit = c.cuit ? `${esc(c.cuit)} ${copiarBtn(c.cuit.replace(/\D/g, ""))}` : "—";
   return `<div class="cliente">
     <h3>${esc(c.razon_social)}</h3>
-    <span class="estado" style="background:${activo ? v("--success") : PIN.inactivo}">${c.compro ? (activo ? "Activo" : "Inactivo") : "Solo cotizó"}</span>
-    <span class="estado" style="background:${TIPOS[tipoDe(c)].color}">${TIPOS[tipoDe(c)].texto}${c.tipo_origen === "manual" ? " (manual)" : ""}</span>
+    ${PROSPECTOS ? `<span class="estado" style="background:${v(ESTADOS_PROSPECTO[c.estado] || "--tipo-sin")}">${esc(c.estado || "Prospecto")}</span>` : `<span class="estado" style="background:${activo ? v("--success") : PIN.inactivo}">${c.compro ? (activo ? "Activo" : "Inactivo") : "Solo cotizó"}</span>
+    <span class="estado" style="background:${TIPOS[tipoDe(c)].color}">${TIPOS[tipoDe(c)].texto}${c.tipo_origen === "manual" ? " (manual)" : ""}</span>`}
     <table>
       ${veCuit(c) ? `<tr><td>CUIT/DNI</td><td>${cuit}</td></tr>` : ""}
       ${veTelefono(c) ? `<tr><td>Teléfono</td><td>${tel}</td></tr>` : ""}
       ${estado.publico ? "" : `<tr><td>Email</td><td>${mail}</td></tr>`}
       ${c.familia ? `<tr><td>Familia</td><td>${esc(c.familia)}</td></tr>` : ""}
       <tr><td>Localidad</td><td>${esc(c.localidad || "—")}, ${esc(c.provincia)}</td></tr>
-      <tr><td>Última compra</td><td>${fmtFecha(c.ultima_compra)}</td></tr>
+      ${PROSPECTOS ? "" : `<tr><td>Última compra</td><td>${fmtFecha(c.ultima_compra)}</td></tr>`}
       ${veProductos() ? `<tr><td>Facturas</td><td>${c.n_facturas}</td></tr>
       <tr><td>Productos</td><td>${productos || "—"}</td></tr>` : ""}
     </table>
@@ -724,7 +776,7 @@ function iniciarMapa() {
     map.addLayer({
       id: "pines", type: "circle", source: "clientes", filter: ["!", ["has", "point_count"]],
       paint: {
-        "circle-color": ["case", ["==", ["get", "activo"], 1], expresionColorTipo(), PIN.inactivo],
+        "circle-color": ["case", ["==", ["get", "activo"], 1], VENTAS || PROSPECTOS ? ["get", "color"] : expresionColorTipo(), PIN.inactivo],
         "circle-radius": 6.5, "circle-stroke-width": 2,
         "circle-stroke-color": ["case", ["==", ["get", "aprox"], 1], v("--warning"), v("--halo")],
         "circle-opacity": ["case", ["==", ["get", "aprox"], 1], 0.65, 1],
@@ -808,7 +860,7 @@ function esperarClientes() {
     window.addEventListener("message", (e) => {
       if (e.origin !== location.origin || !e.data || e.data.tipo !== "mapa:clientes") return;
       clearTimeout(limite);
-      const recibido = { clientes: VENTAS ? e.data.clientes.filter((c) => c.tipo !== "aplicador") : e.data.clientes, fecha_export: e.data.fecha_export };
+      const recibido = { clientes: e.data.clientes.filter(entraEnEsteMapa), fecha_export: e.data.fecha_export };
       // La primera vez arranca el mapa; despues, cada cambio en el CRM (un cliente nuevo, uno
       // marcado como aplicador, una ciudad editada) llega aca y actualiza los pines sin recargar.
       if (estado.cargado) actualizarClientes(recibido); else resolve(recibido);
@@ -893,6 +945,21 @@ for (const id of ["p-x", "p-meses", "p-bajo", "p-alto", "p-aplicador", "p-pines"
   $(id).addEventListener("input", () => { if (estado.map && estado.map.isStyleLoaded()) { renderLeyenda(); pintar(); } });
 }
 $("toggle-panel").addEventListener("click", () => $("app").classList.toggle("abierto"));
+if (PROSPECTOS) {
+  document.body.classList.add("ventas", "prospectos");
+  document.title = "Mapa de prospectos";
+  document.querySelector("#panel h1").textContent = "Prospectos";
+  $("p-aplicador").checked = false;
+  $("fila-familia").style.display = "";
+  for (const id of ["p-x", "p-bajo", "p-alto", "p-radio", "p-piso", "p-aplicador", "p-meses"]) { const fila = $(id).closest(".fila"); if (fila) fila.style.display = "none"; }
+  for (const el of [$("ranking").closest("section"), $("seccion-alcance"), $("abrir-revisar").closest("section")]) el.style.display = "none";
+  $("p-nivel").querySelector('option[value="alc"]').remove();
+  $("p-nivel").value = "prov";
+  $("f-tipo").closest(".fila").style.display = "none";
+  $("f-desde").closest(".fila").style.display = "none";
+  $("f-estado").innerHTML = '<option value="">Todos los estados</option>' + Object.keys(ESTADOS_PROSPECTO).map((n) => `<option>${n}</option>`).join("");
+  $("f-estado").closest(".fila").firstElementChild.textContent = "Estado";
+}
 if (VENTAS) {
   document.body.classList.add("ventas");
   document.title = "Mapa de ventas";
@@ -902,6 +969,11 @@ if (VENTAS) {
   for (const id of ["p-x", "p-bajo", "p-alto", "p-radio", "p-piso", "p-aplicador"]) { const fila = $(id).closest(".fila"); if (fila) fila.style.display = "none"; }
   for (const el of [$("ranking").closest("section"), $("seccion-alcance"), $("abrir-revisar").closest("section")]) el.style.display = "none";
   $("p-nivel").querySelector('option[value="alc"]').remove();
+  $("p-nivel").value = "prov";
+  $("f-tipo").closest(".fila").style.display = "none";
+}
+if (SOLO_APLICADORES) {
+  document.querySelector("#panel h1").textContent = "Aplicadores · RAPYP";
   $("f-tipo").closest(".fila").style.display = "none";
 }
 cargar().catch((err) => { $("meta-export").textContent = "error al cargar datos (" + err.message + ")"; console.error(err); });

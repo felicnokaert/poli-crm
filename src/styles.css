@@ -498,3 +498,11 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .units-list .unit-card > div:first-child { display: grid; gap: 4px; }
 .units-list .unit-card-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start; justify-content: flex-end; max-width: 460px; }
 @media (max-width: 1050px) { .prospect-steps { grid-template-columns: minmax(0, 1fr); } .units-list .unit-card { grid-template-columns: minmax(0, 1fr); } .units-list .unit-card-actions { justify-content: flex-start; max-width: none; } }
+
+.prospect-sheet { overflow-x: auto; border: 1px solid var(--color-border, #e3e3e0); border-radius: 12px; background: #fff; }
+.prospect-sheet table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.prospect-sheet th { position: sticky; top: 0; background: #f4f5f2; text-align: left; padding: 8px 10px; white-space: nowrap; }
+.prospect-sheet td { padding: 8px 10px; border-top: 1px solid var(--color-border, #eee); vertical-align: top; }
+.prospect-sheet td.wrap { overflow-wrap: anywhere; max-width: 220px; }
+.prospect-sheet tr.competitor { background: #fff6e6; }
+.zone-pickers { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }

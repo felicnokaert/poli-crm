@@ -34,7 +34,7 @@ export default async function handler(request, response) {
 
   const channel = request.body?.channel;
   const wabaId = WABAS[channel];
-  if (!wabaId) return response.status(400).json({ error: 'Canal no válido.' });
+  if (!wabaId) return response.status(400).json({ error: 'Este número todavía no tiene una cuenta de WhatsApp de Meta vinculada, así que no hay nada para sincronizar. Se vincula al conectar el número con Meta.' });
 
   const result = await fetch(`https://graph.facebook.com/v23.0/${wabaId}/subscribed_apps`, {
     method: 'POST',

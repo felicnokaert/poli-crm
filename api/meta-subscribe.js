@@ -42,7 +42,20 @@ export default async function handler(request, response) {
     const appId = process.env.META_APP_ID || WABA_APP_ID;
     const result = await repairWebhook({ appId, appSecret: process.env.META_APP_SECRET, callbackUrl: WEBHOOK_URL, verifyToken: process.env.WHATSAPP_VERIFY_TOKEN });
     if (!result.ok) return response.status(502).json({ error: `Meta no aceptó el cambio: ${result.error}` });
-    return response.status(200).json({ ok: true, callbackUrl: WEBHOOK_URL });
+    // Además se corta y se vuelve a crear la suscripción de la cuenta de General: una suscripción
+    // "pegada" deja de entregar mensajes aunque el diagnóstico la muestre bien.
+    const steps = [];
+    const headers = { Authorization: `Bearer ${process.env.META_SYSTEM_USER_TOKEN}` };
+    for (const method of ['DELETE', 'POST']) {
+      try {
+        const reply = await fetch(`https://graph.facebook.com/v23.0/${WABAS.general}/subscribed_apps`, { method, headers });
+        const body = await reply.json().catch(() => ({}));
+        steps.push({ method, ok: reply.ok && body.success !== false, error: body.error?.message || null });
+      } catch (error) {
+        steps.push({ method, ok: false, error: error?.message || 'sin respuesta de Meta' });
+      }
+    }
+    return response.status(200).json({ ok: true, callbackUrl: WEBHOOK_URL, steps });
   }
 
   const channel = request.body?.channel;

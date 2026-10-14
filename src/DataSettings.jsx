@@ -187,7 +187,8 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "No se pudo reparar el webhook.");
-      showMessage("Listo: Meta volvió a apuntar los mensajes al CRM. Mandá un mensaje de prueba al número de General.");
+      const failed = (payload.steps || []).filter((step) => !step.ok);
+      showMessage(failed.length ? `Webhook reparado, pero la suscripción de General falló: ${failed.map((step) => step.error).join("; ")}` : "Listo: se volvió a suscribir General y a apuntar los mensajes al CRM. Mandá un mensaje de prueba a General.");
     } catch (error) {
       showError(error.message || "No se pudo reparar el webhook.");
     } finally {

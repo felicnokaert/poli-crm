@@ -7,6 +7,7 @@ import { loadJsxModule } from "./helpers/load-jsx.mjs";
 afterEach(cleanup);
 
 describe("Prospeccion.jsx - interacción real", () => {
+  const chip = (name) => screen.getAllByRole("button").find((node) => node.className.includes("zone-chip") && node.textContent.startsWith(name) && /Pendiente/.test(node.textContent));
   const paragraph = (pattern) => screen.getByText((_, node) => node.tagName === "P" && pattern.test(node.textContent.replace(/\s+/g, " ")));
   async function mount(initial, extra = {}) {
     const mod = await loadJsxModule("src/Prospeccion.jsx");
@@ -95,7 +96,7 @@ describe("Prospeccion.jsx - interacción real", () => {
     try {
       const snapshots = await mount({ clients: [], prospects: [], prospectSearches: [], prospectSwitches: {} }, { cities: CITIES, session: { access_token: "t" } });
       fireEvent.change(screen.getByLabelText("Familia de hoy"), { target: { value: "Penosil" } });
-      fireEvent.click(await waitFor(() => screen.getByText(/^Córdoba · Pendiente/)));
+      fireEvent.click(await waitFor(() => chip("Córdoba")));
       fireEvent.click(screen.getByText("Buscar en Córdoba"));
       await waitFor(() => assert.equal(snapshots.at(-1).prospects.length, 2));
       assert.equal(calls[0].url, "/api/prospeccion");
@@ -129,13 +130,13 @@ describe("Prospeccion.jsx - interacción real", () => {
     try {
       const snapshots = await mount({ clients: [], prospects: [], prospectSearches: [] }, { cities: CITIES, session: { access_token: "t" } });
       fireEvent.change(screen.getByLabelText("Familia de hoy"), { target: { value: "Penosil" } });
-      fireEvent.click(await waitFor(() => screen.getAllByText(/· Pendiente/)[0]));
+      fireEvent.click(await waitFor(() => screen.getAllByRole("button").find((node) => node.className.includes("zone-chip") && /Pendiente/.test(node.textContent))));
       fireEvent.click(screen.getByText(/^Buscar en /));
       await waitFor(() => assert.ok(screen.getAllByText((text) => text.includes(reason)).length >= 1));
       const logged = snapshots.at(-1).prospectSearches[0];
       assert.deepEqual([logged.status, logged.failed, logged.ms], ["error", true, 26000]);
       assert.equal(snapshots.at(-1).prospects.length, 0);
-      assert.ok(screen.getAllByText(/· Pendiente/).length > 0, "la zona sigue pendiente");
+      assert.ok(screen.getAllByRole("button").some((node) => node.className.includes("zone-chip") && /Pendiente/.test(node.textContent)), "la zona sigue pendiente");
       fireEvent.click(screen.getByText(/Historial de búsquedas \(1\)/));
       assert.ok(screen.getAllByText(/^Error: OpenStreetMap tardó demasiado/).length >= 1);
     } finally {
@@ -146,11 +147,11 @@ describe("Prospeccion.jsx - interacción real", () => {
   test("'Terminé esta zona' la deja agotada y deja de sugerirse", async () => {
     const snapshots = await mount({ clients: [], prospects: [], prospectSearches: [] }, { cities: CITIES, session: { access_token: "t" } });
     fireEvent.change(screen.getByLabelText("Familia de hoy"), { target: { value: "Penosil" } });
-    fireEvent.click(await waitFor(() => screen.getByText(/^Córdoba · Pendiente/)));
+    fireEvent.click(await waitFor(() => chip("Córdoba")));
     fireEvent.click(screen.getByText("Terminé esta zona (por ahora)"));
     await waitFor(() => assert.equal(snapshots.at(-1).prospectSearches[0].exhausted, true));
     assert.equal(screen.queryByText(/^Córdoba · /), null);
-    assert.ok(screen.getByText(/^Paraná · Pendiente/));
+    assert.ok(chip("Paraná"));
   });
 
   test("el foco vigente se ve en el plan y se puede fijar una familia para la semana", async () => {

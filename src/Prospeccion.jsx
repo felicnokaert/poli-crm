@@ -379,72 +379,92 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         </div>
       </div>
 
-      <div className="panel">
-        <h3>Plan de hoy</h3>
-        <p className="muted">Una familia por día, recorriendo el país zona por zona sin repetir. Meta: entre {DAILY_TARGET.min} y {DAILY_TARGET.max} contactos nuevos por día (hoy cargaste {loadedToday} de {planFamily || 'esta familia'}).</p>
-        <p><strong>Foco vigente: {focus.label}.</strong> {focus.mode === 'foco' ? 'Vale hasta el domingo.' : 'Podés fijar una familia para toda la semana.'}</p>
-        <label>Foco de la semana
-          <select aria-label="Foco de la semana" value={focus.mode === 'foco' ? focus.family : ''} onChange={(event) => setFocus(event.target.value)}>
-            <option value="">Rotación diaria</option>
-            {PROSPECT_FAMILIES.filter((item) => familyIsActive(item.key, switches)).map((item) => <option key={item.key}>{item.key}</option>)}
-          </select>
-        </label>
-        <div className="panel-head-actions">
-          <label>Familia de hoy
-            <select aria-label="Familia de hoy" value={planFamily} onChange={(event) => setPlanFamily(event.target.value)}>
-              {PROSPECT_FAMILIES.filter((item) => familyIsActive(item.key, switches)).map((item) => <option key={item.key}>{item.key}</option>)}
-            </select>
-          </label>
-          <span className="muted">Alcance: {scopeDescription(planFamily)}</span>
-        </div>
-        <div className="panel-head-actions">
-          {suggestions.map(({ zone: item, status, habPorPunto }) => (
-            <button key={item.id} type="button" className={zone?.id === item.id ? 'primary' : 'secondary'} onClick={() => setZone(item)}>
-              {item.nombre}{provinces[item.prov] ? ` (${provinces[item.prov]})` : ''} · {status}{habPorPunto ? ` · ${Math.round(habPorPunto).toLocaleString('es-AR')} hab/punto` : ''}
-            </button>
-          ))}
-          {cities.length === 0 && <span className="muted">Cargando zonas…</span>}
-          {cities.length > 0 && <span className="muted">{ranking ? 'Orden: déficit de cobertura (habitantes por cliente o prospecto de la familia).' : 'Esta familia todavía no tiene datos: se ordena por población.'}</span>}
-        </div>
-        <label>Otra zona
-          <input value={zoneQuery} onChange={(event) => setZoneQuery(event.target.value)} placeholder="Escribí una ciudad (mínimo 3 letras)" />
-        </label>
-        {zoneMatches.length > 0 && (
-          <div className="panel-head-actions">
-            {zoneMatches.map((item) => (
-              <button key={item.id} type="button" className="secondary" onClick={() => { setZone(item); setZoneQuery(''); }}>
-                {item.nombre}{provinces[item.prov] ? ` (${provinces[item.prov]})` : ''} · {zoneStatus(planFamily, item.id, searches, today).status}
-              </button>
-            ))}
+      <div className="panel prospect-search">
+        <div className="prospect-search-head">
+          <div>
+            <h3>Plan de hoy</h3>
+            <p className="muted">Una familia por día, zona por zona sin repetir. Meta: {DAILY_TARGET.min} a {DAILY_TARGET.max} contactos nuevos por día (hoy cargaste {loadedToday} de {planFamily || 'esta familia'}).</p>
           </div>
-        )}
-        <label>Rubros a buscar (separados por coma)
-          <input value={rubrosText} onChange={(event) => setRubrosText(event.target.value)} />
-        </label>
-        {sources.length > 1 && (
-          <label>Fuente
-            <select aria-label="Fuente de la búsqueda" value={source} onChange={(event) => setSource(event.target.value)}>
-              {sources.map((item) => <option key={item}>{item}</option>)}
-            </select>
-          </label>
-        )}
-        <div className="panel-head-actions">
-          <button type="button" className="primary" disabled={!zone || searching || !session?.access_token} onClick={runSearch}>
-            <Search size={16} /> {searching ? 'Buscando…' : zone ? `Buscar en ${zone.nombre}` : 'Elegí una zona'}
+          <p className="prospect-focus"><strong>Foco vigente: {focus.label}.</strong> {focus.mode === 'foco' ? 'Vale hasta el domingo.' : 'Podés fijar una familia para toda la semana.'}</p>
+        </div>
+
+        <ol className="prospect-steps">
+          <li>
+            <span className="step-title">1 · Familia</span>
+            <label className="sr-only-label">Familia de hoy
+              <select aria-label="Familia de hoy" value={planFamily} onChange={(event) => setPlanFamily(event.target.value)}>
+                {PROSPECT_FAMILIES.filter((item) => familyIsActive(item.key, switches)).map((item) => <option key={item.key}>{item.key}</option>)}
+              </select>
+            </label>
+            <span className="muted small">Alcance: {scopeDescription(planFamily)}</span>
+          </li>
+          <li>
+            <span className="step-title">2 · Zona</span>
+            <div className="zone-chips">
+              {suggestions.map(({ zone: item, status, habPorPunto }) => (
+                <button key={item.id} type="button" className={`zone-chip ${zone?.id === item.id ? 'selected' : ''}`} onClick={() => setZone(item)}>
+                  <strong>{item.nombre}</strong>
+                  <span>{[provinces[item.prov], status, habPorPunto ? `${Math.round(habPorPunto).toLocaleString('es-AR')} hab/punto` : ''].filter(Boolean).join(' · ')}</span>
+                </button>
+              ))}
+              {cities.length === 0 && <span className="muted">Cargando zonas…</span>}
+            </div>
+            {cities.length > 0 && <span className="muted small">{ranking ? 'Orden: déficit de cobertura (habitantes por cliente o prospecto de la familia).' : 'Esta familia todavía no tiene datos: se ordena por población.'}</span>}
+            <label>Otra zona
+              <input value={zoneQuery} onChange={(event) => setZoneQuery(event.target.value)} placeholder="Escribí una ciudad (mínimo 3 letras)" />
+            </label>
+            {zoneMatches.length > 0 && (
+              <div className="zone-chips">
+                {zoneMatches.map((item) => (
+                  <button key={item.id} type="button" className="zone-chip" onClick={() => { setZone(item); setZoneQuery(''); }}>
+                    <strong>{item.nombre}</strong>
+                    <span>{[provinces[item.prov], zoneStatus(planFamily, item.id, searches, today).status].filter(Boolean).join(' · ')}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </li>
+          <li>
+            <span className="step-title">3 · Qué buscar</span>
+            <label>Rubros a buscar (separados por coma)
+              <input value={rubrosText} onChange={(event) => setRubrosText(event.target.value)} />
+            </label>
+            {sources.length > 1 && (
+              <label>Fuente
+                <select aria-label="Fuente de la búsqueda" value={source} onChange={(event) => setSource(event.target.value)}>
+                  {sources.map((item) => <option key={item}>{item}</option>)}
+                </select>
+              </label>
+            )}
+          </li>
+        </ol>
+
+        <div className="prospect-search-actions">
+          <button type="button" className="primary big" disabled={!zone || searching || !session?.access_token} onClick={runSearch}>
+            <Search size={18} /> {searching ? 'Buscando…' : zone ? `Buscar en ${zone.nombre}` : 'Elegí una zona'}
           </button>
           <button type="button" className="secondary" disabled={!zone} onClick={closeZone}>Terminé esta zona (por ahora)</button>
         </div>
+
+        <details className="prospect-settings">
+          <summary>Ajustes del plan (foco semanal y familias activas)</summary>
+          <label>Foco de la semana
+            <select aria-label="Foco de la semana" value={focus.mode === 'foco' ? focus.family : ''} onChange={(event) => setFocus(event.target.value)}>
+              <option value="">Rotación diaria</option>
+              {PROSPECT_FAMILIES.filter((item) => familyIsActive(item.key, switches)).map((item) => <option key={item.key}>{item.key}</option>)}
+            </select>
+          </label>
+          <div className="family-switches">
+            {PROSPECT_FAMILIES.map((family) => (
+              <label key={family.key} className="checkbox-field">
+                <input type="checkbox" checked={familyIsActive(family.key, switches)} onChange={() => toggleFamily(family.key)} />
+                {family.key}{familyIsActive(family.key, switches) ? '' : ' (pausada)'}
+              </label>
+            ))}
+          </div>
+        </details>
       </div>
       {message && <div className="system-message">{message}</div>}
-
-      <div className="units-list">
-        {PROSPECT_FAMILIES.map((family) => (
-          <label key={family.key} className="checkbox-field">
-            <input type="checkbox" checked={familyIsActive(family.key, switches)} onChange={() => toggleFamily(family.key)} />
-            {family.key}{familyIsActive(family.key, switches) ? '' : ' (pausada)'}
-          </label>
-        ))}
-      </div>
 
       {form && (
         <form className="form-grid" onSubmit={submitForm}>

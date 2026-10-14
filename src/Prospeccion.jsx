@@ -156,10 +156,12 @@ function SearchHistory({ searches, prospects, activeId, onShow }) {
               <div>
                 <strong>{item.zoneName}</strong>
                 <span className="muted small">{[item.province, item.family, item.date, item.source, item.ms != null ? seconds(item.ms) : ''].filter(Boolean).join(' · ')}</span>
+                {Array.isArray(item.rubros) && item.rubros.length > 0 && <span className="muted small">Se buscó: {item.rubros.join(', ')}{item.radiusKm ? ` · radio de ${item.radiusKm} km` : ''}</span>}
                 <span>
                   {failed ? <em className="badge warn">Error</em> : item.exhausted ? <em className="badge">Zona agotada por ahora</em> : <em className="badge ok">Ok</em>}
                   {' '}{failed ? item.error : `Devolvió ${item.returned ?? '–'} · ${item.withPhone ?? '–'} con teléfono · ${item.withWebsite ?? '–'} con web · ${item.fresh ?? item.found ?? 0} nuevos · ${item.repeated ?? '–'} repetidos`}
                 </span>
+                {!failed && item.returned === 0 && <span className="muted small">OpenStreetMap no devolvió comercios con esos rubros en esta zona: muchos comercios argentinos no están cargados ahí. Probá con otro rubro (ej. "ferretería") o una ciudad cercana más grande.</span>}
               </div>
               {found.length > 0 && (
                 <div className="history-actions">
@@ -307,7 +309,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     setSearching(true);
     setMessage('');
     const startedAt = Date.now();
-    const base = { id: crypto.randomUUID(), family: planFamily, zoneId: zone.id, zoneName: zone.nombre, province: provinces[zone.prov] || '', date: new Date().toISOString().slice(0, 10), source };
+    const base = { id: crypto.randomUUID(), family: planFamily, zoneId: zone.id, zoneName: zone.nombre, province: provinces[zone.prov] || '', date: new Date().toISOString().slice(0, 10), source, rubros };
     const logSearch = (entry) => setData((current) => ({ ...current, prospectSearches: [...(Array.isArray(current.prospectSearches) ? current.prospectSearches : []), { ...base, createdAt: new Date().toISOString(), ...entry }] }));
     try {
       const response = await fetch('/api/prospeccion', {
@@ -335,7 +337,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         prospects: [...(Array.isArray(current.prospects) ? current.prospects : []), ...made],
         prospectSearches: [...(Array.isArray(current.prospectSearches) ? current.prospectSearches : []), {
           ...base, createdAt: now, status: 'ok', found: made.length, returned: stats.returned, withPhone: stats.withPhone, withWebsite: stats.withWebsite,
-          fresh: made.length, repeated: results.length - made.length, inCrm, ms, attempts: payload.attempts || 1, endpoint: payload.endpoint || '', truncated: Boolean(payload.truncated),
+          fresh: made.length, repeated: results.length - made.length, inCrm, ms, attempts: payload.attempts || 1, endpoint: payload.endpoint || '', radiusKm: payload.radiusKm ?? null, truncated: Boolean(payload.truncated),
         }],
       }));
       setMessage(searchSummary({ source, zoneName: zone.nombre, returned: stats.returned, withPhone: stats.withPhone, withWebsite: stats.withWebsite, fresh: made.length, repeated: results.length - made.length, inCrm, ms, truncated: payload.truncated }));

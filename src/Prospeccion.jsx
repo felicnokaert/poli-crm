@@ -8,6 +8,7 @@ import { matchProspect } from './prospect-dedupe.mjs';
 import { markProspect } from './prospect-convert.mjs';
 import { buildImportPlan, parseProspectsText } from './prospect-import.mjs';
 import { readFileSmart } from './text-decode.mjs';
+import { deficitRanking, familyPoints } from './prospect-coverage.mjs';
 import { DAILY_TARGET, currentFocus, scopeDescription, weekStart, suggestZones, zoneStatus, zonesForFamily } from './prospect-plan.mjs';
 
 const DAILY_LIST_SIZE = 40;
@@ -140,7 +141,14 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   }, [planFamily]);
 
   const today = new Date().toISOString().slice(0, 10);
-  const suggestions = useMemo(() => (planFamily && cities.length ? suggestZones(planFamily, cities, searches, { count: 3, today }) : []), [planFamily, cities, searches, today]);
+  // Zonas sugeridas por déficit de cobertura (habitantes por cliente/prospecto de la
+  // familia); si la familia todavía no tiene datos, por población.
+  const ranking = useMemo(() => {
+    if (!planFamily || !cities.length) return null;
+    const points = familyPoints(planFamily, { clients, prospects, cities, provinces });
+    return points.length ? deficitRanking(planFamily, cities, points) : null;
+  }, [planFamily, cities, clients, prospects, provinces]);
+  const suggestions = useMemo(() => (planFamily && cities.length ? suggestZones(planFamily, cities, searches, { count: 3, today, ranking }) : []), [planFamily, cities, searches, today, ranking]);
   const zoneMatches = useMemo(() => {
     const query = zoneQuery.trim().toLocaleLowerCase('es-AR');
     if (query.length < 3) return [];
@@ -345,12 +353,13 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
           <span className="muted">Alcance: {scopeDescription(planFamily)}</span>
         </div>
         <div className="panel-head-actions">
-          {suggestions.map(({ zone: item, status }) => (
+          {suggestions.map(({ zone: item, status, habPorPunto }) => (
             <button key={item.id} type="button" className={zone?.id === item.id ? 'primary' : 'secondary'} onClick={() => setZone(item)}>
-              {item.nombre}{provinces[item.prov] ? ` (${provinces[item.prov]})` : ''} · {status}
+              {item.nombre}{provinces[item.prov] ? ` (${provinces[item.prov]})` : ''} · {status}{habPorPunto ? ` · ${Math.round(habPorPunto).toLocaleString('es-AR')} hab/punto` : ''}
             </button>
           ))}
           {cities.length === 0 && <span className="muted">Cargando zonas…</span>}
+          {cities.length > 0 && <span className="muted">{ranking ? 'Orden: déficit de cobertura (habitantes por cliente o prospecto de la familia).' : 'Esta familia todavía no tiene datos: se ordena por población.'}</span>}
         </div>
         <label>Otra zona
           <input value={zoneQuery} onChange={(event) => setZoneQuery(event.target.value)} placeholder="Escribí una ciudad (mínimo 3 letras)" />

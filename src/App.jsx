@@ -74,6 +74,7 @@ const lazyNamed = (loader, name) => lazy(() => loader().then((m) => ({ default: 
 const Pipeline = lazyNamed(() => import("./Pipeline"), "Pipeline");
 const Clients = lazyNamed(() => import("./Clients"), "Clients");
 const Prospeccion = lazyNamed(() => import("./Prospeccion"), "Prospeccion");
+const ProspeccionMapa = lazyNamed(() => import("./ProspeccionMapa"), "ProspeccionMapa");
 const Contacts = lazyNamed(() => import("./Clients"), "Contacts");
 const Conversations = lazyNamed(() => import("./Conversations"), "Conversations");
 const WhatsAppInbox = lazyNamed(() => import("./WhatsAppInbox"), "WhatsAppInbox");
@@ -1391,6 +1392,7 @@ export default function App() {
       ["prospecting", "Prospección", Search],
       ["contacts", "Contactos", Users],
       ["map", "Mapa", MapPin],
+      ["prospect-map", "Mapa de prospección", MapPin],
     ]],
     ["Recursos", [
       ["academy", "Academia comercial", GraduationCap],
@@ -1766,6 +1768,11 @@ export default function App() {
         {view === "map" && (
           <Suspense fallback={<Splash text="Cargando mapa…" />}>
             <MapaCobertura clients={data.clients} onSetClientType={setClientType} onApplyLocations={applyClientLocations}userEmail={session?.user?.email} />
+          </Suspense>
+        )}
+        {view === "prospect-map" && (
+          <Suspense fallback={<Splash text="Cargando mapa de prospección…" />}>
+            <ProspeccionMapa data={data} onOpenClient={setSelectedClientId} />
           </Suspense>
         )}
         {view === "techdocs" && (

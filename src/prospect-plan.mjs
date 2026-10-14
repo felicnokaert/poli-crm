@@ -82,11 +82,14 @@ export function zoneStatus(family, zoneId, searches = [], today = new Date().toI
   return { status: 'En curso', found, lastDate: last.date };
 }
 
-// Próximas zonas a buscar: primero las que nunca se buscaron (de mayor a menor
-// población), después las que están en curso. Las agotadas esperan su revisión.
-export function suggestZones(family, cities, searches = [], { count = 3, today } = {}) {
-  const zones = zonesForFamily(family, cities);
-  const withStatus = zones.map((zone) => ({ zone, ...zoneStatus(family, zone.id, searches, today) }));
+// Próximas zonas a buscar: primero las que nunca se buscaron, después las que están
+// en curso. Las agotadas esperan su revisión. Sin `ranking` van de mayor a menor
+// población; con `ranking` (déficit de cobertura, ver prospect-coverage.mjs) se
+// respeta ese orden.
+export function suggestZones(family, cities, searches = [], { count = 3, today, ranking = null } = {}) {
+  const zones = ranking ? ranking.zones.map((item) => item.zone) : zonesForFamily(family, cities);
+  const stats = ranking ? new Map(ranking.zones.map((item) => [item.zone.id, item])) : null;
+  const withStatus = zones.map((zone) => ({ zone, ...zoneStatus(family, zone.id, searches, today), ...(stats ? { n: stats.get(zone.id).n, habPorPunto: stats.get(zone.id).habPorPunto } : {}) }));
   const pending = withStatus.filter((item) => item.status === 'Pendiente');
   const inProgress = withStatus.filter((item) => item.status === 'En curso');
   return [...pending, ...inProgress].slice(0, count);

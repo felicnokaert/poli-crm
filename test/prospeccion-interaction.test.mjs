@@ -240,3 +240,49 @@ describe("Prospeccion.jsx - enriquecimiento", () => {
     } finally { globalThis.fetch = original; }
   });
 });
+
+describe("Prospeccion.jsx - investigación profunda", () => {
+  test("prepara el pedido con las empresas ya cargadas excluidas y guarda el trabajo", async () => {
+    const mod = await loadJsxModule("src/Prospeccion.jsx");
+    const snapshots = [];
+    function Wrapper() {
+      const [state, setState] = React.useState({ clients: [{ id: "c1", company: "Cliente Ya Cargado SA" }], prospects: [], researchJobs: [] });
+      const setData = (next) => setState((previous) => { const value = typeof next === "function" ? next(previous) : next; snapshots.push(value); return value; });
+      return React.createElement(mod.Prospeccion, { data: state, setData, userEmail: "a@b.com", onOpenClient: () => {}, cities: [], provinces: {} });
+    }
+    render(React.createElement(Wrapper));
+    fireEvent.change(screen.getByLabelText("Familia a investigar"), { target: { value: "Química" } });
+    fireEvent.change(screen.getByLabelText("Alcance de la investigación"), { target: { value: "Santa Fe y Córdoba" } });
+    fireEvent.click(screen.getByText("Preparar investigación"));
+    await waitFor(() => assert.equal(snapshots.at(-1).researchJobs.length, 1));
+    const job = snapshots.at(-1).researchJobs[0];
+    assert.equal(job.family, "Química");
+    assert.equal(job.status, "Preparada");
+    assert.match(job.prompt, /Cliente Ya Cargado SA/);
+    assert.match(job.prompt, /Santa Fe y Córdoba/);
+    assert.ok(screen.getByText("Copiar pedido"));
+  });
+
+  test("pegar la tabla de una IA, revisar e importar marca el trabajo como importado", async () => {
+    const mod = await loadJsxModule("src/Prospeccion.jsx");
+    const snapshots = [];
+    const job = { id: "j1", family: "Penosil", scope: "Entre Ríos", count: 20, status: "En curso", createdAt: "2026-10-14T00:00:00.000Z", prompt: "pedido" };
+    function Wrapper() {
+      const [state, setState] = React.useState({ clients: [], prospects: [], researchJobs: [job] });
+      const setData = (next) => setState((previous) => { const value = typeof next === "function" ? next(previous) : next; snapshots.push(value); return value; });
+      return React.createElement(mod.Prospeccion, { data: state, setData, userEmail: "a@b.com", onOpenClient: () => {}, cities: [], provinces: {} });
+    }
+    render(React.createElement(Wrapper));
+    fireEvent.change(screen.getByLabelText("Resultado de Penosil"), { target: { value: "| Empresa | Ubicación | Evidencia |\n|---|---|---|\n| Ferrenet | Paraná, Entre Ríos | Fischer aerosol |" } });
+    fireEvent.click(screen.getByText("Revisar resultado"));
+    await waitFor(() => screen.getByText(/Confirmar importación \(1\)/));
+    fireEvent.click(screen.getByText(/Confirmar importación \(1\)/));
+    await waitFor(() => assert.equal(snapshots.at(-1).researchJobs[0].status, "Importada"));
+    const saved = snapshots.at(-1).prospects[0];
+    assert.equal(saved.company, "Ferrenet");
+    assert.equal(saved.family, "Penosil");
+    assert.equal(saved.researchJobId, "j1");
+    assert.equal(saved.city, "Paraná");
+    assert.equal(saved.source, "Investigación IA");
+  });
+});

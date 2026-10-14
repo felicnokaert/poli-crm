@@ -18,10 +18,24 @@ const HEADERS = new Map([
   ['estado', 'sheetState'], ['comercial', 'owner'], ['fecha de seguimiento', 'followUpDate'], ['tipo entidad', 'entityType'],
   ['producto propuesta', 'proposal'], ['estado comercial', 'commercialState'], ['valor potencial', 'potentialValue'],
   ['proxima accion', 'nextAction'], ['fecha proxima accion', 'nextDate'],
+  // Tablas de investigación avanzada (IA)
+  ['ubicacion', 'location'], ['ubicacion ciudad provincia', 'location'], ['tipo', 'rubro'], ['tamano', 'size'], ['tamano estimado', 'size'],
+  ['evidencia', 'evidence'], ['evidencia con link a la fuente', 'evidence'], ['evidencia tambor ibc', 'evidence'], ['instagram facebook', 'instagram'], ['sitio', 'website'],
 ]);
 
 function plain(value = '') {
   return String(value).trim().toLocaleLowerCase('es-AR').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+// Tabla en markdown (|...|) como la que devuelven las IA: se convierte a filas separadas por tab.
+function normalizeMarkdownTable(text) {
+  const lines = String(text).split(/\r?\n/);
+  const piped = lines.filter((line) => line.trim().startsWith('|') && line.trim().endsWith('|'));
+  if (piped.length < 2) return text;
+  return piped
+    .filter((line) => !/^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(line.trim()))
+    .map((line) => line.trim().replace(/^\||\|$/g, '').split('|').map((cell) => cell.trim().replace(/\t/g, ' ')).join('\t'))
+    .join('\n');
 }
 
 function detectDelimiter(line = '') {
@@ -45,7 +59,7 @@ function splitLine(line, delimiter) {
 }
 
 export function parseProspectsText(text = '') {
-  const lines = String(text).split(/\r?\n/).filter((line) => line.trim());
+  const lines = normalizeMarkdownTable(text).split(/\r?\n/).filter((line) => line.trim());
   if (lines.length < 2) return { rows: [], ignored: 0, error: 'Pegá una tabla con encabezados en la primera fila y al menos un prospecto.' };
   const delimiter = detectDelimiter(lines[0]);
   const columns = splitLine(lines[0], delimiter).map((header) => HEADERS.get(plain(header)) || '');
@@ -74,6 +88,17 @@ export function prospectFieldsFromRow(row) {
   fields.family = family;
   if (row.family && !family) imported.familyRaw = row.family;
   if (!fields.rubro && row.subfamily) fields.rubro = row.subfamily;
+  // "Paraná, Entre Ríos" / "Neuquén cap. + Centenario; Río Negro": la primera parte es la ciudad, el resto la provincia.
+  if (row.location && !row.city) {
+    const [city, ...rest] = String(row.location).split(/[,;]/).map((part) => part.trim()).filter(Boolean);
+    fields.city = city || '';
+    if (!row.province && rest.length) fields.province = rest.join(', ');
+  }
+  delete fields.location;
+  const extra = [row.evidence && `Evidencia: ${row.evidence}`, row.size && `Tamaño: ${row.size}`].filter(Boolean);
+  delete fields.evidence;
+  delete fields.size;
+  if (extra.length) fields.notes = [row.notes, ...extra].filter(Boolean).join('\n');
   fields.imported = Object.keys(imported).length ? imported : null;
   return fields;
 }

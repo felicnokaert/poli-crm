@@ -7,6 +7,7 @@ import {
 import { matchProspect } from './prospect-dedupe.mjs';
 import { markProspect } from './prospect-convert.mjs';
 import { buildImportPlan, parseProspectsText } from './prospect-import.mjs';
+import { AI_TOOLS, RESEARCH_COOLDOWN_DAYS, RESEARCH_MINUTES, buildResearchPrompt, exclusionNames } from './prospect-playbook.mjs';
 import { readFileSmart } from './text-decode.mjs';
 import { applyEnrichment } from './prospect-enrich-apply.mjs';
 import { DAILY_TARGET, currentFocus, scopeDescription, zoneStatus, zonesForFamily } from './prospect-plan.mjs';
@@ -186,6 +187,10 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const [dailyList, setDailyList] = useState(null);
   const [listView, setListView] = useState('planilla');
   const [searchFilter, setSearchFilter] = useState(null);
+  const [research, setResearch] = useState({ family: '', scope: 'todo el país', count: 20, notes: '' });
+  const [importJobId, setImportJobId] = useState(null);
+  const [jobText, setJobText] = useState({});
+  const researchJobs = Array.isArray(data.researchJobs) ? data.researchJobs : EMPTY;
   const [message, setMessage] = useState('');
   const [importText, setImportText] = useState('');
   const [importPlan, setImportPlan] = useState(null);
@@ -263,7 +268,8 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   }
 
   // Paso 1: leer la lista y mostrar la vista previa (todavía no se guarda nada).
-  function analyzeImport(text) {
+  function analyzeImport(text, jobId = null) {
+    setImportJobId(jobId);
     const { rows, ignored, error } = parseProspectsText(text);
     if (error) { setMessage(error); setImportPlan(null); return; }
     setImportPlan({ ...buildImportPlan(rows, clients, prospects), ignored });
@@ -281,12 +287,19 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   // las que ya están en el CRM o ya cargadas se omiten.
   function confirmImport() {
     if (!importPlan) return;
-    const made = importPlan.toImport;
-    setData((current) => ({ ...current, prospects: [...(Array.isArray(current.prospects) ? current.prospects : []), ...made] }));
+    const job = researchJobs.find((item) => item.id === importJobId);
+    const made = importPlan.toImport.map((item) => (job ? { ...item, family: item.family || job.family, researchJobId: job.id, source: 'Investigación IA' } : item));
+    setData((current) => ({
+      ...current,
+      prospects: [...(Array.isArray(current.prospects) ? current.prospects : []), ...made],
+      researchJobs: job ? (current.researchJobs || []).map((item) => (item.id === job.id ? { ...item, status: 'Importada', importedCount: made.length, updatedAt: new Date().toISOString() } : item)) : current.researchJobs,
+    }));
     const skipped = importPlan.counts.enCrm + importPlan.counts.yaCargadas;
     setMessage(`Se importaron ${made.length} prospectos como "No contactado" (fuente: importado).${skipped ? ` Se omitieron ${skipped} que ya estaban en el CRM o ya cargadas.` : ''}`);
     setImportPlan(null);
     setImportText('');
+    if (job) setJobText((current) => ({ ...current, [job.id]: '' }));
+    setImportJobId(null);
   }
 
   function mark(prospectId, nextState, outcome) {
@@ -364,6 +377,27 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     setZone(null);
   }
 
+  function prepareResearch() {
+    const family = research.family || planFamily;
+    if (!family) return;
+    const now = new Date().toISOString();
+    const exclusions = exclusionNames(clients, prospects);
+    const job = {
+      id: crypto.randomUUID(), family, scope: research.scope.trim() || 'todo el país', count: Number(research.count) || 20, notes: research.notes, status: 'Preparada', createdAt: now, updatedAt: now,
+      prompt: buildResearchPrompt({ family, scope: research.scope.trim() || 'todo el país', count: Number(research.count) || 20, exclusions, notes: research.notes }),
+    };
+    setData((current) => ({ ...current, researchJobs: [...(Array.isArray(current.researchJobs) ? current.researchJobs : []), job] }));
+    setMessage(`Pedido de investigación listo para ${family}. Copialo y lanzalo en la IA que prefieras (abajo).`);
+  }
+
+  function setJobStatus(jobId, status) {
+    setData((current) => ({ ...current, researchJobs: (current.researchJobs || []).map((item) => (item.id === jobId ? { ...item, status, updatedAt: new Date().toISOString() } : item)) }));
+  }
+
+  async function copyPrompt(job) {
+    try { await navigator.clipboard.writeText(job.prompt); setMessage('Pedido copiado. Pegalo en la IA y activá su modo de investigación avanzada.'); if (job.status === 'Preparada') setJobStatus(job.id, 'En curso'); } catch { setMessage('No se pudo copiar: abrí "Ver el pedido" y copialo a mano.'); }
+  }
+
   function remove(prospectId) {
     setData((current) => ({ ...current, prospects: (current.prospects || []).filter((item) => item.id !== prospectId) }));
   }
@@ -413,6 +447,33 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const bySearch = searchFilter ? visible.filter((item) => item.searchId === searchFilter) : visible;
   const shown = dailyList ? bySearch.filter((item) => dailyList.includes(item.id)) : bySearch;
 
+  const importPreview = importPlan && (
+    <div className="panel">
+      <h3>Vista previa de la importación</h3>
+      <p>
+        {importPlan.counts.total} filas: <strong>{importPlan.counts.nuevas} nuevas</strong>, {importPlan.counts.enCrm} ya en el CRM,
+        {' '}{importPlan.counts.posibles} posibles duplicadas, {importPlan.counts.yaCargadas} ya cargadas como prospecto
+        {importPlan.ignored ? `, ${importPlan.ignored} sin nombre (se ignoran)` : ''}.
+      </p>
+      <table>
+        <thead><tr><th>Empresa</th><th>Familia</th><th>Ciudad</th><th>Cruce</th></tr></thead>
+        <tbody>
+          {importPlan.items.slice(0, 15).map((item) => (
+            <tr key={item.prospect.id}>
+              <td>{item.prospect.company}</td><td>{item.prospect.family || item.prospect.imported?.familyRaw || '–'}</td><td>{item.prospect.city || '–'}</td>
+              <td>{item.status}{item.match ? ` · ${item.match.name}` : ''}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {importPlan.items.length > 15 && <p className="muted">Se muestran las primeras 15 de {importPlan.items.length}.</p>}
+      <div className="panel-head-actions">
+        <button type="button" className="primary" disabled={!importPlan.toImport.length} onClick={confirmImport}>Confirmar importación ({importPlan.toImport.length})</button>
+        <button type="button" className="secondary" onClick={() => setImportPlan(null)}>Cancelar</button>
+      </div>
+    </div>
+  );
+
   return (
     <section className="panel">
       <div className="panel-head">
@@ -426,10 +487,76 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         </div>
       </div>
 
+      <div className="panel research-panel">
+        <div className="prospect-search-head">
+          <div>
+            <h3>Investigación profunda</h3>
+            <p className="muted">La búsqueda de verdad: una IA con modo de investigación avanzada recorre Google, Maps, sitios y redes y devuelve una tabla con evidencia y fuente por empresa. Tarda entre {RESEARCH_MINUTES.min} y {RESEARCH_MINUTES.max} minutos y no cuesta nada extra: usa tu suscripción a Claude, ChatGPT, Gemini o Perplexity. El CRM arma el pedido (con las empresas que ya tenés excluidas) y después importa el resultado.</p>
+          </div>
+        </div>
+        <div className="research-form">
+          <label>Familia
+            <select aria-label="Familia a investigar" value={research.family || planFamily} onChange={(event) => setResearch({ ...research, family: event.target.value })}>
+              {PROSPECT_FAMILIES.map((item) => <option key={item.key}>{item.key}</option>)}
+            </select>
+          </label>
+          <label>Alcance
+            <input aria-label="Alcance de la investigación" value={research.scope} onChange={(event) => setResearch({ ...research, scope: event.target.value })} placeholder="todo el país, o provincias: Mendoza, Córdoba…" />
+          </label>
+          <label>Cantidad
+            <input type="number" min="5" max="50" value={research.count} onChange={(event) => setResearch({ ...research, count: event.target.value })} />
+          </label>
+          <label className="research-notes">Indicaciones extra (opcional)
+            <input value={research.notes} onChange={(event) => setResearch({ ...research, notes: event.target.value })} placeholder="ej. priorizar empresas con planta propia" />
+          </label>
+        </div>
+        <div className="prospect-search-actions">
+          <button type="button" className="primary big" onClick={prepareResearch}><Search size={18} /> Preparar investigación</button>
+          <span className="muted small">Se excluyen {exclusionNames(clients, prospects).length} empresas que ya tenés.</span>
+        </div>
+
+        {researchJobs.length > 0 && (
+          <div className="history-list">
+            {[...researchJobs].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).map((job) => {
+              const again = new Date(new Date(job.createdAt).getTime() + RESEARCH_COOLDOWN_DAYS * 86400000).toISOString().slice(0, 10);
+              return (
+                <article key={job.id} className="history-card research-job">
+                  <div>
+                    <strong>{job.family} · {job.scope}</strong>
+                    <span className="muted small">{job.createdAt.slice(0, 10)} · hasta {job.count} empresas · volver a investigar esto a partir del {again}</span>
+                    <span>
+                      <em className={job.status === 'Importada' ? 'badge ok' : 'badge'}>{job.status}</em>
+                      {job.status === 'Importada' && ` · ${job.importedCount ?? 0} prospectos cargados`}
+                      {job.status === 'En curso' && ` · la IA tarda entre ${RESEARCH_MINUTES.min} y ${RESEARCH_MINUTES.max} minutos; cuando termine, pegá la tabla acá abajo`}
+                    </span>
+                    <div className="panel-head-actions">
+                      <button type="button" className="primary" onClick={() => copyPrompt(job)}>Copiar pedido</button>
+                      {AI_TOOLS.map((tool) => <a key={tool.name} className="secondary link-pill" href={tool.url} target="_blank" rel="noreferrer">Abrir {tool.name} ({tool.note})</a>)}
+                    </div>
+                    <details>
+                      <summary>Ver el pedido</summary>
+                      <textarea readOnly rows={10} value={job.prompt} aria-label={`Pedido de ${job.family}`} />
+                    </details>
+                    {job.status !== 'Importada' && (
+                      <details open={job.status === 'En curso'}>
+                        <summary>Pegar el resultado de la IA</summary>
+                        <textarea rows={6} placeholder="Pegá acá la tabla (o el CSV) que te devolvió la IA" aria-label={`Resultado de ${job.family}`} value={jobText[job.id] || ''} onChange={(event) => setJobText({ ...jobText, [job.id]: event.target.value })} />
+                        <button type="button" className="secondary" disabled={!(jobText[job.id] || '').trim()} onClick={() => { setJobStatus(job.id, 'Resultado listo'); analyzeImport(jobText[job.id], job.id); }}>Revisar resultado</button>
+                      </details>
+                    )}
+                    {importPlan && importJobId === job.id && importPreview}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       <div className="panel prospect-search">
         <div className="prospect-search-head">
           <div>
-            <h3>Plan de hoy</h3>
+            <h3>Plan de hoy · búsqueda rápida en OpenStreetMap</h3>
             <p className="muted">Una familia por día, zona por zona sin repetir. Meta: {DAILY_TARGET.min} a {DAILY_TARGET.max} contactos nuevos por día (hoy cargaste {loadedToday} de {planFamily || 'esta familia'}).</p>
           </div>
         </div>
@@ -480,7 +607,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
 
         <div className="prospect-search-actions">
           <button type="button" className="primary big" disabled={!zone || searching || !session?.access_token} onClick={runSearch}>
-            <Search size={18} /> {searching ? 'Buscando…' : zone ? `Buscar en ${zone.nombre}` : 'Elegí una zona'}
+            <Search size={18} /> {searching ? 'Buscando… puede tardar hasta 1 minuto' : zone ? `Buscar en ${zone.nombre}` : 'Elegí una zona'}
           </button>
           <button type="button" className="secondary" disabled={!zone} onClick={closeZone}>Terminé esta zona (por ahora)</button>
         </div>
@@ -518,32 +645,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         </label>
         <textarea rows={5} value={importText} onChange={(event) => setImportText(event.target.value)} aria-label="Lista de prospectos" />
         <button type="button" className="secondary" disabled={!importText.trim()} onClick={() => analyzeImport(importText)}>Revisar lista</button>
-        {importPlan && (
-          <div className="panel">
-            <h3>Vista previa de la importación</h3>
-            <p>
-              {importPlan.counts.total} filas: <strong>{importPlan.counts.nuevas} nuevas</strong>, {importPlan.counts.enCrm} ya en el CRM,
-              {' '}{importPlan.counts.posibles} posibles duplicadas, {importPlan.counts.yaCargadas} ya cargadas como prospecto
-              {importPlan.ignored ? `, ${importPlan.ignored} sin nombre (se ignoran)` : ''}.
-            </p>
-            <table>
-              <thead><tr><th>Empresa</th><th>Familia</th><th>Ciudad</th><th>Cruce</th></tr></thead>
-              <tbody>
-                {importPlan.items.slice(0, 15).map((item) => (
-                  <tr key={item.prospect.id}>
-                    <td>{item.prospect.company}</td><td>{item.prospect.family || item.prospect.imported?.familyRaw || '–'}</td><td>{item.prospect.city || '–'}</td>
-                    <td>{item.status}{item.match ? ` · ${item.match.name}` : ''}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {importPlan.items.length > 15 && <p className="muted">Se muestran las primeras 15 de {importPlan.items.length}.</p>}
-            <div className="panel-head-actions">
-              <button type="button" className="primary" disabled={!importPlan.toImport.length} onClick={confirmImport}>Confirmar importación ({importPlan.toImport.length})</button>
-              <button type="button" className="secondary" onClick={() => setImportPlan(null)}>Cancelar</button>
-            </div>
-          </div>
-        )}
+        {importPlan && !importJobId && importPreview}
       </details>
 
       <div className="panel-head-actions">

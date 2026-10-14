@@ -1391,8 +1391,8 @@ export default function App() {
       ["clients", "Empresas", Building2],
       ["prospecting", "Prospección", Search],
       ["contacts", "Contactos", Users],
-      ["map", "Mapa", MapPin],
-      ["prospect-map", "Mapa de prospección", MapPin],
+      ["map", "Mapa de aplicadores (RAPYP)", MapPin],
+      ["prospect-map", "Mapa de ventas (resto)", MapPin],
     ]],
     ["Recursos", [
       ["academy", "Academia comercial", GraduationCap],

@@ -36,28 +36,39 @@ export const STATE_COLORS = {
   'No contactado': '#7c8794', Contactado: '#2b6cb0', 'Con interés': '#2f855a', 'Sin interés': '#c53030', Cliente: '#1a202c',
 };
 
-// Puntos del mapa: prospectos (y, si se pide, clientes del CRM de las familias visibles)
-// ubicados por coordenadas exactas o por el centro de su ciudad. Los que no se pueden ubicar se cuentan aparte.
-export function mapPoints({ prospects = [], clients = [], includeClients = false, locate }) {
+// Puntos del mapa de ventas (todo lo que NO es aplicador): clientes del CRM que no
+// son aplicadores y, si se pide, prospectos. Los aplicadores/RAPYP viven en su propio
+// mapa y acá nunca aparecen. Los que no se pueden ubicar se cuentan aparte.
+const isoFromCrm = (text) => {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(text || '').trim());
+  return match ? `${match[3]}-${match[2]}-${match[1]}` : '';
+};
+
+export function mapPoints({ prospects = [], clients = [], includeClients = false, includeProspects = true, isApplicator = () => false, locate }) {
   const points = [];
   let unlocated = 0;
-  for (const prospect of prospects) {
-    const position = locate(prospect);
-    if (!position) { unlocated += 1; continue; }
-    points.push({ id: prospect.id, kind: 'prospecto', name: prospect.company, state: prospect.state, family: prospect.family, unit: unitOfFamily(prospect.family), city: prospect.city || '', province: prospect.province || '', date: String(prospect.createdAt || '').slice(0, 10), linkedClientId: prospect.linkedClientId || '', ...position });
+  let applicators = 0;
+  if (includeProspects) {
+    for (const prospect of prospects) {
+      const position = locate(prospect);
+      if (!position) { unlocated += 1; continue; }
+      points.push({ id: prospect.id, kind: 'prospecto', name: prospect.company, state: prospect.state, family: prospect.family, unit: unitOfFamily(prospect.family), city: prospect.city || '', province: prospect.province || '', date: String(prospect.createdAt || '').slice(0, 10), linkedClientId: prospect.linkedClientId || '', ...position });
+    }
   }
   if (includeClients) {
     const linked = new Set(prospects.map((item) => item.linkedClientId).filter(Boolean));
-    const crmToProspect = new Map(PROSPECT_FAMILIES.map((item) => [item.crmFamily, item.key]));
+    const crmToProspect = new Map(PROSPECT_FAMILIES.map((item) => [item.crmFamily.toLocaleLowerCase('es-AR'), item.key]));
     for (const client of clients) {
-      const family = crmToProspect.get(client.family);
-      if (!family || linked.has(client.id)) continue;
+      if (isApplicator(client)) { applicators += 1; continue; }
+      if (includeProspects && linked.has(client.id)) continue;
+      const rawFamily = String(client.family || '').trim();
+      const family = crmToProspect.get(rawFamily.toLocaleLowerCase('es-AR')) || rawFamily || 'Sin definir';
       const position = locate(client);
-      if (!position) continue;
-      points.push({ id: client.id, kind: 'cliente', name: client.company, state: 'Cliente', family, unit: unitOfFamily(family), city: client.city || '', province: client.province || '', date: '', linkedClientId: client.id, ...position });
+      if (!position) { unlocated += 1; continue; }
+      points.push({ id: client.id, kind: 'cliente', name: client.company, state: 'Cliente', family, unit: unitOfFamily(family), city: client.city || '', province: client.province || '', date: isoFromCrm(client.lastPurchase), linkedClientId: client.id, ...position });
     }
   }
-  return { points, unlocated };
+  return { points, unlocated, applicators };
 }
 
 export function filterPoints(points, { unit = '', family = '', state = '', province = '', city = '', from = '', to = '' } = {}) {
@@ -93,4 +104,16 @@ export function clusterPoints(points, cellSize) {
 
 export function familiesForUnit(unit) {
   return PROSPECT_FAMILIES.filter((item) => !unit || unitOfFamily(item.key) === unit).map((item) => item.key).filter((key) => familyConfig(key));
+}
+
+// "Dónde vendo": cuántos clientes y prospectos hay por provincia (ordenado de más a menos).
+export function salesByProvince(points = []) {
+  const rows = new Map();
+  for (const point of points) {
+    const key = point.province || 'Sin provincia';
+    const row = rows.get(key) || { province: key, clients: 0, prospects: 0 };
+    if (point.kind === 'cliente') row.clients += 1; else row.prospects += 1;
+    rows.set(key, row);
+  }
+  return [...rows.values()].sort((a, b) => (b.clients + b.prospects) - (a.clients + a.prospects) || a.province.localeCompare(b.province, 'es'));
 }

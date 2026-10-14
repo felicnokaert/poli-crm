@@ -40,6 +40,12 @@ Tests: 657/657, build limpio. Todo sigue en la rama; **nada en `main`**.
 
 Sin hacer, como se pidió: panel de aprendizaje, competencia, skills.
 
+### Ajuste del 14/10 (pedido de Felipe): dos mapas separados
+
+- **Mapa de aplicadores (RAPYP)**: el mapa de cobertura de siempre, ahora abre filtrado a *Aplicadores* (se puede volver a "Todos"), con ranking y habitantes por aplicador. Los emails largos se ajustan a la ficha.
+- **Mapa de ventas (resto)**: clientes que **no** son aplicadores + prospectos, con filtros (unidad, familia, estado, provincia, localidad, fechas) y dos tablas: "Dónde vendo" (por provincia) y "Ciudades grandes sin presencia" por familia. No usa el ranking habitantes por aplicador.
+- Cambia el baseline de la prueba de regresión del mapa a propósito (solo título, filtro por defecto y CSS).
+
 ## 3. Pendiente y por qué
 
 | Pendiente | Motivo |

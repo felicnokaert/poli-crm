@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import React from 'react';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { loadJsxModule } from './helpers/load-jsx.mjs';
-import { BOUNDS, MAP_SIZE, clusterPoints, filterPoints, mapPoints, project, provincePaths, unitOfFamily, familiesForUnit, UNITS } from '../src/prospect-map.mjs';
+import { BOUNDS, MAP_SIZE, clusterPoints, filterPoints, mapPoints, project, provincePaths, salesByProvince, unitOfFamily, familiesForUnit, UNITS } from '../src/prospect-map.mjs';
 
 afterEach(cleanup);
 
@@ -40,17 +40,32 @@ test('los pines salen de los prospectos y los sin ubicar se cuentan aparte', () 
   assert.equal(result.points[0].unit, unitOfFamily('Penosil'));
 });
 
-test('los clientes del CRM solo se pueden pedir explícitamente (el mapa de prospección no los pide)', () => {
+test('el mapa de ventas muestra clientes que no son aplicadores y deja afuera a los aplicadores', () => {
   const prospects = [{ id: 'a', company: 'A', family: 'Penosil', state: 'Contactado', lat: -31, lon: -60, linkedClientId: 'c1' }];
   const clients = [
     { id: 'c1', company: 'A', family: 'Penosil', lat: -31, lon: -60 },
-    { id: 'c2', company: 'C', family: 'Penosil', lat: -32, lon: -61 },
+    { id: 'c2', company: 'C', family: 'Penosil', lat: -32, lon: -61, lastPurchase: '05/10/2026' },
     { id: 'c3', company: 'D', family: 'Otra cosa', lat: -33, lon: -62 },
+    { id: 'c4', company: 'Aplicador', family: 'PURMAC', lat: -34, lon: -63 },
   ];
+  const isApplicator = (client) => client.id === 'c4';
   assert.equal(mapPoints({ prospects, clients, locate }).points.length, 1);
-  const withClients = mapPoints({ prospects, clients, includeClients: true, locate }).points;
-  assert.deepEqual(withClients.map((item) => item.id), ['a', 'c2']);
-  assert.equal(withClients[1].state, 'Cliente');
+  const result = mapPoints({ prospects, clients, includeClients: true, isApplicator, locate });
+  assert.deepEqual(result.points.map((item) => item.id), ['a', 'c2', 'c3']);
+  assert.equal(result.applicators, 1);
+  assert.equal(result.points[1].state, 'Cliente');
+  assert.equal(result.points[1].date, '2026-10-05');
+  assert.equal(result.points[2].family, 'Otra cosa');
+  assert.equal(mapPoints({ prospects, clients, includeClients: true, includeProspects: false, isApplicator, locate }).points.map((item) => item.id).join(), 'c1,c2,c3');
+});
+
+test('dónde vendo cuenta clientes y prospectos por provincia', () => {
+  const rows = salesByProvince([
+    { kind: 'cliente', province: 'Entre Ríos' }, { kind: 'cliente', province: 'Entre Ríos' }, { kind: 'prospecto', province: 'Entre Ríos' },
+    { kind: 'cliente', province: 'Córdoba' }, { kind: 'prospecto', province: '' },
+  ]);
+  assert.deepEqual(rows[0], { province: 'Entre Ríos', clients: 2, prospects: 1 });
+  assert.ok(rows.some((row) => row.province === 'Sin provincia'));
 });
 
 test('los filtros combinan unidad, familia, estado, provincia, localidad y fechas', () => {
@@ -94,18 +109,19 @@ describe('ProspeccionMapa.jsx', () => {
     render(React.createElement(mod.ProspeccionMapa, { data, onOpenClient: () => {}, cities, provincesGeo: geo }));
   }
 
-  test('sin prospectos muestra el mapa vacío y la tabla de déficit por población', async () => {
+  test('sin datos muestra el mapa vacío y las ciudades grandes sin presencia', async () => {
     await mount({ clients: [], prospects: [] });
     assert.ok(screen.getByRole('img', { name: 'Mapa de prospección' }));
     assert.ok(screen.getByText(/0 pines/));
-    assert.ok(screen.getByText(/todavía no tiene datos: se ordena por población/));
     assert.ok(screen.getAllByText('Ciudad de Buenos Aires').length >= 1);
   });
 
-  test('no ofrece mezclar los clientes del CRM en el mapa', async () => {
-    await mount({ clients: [{ id: 'c1', company: 'Aplicador', family: 'PURMAC', city: 'Córdoba', province: 'Córdoba' }], prospects: [] });
-    assert.equal(screen.queryByText(/Mostrar clientes del CRM/), null);
-    assert.ok(screen.getByText(/0 pines/));
+  test('los aplicadores no aparecen en el mapa de ventas y se avisa cuántos quedaron afuera', async () => {
+    await mount({ clients: [
+      { id: 'c1', company: 'Aplicador SA', cuit: '30111111111', family: 'PURMAC', city: 'Córdoba', province: 'Córdoba', tipoCliente: 'aplicador' },
+      { id: 'c2', company: 'Corralón Sur', cuit: '30222222222', family: 'Penosil', city: 'Córdoba', province: 'Córdoba' },
+    ], prospects: [] });
+    await waitFor(() => screen.getByText(/1 pines · 1 aplicadores no se muestran/));
   });
 
   test('un prospecto ubicado por su ciudad aparece y el filtro de estado lo oculta', async () => {
@@ -117,6 +133,6 @@ describe('ProspeccionMapa.jsx', () => {
 
   test('los prospectos sin localidad se avisan como sin ubicar', async () => {
     await mount({ clients: [], prospects: [{ id: 'p2', company: 'Sin lugar', family: 'Penosil', state: 'No contactado' }] });
-    await waitFor(() => screen.getByText(/1 prospectos sin ubicar/));
+    await waitFor(() => screen.getByText(/1 sin ubicar/));
   });
 });

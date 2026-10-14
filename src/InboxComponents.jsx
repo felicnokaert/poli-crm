@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { analyzeConversation } from "./conversation-insights.mjs";
 import { Check, ChevronRight, X } from "lucide-react";
 import { inferIntent } from "./commercial-intelligence.mjs";
 import { buildSuggestion, PENDING_LABEL } from "./suggestion-rules.mjs";
@@ -60,6 +61,7 @@ export function InboxRow({
   };
   const name =
     item.customer_name || item.customer_wa_id || "Contacto sin identificar";
+  const insights = Array.isArray(item.events) ? analyzeConversation(item.events) : null;
   const intent = inferIntent(item.text_body);
   const channelNames = (item.channels || [item.channel])
     .map((key) => CHANNELS[key]?.name || "WhatsApp")
@@ -123,6 +125,18 @@ export function InboxRow({
           <p>
             {item.text_body || `[${item.message_type || "mensaje sin texto"}]`}
           </p>
+          {insights && !insights.empty && (
+            <div className="insight-chips" title={insights.summary}>
+              <span className={`insight-chip readiness-${insights.readiness >= 8 ? "high" : insights.readiness >= 5 ? "mid" : "low"}`}>
+                Compra {insights.readiness}/10
+              </span>
+              <span className={`insight-chip mood-${insights.sentiment.toLowerCase()}`}>{insights.sentiment}</span>
+              {insights.competitors.length > 0 && (
+                <span className="insight-chip">Competencia: {insights.competitors.join(", ")}</span>
+              )}
+              <span className="insight-next">→ {insights.nextStep}</span>
+            </div>
+          )}
         </div>
         <ChevronRight size={18} />
       </button>

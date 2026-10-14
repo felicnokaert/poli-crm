@@ -233,3 +233,31 @@ describe("Prospeccion.jsx - interacción real", () => {
     assert.equal(screen.queryByText("Confirmar importación (2)"), null);
   });
 });
+
+describe("Prospeccion.jsx - enriquecimiento", () => {
+  test("el botón lee el sitio y completa Instagram sin pisar lo cargado", async () => {
+    const mod = await loadJsxModule("src/Prospeccion.jsx");
+    const original = globalThis.fetch;
+    globalThis.fetch = async (url, options) => {
+      if (String(url) === "/api/prospeccion") {
+        assert.equal(JSON.parse(options.body).action, "enrich");
+        return new Response(JSON.stringify({ ok: true, facebook: "", instagram: "https://www.instagram.com/norte", emails: ["x@y.com"], whatsapp: null }), { status: 200 });
+      }
+      return new Response("{}", { status: 200 });
+    };
+    try {
+      const snapshots = [];
+      function Wrapper() {
+        const [state, setState] = React.useState({ clients: [], prospects: [{ id: "p1", company: "Norte", family: "Penosil", state: "No contactado", source: "OpenStreetMap", website: "norte.com.ar", email: "mio@norte.com.ar" }] });
+        const setData = (next) => setState((previous) => { const value = typeof next === "function" ? next(previous) : next; snapshots.push(value); return value; });
+        return React.createElement(mod.Prospeccion, { data: state, setData, userEmail: "a@b.com", session: { access_token: "t" }, onOpenClient: () => {} });
+      }
+      render(React.createElement(Wrapper));
+      fireEvent.click(screen.getByText("Buscar redes y contacto en su sitio"));
+      await waitFor(() => screen.getByText(/Agregado desde su sitio: Instagram\./));
+      const saved = snapshots.at(-1).prospects[0];
+      assert.equal(saved.instagram, "https://www.instagram.com/norte");
+      assert.equal(saved.email, "mio@norte.com.ar");
+    } finally { globalThis.fetch = original; }
+  });
+});

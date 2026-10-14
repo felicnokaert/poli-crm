@@ -1,4 +1,5 @@
 import { authenticatedCorporateUser } from '../lib/corporate-auth.mjs';
+import { enrichWebsite } from '../lib/prospect-enrich.mjs';
 import { buildOverpassQuery, normalizeOverpass, radiusForPopulation, safeWord, searchOverpass, summarizeResults } from '../lib/prospect-osm.mjs';
 
 // Lupa de Prospección: busca comercios en OpenStreetMap por zona y rubros y
@@ -9,6 +10,10 @@ export default async function handler(request, response) {
   if (!user) return response.status(401).json({ error: 'Acceso corporativo requerido.' });
 
   const body = request.body || {};
+  if (body.action === 'enrich') {
+    const result = await enrichWebsite(String(body.website || ''));
+    return response.status(result.ok ? 200 : 422).json(result);
+  }
   const lat = Number(body.lat);
   const lon = Number(body.lon);
   // Cajón aproximado de Argentina: evita consultas fuera del país por error.

@@ -8,6 +8,7 @@ import { matchProspect } from './prospect-dedupe.mjs';
 import { markProspect } from './prospect-convert.mjs';
 import { buildImportPlan, parseProspectsText } from './prospect-import.mjs';
 import { readFileSmart } from './text-decode.mjs';
+import { applyEnrichment } from './prospect-enrich-apply.mjs';
 import { deficitRanking, familyPoints } from './prospect-coverage.mjs';
 import { DAILY_TARGET, currentFocus, scopeDescription, weekStart, suggestZones, zoneStatus, zonesForFamily } from './prospect-plan.mjs';
 
@@ -20,7 +21,9 @@ function statusClass(status) {
   return 'badge';
 }
 
-function ProspectRow({ prospect, check, onMark, onOpenClient, onDelete }) {
+function ProspectRow({ prospect, check, onMark, onOpenClient, onDelete, onEnrich }) {
+  const [enriching, setEnriching] = useState(false);
+  const [enrichNote, setEnrichNote] = useState('');
   const [outcome, setOutcome] = useState(prospect.outcome || '');
   const whatsapp = possibleWhatsAppLink(prospect.phone);
   const bestMatch = check.matches[0];
@@ -34,7 +37,10 @@ function ProspectRow({ prospect, check, onMark, onOpenClient, onDelete }) {
           {whatsapp && <> · <a href={whatsapp} target="_blank" rel="noreferrer">WhatsApp (posible)</a></>}
           {prospect.website && <> · <a href={/^https?:/.test(prospect.website) ? prospect.website : `https://${prospect.website}`} target="_blank" rel="noreferrer">sitio web</a></>}
           {prospect.email && <> · {prospect.email}</>}
+          {prospect.instagram && <> · <a href={prospect.instagram} target="_blank" rel="noreferrer">Instagram</a></>}
+          {prospect.facebook && <> · <a href={prospect.facebook} target="_blank" rel="noreferrer">Facebook</a></>}
         </span>
+        {enrichNote && <span className="muted">{enrichNote}</span>}
         <span>
           <em className={statusClass(check.status)}>{check.status}</em>
           {prospect.competitor && <em className="badge warn"> Competencia</em>}
@@ -60,6 +66,14 @@ function ProspectRow({ prospect, check, onMark, onOpenClient, onDelete }) {
           <option value="">Detalle (opcional)</option>
           {PROSPECT_OUTCOMES.map((item) => <option key={item}>{item}</option>)}
         </select>
+        {prospect.website && !/(facebook|instagram|wa\.me)/i.test(prospect.website) && (
+          <button
+            type="button" className="secondary" disabled={enriching}
+            onClick={async () => { setEnriching(true); setEnrichNote(await onEnrich(prospect)); setEnriching(false); }}
+          >
+            {enriching ? 'Leyendo el sitio…' : 'Buscar redes y contacto en su sitio'}
+          </button>
+        )}
         <button type="button" className="icon-button" aria-label="Eliminar prospecto" onClick={() => onDelete(prospect.id)}><Trash2 size={14} /></button>
       </div>
     </article>
@@ -289,6 +303,27 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     setData((current) => ({ ...current, prospects: (current.prospects || []).filter((item) => item.id !== prospectId) }));
   }
 
+  // Lee el sitio de la propia empresa (con robots.txt) y completa solo lo que falta.
+  async function enrich(prospect) {
+    if (!session?.access_token) return 'Iniciá sesión para buscar.';
+    try {
+      const response = await fetch('/api/prospeccion', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'enrich', website: prospect.website }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.ok) return result.error || 'No se pudo leer el sitio web.';
+      if (result.blockedByRobots) return 'El sitio pide no ser leído por robots (robots.txt): no se leyó.';
+      const outcome = applyEnrichment(prospect, result);
+      if (!outcome.added.length) return 'Se leyó el sitio y no había datos nuevos para agregar.';
+      setData((current) => ({ ...current, prospects: (current.prospects || []).map((item) => (item.id === prospect.id ? applyEnrichment(item, result).prospect : item)) }));
+      return `Agregado desde su sitio: ${outcome.added.join(', ')}.`;
+    } catch {
+      return 'No se pudo conectar para leer el sitio. Probá de nuevo.';
+    }
+  }
+
   function toggleFamily(key) {
     setData((current) => ({ ...current, prospectSwitches: { ...(current.prospectSwitches || {}), [key]: !familyIsActive(key, current.prospectSwitches) } }));
   }
@@ -469,7 +504,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       <div className="units-list">
         {shown.length === 0 && <p className="muted">{prospects.length ? 'No hay prospectos con ese filtro.' : 'Todavía no cargaste prospectos.'}</p>}
         {shown.map((item) => (
-          <ProspectRow key={item.id} prospect={item} check={checks.get(item.id) || { status: 'Nuevo', matches: [] }} onMark={mark} onOpenClient={onOpenClient} onDelete={remove} />
+          <ProspectRow key={item.id} prospect={item} check={checks.get(item.id) || { status: 'Nuevo', matches: [] }} onMark={mark} onOpenClient={onOpenClient} onDelete={remove} onEnrich={enrich} />
         ))}
       </div>
 

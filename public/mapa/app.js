@@ -42,6 +42,8 @@ const nf1 = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 1, minimumFr
 const nf2 = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2, minimumFractionDigits: 2 });
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+/* Modo "ventas" (?modo=ventas): el mismo mapa pero con los clientes que NO son aplicadores, sin semáforo ni ranking de aplicadores. */
+const VENTAS = new URLSearchParams(location.search).get("modo") === "ventas";
 const estado = { clientes: [], zonas: null, meta: null, provGeo: null, depGeo: null, metricas: { prov: new Map(), dep: new Map() } };
 
 function fechaCorte(exportISO, meses) {
@@ -64,6 +66,7 @@ function parametros() {
     radio: Math.min(500, Math.max(10, Number($("p-radio").value) || 100)),
     piso: Math.max(0, Number($("p-piso").value) || 0),
     producto: $("f-producto").value,
+    familia: $("f-familia").value,
     provincia: $("f-provincia").value,
     estadoPin: $("f-estado").value,
     desde: $("f-desde").value,
@@ -77,6 +80,7 @@ function clientesFiltrados(modo = "pines") {
   return estado.clientes.filter((c) => {
     if (modo === "metricas" && p.soloAplicadores && c.tipo !== "aplicador") return false;
     if (modo === "pines" && p.tipoPin && tipoDe(c) !== p.tipoPin) return false;
+    if (p.familia && c.familia !== p.familia) return false;
     if (p.producto && !c.productos.some((pr) => pr.producto === p.producto)) return false;
     if (p.desde && !(c.ultima_compra && c.ultima_compra >= p.desde)) return false;
     if (p.hasta && !(c.ultima_compra && c.ultima_compra <= p.hasta)) return false;
@@ -94,7 +98,7 @@ function clasificar(z, p) {
   const base = Math.max(z.esperados, p.piso);
   z.indice = base > 0 ? z.activos / base : 0;
   z.diferencia = z.activos - z.esperados; // < 0: faltan, > 0: sobran
-  z.clase = z.activos === 0 ? "sin" : z.indice > p.alto ? "sobre" : z.indice >= p.bajo ? "ok" : "faltan";
+  z.clase = VENTAS ? (z.activos === 0 ? "sin" : "ok") : z.activos === 0 ? "sin" : z.indice > p.alto ? "sobre" : z.indice >= p.bajo ? "ok" : "faltan";
 }
 
 /** Métricas por provincia y por departamento con los parámetros actuales. */
@@ -381,6 +385,8 @@ function poblarFiltros() {
   for (const c of estado.clientes) for (const pr of c.productos) kgPorProd.set(pr.producto, (kgPorProd.get(pr.producto) || 0) + pr.kg);
   const prods = [...kgPorProd.entries()].sort((a, b) => b[1] - a[1]).map(([n]) => n);
   $("f-producto").innerHTML = '<option value="">Todos</option>' + prods.map((n) => `<option>${esc(n)}</option>`).join("");
+  const familias = [...new Set(estado.clientes.map((c) => c.familia).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
+  $("f-familia").innerHTML = '<option value="">Todas</option>' + familias.map((n) => `<option>${esc(n)}</option>`).join("");
   $("f-provincia").innerHTML = '<option value="">Todas</option>' + estado.zonas.provincias.map((z) => `<option value="${z.cod}">${esc(z.nombre)}</option>`).join("");
 }
 
@@ -484,6 +490,7 @@ function htmlCliente(c) {
       ${veCuit(c) ? `<tr><td>CUIT/DNI</td><td>${cuit}</td></tr>` : ""}
       ${veTelefono(c) ? `<tr><td>Teléfono</td><td>${tel}</td></tr>` : ""}
       ${estado.publico ? "" : `<tr><td>Email</td><td>${mail}</td></tr>`}
+      ${c.familia ? `<tr><td>Familia</td><td>${esc(c.familia)}</td></tr>` : ""}
       <tr><td>Localidad</td><td>${esc(c.localidad || "—")}, ${esc(c.provincia)}</td></tr>
       <tr><td>Última compra</td><td>${fmtFecha(c.ultima_compra)}</td></tr>
       ${veProductos() ? `<tr><td>Facturas</td><td>${c.n_facturas}</td></tr>
@@ -801,7 +808,7 @@ function esperarClientes() {
     window.addEventListener("message", (e) => {
       if (e.origin !== location.origin || !e.data || e.data.tipo !== "mapa:clientes") return;
       clearTimeout(limite);
-      const recibido = { clientes: e.data.clientes, fecha_export: e.data.fecha_export };
+      const recibido = { clientes: VENTAS ? e.data.clientes.filter((c) => c.tipo !== "aplicador") : e.data.clientes, fecha_export: e.data.fecha_export };
       // La primera vez arranca el mapa; despues, cada cambio en el CRM (un cliente nuevo, uno
       // marcado como aplicador, una ciudad editada) llega aca y actualiza los pines sin recargar.
       if (estado.cargado) actualizarClientes(recibido); else resolve(recibido);
@@ -868,7 +875,7 @@ $("tab-sobre").addEventListener("click", () => { $("tab-sobre").classList.add("a
 $("exportar").addEventListener("click", exportarExcel);
 $("f-provincia").addEventListener("change", irAProvincia);
 $("f-limpiar").addEventListener("click", () => {
-  for (const id of ["f-producto", "f-provincia", "f-estado", "f-tipo", "f-desde", "f-hasta"]) $(id).value = "";
+  for (const id of ["f-producto", "f-familia", "f-provincia", "f-estado", "f-tipo", "f-desde", "f-hasta"]) $(id).value = "";
   irAProvincia(); renderLeyenda(); pintar();
 });
 $("ranking").addEventListener("click", (e) => {
@@ -882,10 +889,21 @@ $("alc-ranking").addEventListener("click", (e) => {
   const li = e.target.closest("li[data-lon]");
   if (li) { estado.map.flyTo({ center: [Number(li.dataset.lon), Number(li.dataset.lat)], zoom: 8 }); $("app").classList.remove("abierto"); }
 });
-for (const id of ["p-x", "p-meses", "p-bajo", "p-alto", "p-aplicador", "p-pines", "p-nombres", "p-nivel", "p-radio", "p-piso", "f-producto", "f-provincia", "f-estado", "f-desde", "f-hasta"]) {
+for (const id of ["p-x", "p-meses", "p-bajo", "p-alto", "p-aplicador", "p-pines", "p-nombres", "p-nivel", "p-radio", "p-piso", "f-producto", "f-familia", "f-provincia", "f-estado", "f-desde", "f-hasta"]) {
   $(id).addEventListener("input", () => { if (estado.map && estado.map.isStyleLoaded()) { renderLeyenda(); pintar(); } });
 }
 $("toggle-panel").addEventListener("click", () => $("app").classList.toggle("abierto"));
+if (VENTAS) {
+  document.body.classList.add("ventas");
+  document.title = "Mapa de ventas";
+  document.querySelector("#panel h1").textContent = "Ventas (sin aplicadores)";
+  $("p-aplicador").checked = false;
+  $("fila-familia").style.display = "";
+  for (const id of ["p-x", "p-bajo", "p-alto", "p-radio", "p-piso", "p-aplicador"]) { const fila = $(id).closest(".fila"); if (fila) fila.style.display = "none"; }
+  for (const el of [$("ranking").closest("section"), $("seccion-alcance"), $("abrir-revisar").closest("section")]) el.style.display = "none";
+  $("p-nivel").querySelector('option[value="alc"]').remove();
+  $("f-tipo").closest(".fila").style.display = "none";
+}
 cargar().catch((err) => { $("meta-export").textContent = "error al cargar datos (" + err.message + ")"; console.error(err); });
 
 /* Botones "Copiar" de las fichas (CUIT y celular a mano, solo en la vista del CRM). */

@@ -50,6 +50,7 @@ export function toMapClient(crm = {}) {
     doc,
     cuit: formatCuit(doc),
     tipo_doc: doc.length === 11 ? 'CUIT' : 'DNI',
+    familia: String(crm.family || '').trim(),
     razon_social: String(crm.legalName || crm.company || '').trim() || 'Sin nombre',
     email: crm.email || '',
     telefono: crm.phone || '',

@@ -221,7 +221,8 @@ function CompartirMapa({ mapClients, userEmail }) {
 // /mapa/ (estático, con su propia CSP); los clientes se calculan acá, con la
 // sesión, y se le mandan por postMessage - nunca hay un archivo público con
 // CUIT, teléfonos o emails. Ver public/mapa/app.js (esperarClientes).
-function MapaCoberturaBase({ clients, onSetClientType, onApplyLocations, userEmail }) {
+function MapaCoberturaBase({ clients, onSetClientType, onApplyLocations, userEmail, modo = "aplicadores" }) {
+  const ventas = modo === "ventas";
   const iframeRef = useRef(null);
   const [listo, setListo] = useState(false);
   const [estado, setEstado] = useState({ fase: "ubicando", detalle: "Ubicando clientes…" });
@@ -285,7 +286,7 @@ function MapaCoberturaBase({ clients, onSetClientType, onApplyLocations, userEma
         <div className="panel-head">
           <div>
             <span className="eyebrow">Solo para el equipo · requiere sesión</span>
-            <h2>Mapa de cobertura</h2>
+            <h2>{ventas ? "Mapa de ventas (sin aplicadores)" : "Mapa de aplicadores (RAPYP)"}</h2>
             <p>
               {base.length} clientes ({compradores} con compra) · {mapClients ? `${conPin} con ubicación` : "ubicando…"}
               {estado.detalle ? ` · ${estado.detalle}` : ""}
@@ -295,7 +296,7 @@ function MapaCoberturaBase({ clients, onSetClientType, onApplyLocations, userEma
             <button type="button" className="secondary" onClick={() => setPendientesAbierto((abierto) => !abierto)}>
               Pendientes de ubicación ({sinUbicar})
             </button>
-            {onlineConfigured && (
+            {onlineConfigured && !ventas && (
               <button type="button" className="secondary" onClick={() => setCompartirAbierto((abierto) => !abierto)}>
                 <Share2 size={15} /> Compartir mapa
               </button>
@@ -307,8 +308,8 @@ function MapaCoberturaBase({ clients, onSetClientType, onApplyLocations, userEma
         {compartirAbierto && <CompartirMapa mapClients={mapClients} userEmail={userEmail} />}
         <iframe
           ref={iframeRef}
-          title="Mapa de cobertura de aplicadores"
-          src="/mapa"
+          title={ventas ? "Mapa de ventas" : "Mapa de cobertura de aplicadores"}
+          src={ventas ? "/mapa?modo=ventas" : "/mapa"}
           className="mapa-cobertura-frame"
         />
       </section>

@@ -28,3 +28,10 @@ test('sin investigación cae al rubro y ciudad, y avisa qué falta', () => {
   assert.deepEqual(draft.missing, ['ciudad']);
   assert.equal(fitLine({ notes: 'nada' }), '');
 });
+
+test('nombra las líneas del catálogo y ofrece un seguimiento sin "alguna novedad"', () => {
+  const draft = buildOutreachDraft({ company: 'Ferretería Norte', family: 'Penosil', rubro: 'ferretería', city: 'Rosario' }, { sender: 'Marta' });
+  assert.match(draft.whatsapp, /selladores, espumas y adhesivos Penosil/);
+  assert.match(draft.followUp, /Ferretería Norte/);
+  assert.doesNotMatch(draft.followUp, /novedad/i);
+});

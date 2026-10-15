@@ -233,7 +233,7 @@ function OutreachDraft({ prospect, defaultSender }) {
   const [edited, setEdited] = useState({});
   const [copied, setCopied] = useState('');
   const draft = useMemo(() => buildOutreachDraft(prospect, { sender }), [prospect, sender]);
-  const generated = { whatsapp: draft.whatsapp, email: `Asunto: ${draft.email.subject}\n\n${draft.email.body}`, call: draft.call };
+  const generated = { whatsapp: draft.whatsapp, email: `Asunto: ${draft.email.subject}\n\n${draft.email.body}`, call: draft.call, followUp: draft.followUp };
   const text = edited[channel] ?? generated[channel];
   function changeSender(value) {
     setSender(value);
@@ -251,11 +251,11 @@ function OutreachDraft({ prospect, defaultSender }) {
           <input value={sender} onChange={(event) => changeSender(event.target.value)} placeholder="ej. Marta" />
         </label>
         <div className="segmented" role="tablist" aria-label="Canal del borrador">
-          {[['whatsapp', 'WhatsApp'], ['email', 'Mail'], ['call', 'Guion de llamada']].map(([key, label]) => (
+          {[['whatsapp', 'WhatsApp'], ['email', 'Mail'], ['followUp', 'Seguimiento'], ['call', 'Guion de llamada']].map(([key, label]) => (
             <button key={key} type="button" role="tab" aria-selected={channel === key} className={channel === key ? 'selected' : ''} onClick={() => setChannel(key)}>{label}</button>
           ))}
         </div>
-        <textarea rows={channel === 'whatsapp' ? 6 : 9} aria-label={`Borrador de ${channel}`} value={text} onChange={(event) => setEdited({ ...edited, [channel]: event.target.value })} />
+        <textarea rows={['whatsapp', 'followUp'].includes(channel) ? 6 : 9} aria-label={`Borrador de ${channel}`} value={text} onChange={(event) => setEdited({ ...edited, [channel]: event.target.value })} />
         <div className="panel-head-actions">
           <button type="button" className="primary" onClick={copy}>{copied === channel ? 'Copiado ✓' : 'Copiar texto'}</button>
           {edited[channel] != null && <button type="button" className="secondary" onClick={() => setEdited({ ...edited, [channel]: undefined })}>Volver al original</button>}

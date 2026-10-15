@@ -14,6 +14,18 @@ const ASK = {
   penosil: 'qué marcas de selladores y espumas tienen hoy y cómo rotan',
 };
 
+// Líneas reales del catálogo de Poliplast por tipo de guía (solo nombres de familias, sin datos técnicos).
+const LINES = {
+  aplicadores: 'poliuretano, poliurea y equipos Purmac',
+  fabricantes: 'poliuretano, resinas y fibra de vidrio',
+  distribuidores: 'Penosil, resinas y poliuretano',
+  constructoras: 'poliuretano y selladores Penosil',
+  frigorificas: 'poliuretano para paneles y cámaras',
+  carrozados: 'poliuretano, resinas y fibra de vidrio para carrocerías',
+  prfv: 'resinas, gel coat y fibra de vidrio',
+  penosil: 'selladores, espumas y adhesivos Penosil',
+};
+
 function plain(value = '') {
   return String(value).toLocaleLowerCase('es-AR').normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
@@ -52,11 +64,12 @@ export function buildOutreachDraft(prospect = {}, { sender = '' } = {}) {
   const opening = `Hola, ¿hablo con ${company}? Soy ${who} de Grupo Poliplast.`;
   const reason = fit ? `Vi que ${lower(fit)}.` : context ? `Vi que ${context}.` : '';
   const value = book ? `Lo que más valoran empresas del rubro: ${lower(book.motivation).replace(/\.$/, '')}.` : '';
+  const lines = book ? `Trabajamos con ${LINES[book.id]}.` : '';
   const ask = `¿Me podrían contar ${book ? ASK[book.id] : 'qué usan hoy y qué volumen manejan'}? Con eso les cuento si podemos ayudarlos, sin compromiso.`;
-  const whatsapp = [opening, reason, value, ask].filter(Boolean).join(' ');
+  const whatsapp = [opening, reason, lines, value, ask].filter(Boolean).join(' ');
   const email = {
     subject: `Grupo Poliplast · ${rubro || 'consulta'} para ${company}`.slice(0, 90),
-    body: [`Hola, buenos días.`, '', [`Soy ${who} de Grupo Poliplast.`, reason].filter(Boolean).join(' '), value, '', ask, '', 'Quedo atento.', who].filter((line, index, all) => line !== '' || (index > 0 && all[index - 1] !== '')).join('\n'),
+    body: [`Hola, buenos días.`, '', [`Soy ${who} de Grupo Poliplast.`, reason].filter(Boolean).join(' '), lines, value, '', ask, '', 'Quedo atento.', who].filter((line, index, all) => line !== '' || (index > 0 && all[index - 1] !== '')).join('\n'),
   };
   const call = book ? [
     `1) Presentate: ${who} de Grupo Poliplast, y por qué llamás${reason ? ` (${reason.replace(/\.$/, '').toLocaleLowerCase('es-AR')})` : ''}.`,
@@ -64,5 +77,10 @@ export function buildOutreachDraft(prospect = {}, { sender = '' } = {}) {
     `3) Si dicen "${book.typicalObjection.replace(/\.$/, '')}": no discutas, seguí preguntando.`,
     `4) Próximo paso sugerido: ${lower(book.nextStep).replace(/\.$/, '')}.`,
   ].join('\n') : '';
-  return { playbook: book, whatsapp, email, call, usesResearch: Boolean(fit), missing: [!rubro && 'rubro', !where && 'ciudad'].filter(Boolean) };
+  const followUp = [
+    `Hola, ${who} de Grupo Poliplast otra vez. Te escribí hace unos días por ${company}.`,
+    book ? `Te dejo algo concreto: ${lower(book.nextStep).replace(/\.$/, '')}. ¿Lo vemos?` : '¿Te sirve que lo veamos?',
+    'Si ahora no es momento, decime cuándo te conviene que retome y listo.',
+  ].join(' ');
+  return { followUp, playbook: book, whatsapp, email, call, usesResearch: Boolean(fit), missing: [!rubro && 'rubro', !where && 'ciudad'].filter(Boolean) };
 }

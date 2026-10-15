@@ -2,6 +2,7 @@ import { memo, useEffect, useState } from "react";
 import { CircleAlert, GraduationCap, Search, Sparkles } from "lucide-react";
 import {
   QUICK_REPLIES,
+  REPLY_TEMPLATES,
   ROLE_PLAYS,
   RUBRIC,
   scoreBand,
@@ -57,9 +58,19 @@ export function QuickReplies({ myChannels }) {
               <span>{String(index + 1).padStart(2, "0")}</span>
               <h3>{title}</h3>
               <p>{guidance}</p>
-              <button onClick={() => copyReply(title, guidance)}>
-                {copied === title ? "Copiado ✓" : "Copiar criterio"}
-              </button>
+              {REPLY_TEMPLATES[channel]?.[title] && (
+                <blockquote className="reply-template">{REPLY_TEMPLATES[channel][title]}</blockquote>
+              )}
+              <div className="panel-head-actions">
+                {REPLY_TEMPLATES[channel]?.[title] && (
+                  <button className="primary" onClick={() => copyReply(`${title}:mensaje`, REPLY_TEMPLATES[channel][title])}>
+                    {copied === `${title}:mensaje` ? "Copiado ✓" : "Copiar mensaje"}
+                  </button>
+                )}
+                <button onClick={() => copyReply(title, guidance)}>
+                  {copied === title ? "Copiado ✓" : "Copiar criterio"}
+                </button>
+              </div>
             </article>
           ))}
         </div>

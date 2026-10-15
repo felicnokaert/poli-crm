@@ -25,3 +25,7 @@ Una tarea programada de Claude (cuenta marketing@grupopoliplast.com.ar, sin API)
 - **`COMPETENCIA NUEVA: <nombre>`**: un comercial cargó un competidor (nombre y/o web/Facebook/Instagram en `scope`; familia sugerida en `notes`). Investigar en la web con fuente por dato (Facebook/Instagram suelen no poder leerse: usarlos solo para nombre y links). Si es un competidor real, hacer `insert into competitors` con `id` (slug), `name`, `kind` (fabricante/distribuidor/comercio/marca/equipos), `families` (de Penosil, Carrozados, Imperpur, Planchas, Resinplast, PURMAC, Poliurea, Poliuretano, Química), `summary`, `products`, `location`, `website`, `channels`, `sources` (json `[{"t","u"}]`), `caveats` (lo no verificado) y **`reviewed = false`**. Marcar el pedido `lista` con un resumen; si no es competidor real o no se encuentra, `status = 'error'` y `progress` con el motivo.
 
 Reglas: nunca inventar datos; pocas fichas verificadas antes que muchas dudosas; máximo 5 pedidos por corrida (el resto queda `pendiente` para la próxima); no mandar mensajes a nadie; no borrar datos.
+
+## Criterio de "competidor" (definido por Felipe, 15/10/2026)
+- Los **aplicadores** de poliuretano proyectado (ej. Poliuretanos del Norte) **no son competencia: son clientes**. No cargarlos en `competitors`; si aparece uno, marcar el pedido `lista` explicando que es cliente potencial.
+- Los que **venden máquinas** (Satch, Spinna, y quien confirme Felipe) **sí son competencia** (kind = `equipos`), porque compiten con la línea de equipos Purmac.

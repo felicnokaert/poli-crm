@@ -66,6 +66,6 @@ test('repairWebhook reenvía URL, campo messages y token de verificación', asyn
   assert.equal(out.ok, true);
   assert.equal(seen.init.method, 'POST');
   assert.match(seen.init.body, /object=whatsapp_business_account/);
-  assert.match(seen.init.body, /fields=messages/);
+  assert.match(seen.init.body, /fields=messages%2Caccount_update/);
   assert.equal((await repairWebhook({ appId: '1', appSecret: '', callbackUrl: 'x', verifyToken: 'y' })).ok, false);
 });

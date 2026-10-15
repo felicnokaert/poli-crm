@@ -11,6 +11,7 @@ import { contactQuality } from './prospect-contact.mjs';
 import { applyResearch, companyFromTitle } from './prospect-research-apply.mjs';
 import { markProspect } from './prospect-convert.mjs';
 import { Competencia } from './Competencia.jsx';
+import { buildOutreachDraft } from './prospect-outreach.mjs';
 import { remoteLabel } from './prospect-requests.mjs';
 import { buildImportPlan, parseProspectsText } from './prospect-import.mjs';
 import { AI_TOOLS, RESEARCH_COOLDOWN_DAYS, RESEARCH_MINUTES, buildResearchPrompt, exclusionNames } from './prospect-playbook.mjs';
@@ -154,7 +155,7 @@ const FICHA_FIELDS = [
 ];
 
 // Ficha del prospecto: todo lo que se sabe, editable, y desde dónde salió.
-function ProspectDetail({ prospect, check, onClose, onSave, onMark, onEnrich, onOpenClient, onDelete }) {
+function ProspectDetail({ defaultSender, prospect, check, onClose, onSave, onMark, onEnrich, onOpenClient, onDelete }) {
   const [form, setForm] = useState({ ...prospect });
   const [note, setNote] = useState('');
   const quality = contactQuality(form);
@@ -186,6 +187,7 @@ function ProspectDetail({ prospect, check, onClose, onSave, onMark, onEnrich, on
         </div>
         {quality.notes.length > 0 && <p className="muted small contact-quality">{quality.notes.join(' · ')}.</p>}
         <ResearchBox research={prospect.research} />
+        <OutreachDraft prospect={form} defaultSender={defaultSender} />
         {missingContact(form).length > 0 && <p className="muted small">Falta: {missingContact(form).join(', ')}.</p>}
         <div className="form-grid">
           <label>Familia
@@ -225,6 +227,49 @@ function ProspectDetail({ prospect, check, onClose, onSave, onMark, onEnrich, on
 }
 
 // Cola de trabajo: de a uno, el más prometedor primero; marcar o saltar y pasa al siguiente.
+function OutreachDraft({ prospect, defaultSender }) {
+  const [sender, setSender] = useState(() => { try { return localStorage.getItem('poliplast-sender-name') || defaultSender; } catch { return defaultSender; } });
+  const [channel, setChannel] = useState('whatsapp');
+  const [edited, setEdited] = useState({});
+  const [copied, setCopied] = useState('');
+  const draft = useMemo(() => buildOutreachDraft(prospect, { sender }), [prospect, sender]);
+  const generated = { whatsapp: draft.whatsapp, email: `Asunto: ${draft.email.subject}\n\n${draft.email.body}`, call: draft.call };
+  const text = edited[channel] ?? generated[channel];
+  function changeSender(value) {
+    setSender(value);
+    setEdited({});
+    try { localStorage.setItem('poliplast-sender-name', value); } catch { /* sin almacenamiento */ }
+  }
+  async function copy() {
+    try { await navigator.clipboard.writeText(text); setCopied(channel); setTimeout(() => setCopied(''), 1800); } catch { setCopied('error'); }
+  }
+  return (
+    <details className="outreach-draft">
+      <summary><strong>Borrador de primer contacto</strong> <span className="muted small">armado con la guía de Academia y los datos de esta ficha</span></summary>
+      <div className="outreach-body">
+        <label>Tu nombre (va en el mensaje)
+          <input value={sender} onChange={(event) => changeSender(event.target.value)} placeholder="ej. Marta" />
+        </label>
+        <div className="segmented" role="tablist" aria-label="Canal del borrador">
+          {[['whatsapp', 'WhatsApp'], ['email', 'Mail'], ['call', 'Guion de llamada']].map(([key, label]) => (
+            <button key={key} type="button" role="tab" aria-selected={channel === key} className={channel === key ? 'selected' : ''} onClick={() => setChannel(key)}>{label}</button>
+          ))}
+        </div>
+        <textarea rows={channel === 'whatsapp' ? 6 : 9} aria-label={`Borrador de ${channel}`} value={text} onChange={(event) => setEdited({ ...edited, [channel]: event.target.value })} />
+        <div className="panel-head-actions">
+          <button type="button" className="primary" onClick={copy}>{copied === channel ? 'Copiado ✓' : 'Copiar texto'}</button>
+          {edited[channel] != null && <button type="button" className="secondary" onClick={() => setEdited({ ...edited, [channel]: undefined })}>Volver al original</button>}
+        </div>
+        <p className="muted small">
+          {draft.usesResearch ? 'Incluye lo que encontró la investigación sobre esta empresa. ' : 'Sin investigación previa: usa solo rubro y ciudad. '}
+          {draft.missing.length > 0 && `Faltan datos en la ficha: ${draft.missing.join(', ')}. `}
+          Revisalo y editalo antes de usarlo. El CRM no envía nada: lo copiás y lo mandás vos.
+        </p>
+      </div>
+    </details>
+  );
+}
+
 function ResearchBox({ research }) {
   if (!research) return null;
   return (
@@ -834,6 +879,8 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         </div>
 
         {researchJobs.length > 0 && (
+          <details className="research-history" open={researchJobs.some((job) => !['Importada', 'Falló la investigación'].includes(job.status))}>
+          <summary><strong>Historial de pedidos</strong> <span className="muted small">{researchJobs.length} {researchJobs.length === 1 ? 'pedido' : 'pedidos'} · {researchJobs.filter((job) => job.status === 'Importada').length} importados</span></summary>
           <div className="history-list">
             {[...researchJobs].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).map((job) => {
               const again = new Date(new Date(job.createdAt).getTime() + RESEARCH_COOLDOWN_DAYS * 86400000).toISOString().slice(0, 10);
@@ -849,7 +896,8 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
                     </span>
                     <div className="panel-head-actions">
                       <button type="button" className="primary" onClick={() => copyPrompt(job)}>Copiar pedido</button>
-                      {AI_TOOLS.map((tool) => <a key={tool.name} className="secondary link-pill" href={tool.url} target="_blank" rel="noreferrer">Abrir {tool.name} ({tool.note})</a>)}
+                      <span className="muted small">Pegalo en:</span>
+                      {AI_TOOLS.map((tool) => <a key={tool.name} className="secondary link-pill" href={tool.url} target="_blank" rel="noreferrer" title={tool.note}>{tool.name}</a>)}
                     </div>
                     <details>
                       <summary>Ver el pedido</summary>
@@ -868,6 +916,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
               );
             })}
           </div>
+          </details>
         )}
       </details>
 
@@ -1041,7 +1090,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       )}
       {detail && (
         <ProspectDetail
-          key={detail.id} prospect={detail} check={checks.get(detail.id) || { status: 'Nuevo', matches: [] }}
+          key={detail.id} defaultSender={String(userEmail || '').split('@')[0].split(/[._-]/)[0].replace(/^./, (c) => c.toLocaleUpperCase('es-AR'))} prospect={detail} check={checks.get(detail.id) || { status: 'Nuevo', matches: [] }}
           onClose={() => setDetailId(null)} onSave={saveProspect} onMark={mark} onOpenClient={onOpenClient} onDelete={remove}
           onEnrich={async (prospect) => setMessage(await enrich(prospect))}
         />

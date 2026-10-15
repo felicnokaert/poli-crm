@@ -52,6 +52,7 @@ const DataSettings = lazy(() => import("./DataSettings").then((m) => ({ default:
 import { InteractionDetail } from "./Interactions";
 import { ProjectBoardGateway, Dashboard } from "./Dashboard";
 import { useCronStatus } from "./hooks/useCronStatus";
+import { useWhatsAppHealth } from "./hooks/useWhatsAppHealth";
 import { shouldShowWelcome } from "./weekly-targets.mjs";
 import { conTipoManual } from "./client-type.mjs";
 import { aplicarUbicaciones } from "./client-location.mjs";
@@ -226,6 +227,7 @@ export default function App() {
     retrySave,
   } = useWorkspaceSync(data, setData);
   const cronStatus = useCronStatus(session);
+  const whatsappHealth = useWhatsAppHealth(session);
   const [view, setView] = useState("dashboard");
   const [mapTab, setMapTab] = useState("aplicadores");
   const [collapsedNavGroups, setCollapsedNavGroups] = useNavGroups(NAV_GROUP_NAMES);
@@ -1644,6 +1646,7 @@ export default function App() {
             onNewInteraction={openNewInteractionForm}
             dailySignals={data.dailySignals}
             cronStatus={cronStatus}
+            whatsappHealth={whatsappHealth}
             onToggle={toggleTask}
             onOpenTask={setSelectedTaskId}
             onOpenInteraction={setSelectedInteractionId}

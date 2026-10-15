@@ -106,6 +106,14 @@ export async function loadCronStatus() {
   return data ? { lastRunAt: data.last_run_at, ok: data.ok } : null;
 }
 
+// Resultado del chequeo diario de WhatsApp (lo escribe el cron). undefined = no se sabe todavía.
+export async function loadWhatsAppHealth() {
+  if (!supabase) return undefined;
+  const { data, error } = await supabase.from('crm_system_status').select('last_run_at,ok,detail').eq('key', 'whatsapp-health').maybeSingle();
+  if (error) throw error;
+  return data ? { checkedAt: data.last_run_at, ok: data.ok, problems: data.detail?.problems || [], lastInboundAt: data.detail?.lastInboundAt || null } : null;
+}
+
 // Cada guardado del CRM pasa por acá. Si Supabase devuelve un 5xx pasajero
 // (o el PATCH ni siquiera llega a completarse por un corte de red), no tiene
 // sentido perder los cambios del usuario a la primera - se reintenta un par

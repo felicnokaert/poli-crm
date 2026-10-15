@@ -4,6 +4,7 @@ import { withRetry } from '../lib/retry.mjs';
 import { logError } from '../lib/log.mjs';
 import { runDailyBackup, cleanupOldBackups } from '../lib/backup.mjs';
 import { recordCronRun } from '../lib/cron-status.mjs';
+import { runWhatsAppHealthCheck } from '../lib/whatsapp-health.mjs';
 
 // Cron interno de mantenimiento (ver docs/AUDITORIA_MADUREZ_PRODUCTO_2026-09-12.md,
 // Automatización 35/100: "cero cron jobs... todo lo inteligente es manual o
@@ -149,6 +150,15 @@ export default async function handler(request, response) {
     logError('cron-daily-maintenance', 'failed at step "recordCronRun"', { ranAt: nowISO }, error);
   }
 
+  // Chequeo de que Meta sigue entregando mensajes (aviso en Inicio). Nunca tira abajo el cron.
+  let whatsappHealth = { skipped: true };
+  try {
+    whatsappHealth = await runWhatsAppHealthCheck(process.env);
+  } catch (error) {
+    logError('cron-daily-maintenance', 'failed at step "runWhatsAppHealthCheck"', { ranAt: nowISO }, error);
+    whatsappHealth = { ok: false, error: error.message || 'Error desconocido.' };
+  }
+
   const tasksClosed = results.reduce((sum, item) => sum + (item.tasksClosed || 0), 0);
   const autoFollowupTasksCreated = results.reduce((sum, item) => sum + (item.autoFollowupTasksCreated || 0), 0);
   const hotLeadsCount = results.reduce((sum, item) => sum + (item.hotLeadsCount || 0), 0);
@@ -160,6 +170,7 @@ export default async function handler(request, response) {
     workspacesProcessed: results.length,
     workspacesUpdated: results.filter((item) => item.changed).length,
     workspacesFailed: failed.length,
+    whatsappHealth: { ok: whatsappHealth.ok ?? null, problems: whatsappHealth.problems || [] },
     tasksClosed,
     summary: {
       descripcion: `Se cerraron ${tasksClosed} tarea(s) vencida(s) y se crearon ${autoFollowupTasksCreated} tarea(s) automática(s) de seguimiento en ${results.length} workspace(s)${failed.length ? `, ${failed.length} con error` : ''}.`,

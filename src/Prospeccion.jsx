@@ -780,11 +780,18 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         </div>
       </div>
 
-      <details className="panel research-panel">
+      <details className="panel research-panel" open>
         <summary><strong>Investigación profunda: Claude investiga por vos en la web</strong></summary>
         <div className="prospect-search-head">
           <div>
-            <h3>Investigación con IA externa</h3>
+            <h3>{requests ? 'Pedile a Claude una lista de empresas' : 'Investigación con IA externa'}</h3>
+            {requests && (
+              <ol className="muted small">
+                <li>Elegí familia, zona y cantidad.</li>
+                <li>Tocá «Pedir a Claude que investigue» (no cuesta nada extra).</li>
+                <li>Cuando Claude termina, las empresas aparecen solas en la cola de trabajo, con la fuente de cada dato.</li>
+              </ol>
+            )}
             <p className="muted">La búsqueda de verdad: una IA con modo de investigación avanzada recorre Google, Maps, sitios y redes y devuelve una tabla con evidencia y fuente por empresa. Tarda entre {RESEARCH_MINUTES.min} y {RESEARCH_MINUTES.max} minutos y no cuesta nada extra: usa tu suscripción a Claude, ChatGPT, Gemini o Perplexity. El CRM arma el pedido (con las empresas que ya tenés excluidas) y después importa el resultado.</p>
           </div>
         </div>
@@ -863,6 +870,8 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         )}
       </details>
 
+      <details className="panel prospect-experimental">
+        <summary><strong>Otras formas de buscar (experimental)</strong> <span className="muted small">búsqueda rápida en OpenStreetMap y en la web desde la app; los resultados pueden ser pocos o incompletos</span></summary>
       <div className="panel prospect-search">
         <div className="prospect-search-head">
           <div>
@@ -943,6 +952,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         )}
 
       </div>
+      </details>
       {message && <div className="system-message">{message}</div>}
 
       {form && (

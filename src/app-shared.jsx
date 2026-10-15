@@ -133,16 +133,27 @@ export function longToday() {
 }
 
 export function googleCalendarUrl(task) {
-  const start = String(task?.dueDate || today()).replaceAll("-", "");
-  const endDate = new Date(`${task?.dueDate || today()}T12:00:00`);
-  endDate.setDate(endDate.getDate() + 1);
-  const end = endDate.toISOString().slice(0, 10).replaceAll("-", "");
+  const day = String(task?.dueDate || today());
   const parameters = new URLSearchParams({
     action: "TEMPLATE",
     text: task?.title || "Seguimiento comercial",
-    dates: `${start}/${end}`,
     details: [task?.company, task?.trigger].filter(Boolean).join(" · "),
   });
+  if (task?.kind === "evento" && task?.startTime) {
+    const compact = (time) => `${time.replace(":", "")}00`;
+    const startHour = Number(task.startTime.slice(0, 2));
+    const fallbackEnd = `${String(Math.min(startHour + 1, 23)).padStart(2, "0")}:${task.startTime.slice(3, 5)}`;
+    const stamp = day.replaceAll("-", "");
+    parameters.set("dates", `${stamp}T${compact(task.startTime)}/${stamp}T${compact(task.endTime || fallbackEnd)}`);
+    parameters.set("ctz", "America/Argentina/Buenos_Aires");
+    if (task.place) parameters.set("location", task.place);
+    return `https://calendar.google.com/calendar/render?${parameters.toString()}`;
+  }
+  const start = day.replaceAll("-", "");
+  const endDate = new Date(`${day}T12:00:00`);
+  endDate.setDate(endDate.getDate() + 1);
+  const end = endDate.toISOString().slice(0, 10).replaceAll("-", "");
+  parameters.set("dates", `${start}/${end}`);
   return `https://calendar.google.com/calendar/render?${parameters.toString()}`;
 }
 

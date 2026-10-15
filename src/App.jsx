@@ -311,7 +311,7 @@ export default function App() {
       ).length,
       wins: (data.opportunities || []).filter((item) => item.stage === "Ganada")
         .length,
-      overdue: data.tasks.filter((task) => !task.done && task.dueDate < now)
+      overdue: data.tasks.filter((task) => !task.done && task.kind !== "evento" && task.dueDate < now)
         .length,
       dueToday: data.tasks.filter((task) => !task.done && task.dueDate === now)
         .length,
@@ -464,6 +464,18 @@ export default function App() {
     setData((current) => ({ ...current, welcomeDismissed: true }));
   }, [setData]);
   const openNewInteractionForm = useCallback(() => setShowForm(true), []);
+
+  const addEvent = useCallback((form) => {
+    const stamp = new Date().toISOString();
+    setData((current) => ({
+      ...current,
+      tasks: [...(current.tasks || []), {
+        id: crypto.randomUUID(), clientId: "", company: form.company || "", title: form.title, dueDate: form.date,
+        startTime: form.startTime, endTime: form.endTime || "", place: form.place || "", kind: "evento",
+        cadence: "Única", priority: "Media", done: false, createdAt: stamp, updatedAt: stamp,
+      }],
+    }));
+  }, []);
 
   const importTrelloPlan = useCallback(() => {
     setData((current) => {
@@ -1432,7 +1444,7 @@ export default function App() {
   // Señal única y barata para el ícono de "Tareas": tareas vencidas
   // (mismo criterio que overdueTasks en Dashboard.jsx).
   const overdueTaskCount = data.tasks.filter(
-    (task) => !task.done && task.dueDate && task.dueDate < today(),
+    (task) => !task.done && task.kind !== "evento" && task.dueDate && task.dueDate < today(),
   ).length;
   // Hot leads + cotizaciones frías en el ícono de "Por revisar": reutiliza
   // `dailySignals` (ya calculado y cacheado por el cron diario, ver
@@ -1719,6 +1731,7 @@ export default function App() {
             onTogglePlan={togglePlanCheck}
             onNavigate={setView}
             onImportPlan={importTrelloPlan}
+            onAddEvent={addEvent}
           />
         )}
         {view === "pipeline" && (

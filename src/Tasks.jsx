@@ -83,7 +83,7 @@ function taskListEmptyText({ items, filtered, filter, query }) {
   return "No hay tareas que coincidan con este filtro.";
 }
 
-function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, onNavigate, onImportPlan }) {
+function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, onNavigate, onImportPlan, onAddEvent }) {
   const [tab, setTab] = useState("tareas");
   const [filter, setFilter] = useState("pending");
   const [query, setQuery] = useState("");
@@ -118,7 +118,7 @@ function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, o
     return (
       <div className="content-stack">
         {tabs}
-        <Calendar tasks={items} date={today()} onToggleTask={onToggle} onOpenTask={onOpen} />
+        <Calendar tasks={items} date={today()} onToggleTask={onToggle} onOpenTask={onOpen} onAddEvent={onAddEvent} />
       </div>
     );
   }
@@ -199,7 +199,7 @@ export function TaskList({
   if (!items.length) return <Empty text={emptyText} />;
   const now = today();
   return items.map((task) => {
-    const overdue = !task.done && task.dueDate && task.dueDate < now;
+    const overdue = !task.done && task.dueDate && task.dueDate < now && task.kind !== "evento";
     return (
       <article className={`task-row ${task.done ? "done" : ""} ${overdue ? "overdue" : ""}`} key={task.id}>
         <button
@@ -220,7 +220,7 @@ export function TaskList({
           onClick={() => onOpen?.(task.id)}
         >
           <strong>
-            {task.title}
+            {task.kind === "evento" && task.startTime ? `${task.startTime} · ` : ""}{task.title}
             {task.origin && (
               <span className="task-origin-badge" title={`Creada automáticamente por: ${task.origin}`}>
                 <Bot size={11} /> {task.origin.replace(/^Automatización /i, "")}

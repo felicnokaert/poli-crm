@@ -463,6 +463,10 @@ export default function App() {
   }, [setData]);
   const openNewInteractionForm = useCallback(() => setShowForm(true), []);
 
+  const togglePlanCheck = useCallback((key, value) => {
+    setData((current) => ({ ...current, planChecks: { ...(current.planChecks || {}), [key]: value } }));
+  }, []);
+
   const toggleTask = useCallback((id) => {
     const stamp = new Date().toISOString();
     setData((current) => ({
@@ -1702,6 +1706,9 @@ export default function App() {
             onToggle={toggleTask}
             onOpen={setSelectedTaskId}
             onNew={openTaskForm}
+            planChecks={data.planChecks}
+            onTogglePlan={togglePlanCheck}
+            onNavigate={setView}
           />
         )}
         {view === "pipeline" && (

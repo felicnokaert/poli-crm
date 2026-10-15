@@ -637,3 +637,21 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .battlecard article { padding: 14px; border: 1px solid var(--color-border, #e3e3e0); border-radius: 12px; background: #fff; display: grid; gap: 8px; align-content: start; }
 .battlecard h3 { margin: 0; font-size: 14px; }
 .battlecard ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13px; }
+
+/* Rutina diaria */
+.routine-tabs { width: fit-content; margin-bottom: 4px; }
+.routine-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin: 4px 0 12px; }
+.routine-streak { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: #b45309; font-weight: 700; }
+.routine-list { display: grid; gap: 10px; }
+.routine-block { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; padding: 12px 14px; border: 1px solid var(--color-border, #e3e3e0); border-radius: 12px; background: #fff; }
+.routine-block.extra { border-style: dashed; }
+.routine-block.done { background: #f3f7f3; }
+.routine-block.done strong { text-decoration: line-through; color: #6b7a6b; }
+.routine-block > div { display: grid; gap: 4px; min-width: 0; }
+.routine-block p { margin: 0; font-size: 13px; line-height: 1.45; }
+.routine-week { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 16px; }
+.routine-day { display: grid; gap: 2px; justify-items: center; padding: 8px; border-radius: 10px; background: #f6f6f4; font-size: 12px; }
+.routine-day.today { outline: 2px solid var(--color-forest, #292929); }
+.routine-targets { margin-top: 14px; }
+.routine-targets ul { margin: 8px 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; }
+@media (max-width: 600px) { .routine-block { grid-template-columns: auto 1fr; } .routine-block > .secondary { grid-column: 2; justify-self: start; } }

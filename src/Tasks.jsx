@@ -3,6 +3,8 @@ import { Bot, CheckCircle2, Download, Plus, Search, X } from "lucide-react";
 import { formatDate } from "./utils.mjs";
 import { Empty, Fact } from "./ui-primitives";
 import { Routine } from "./Routine.jsx";
+import { Calendar } from "./Calendar.jsx";
+import { TRELLO_PLAN } from "./trello-plan.mjs";
 import { addDaysToToday, googleCalendarUrl, today, TRELLO_BOARD_URL, useModalEscape } from "./app-shared";
 
 // Mismo patrón que clientsToCsv/salesToCsv (client-csv.mjs, sales-model.mjs):
@@ -81,7 +83,7 @@ function taskListEmptyText({ items, filtered, filter, query }) {
   return "No hay tareas que coincidan con este filtro.";
 }
 
-function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, onNavigate }) {
+function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, onNavigate, onImportPlan }) {
   const [tab, setTab] = useState("tareas");
   const [filter, setFilter] = useState("pending");
   const [query, setQuery] = useState("");
@@ -101,13 +103,22 @@ function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, o
     <div className="segmented routine-tabs" role="tablist" aria-label="Tareas y rutina">
       <button type="button" role="tab" aria-selected={tab === "tareas"} className={tab === "tareas" ? "selected" : ""} onClick={() => setTab("tareas")}>Tareas</button>
       <button type="button" role="tab" aria-selected={tab === "rutina"} className={tab === "rutina" ? "selected" : ""} onClick={() => setTab("rutina")}>Rutina</button>
+      <button type="button" role="tab" aria-selected={tab === "calendario"} className={tab === "calendario" ? "selected" : ""} onClick={() => setTab("calendario")}>Calendario</button>
     </div>
   );
   if (tab === "rutina") {
     return (
       <div className="content-stack">
         {tabs}
-        <Routine date={today()} planChecks={planChecks || {}} onToggle={onTogglePlan} onNavigate={onNavigate} />
+        <Routine date={today()} planChecks={planChecks || {}} onToggle={onTogglePlan} onNavigate={onNavigate} tasks={items} onToggleTask={onToggle} plan={TRELLO_PLAN} onImportPlan={onImportPlan} />
+      </div>
+    );
+  }
+  if (tab === "calendario") {
+    return (
+      <div className="content-stack">
+        {tabs}
+        <Calendar tasks={items} date={today()} onToggleTask={onToggle} onOpenTask={onOpen} />
       </div>
     );
   }
@@ -224,6 +235,7 @@ export function TaskList({
             {task.trigger ? ` · ${task.trigger}` : ""}
           </span>
         </button>
+        {task.trelloUrl && <a className="task-trello" href={task.trelloUrl} target="_blank" rel="noreferrer">Trello</a>}
         <span className={`priority ${(task.priority || "Media").toLowerCase()}`}>
           {task.priority || "Media"}
         </span>

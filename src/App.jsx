@@ -68,6 +68,8 @@ import {
 } from "./online";
 import { inferIntent } from "./commercial-intelligence.mjs";
 import { makeRequestsApi } from "./prospect-requests.mjs";
+import { planTasks } from "./trello-plan-import.mjs";
+import { TRELLO_PLAN } from "./trello-plan.mjs";
 const Sales = lazy(() => import("./Sales"));
 // Vistas y modales que no se ven al abrir la app (la entrada es Hoy/dashboard):
 // cada una va a su propio chunk y se baja al entrar por primera vez. Login,
@@ -462,6 +464,13 @@ export default function App() {
     setData((current) => ({ ...current, welcomeDismissed: true }));
   }, [setData]);
   const openNewInteractionForm = useCallback(() => setShowForm(true), []);
+
+  const importTrelloPlan = useCallback(() => {
+    setData((current) => {
+      const added = planTasks(TRELLO_PLAN, current.tasks);
+      return added.length ? { ...current, tasks: [...(current.tasks || []), ...added] } : current;
+    });
+  }, []);
 
   const togglePlanCheck = useCallback((key, value) => {
     setData((current) => ({ ...current, planChecks: { ...(current.planChecks || {}), [key]: value } }));
@@ -1709,6 +1718,7 @@ export default function App() {
             planChecks={data.planChecks}
             onTogglePlan={togglePlanCheck}
             onNavigate={setView}
+            onImportPlan={importTrelloPlan}
           />
         )}
         {view === "pipeline" && (

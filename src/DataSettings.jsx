@@ -425,10 +425,10 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
             {message}
           </div>
         )}
-        {myChannels.length > 0 && (
+        {isChannelAdmin(session?.user?.email) && myChannels.length > 0 && (
           <>
             <p className="muted">
-              ¿Meta dice "Sin conexión" para tu número? Conectalo acá: se abre Meta, elegís
+              Solo para el administrador. Volver a conectar un número ya activo puede cortar la recepción de mensajes: hacelo solo siguiendo un plan. ¿Meta dice "Sin conexión" para tu número? Conectalo acá: se abre Meta, elegís
               "conectar una cuenta existente de WhatsApp Business" y seguís los pasos. Al
               terminar, el CRM te muestra el ID del número.
             </p>

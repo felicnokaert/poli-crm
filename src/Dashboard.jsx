@@ -493,6 +493,7 @@ function DashboardBase({
   myChannels,
   dailySignals,
   cronStatus,
+  whatsappHealth,
   onToggle,
   onOpenTask,
   onOpenInteraction,
@@ -603,6 +604,13 @@ function DashboardBase({
           </article>
         ))}
       </section>
+      {whatsappHealth && whatsappHealth.ok === false && myChannels.includes("general") && (
+        <section className="panel whatsapp-alert" role="alert">
+          <strong>WhatsApp: hay algo para revisar</strong>
+          <ul>{whatsappHealth.problems.map((line, index) => <li key={index}>{line}</li>)}</ul>
+          <button type="button" className="secondary" onClick={() => onNavigate("settings")}>Ir a Datos para el diagnóstico</button>
+        </section>
+      )}
       <AutomationSummary tasks={tasks} cronStatus={cronStatus} />
       <section className="two-columns">
         <article className="panel">

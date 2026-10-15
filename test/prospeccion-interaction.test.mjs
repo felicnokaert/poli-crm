@@ -378,6 +378,29 @@ describe("Prospeccion.jsx - cola de trabajo y ficha", () => {
   });
 });
 
+describe("Prospeccion.jsx - pedido a Claude", () => {
+  test("el pedido se guarda, y cuando Claude termina el resultado queda listo para revisar", async () => {
+    const mod = await loadJsxModule("src/Prospeccion.jsx");
+    let remote = { id: "", status: "pendiente", result_markdown: "" };
+    const requests = {
+      // Claude termina enseguida: la primera consulta de la app ya encuentra el resultado.
+      create: async (job) => { remote = { id: job.id, status: "lista", result_markdown: "| Empresa | Rubro |\\n|---|---|\\n| Corralón Uno | corralón |" }; },
+      fetch: async () => [remote],
+    };
+    const snapshots = [];
+    function Wrapper() {
+      const [state, setState] = React.useState({ clients: [], prospects: [], prospectSearches: [], researchJobs: [] });
+      const setData = (next) => setState((previous) => { const value = typeof next === "function" ? next(previous) : next; snapshots.push(value); return value; });
+      return React.createElement(mod.Prospeccion, { data: state, setData, userEmail: "a@b.com", onOpenClient: () => {}, cities: [], provinces: {}, requests });
+    }
+    render(React.createElement(Wrapper));
+    fireEvent.click(screen.getByText("Pedir a Claude que investigue"));
+    await waitFor(() => assert.equal(snapshots.at(-1).researchJobs.length, 1));
+    assert.equal(snapshots.at(-1).researchJobs[0].remote, true);
+    await waitFor(() => assert.equal(snapshots.at(-1).researchJobs[0].status, "Resultado listo"), { timeout: 3000 });
+  });
+});
+
 describe("Prospeccion.jsx - control de contacto", () => {
   test("la cola avisa si el teléfono tiene un problema de formato y ofrece WhatsApp si es celular", async () => {
     const mod = await loadJsxModule("src/Prospeccion.jsx");

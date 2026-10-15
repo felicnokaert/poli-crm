@@ -1,5 +1,6 @@
 import { authenticatedCorporateUser } from '../lib/corporate-auth.mjs';
 import { diagnoseMeta, repairWebhook, webhookStatus } from '../lib/meta-diagnose.mjs';
+import { recentWebhookCalls } from '../lib/webhook-log.mjs';
 
 const WABAS = {
   general: '1620643669067135',
@@ -34,7 +35,8 @@ export default async function handler(request, response) {
   if (request.body?.action === 'diagnose') {
     const report = await diagnoseMeta({ token: process.env.META_SYSTEM_USER_TOKEN, wabas: { ...WABAS, ...DIAGNOSE_ONLY } });
     const webhook = await webhookStatus({ appId: report.token?.appId, appSecret: process.env.META_APP_SECRET, expectedUrl: WEBHOOK_URL });
-    return response.status(200).json({ ok: true, ...report, webhook });
+    const webhookCalls = await recentWebhookCalls();
+    return response.status(200).json({ ok: true, ...report, webhook, webhookCalls });
   }
 
   // Deja el webhook de la app apuntando de nuevo al CRM (URL + campo `messages`).

@@ -561,7 +561,8 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       const knownHosts = new Set([...prospects, ...clients].map((item) => String(item.website || '').toLowerCase().replace(/^https?:\/\/(www\.)?/, '').split('/')[0]).filter(Boolean));
       const candidates = (found.payload.candidates || []).filter((item) => !knownHosts.has(item.host)).slice(0, 10);
       if (!candidates.length) {
-        setWeb({ running: false, log: [], summary: found.payload.answered ? 'Los buscadores no devolvieron empresas nuevas para esta zona y rubros. Probá con otros rubros.' : 'Los buscadores web no respondieron (pueden estar bloqueando consultas automáticas). Probá más tarde o usá la búsqueda en OpenStreetMap.' });
+        const detail = (found.payload.engines || []).length ? ` Detalle: ${found.payload.engines.join(' · ')}.` : '';
+        setWeb({ running: false, log: [], summary: (found.payload.rawResults ? `Los buscadores devolvieron ${found.payload.rawResults} resultados, pero ninguna empresa nueva con sitio propio (el resto eran redes, directorios o empresas que ya tenés). Probá con otros rubros.` : 'Los buscadores web no devolvieron resultados (pueden estar bloqueando consultas automáticas). Probá más tarde o usá la búsqueda en OpenStreetMap.') + detail });
         return;
       }
       const log = [];

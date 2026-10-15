@@ -55,11 +55,8 @@ export default async function handler(request, response) {
     return response.status(200).json({ ok: true, source: 'Google Maps', radiusKm, count: googleResults.length, truncated: false, stats: summarizeResults(googleResults), attempts: 1, ms: found.ms, endpoint: 'places.googleapis.com', results: googleResults });
   }
   const stages = buildOverpassStages({ lat, lon, radiusKm, rubros });
-  const endpoints = OVERPASS_ENDPOINTS.slice(0, 2); // 2 servidores por etapa: entra en los 60 s de la función
-  const runs = [];
-  for (const name of ['tags', 'names']) {
-    if (stages[name]) runs.push({ name, result: await searchOverpass(stages[name], fetch, endpoints, STAGE_TIMEOUTS_MS[name]) });
-  }
+  // Las dos etapas corren a la vez y cada una prueba los 3 servidores (10 s cada uno): máximo ~30 s.
+  const runs = await Promise.all(['tags', 'names'].filter((name) => stages[name]).map(async (name) => ({ name, result: await searchOverpass(stages[name], fetch, OVERPASS_ENDPOINTS, STAGE_TIMEOUTS_MS[name]) })));
   const worked = runs.filter((run) => run.result.ok);
   const attempts = runs.reduce((sum, run) => sum + run.result.attempts, 0);
   const ms = runs.reduce((sum, run) => sum + run.result.ms, 0);

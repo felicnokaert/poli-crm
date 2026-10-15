@@ -633,3 +633,7 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .outreach-body .panel-head-actions { justify-content: flex-start; }
 .reply-template { margin: 10px 0; padding: 10px 12px; border-left: 3px solid var(--color-border, #d8d8d4); background: #f7f7f5; border-radius: 8px; font-size: 13px; line-height: 1.45; }
 .reply-card .panel-head-actions { justify-content: flex-start; gap: 8px; margin-top: 8px; }
+.battlecard { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 16px; }
+.battlecard article { padding: 14px; border: 1px solid var(--color-border, #e3e3e0); border-radius: 12px; background: #fff; display: grid; gap: 8px; align-content: start; }
+.battlecard h3 { margin: 0; font-size: 14px; }
+.battlecard ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13px; }

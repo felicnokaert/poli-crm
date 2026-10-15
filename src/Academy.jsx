@@ -15,6 +15,7 @@ import {
   findObjections,
 } from "./commercial-knowledge.mjs";
 import PriceMemory from "./PriceMemory";
+import { buildBattlecard } from "./competitor-battlecard.mjs";
 import { Empty, Goal } from "./ui-primitives";
 
 export function QuickReplies({ myChannels }) {
@@ -98,7 +99,51 @@ export function QuickReplies({ myChannels }) {
 // nada de esto - sin memo, cualquier estado ajeno de App.jsx (tipear en el
 // buscador de otra pantalla, el tick de syncStatus) volvía a renderizar
 // toda la Academia sin ningún prop distinto.
-function AcademyBase({ myChannels, interactions, data, setData }) {
+export function CompetitorTalk({ supabase }) {
+  const [rows, setRows] = useState(null);
+  const [selected, setSelected] = useState("");
+  useEffect(() => {
+    if (!supabase) { setRows([]); return; }
+    supabase.from("competitors").select("id,name,kind,families,summary,caveats").order("name").then(({ data, error }) => {
+      setRows(error ? [] : (data || []).filter((item) => item.kind !== "cliente"));
+    });
+  }, [supabase]);
+  const current = (rows || []).find((item) => item.id === selected);
+  const card = current ? buildBattlecard(current) : null;
+  return (
+    <section className="panel">
+      <div className="panel-head">
+        <div>
+          <span className="eyebrow">Competencia</span>
+          <h2>Qué hacer si el cliente nombra a un competidor</h2>
+          <p>Elegí la empresa que mencionó. La guía usa solo lo verificado en su ficha y los principios de Academia.</p>
+        </div>
+      </div>
+      {rows === null && <p className="muted">Cargando…</p>}
+      {rows && rows.length === 0 && <p className="muted">{supabase ? "Todavía no hay competidores cargados." : "Esta guía está disponible en la versión en línea."}</p>}
+      {rows && rows.length > 0 && (
+        <label>El cliente nombró a…
+          <select aria-label="Competidor nombrado" value={selected} onChange={(event) => setSelected(event.target.value)}>
+            <option value="">Elegí un competidor</option>
+            {rows.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+          </select>
+        </label>
+      )}
+      {card && (
+        <div className="battlecard">
+          <article><h3>Qué sabemos</h3><p>{card.known || "Sin resumen cargado."}</p></article>
+          {card.overlap.length > 0 && <article><h3>Dónde nos cruzamos</h3><ul>{card.overlap.map((line) => <li key={line}>{line}</li>)}</ul></article>}
+          <article><h3>Preguntas para abrir la conversación</h3><ul>{card.ask.map((line) => <li key={line}>{line}</li>)}</ul></article>
+          <article><h3>Cómo decirlo</h3><blockquote className="reply-template">{card.open}</blockquote></article>
+          <article><h3>Qué no sabemos (averiguá)</h3><ul>{card.unknown.map((line) => <li key={line}>{line}</li>)}</ul></article>
+          <article><h3>Evitá</h3><ul>{card.avoid.map((line) => <li key={line}>{line}</li>)}</ul></article>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function AcademyBase({ myChannels, interactions, data, setData, supabase }) {
   const [section, setSection] = useState("method");
   return (
     <div className="content-stack">
@@ -112,11 +157,13 @@ function AcademyBase({ myChannels, interactions, data, setData }) {
           <button className={section === "method" ? "selected" : ""} onClick={() => setSection("method")}>Método</button>
           <button className={section === "objections" ? "selected" : ""} onClick={() => setSection("objections")}>Objeciones</button>
           <button className={section === "profiles" ? "selected" : ""} onClick={() => setSection("profiles")}>Perfiles</button>
+          <button className={section === "competition" ? "selected" : ""} onClick={() => setSection("competition")}>Competencia</button>
           <button className={section === "library" ? "selected" : ""} onClick={() => setSection("library")}>Biblioteca y práctica</button>
           <button className={section === "coach" ? "selected" : ""} onClick={() => setSection("coach")}>Evaluar conversaciones</button>
         </div>
       </section>
       {["method", "objections", "profiles"].includes(section) && <CommercialKnowledge section={section} />}
+      {section === "competition" && <CompetitorTalk supabase={supabase} />}
       {section === "library" && <QuickReplies myChannels={myChannels} />}
       {section === "coach" && (
         <>

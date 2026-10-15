@@ -1776,6 +1776,7 @@ export default function App() {
               interactions={data.interactions}
               data={data}
               setData={setData}
+              supabase={supabase}
             />
           </Suspense>
         )}

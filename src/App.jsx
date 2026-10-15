@@ -212,6 +212,14 @@ function loadState() {
 }
 
 export default function App() {
+  const [narrowScreen, setNarrowScreen] = useState(() => typeof window !== "undefined" && window.matchMedia?.("(max-width: 760px)").matches);
+  useEffect(() => {
+    const query = window.matchMedia?.("(max-width: 760px)");
+    if (!query) return undefined;
+    const onChange = (event) => setNarrowScreen(event.matches);
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  }, []);
   const prospectRequests = useMemo(() => makeRequestsApi(supabase), []);
   const confirm = useConfirm();
   const [data, setData] = useState(loadState);
@@ -1503,7 +1511,8 @@ export default function App() {
             // adentro tuyo la pantalla en la que estás. El resto respeta lo
             // que el usuario eligió.
             const isActiveGroup = items.some(([id]) => id === view);
-            const collapsed = collapsedNavGroups.includes(group) && !isActiveGroup;
+            // En el celular los títulos de sección no se muestran, así que nunca se colapsa.
+            const collapsed = collapsedNavGroups.includes(group) && !isActiveGroup && !narrowScreen;
             return (
               <div className={`nav-group ${collapsed ? "collapsed" : ""}`} key={group}>
                 <button

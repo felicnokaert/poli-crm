@@ -10,7 +10,6 @@ import {
   MessageCircle,
   Inbox,
   Plus,
-  Scale,
   Search,
   Target,
   Trash2,
@@ -77,7 +76,6 @@ const Sales = lazy(() => import("./Sales"));
 const lazyNamed = (loader, name) => lazy(() => loader().then((m) => ({ default: m[name] })));
 const Pipeline = lazyNamed(() => import("./Pipeline"), "Pipeline");
 const Clients = lazyNamed(() => import("./Clients"), "Clients");
-const Competencia = lazyNamed(() => import("./Competencia"), "Competencia");
 const Prospeccion = lazyNamed(() => import("./Prospeccion"), "Prospeccion");
 const Contacts = lazyNamed(() => import("./Clients"), "Contacts");
 const Conversations = lazyNamed(() => import("./Conversations"), "Conversations");
@@ -1397,7 +1395,6 @@ export default function App() {
     ["Cartera", [
       ["clients", "Empresas", Building2],
       ["prospecting", "Prospección", Search],
-      ["competition", "Competencia", Scale],
       ["contacts", "Contactos", Users],
       ["map", "Mapa", MapPin],
     ]],
@@ -1749,12 +1746,7 @@ export default function App() {
         )}
         {view === "prospecting" && (
           <Suspense fallback={<Splash text="Cargando prospección…" />}>
-            <Prospeccion data={data} setData={setData} userEmail={session?.user?.email} session={session} onOpenClient={setSelectedClientId} requests={prospectRequests} />
-          </Suspense>
-        )}
-        {view === "competition" && (
-          <Suspense fallback={<Splash text="Cargando competencia…" />}>
-            <Competencia supabase={supabase} userEmail={session?.user?.email} />
+            <Prospeccion data={data} setData={setData} userEmail={session?.user?.email} session={session} onOpenClient={setSelectedClientId} requests={prospectRequests} supabase={supabase} />
           </Suspense>
         )}
         {view === "contacts" && (

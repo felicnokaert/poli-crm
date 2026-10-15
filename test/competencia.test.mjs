@@ -54,3 +54,21 @@ test('filtra por familia y oculta las familias sin competidores', async () => {
   assert.equal(screen.queryByRole('button', { name: 'Penosil' }), null);
   assert.equal(screen.queryByRole('button', { name: 'Poliurea' }), null);
 });
+
+test('cargar un competidor nuevo deja un pedido en la cola con los links', async () => {
+  const { Competencia, buildNewCompetitorPrompt, newCompetitorLabel, hostOf } = await loadJsxModule('src/Competencia.jsx');
+  assert.equal(hostOf('https://www.ejemplo.com.ar/x'), 'ejemplo.com.ar');
+  assert.equal(newCompetitorLabel({ website: 'www.ejemplo.com.ar' }), 'ejemplo.com.ar');
+  assert.match(buildNewCompetitorPrompt({ name: 'Foam SA', instagram: '@foamsa' }), /Instagram: @foamsa/);
+  const inserts = [];
+  render(React.createElement(Competencia, { supabase: fakeSupabase(inserts), userEmail: 'V@x.com', families: ['Planchas'] }));
+  await screen.findByText('Argenpur S.A.');
+  fireEvent.click(screen.getByRole('button', { name: /Cargar un competidor nuevo/ }));
+  fireEvent.click(screen.getByRole('button', { name: /Cargar y que la IA investigue/ }));
+  assert.equal(inserts.length, 0, 'sin ningún dato no se envía');
+  fireEvent.change(screen.getByLabelText('Instagram'), { target: { value: '@foamsa' } });
+  fireEvent.click(screen.getByRole('button', { name: /Cargar y que la IA investigue/ }));
+  await waitFor(() => assert.equal(inserts.length, 1));
+  assert.match(inserts[0].row.family, /^COMPETENCIA NUEVA: /);
+  assert.equal(inserts[0].row.user_email, 'v@x.com');
+});

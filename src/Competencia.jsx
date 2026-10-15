@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, Search } from 'lucide-react';
 import { AI_TOOLS } from './prospect-playbook.mjs';
 
@@ -13,6 +13,28 @@ export function buildCompetitorPrompt(competitor) {
   ].join('\n');
 }
 
+export function hostOf(value = '') {
+  const text = String(value).trim();
+  if (!text) return '';
+  try { return new URL(/^https?:\/\//i.test(text) ? text : `https://${text}`).hostname.replace(/^www\./, ''); } catch { return ''; }
+}
+
+export function newCompetitorLabel(form = {}) {
+  return String(form.name || '').trim() || hostOf(form.website) || hostOf(form.instagram) || hostOf(form.facebook) || '';
+}
+
+export function buildNewCompetitorPrompt(form = {}) {
+  const links = [['Sitio web', form.website], ['Facebook', form.facebook], ['Instagram', form.instagram]].filter(([, value]) => String(value || '').trim());
+  return [
+    `Un comercial de Grupo Poliplast (poliuretano, fibra de vidrio y resinas en Argentina) encontró un posible competidor y quiere su ficha: "${newCompetitorLabel(form)}".`,
+    links.length ? `Datos que cargó: ${links.map(([label, value]) => `${label}: ${String(value).trim()}`).join(' · ')}.` : 'No cargó links: buscá la empresa por el nombre.',
+    form.family ? `Familia de Poliplast con la que compite, según el comercial: ${form.family}.` : 'Decidí con qué familias de Poliplast compite (Penosil, Carrozados, Imperpur, Planchas, Resinplast, PURMAC, Poliurea, Poliuretano, Química).',
+    'Investigá en la web con fuente y link para cada dato: qué es (fabricante, distribuidor o comercio), productos, dónde está, canales de venta, precios publicados si los hay, redes, teléfono y email comerciales. Facebook e Instagram suelen no poder leerse: usalos para el nombre y los links, y buscá la información en la web y en otras fuentes.',
+    'No inventes nada: lo que no se pueda verificar va como "no verificado". Si no es un competidor real, decilo.',
+    'Al terminar, creá la ficha en la tabla competitors con reviewed = false.',
+  ].join('\n');
+}
+
 export function filterCompetitors(rows = [], family = 'Todas') {
   if (!family || family === 'Todas') return rows;
   return rows.filter((item) => (item.families || []).includes(family));
@@ -24,6 +46,7 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
   const [family, setFamily] = useState(initialFamily);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [form, setForm] = useState(null);
 
   useEffect(() => { setFamily(initialFamily || 'Todas'); }, [initialFamily]);
 
@@ -31,7 +54,7 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
     if (!supabase) { setRows([]); return; }
     const [comp, reqs] = await Promise.all([
       supabase.from('competitors').select('*').order('name'),
-      supabase.from('prospect_requests').select('id,family,status,progress,result_markdown,created_at').like('family', 'COMPETENCIA:%').order('created_at', { ascending: false }),
+      supabase.from('prospect_requests').select('id,family,status,progress,result_markdown,created_at').like('family', 'COMPETENCIA%').order('created_at', { ascending: false }),
     ]);
     if (comp.error) { setError('No se pudieron cargar las fichas.'); setRows([]); return; }
     setRows(comp.data || []);
@@ -53,6 +76,25 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
     }
   }
 
+  async function submitNew(event) {
+    event.preventDefault();
+    const label = newCompetitorLabel(form);
+    if (!label) { setMessage('Cargá al menos el nombre, la web, el Facebook o el Instagram.'); return; }
+    try {
+      const { error: insertError } = await supabase.from('prospect_requests').insert({
+        id: crypto.randomUUID(), user_email: String(userEmail || '').trim().toLowerCase(),
+        family: `COMPETENCIA NUEVA: ${label}`, scope: [form.website, form.facebook, form.instagram].filter(Boolean).join(' · ') || 'solo nombre',
+        wanted: 1, notes: form.family || '', prompt: buildNewCompetitorPrompt(form),
+      });
+      if (insertError) throw insertError;
+      setForm(null);
+      setMessage(`Cargado: ${label}. La IA arma la ficha en la próxima hora y aparece acá marcada "sin revisar".`);
+      load();
+    } catch {
+      setMessage('No se pudo cargar el competidor. Probá de nuevo.');
+    }
+  }
+
   async function copy(competitor) {
     try {
       await navigator.clipboard.writeText(buildCompetitorPrompt(competitor));
@@ -64,6 +106,7 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
 
   const available = (families || []).filter((name) => (rows || []).some((item) => (item.families || []).includes(name)));
   const shown = filterCompetitors(rows || [], family);
+  const waiting = useMemo(() => requests.filter((req) => req.family.startsWith('COMPETENCIA NUEVA:') && req.status !== 'lista'), [requests]);
 
   return (
     <details className="panel competitor-panel" open>
@@ -74,6 +117,43 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
           <button key={name} type="button" className={family === name ? 'selected' : ''} aria-pressed={family === name} onClick={() => setFamily(name)}>{name}</button>
         ))}
       </div>
+      {supabase && (
+        <div className="panel-head-actions">
+          <button type="button" className="secondary" onClick={() => setForm(form ? null : { name: '', website: '', facebook: '', instagram: '', family: '' })}>+ Cargar un competidor nuevo</button>
+        </div>
+      )}
+      {form && (
+        <form className="form-grid" onSubmit={submitNew}>
+          <p className="muted small span-2">Alcanza con uno de los datos. La IA busca el resto y arma la ficha con fuentes.</p>
+          <label>Nombre<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
+          <label>Sitio web<input value={form.website} onChange={(event) => setForm({ ...form, website: event.target.value })} placeholder="ejemplo.com.ar" /></label>
+          <label>Facebook<input value={form.facebook} onChange={(event) => setForm({ ...form, facebook: event.target.value })} /></label>
+          <label>Instagram<input value={form.instagram} onChange={(event) => setForm({ ...form, instagram: event.target.value })} /></label>
+          <label>Familia con la que compite (opcional)
+            <select value={form.family} onChange={(event) => setForm({ ...form, family: event.target.value })}>
+              <option value="">No sé</option>
+              {families.map((name) => <option key={name}>{name}</option>)}
+            </select>
+          </label>
+          <div className="panel-head-actions span-2">
+            <button type="submit" className="primary">Cargar y que la IA investigue</button>
+            <button type="button" className="secondary" onClick={() => setForm(null)}>Cancelar</button>
+          </div>
+        </form>
+      )}
+      {waiting.length > 0 && (
+        <div className="history-list">
+          {waiting.map((req) => (
+            <article key={req.id} className="history-card">
+              <div>
+                <strong>{req.family.replace('COMPETENCIA NUEVA: ', '')}</strong>
+                <span className="muted small">{String(req.created_at).slice(0, 10)} · <em className="badge">{req.status === 'lista' ? 'ficha creada' : req.status === 'error' ? 'falló' : 'en proceso'}</em></span>
+                {req.status === 'error' && req.progress && <span className="muted small">{req.progress}</span>}
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
       {message && <div className="system-message">{message}</div>}
       {error && <div className="system-message">{error}</div>}
       {rows && rows.length === 0 && !error && <p className="muted">{supabase ? 'Todavía no hay competidores cargados.' : 'Las fichas de competencia están disponibles en la versión en línea.'}</p>}
@@ -85,7 +165,7 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
             <article key={item.id} className="unit-card competitor-card">
               <div>
                 <strong>{item.name}</strong>
-                <span><em className="badge">{item.kind}</em> {(item.families || []).join(' · ')}</span>
+                <span><em className="badge">{item.kind}</em>{item.reviewed === false && <em className="badge warn">Cargada por IA, sin revisar</em>} {(item.families || []).join(' · ')}</span>
                 <span>{item.summary}</span>
                 <span><b>Productos:</b> {(item.products || []).join(' · ')}</span>
                 <span><b>Dónde:</b> {item.location}</span>

@@ -110,3 +110,23 @@ test('applyDuplicateReviewDecisions: un par "postponed" reaparece si surge una s
   assert.equal(visible.length, 1);
   assert.equal(visible[0].id, candidate.id);
 });
+
+import { detectDuplicateClientCandidates as detectDup } from '../src/duplicate-candidates.mjs';
+const mkc = (id, company, extra = {}) => ({ id, company, contacts: [], ...extra });
+
+test('un mail usado por 3 o más fichas (contador, mail del equipo) no genera duplicados', () => {
+  const c = detectDup([mkc('1', 'Alfa SA', { email: 'conta@estudio.com' }), mkc('2', 'Beta SRL', { email: 'conta@estudio.com' }), mkc('3', 'Gamma SA', { email: 'conta@estudio.com' })]);
+  assert.equal(c.length, 0);
+});
+
+test('el mail propio de la empresa no marca duplicados', () => {
+  const c = detectDup([mkc('1', 'Alfa SA', { email: 'felipe@grupopoliplast.com.ar' }), mkc('2', 'Beta SRL', { email: 'felipe@grupopoliplast.com.ar' })]);
+  assert.equal(c.length, 0);
+});
+
+test('mismo teléfono con nombres sin relación queda en "revisar" (baja), con nombre parecido sigue en media', () => {
+  const distinct = detectDup([mkc('1', 'Mundo Ambiental SRL', { phone: '1140571045' }), mkc('2', 'Daniel Petitti Repuestos', { phone: '1140571045' })]);
+  assert.equal(distinct[0].confidence, 'low');
+  const similar = detectDup([mkc('1', 'Purcat', { phone: '3834022006' }), mkc('2', 'Purcat S. R. L.', { phone: '3834022006' })]);
+  assert.notEqual(similar[0].confidence, 'low');
+});

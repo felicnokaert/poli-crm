@@ -15,18 +15,32 @@ function valuesFor(client, field) {
   return [];
 }
 
-function intersects(left = [], right = []) {
+function intersects(left = [], right = [], ignored = new Set()) {
   const rightSet = new Set(right);
-  return left.some((value) => rightSet.has(value));
+  return left.some((value) => rightSet.has(value) && !ignored.has(value));
 }
 
-function signalsFor(left, right) {
+// Direcciones propias de la empresa: aparecen en muchas fichas porque el equipo las usa como contacto, no indican duplicado.
+// Los mails se comparan normalizados (puntos como espacios).
+const INTERNAL_EMAIL = /@(grupopoliplast|poliplast) com ar$/;
+const NAME_STOPWORDS = new Set(['sa', 'srl', 'sas', 'sh', 'de', 'del', 'la', 'el', 'los', 'las', 'y', 'e', 'sociedad', 'anonima', 'limitada', 'cia', 'ltda', 'coop', 'cooperativa']);
+
+function nameTokens(value = '') {
+  return normalizedText(value).split(' ').filter((token) => token.length >= 4 && !NAME_STOPWORDS.has(token));
+}
+
+function sharesNameWord(left, right) {
+  const a = new Set([...nameTokens(left.company), ...nameTokens(left.legalName)]);
+  return [...nameTokens(right.company), ...nameTokens(right.legalName)].some((token) => a.has(token));
+}
+
+function signalsFor(left, right, shared = { phone: new Set(), email: new Set() }) {
   const signals = [];
   const leftCuit = normalizedCuit(left.cuit);
   const rightCuit = normalizedCuit(right.cuit);
   if (leftCuit && leftCuit === rightCuit) signals.push({ type: 'cuit_exact', strength: 'strong', label: 'CUIT exacto' });
-  if (intersects(valuesFor(left, 'phone'), valuesFor(right, 'phone'))) signals.push({ type: 'phone_exact', strength: 'strong', label: 'Teléfono exacto' });
-  if (intersects(valuesFor(left, 'email'), valuesFor(right, 'email'))) signals.push({ type: 'email_exact', strength: 'strong', label: 'Email exacto' });
+  if (intersects(valuesFor(left, 'phone'), valuesFor(right, 'phone'), shared.phone)) signals.push({ type: 'phone_exact', strength: 'strong', label: 'Teléfono exacto' });
+  if (intersects(valuesFor(left, 'email'), valuesFor(right, 'email'), shared.email)) signals.push({ type: 'email_exact', strength: 'strong', label: 'Email exacto' });
 
   const leftLegal = normalizedText(left.legalName);
   const rightLegal = normalizedText(right.legalName);
@@ -38,7 +52,11 @@ function signalsFor(left, right) {
   return signals;
 }
 
-function confidenceFor(signals) {
+function confidenceFor(signals, left, right) {
+  // Solo comparten un teléfono o un mail y los nombres no tienen nada en común (ej. dos empresas
+  // distintas con el mismo contador): se muestra, pero como "revisar", no como duplicado probable.
+  const onlyContact = signals.every((item) => item.type === 'phone_exact' || item.type === 'email_exact');
+  if (onlyContact && signals.length === 1 && left && right && !sharesNameWord(left, right)) return 'low';
   const strong = signals.filter((item) => item.strength === 'strong').length;
   if (strong >= 2 || signals.some((item) => item.type === 'cuit_exact')) return 'high';
   if (strong === 1) return 'medium';
@@ -63,8 +81,17 @@ export function detectDuplicateClientCandidates(clients = []) {
     add(indexes.legalName, normalizedText(client.legalName), clientIndex);
     add(indexes.company, normalizedText(client.company), clientIndex);
   });
+  // Un teléfono o mail que figura en 3 o más fichas es un contacto compartido (estudio contable,
+  // distribuidor, mail del equipo): no sirve para decir que son la misma empresa.
+  const shared = { phone: new Set(), email: new Set() };
+  for (const kind of ['phone', 'email']) {
+    indexes[kind].forEach((members, value) => {
+      if (new Set(members).size >= 3 || (kind === 'email' && INTERNAL_EMAIL.test(value))) shared[kind].add(value);
+    });
+  }
   const pairKeys = new Set();
-  Object.values(indexes).forEach((index) => index.forEach((members) => {
+  Object.entries(indexes).forEach(([kind, index]) => index.forEach((members, value) => {
+    if ((kind === 'phone' || kind === 'email') && shared[kind].has(value)) return;
     const unique = [...new Set(members)];
     for (let left = 0; left < unique.length; left += 1) {
       for (let right = left + 1; right < unique.length; right += 1) {
@@ -78,8 +105,8 @@ export function detectDuplicateClientCandidates(clients = []) {
       const left = clients[leftIndex];
       const right = clients[rightIndex];
       if (!left?.id || !right?.id || left.id === right.id) continue;
-      const signals = signalsFor(left, right);
-      const confidence = confidenceFor(signals);
+      const signals = signalsFor(left, right, shared);
+      const confidence = confidenceFor(signals, left, right);
       if (!confidence) continue;
       candidates.push({
         id: [left.id, right.id].sort().join('::'),

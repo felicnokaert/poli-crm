@@ -17,3 +17,11 @@
 **Límites honestos**
 - No es instantáneo: depende de que le pidas a Claude que procese (o de programar una tarea que lo haga cada cierto tiempo).
 - Consume el uso de tu suscripción de Claude, no crédito de API.
+
+## Procesamiento automático (tarea programada, cuenta de marketing)
+Una tarea programada de Claude (cuenta marketing@grupopoliplast.com.ar, sin API) corre cada hora y procesa los pedidos pendientes. Tipos de pedido, por el prefijo de `family`:
+- **Familia normal** (Penosil, Carrozados, etc.): prospección; seguir las instrucciones de arriba.
+- **`COMPETENCIA: <nombre>`**: profundizar una ficha existente. Investigar según el `prompt` y guardar el informe en `result_markdown`.
+- **`COMPETENCIA NUEVA: <nombre>`**: un comercial cargó un competidor (nombre y/o web/Facebook/Instagram en `scope`; familia sugerida en `notes`). Investigar en la web con fuente por dato (Facebook/Instagram suelen no poder leerse: usarlos solo para nombre y links). Si es un competidor real, hacer `insert into competitors` con `id` (slug), `name`, `kind` (fabricante/distribuidor/comercio/marca/equipos), `families` (de Penosil, Carrozados, Imperpur, Planchas, Resinplast, PURMAC, Poliurea, Poliuretano, Química), `summary`, `products`, `location`, `website`, `channels`, `sources` (json `[{"t","u"}]`), `caveats` (lo no verificado) y **`reviewed = false`**. Marcar el pedido `lista` con un resumen; si no es competidor real o no se encuentra, `status = 'error'` y `progress` con el motivo.
+
+Reglas: nunca inventar datos; pocas fichas verificadas antes que muchas dudosas; máximo 5 pedidos por corrida (el resto queda `pendiente` para la próxima); no mandar mensajes a nadie; no borrar datos.

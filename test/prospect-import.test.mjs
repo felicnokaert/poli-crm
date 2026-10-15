@@ -68,3 +68,12 @@ test('al pasar a Empresa se llevan el contacto, la máquina, el proveedor y las 
   assert.deepEqual([client.contact, client.machine, client.currentSupplier, client.family], ['Marcos', 'Pegadora', 'Argenpur', 'Poliuretano']);
   assert.equal(client.notes, 'Compra por pallet · Producto / propuesta: Plancha 1000x1100 · Próxima acción: Llamar (2026-10-21)');
 });
+
+test('la columna "Por qué encaja" de la investigación se guarda en las notas', async () => {
+  const { parseProspectsText, buildImportPlan } = await import('../src/prospect-import.mjs');
+  const parsed = parseProspectsText('| Empresa | Evidencia (con link a la fuente) | Por qué encaja (1 frase) |\n|---|---|---|\n| Casillas Sur | https://casillas.com.ar | Laminado propio en PRFV |');
+  const plan = buildImportPlan(parsed.rows, [], []);
+  const notes = plan.items[0].prospect.notes;
+  assert.match(notes, /Por qué encaja: Laminado propio en PRFV/);
+  assert.match(notes, /Evidencia: https:\/\/casillas\.com\.ar/);
+});

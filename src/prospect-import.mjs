@@ -20,7 +20,7 @@ const HEADERS = new Map([
   ['proxima accion', 'nextAction'], ['fecha proxima accion', 'nextDate'],
   // Tablas de investigación avanzada (IA)
   ['ubicacion', 'location'], ['ubicacion ciudad provincia', 'location'], ['tipo', 'rubro'], ['tamano', 'size'], ['tamano estimado', 'size'],
-  ['evidencia', 'evidence'], ['evidencia con link a la fuente', 'evidence'], ['evidencia tambor ibc', 'evidence'], ['instagram facebook', 'instagram'], ['sitio', 'website'],
+  ['evidencia', 'evidence'], ['evidencia con link a la fuente', 'evidence'], ['evidencia tambor ibc', 'evidence'], ['instagram facebook', 'instagram'], ['sitio', 'website'], ['por que encaja', 'fit'], ['por que encaja 1 frase', 'fit'],
 ]);
 
 function plain(value = '') {
@@ -95,8 +95,9 @@ export function prospectFieldsFromRow(row) {
     if (!row.province && rest.length) fields.province = rest.join(', ');
   }
   delete fields.location;
-  const extra = [row.evidence && `Evidencia: ${row.evidence}`, row.size && `Tamaño: ${row.size}`].filter(Boolean);
+  const extra = [row.evidence && `Evidencia: ${row.evidence}`, row.fit && `Por qué encaja: ${row.fit}`, row.size && `Tamaño: ${row.size}`].filter(Boolean);
   delete fields.evidence;
+  delete fields.fit;
   delete fields.size;
   if (extra.length) fields.notes = [row.notes, ...extra].filter(Boolean).join('\n');
   fields.imported = Object.keys(imported).length ? imported : null;

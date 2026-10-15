@@ -581,7 +581,8 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .day-hero { border-left: 4px solid var(--brand-red, #ed1c24); }
 .day-hero-head h2 { margin: 2px 0 4px; text-transform: none; }
 .day-hero-head p { margin: 0; color: var(--brand-gray, #999b9e); font-size: 1.02rem; }
-.day-hero-head .eyebrow { text-transform: capitalize; }
+.day-hero-head .eyebrow { text-transform: none; letter-spacing: .04em; }
+.day-hero-head .eyebrow::first-letter { text-transform: uppercase; }
 .day-hero-urgent { margin-top: 14px; }
 .metric-card strong { font-variant-numeric: tabular-nums; }
 

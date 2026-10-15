@@ -520,7 +520,7 @@ function DashboardBase({
   const hotLeads = (signalsAreFresh ? dailySignals.hotLeads : findStaleHotLeads(inbox)).slice(0, 6);
   const staleClients = (signalsAreFresh ? dailySignals.staleClients : findStaleClients(clients, sales, inbox)).slice(0, 6);
   const expiredQuotes = (signalsAreFresh ? dailySignals.expiredQuotes : findExpiredQuotes(clients, sales)).slice(0, 6);
-  const overdueTasks = tasks.filter((task) => !task.done && task.dueDate && task.dueDate < now);
+  const overdueTasks = tasks.filter((task) => !task.done && task.kind !== "evento" && task.dueDate && task.dueDate < now);
   const dueTodayTasks = tasks.filter((task) => !task.done && task.dueDate === now);
   const latestByContact = [];
   const seenContacts = new Set();

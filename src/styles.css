@@ -679,3 +679,8 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .calendar-task { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--color-border-light, #eee); }
 .calendar-task .link-button { text-align: left; flex: 1; }
 .calendar-task.done .link-button { text-decoration: line-through; color: #6b7a6b; }
+.calendar-form { margin: 12px 0; }
+.calendar-export { margin: 12px 0; padding: 12px 14px; border: 1px solid var(--color-border, #e3e3e0); border-radius: 12px; background: #fff; display: grid; gap: 8px; }
+.calendar-export label { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+.calendar-task.event { background: #f5f8ff; border-radius: 8px; padding-left: 8px; }
+.calendar-time { font-size: 12px; font-weight: 700; color: #2a4a8a; min-width: 82px; }

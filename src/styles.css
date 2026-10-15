@@ -655,3 +655,27 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .routine-targets { margin-top: 14px; }
 .routine-targets ul { margin: 8px 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; }
 @media (max-width: 600px) { .routine-block { grid-template-columns: auto 1fr; } .routine-block > .secondary { grid-column: 2; justify-self: start; } }
+
+/* Plan Trello y calendario */
+.routine-plan { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 16px; padding: 12px 14px; border: 1px solid var(--color-border, #e3e3e0); border-radius: 12px; background: #fff; }
+.routine-plan > div { display: grid; gap: 4px; }
+.routine-today-tasks { margin-top: 14px; display: grid; gap: 8px; }
+.routine-today-tasks h3 { margin: 0; font-size: 14px; }
+.routine-today-tasks label { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+.routine-today-tasks label.done span { text-decoration: line-through; color: #6b7a6b; }
+.task-trello { font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--color-border, #d8d8d4); text-decoration: none; color: inherit; white-space: nowrap; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-top: 12px; }
+.calendar-head { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #7c8683; text-align: center; }
+.calendar-cell { position: relative; min-height: 54px; padding: 6px; border-radius: 10px; border: 1px solid var(--color-border, #e3e3e0); background: #fff; text-align: left; display: grid; align-content: space-between; }
+.calendar-cell.empty { border: 0; background: transparent; }
+.calendar-cell.weekend { background: #f6f6f4; color: #8a8a86; }
+.calendar-cell.holiday { background: #fbf1ec; }
+.calendar-cell.today { outline: 2px solid var(--color-forest, #292929); }
+.calendar-cell.selected { box-shadow: inset 0 0 0 2px #e31b23; }
+.calendar-cell em { font-size: 10px; color: #b45309; font-style: normal; }
+.calendar-count { justify-self: end; min-width: 22px; text-align: center; border-radius: 999px; background: #292929; color: #fff; font-size: 11px; padding: 2px 6px; }
+.calendar-detail { margin-top: 16px; display: grid; gap: 8px; }
+.calendar-detail h3 { margin: 0; }
+.calendar-task { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--color-border-light, #eee); }
+.calendar-task .link-button { text-align: left; flex: 1; }
+.calendar-task.done .link-button { text-decoration: line-through; color: #6b7a6b; }

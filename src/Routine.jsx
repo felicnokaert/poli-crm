@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { planSummary, tasksForDay } from "./trello-plan-import.mjs";
 import { CheckCircle2, Circle, ArrowRight, Flame } from "lucide-react";
 import {
   WEEKLY_TARGETS, hoursLabel, routineForDate, routineKey, routineProgress, routineStreak, weekDates,
@@ -6,7 +7,7 @@ import {
 
 const DAY_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie"];
 
-export function Routine({ date, planChecks = {}, onToggle, onNavigate }) {
+export function Routine({ date, planChecks = {}, onToggle, onNavigate, tasks = [], onToggleTask, onImportPlan, plan = [] }) {
   const [full, setFull] = useState(true);
   const day = useMemo(() => routineForDate(date), [date]);
   const progress = routineProgress(planChecks, date);
@@ -62,6 +63,32 @@ export function Routine({ date, planChecks = {}, onToggle, onNavigate }) {
             })}
           </div>
         </>
+      )}
+
+      {onImportPlan && (() => {
+        const sum = planSummary(plan, tasks);
+        return (
+          <div className="routine-plan">
+            <div>
+              <strong>Plan Trello del 16/10 al 31/12</strong>
+              <span className="muted small">{sum.total} tarjetas repartidas por día hábil según el bloque del día. {sum.pending === 0 ? "Ya están cargadas en Tareas." : `${sum.pending} sin cargar todavía.`}</span>
+            </div>
+            <button type="button" className="primary" disabled={sum.pending === 0} onClick={onImportPlan}>{sum.pending === 0 ? "Plan cargado" : `Cargar ${sum.pending} tareas`}</button>
+          </div>
+        );
+      })()}
+
+      {tasksForDay(tasks, date).length > 0 && (
+        <div className="routine-today-tasks">
+          <h3>Para hoy desde Trello</h3>
+          {tasksForDay(tasks, date).map((task) => (
+            <label key={task.id} className={task.done ? "done" : ""}>
+              <input type="checkbox" checked={Boolean(task.done)} onChange={() => onToggleTask?.(task.id)} />
+              <span>{task.title}</span>
+              {task.trelloUrl && <a href={task.trelloUrl} target="_blank" rel="noreferrer">Trello</a>}
+            </label>
+          ))}
+        </div>
       )}
 
       <div className="routine-week" aria-label="Semana">

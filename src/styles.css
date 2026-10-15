@@ -631,3 +631,5 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .prospect-experimental { margin-top: 16px; }
 .prospect-drawer .drawer-body > * + * { margin-top: 12px; }
 .outreach-body .panel-head-actions { justify-content: flex-start; }
+.reply-template { margin: 10px 0; padding: 10px 12px; border-left: 3px solid var(--color-border, #d8d8d4); background: #f7f7f5; border-radius: 8px; font-size: 13px; line-height: 1.45; }
+.reply-card .panel-head-actions { justify-content: flex-start; gap: 8px; margin-top: 8px; }

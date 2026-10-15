@@ -57,7 +57,7 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
       supabase.from('prospect_requests').select('id,family,status,progress,result_markdown,created_at').like('family', 'COMPETENCIA%').order('created_at', { ascending: false }),
     ]);
     if (comp.error) { setError('No se pudieron cargar las fichas.'); setRows([]); return; }
-    setRows(comp.data || []);
+    setRows((comp.data || []).filter((item) => item.kind !== 'cliente'));
     setRequests(reqs.data || []);
   }
   useEffect(() => { load(); }, [supabase]);

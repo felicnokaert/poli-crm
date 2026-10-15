@@ -10,6 +10,7 @@ import { buildQueue, missingContact } from './prospect-queue.mjs';
 import { contactQuality } from './prospect-contact.mjs';
 import { applyResearch, companyFromTitle } from './prospect-research-apply.mjs';
 import { markProspect } from './prospect-convert.mjs';
+import { remoteLabel } from './prospect-requests.mjs';
 import { buildImportPlan, parseProspectsText } from './prospect-import.mjs';
 import { AI_TOOLS, RESEARCH_COOLDOWN_DAYS, RESEARCH_MINUTES, buildResearchPrompt, exclusionNames } from './prospect-playbook.mjs';
 import { readFileSmart } from './text-decode.mjs';
@@ -334,7 +335,7 @@ function SearchHistory({ searches, prospects, activeId, onShow, onDelete }) {
   );
 }
 
-function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, cities: citiesProp, provinces: provincesProp }) {
+function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, cities: citiesProp, provinces: provincesProp, requests }) {
   const prospects = Array.isArray(data.prospects) ? data.prospects : EMPTY;
   const clients = Array.isArray(data.clients) ? data.clients : EMPTY;
   const switches = data.prospectSwitches || {};
@@ -619,6 +620,47 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     setMessage(`Pedido de investigación listo para ${family}. Copialo y lanzalo en la IA que prefieras (abajo).`);
   }
 
+  // Deja el pedido para que Claude lo investigue en la web (sin costo de API) y devuelva la tabla.
+  async function requestFromClaude() {
+    const family = research.family || planFamily;
+    if (!family || !requests) return;
+    const now = new Date().toISOString();
+    const scope = research.scope.trim() || 'todo el país';
+    const count = Number(research.count) || 20;
+    const job = {
+      id: crypto.randomUUID(), family, scope, count, notes: research.notes, status: 'Pedida: esperando a Claude', remote: true, createdAt: now, updatedAt: now,
+      prompt: buildResearchPrompt({ family, scope, count, exclusions: exclusionNames(clients, prospects), notes: research.notes }),
+    };
+    try {
+      await requests.create(job, userEmail);
+      setData((current) => ({ ...current, researchJobs: [...(Array.isArray(current.researchJobs) ? current.researchJobs : []), job] }));
+      setMessage(`Pedido enviado para ${family}. Para que Claude lo investigue, abrí tu sesión de Claude y decile: "procesá los pedidos de Prospección". El resultado aparece acá.`);
+    } catch {
+      setMessage('No se pudo enviar el pedido. Probá de nuevo o usá "Preparar investigación" para hacerlo a mano.');
+    }
+  }
+
+  // Mientras haya pedidos esperando a Claude, consulta cada 20 s si ya hay resultado.
+  const waitingIds = researchJobs.filter((job) => job.remote && !['Resultado listo', 'Importada', 'Falló la investigación'].includes(job.status)).map((job) => job.id).join(',');
+  useEffect(() => {
+    if (!requests || !waitingIds) return undefined;
+    let alive = true;
+    const check = async () => {
+      try {
+        const rows = await requests.fetch(waitingIds.split(','));
+        if (!alive || !rows.length) return;
+        for (const row of rows) {
+          const label = remoteLabel(row);
+          if (row.status === 'lista' && row.result_markdown) setJobText((current) => ({ ...current, [row.id]: row.result_markdown }));
+          setData((current) => ({ ...current, researchJobs: (current.researchJobs || []).map((item) => (item.id === row.id && item.status !== label && item.status !== 'Importada' ? { ...item, status: label, updatedAt: new Date().toISOString() } : item)) }));
+        }
+      } catch { /* se reintenta en 20 s */ }
+    };
+    check();
+    const timer = setInterval(check, 20000);
+    return () => { alive = false; clearInterval(timer); };
+  }, [requests, waitingIds]);
+
   function setJobStatus(jobId, status) {
     setData((current) => ({ ...current, researchJobs: (current.researchJobs || []).map((item) => (item.id === jobId ? { ...item, status, updatedAt: new Date().toISOString() } : item)) }));
   }
@@ -739,7 +781,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       </div>
 
       <details className="panel research-panel">
-        <summary><strong>Opcional: investigación con tu propia IA (Claude, ChatGPT, Gemini)</strong></summary>
+        <summary><strong>Investigación profunda: Claude investiga por vos en la web</strong></summary>
         <div className="prospect-search-head">
           <div>
             <h3>Investigación con IA externa</h3>
@@ -778,7 +820,8 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
           </label>
         </div>
         <div className="prospect-search-actions">
-          <button type="button" className="primary big" onClick={prepareResearch}><Search size={18} /> Preparar investigación</button>
+          {requests && <button type="button" className="primary big" onClick={requestFromClaude}><Search size={18} /> Pedir a Claude que investigue</button>}
+          <button type="button" className={requests ? 'secondary' : 'primary big'} onClick={prepareResearch}>{requests ? 'Preparar pedido para otra IA' : <><Search size={18} /> Preparar investigación</>}</button>
           <span className="muted small">Se excluyen {exclusionNames(clients, prospects).length} empresas que ya tenés.</span>
         </div>
 

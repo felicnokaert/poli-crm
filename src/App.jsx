@@ -60,11 +60,13 @@ import { CLASSIFICATIONS } from "./knowledge";
 import {
   mergeClients,
   onlineConfigured,
+  supabase,
   recordDeletions,
   recordDuplicateReviewDecision,
   undoClientMerge,
 } from "./online";
 import { inferIntent } from "./commercial-intelligence.mjs";
+import { makeRequestsApi } from "./prospect-requests.mjs";
 const Sales = lazy(() => import("./Sales"));
 // Vistas y modales que no se ven al abrir la app (la entrada es Hoy/dashboard):
 // cada una va a su propio chunk y se baja al entrar por primera vez. Login,
@@ -209,6 +211,7 @@ function loadState() {
 }
 
 export default function App() {
+  const prospectRequests = useMemo(() => makeRequestsApi(supabase), []);
   const confirm = useConfirm();
   const [data, setData] = useState(loadState);
   const {
@@ -1740,7 +1743,7 @@ export default function App() {
         )}
         {view === "prospecting" && (
           <Suspense fallback={<Splash text="Cargando prospección…" />}>
-            <Prospeccion data={data} setData={setData} userEmail={session?.user?.email} session={session} onOpenClient={setSelectedClientId} />
+            <Prospeccion data={data} setData={setData} userEmail={session?.user?.email} session={session} onOpenClient={setSelectedClientId} requests={prospectRequests} />
           </Suspense>
         )}
         {view === "contacts" && (

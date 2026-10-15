@@ -592,3 +592,11 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .insight-chip.readiness-mid { background: #ed1c2420; color: #c9151c; }
 .insight-chip.mood-negativo { background: #292929; color: #fff; }
 .insight-next { color: #5b5d60; }
+
+/* Investigación en la app */
+.research-box { margin: 10px 0; padding: 10px 14px; border-radius: 12px; background: #ed1c240d; border: 1px solid #ed1c2428; font-size: 14px; }
+.research-box ul, .web-research ul { margin: 6px 0 6px 18px; padding: 0; }
+.research-box blockquote { margin: 6px 0; padding-left: 10px; border-left: 3px solid #ed1c24; color: #5b5d60; font-size: 13px; }
+.web-research { margin-top: 12px; padding: 12px 16px; border-radius: 14px; background: #ffffffb8; border: 1px solid #ffffffe0; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.web-research details { margin: 4px 0; }
+.research-panel > summary { cursor: pointer; }

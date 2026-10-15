@@ -10,6 +10,7 @@ import { buildQueue, missingContact } from './prospect-queue.mjs';
 import { contactQuality } from './prospect-contact.mjs';
 import { applyResearch, companyFromTitle } from './prospect-research-apply.mjs';
 import { markProspect } from './prospect-convert.mjs';
+import { Competencia } from './Competencia.jsx';
 import { remoteLabel } from './prospect-requests.mjs';
 import { buildImportPlan, parseProspectsText } from './prospect-import.mjs';
 import { AI_TOOLS, RESEARCH_COOLDOWN_DAYS, RESEARCH_MINUTES, buildResearchPrompt, exclusionNames } from './prospect-playbook.mjs';
@@ -335,7 +336,7 @@ function SearchHistory({ searches, prospects, activeId, onShow, onDelete }) {
   );
 }
 
-function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, cities: citiesProp, provinces: provincesProp, requests }) {
+function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, cities: citiesProp, provinces: provincesProp, requests, supabase }) {
   const prospects = Array.isArray(data.prospects) ? data.prospects : EMPTY;
   const clients = Array.isArray(data.clients) ? data.clients : EMPTY;
   const switches = data.prospectSwitches || {};
@@ -869,6 +870,8 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
           </div>
         )}
       </details>
+
+      <Competencia supabase={supabase} userEmail={userEmail} family={research.family || planFamily} families={PROSPECT_FAMILIES.map((item) => item.key)} />
 
       <details className="panel prospect-experimental">
         <summary><strong>Otras formas de buscar (experimental)</strong> <span className="muted small">búsqueda rápida en OpenStreetMap y en la web desde la app; los resultados pueden ser pocos o incompletos</span></summary>

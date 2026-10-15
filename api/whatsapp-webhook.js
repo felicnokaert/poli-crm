@@ -2,6 +2,7 @@ import { buildPhoneMap, fetchChannelRows } from '../lib/channels.mjs';
 import { normalizeWebhook, verifyMetaSignature, verifyMetaVerifyToken } from '../lib/whatsapp.mjs';
 import { persistEvents } from '../lib/storage.mjs';
 import { logError } from '../lib/log.mjs';
+import { logWebhookCall, summarizePayload } from '../lib/webhook-log.mjs';
 
 export const config = { api: { bodyParser: false } };
 
@@ -29,7 +30,11 @@ export default async function handler(request, response) {
     const mode = request.query['hub.mode'];
     const token = request.query['hub.verify_token'];
     const challenge = request.query['hub.challenge'];
-    if (mode === 'subscribe' && verifyMetaVerifyToken(token, process.env.WHATSAPP_VERIFY_TOKEN)) return response.status(200).send(challenge);
+    if (mode === 'subscribe' && verifyMetaVerifyToken(token, process.env.WHATSAPP_VERIFY_TOKEN)) {
+      await logWebhookCall({ method: 'GET', outcome: 'verify_ok', statusCode: 200 });
+      return response.status(200).send(challenge);
+    }
+    await logWebhookCall({ method: 'GET', outcome: 'verify_rejected', statusCode: 403 });
     return response.status(403).json({ ok: false });
   }
 
@@ -39,6 +44,7 @@ export default async function handler(request, response) {
   try {
     rawBody = await readBody(request);
   } catch (error) {
+    await logWebhookCall({ method: 'POST', outcome: 'body_error', statusCode: error instanceof PayloadTooLargeError ? 413 : 400 });
     if (error instanceof PayloadTooLargeError) return response.status(413).json({ ok: false, error: 'payload_too_large' });
     logError('whatsapp-webhook', 'failed reading request body', {}, error);
     return response.status(400).json({ ok: false, error: 'invalid_body' });
@@ -48,6 +54,7 @@ export default async function handler(request, response) {
   if (!verifyMetaSignature(rawBody, signature, process.env.META_APP_SECRET)) {
     // Sin esto un rechazo es invisible: queda constancia (sin datos del mensaje) para poder diagnosticar.
     logError('whatsapp-webhook', 'rejected: invalid or missing signature', { hasSignature: Boolean(signature), hasSecret: Boolean(process.env.META_APP_SECRET), bytes: rawBody.length });
+    await logWebhookCall({ method: 'POST', outcome: 'bad_signature', statusCode: 401, bodyBytes: rawBody.length, hasSignature: Boolean(signature) });
     return response.status(401).json({ ok: false });
   }
 
@@ -56,6 +63,7 @@ export default async function handler(request, response) {
     payload = JSON.parse(rawBody.toString('utf8'));
   } catch (error) {
     logError('whatsapp-webhook', 'received a body with an invalid signature-verified JSON payload', {}, error);
+    await logWebhookCall({ method: 'POST', outcome: 'invalid_json', statusCode: 400, bodyBytes: rawBody.length, hasSignature: true });
     return response.status(400).json({ ok: false, error: 'invalid_json' });
   }
   // Forma mínima esperada de un webhook real de WhatsApp Business - protege
@@ -64,6 +72,7 @@ export default async function handler(request, response) {
   // remotamente un webhook de Meta) de payloads con la firma válida pero de
   // otro producto/versión de la API.
   if (payload?.object !== 'whatsapp_business_account' || !Array.isArray(payload?.entry)) {
+    await logWebhookCall({ method: 'POST', outcome: 'unexpected_shape', statusCode: 400, bodyBytes: rawBody.length, hasSignature: true, summary: summarizePayload(payload) });
     return response.status(400).json({ ok: false, error: 'unexpected_payload_shape' });
   }
 
@@ -71,9 +80,11 @@ export default async function handler(request, response) {
   const events = normalizeWebhook(payload, phoneMap);
   try {
     const result = await persistEvents(events);
+    await logWebhookCall({ method: 'POST', outcome: 'stored', statusCode: 200, bodyBytes: rawBody.length, hasSignature: true, summary: { ...summarizePayload(payload), accepted: events.length, stored: result.stored } });
     return response.status(200).json({ ok: true, accepted: events.length, stored: result.stored });
   } catch (error) {
     logError('whatsapp-webhook', 'failed persisting events', { eventCount: events.length }, error);
+    await logWebhookCall({ method: 'POST', outcome: 'persist_failed', statusCode: 502, bodyBytes: rawBody.length, hasSignature: true, summary: summarizePayload(payload) });
     return response.status(502).json({ ok: false, error: 'persist_failed' });
   }
 }

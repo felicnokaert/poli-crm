@@ -61,3 +61,26 @@ test('discoverCandidates sigue con el segundo buscador si el primero falla', asy
   const r = await discoverCandidates({ rubros: ['aplicador de poliuretano'], city: 'Rosario', province: 'Santa Fe', family: 'Poliuretano' }, { fetchFn });
   assert.equal(r.candidates[0].host, 'poliurex.com');
 });
+
+import { unwrapBing, parseMojeek } from '../lib/prospect-research.mjs';
+
+test('desarma los enlaces de Bing que envuelven la dirección real', () => {
+  const real = 'https://www.poliurex.com/';
+  const b64 = Buffer.from(real).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  assert.equal(unwrapBing(`https://www.bing.com/ck/a?!&&p=abc&u=a1${b64}&ntb=1`), real);
+  assert.equal(unwrapBing('https://otro.com/x'), 'https://otro.com/x');
+  const html = `<li class="b_algo"><h2><a href="https://www.bing.com/ck/a?!&amp;u=a1${b64}&amp;ntb=1">Poliurex</a></h2></li>`;
+  assert.equal(parseBing(html)[0].url, real);
+});
+
+test('parsea resultados de Mojeek', () => {
+  const html = '<li><h2><a class="title" href="https://aplicadores.com.ar/">Aplicadores</a></h2></li><a href="https://x.com/" class="ob">X</a>';
+  assert.deepEqual(parseMojeek(html).map((r) => r.url), ['https://aplicadores.com.ar/', 'https://x.com/']);
+});
+
+test('discoverCandidates informa qué respondió cada buscador', async () => {
+  const fetchFn = async (url) => (url.includes('duckduckgo') ? { ok: false, status: 202 } : { ok: true, text: async () => '<li class="b_algo"><h2><a href="https://www.poliurex.com/">P</a></h2></li>' });
+  const r = await discoverCandidates({ rubros: ['x'], city: 'Rosario', province: 'Santa Fe', family: 'Poliuretano' }, { fetchFn });
+  assert.ok(r.engines.some((line) => /DuckDuckGo: HTTP 202/.test(line)));
+  assert.equal(r.rawResults > 0, true);
+});

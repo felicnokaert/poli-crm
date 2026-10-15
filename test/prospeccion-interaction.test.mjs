@@ -87,6 +87,31 @@ describe("Prospeccion.jsx - interacción real", () => {
     { id: "2", nombre: "Paraná", prov: "30", pob: 250000, lat: -31.73, lon: -60.52 },
   ];
 
+  test("descubre sitios, lee cada uno, carga los que encajan y explica los descartados", async () => {
+    const original = globalThis.fetch;
+    globalThis.fetch = async (url, options) => {
+      const body = JSON.parse(options.body);
+      const reply = (json, ok = true) => ({ ok, json: async () => json });
+      if (body.action === "sources") return reply({ ok: true, sources: ["OpenStreetMap"] });
+      if (body.action === "discover") return reply({ ok: true, answered: 1, candidates: [{ title: "Poliurex - Aplicación de poliuretano", website: "https://poliurex.com", host: "poliurex.com" }, { title: "Clínica Sur", website: "https://clinica.com", host: "clinica.com" }] });
+      if (body.website === "https://poliurex.com") return reply({ ok: true, website: "https://poliurex.com", score: 80, label: "Encaja bien", reasoning: ["El sitio menciona “poliuretano”."], evidence: [{ keyword: "poliuretano", snippet: "…aplicamos poliuretano…", url: "https://poliurex.com" }], contacts: { emails: ["ventas@poliurex.com"], facebook: "", instagram: "", whatsapp: null }, pages: ["https://poliurex.com/"], competitors: [] });
+      return reply({ ok: true, website: "https://clinica.com", score: 0, label: "Poca evidencia", reasoning: ["No se encontró ninguna señal."], evidence: [], contacts: { emails: [] }, pages: [], competitors: [] });
+    };
+    try {
+      const snapshots = await mount({ clients: [], prospects: [], prospectSearches: [], prospectSwitches: {} }, { cities: CITIES, session: { access_token: "t" } });
+      fireEvent.change(screen.getByLabelText("Familia de hoy"), { target: { value: "Poliuretano" } });
+      pickZone("14", "1");
+      fireEvent.click(screen.getByText("Investigar en la web (en la app)"));
+      await waitFor(() => screen.getByText(/leí 2 sitios y cargué 1/));
+      const last = snapshots.at(-1);
+      assert.equal(last.prospects.length, 1);
+      assert.equal(last.prospects[0].company, "Poliurex");
+      assert.equal(last.prospects[0].research.score, 80);
+      assert.equal(last.prospects[0].email, "ventas@poliurex.com");
+      assert.ok(screen.getByText(/Descartada · Poca evidencia/));
+    } finally { globalThis.fetch = original; }
+  });
+
   test("la lupa busca en la zona elegida, carga lo nuevo, anota la búsqueda y no repite lo ya cargado", async () => {
     const original = globalThis.fetch;
     const calls = [];

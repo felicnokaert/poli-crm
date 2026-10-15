@@ -8,6 +8,7 @@ import { matchProspect } from './prospect-dedupe.mjs';
 import { recordDeletions } from './workspace.mjs';
 import { buildQueue, missingContact } from './prospect-queue.mjs';
 import { contactQuality } from './prospect-contact.mjs';
+import { applyResearch, companyFromTitle } from './prospect-research-apply.mjs';
 import { markProspect } from './prospect-convert.mjs';
 import { buildImportPlan, parseProspectsText } from './prospect-import.mjs';
 import { AI_TOOLS, RESEARCH_COOLDOWN_DAYS, RESEARCH_MINUTES, buildResearchPrompt, exclusionNames } from './prospect-playbook.mjs';
@@ -182,6 +183,7 @@ function ProspectDetail({ prospect, check, onClose, onSave, onMark, onEnrich, on
           {form.facebook && <a className="secondary link-pill" href={form.facebook} target="_blank" rel="noreferrer">Facebook</a>}
         </div>
         {quality.notes.length > 0 && <p className="muted small contact-quality">{quality.notes.join(' · ')}.</p>}
+        <ResearchBox research={prospect.research} />
         {missingContact(form).length > 0 && <p className="muted small">Falta: {missingContact(form).join(', ')}.</p>}
         <div className="form-grid">
           <label>Familia
@@ -221,7 +223,20 @@ function ProspectDetail({ prospect, check, onClose, onSave, onMark, onEnrich, on
 }
 
 // Cola de trabajo: de a uno, el más prometedor primero; marcar o saltar y pasa al siguiente.
-function ProspectQueue({ queue, byId, checks, onMark, onSkip, onOpen, onEnrich }) {
+function ResearchBox({ research }) {
+  if (!research) return null;
+  return (
+    <div className="research-box">
+      <p><strong>Investigación en la app:</strong> <em className={research.score >= 60 ? 'badge ok' : 'badge'}>{research.label} · {research.score}/100</em></p>
+      <ul>{(research.reasoning || []).map((line, index) => <li key={index}>{line}</li>)}</ul>
+      {(research.evidence || []).map((item, index) => (
+        <blockquote key={index}>{item.snippet}{item.url && <> <a href={item.url} target="_blank" rel="noreferrer">fuente</a></>}</blockquote>
+      ))}
+    </div>
+  );
+}
+
+function ProspectQueue({ queue, byId, checks, onMark, onSkip, onOpen, onEnrich, onResearch }) {
   const [outcome, setOutcome] = useState('');
   const [note, setNote] = useState('');
   const current = byId.get(queue[0]);
@@ -246,6 +261,8 @@ function ProspectQueue({ queue, byId, checks, onMark, onSkip, onOpen, onEnrich }
         {current.facebook && <a className="secondary link-pill" href={current.facebook} target="_blank" rel="noreferrer">Facebook</a>}
       </div>
       {quality.notes.length > 0 && <p className="muted small contact-quality">{quality.notes.join(' · ')}.</p>}
+      {current.markedBy && <p className="muted small">Última marca: {current.markedBy}{current.markedAt ? ` el ${String(current.markedAt).slice(0, 10)}` : ''}.</p>}
+      <ResearchBox research={current.research} />
       {missing.length > 0 && <p className="muted small">Falta: {missing.join(', ')}. {current.website ? 'Probá "Buscar redes y contacto" antes de contactar.' : ''}</p>}
       <div className="panel-head-actions">
         <button type="button" className="primary big" onClick={() => { onMark(current.id, 'Contactado', ''); setOutcome(''); }}>Contactado</button>
@@ -258,6 +275,7 @@ function ProspectQueue({ queue, byId, checks, onMark, onSkip, onOpen, onEnrich }
         <button type="button" className="secondary" onClick={() => onSkip(current.id)}>Saltar por hoy</button>
         <button type="button" className="secondary" onClick={() => onOpen(current.id)}>Abrir ficha</button>
         {current.website && !/(facebook|instagram|wa\.me)/i.test(current.website) && <button type="button" className="secondary" onClick={() => onEnrich(current)}>Buscar redes y contacto</button>}
+        {current.website && !/(facebook|instagram|wa\.me)/i.test(current.website) && <button type="button" className="primary" onClick={() => onResearch(current)}>Investigar a fondo</button>}
       </div>
     </article>
   );
@@ -343,6 +361,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const [provSel, setProvSel] = useState('');
   const [rubrosText, setRubrosText] = useState('');
   const [searching, setSearching] = useState(false);
+  const [web, setWeb] = useState({ running: false, log: [], summary: '' });
   // Google Maps solo aparece si el servidor lo tiene activado (apagado por defecto).
   const [sources, setSources] = useState(['OpenStreetMap']);
   const [source, setSource] = useState('OpenStreetMap');
@@ -503,6 +522,75 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     }
   }
 
+  async function api(body) {
+    const response = await fetch('/api/prospeccion', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const payload = await response.json().catch(() => ({}));
+    return { ok: response.ok && payload.ok !== false, payload };
+  }
+
+  async function researchProspect(prospect) {
+    if (!session?.access_token) return 'Iniciá sesión para investigar.';
+    try {
+      const rubros = prospect.rubro ? [prospect.rubro] : [];
+      const { ok, payload } = await api({ action: 'research', website: prospect.website, family: prospect.family || planFamily, rubros });
+      if (!ok) return payload.error || 'No se pudo leer el sitio web.';
+      const outcome = applyResearch(prospect, payload);
+      setData((current) => ({ ...current, prospects: (current.prospects || []).map((item) => (item.id === prospect.id ? applyResearch(item, payload).prospect : item)) }));
+      return `${prospect.company}: ${payload.label} (${payload.score}/100).${outcome.added.length ? ` Agregado: ${outcome.added.join(', ')}.` : ''}`;
+    } catch {
+      return 'No se pudo conectar para investigar. Probá de nuevo.';
+    }
+  }
+
+  // Investigación en la app: busca páginas del rubro y la zona, lee cada sitio y
+  // carga solo las que encajan, mostrando el razonamiento de cada una.
+  async function runWebResearch() {
+    if (!zone || !session?.access_token) return;
+    const rubros = rubrosText.split(',').map((item) => item.trim()).filter(Boolean);
+    if (!rubros.length) { setMessage('Elegí al menos un rubro para investigar.'); return; }
+    const provinceName = provinces[zone.prov] || '';
+    const searchId = crypto.randomUUID();
+    setWeb({ running: true, log: [], summary: 'Buscando páginas de empresas en la web…' });
+    try {
+      const found = await api({ action: 'discover', rubros, city: zone.nombre, province: provinceName, family: planFamily });
+      if (!found.ok) { setWeb({ running: false, log: [], summary: found.payload.error || 'No se pudo buscar en la web.' }); return; }
+      const knownHosts = new Set([...prospects, ...clients].map((item) => String(item.website || '').toLowerCase().replace(/^https?:\/\/(www\.)?/, '').split('/')[0]).filter(Boolean));
+      const candidates = (found.payload.candidates || []).filter((item) => !knownHosts.has(item.host)).slice(0, 10);
+      if (!candidates.length) {
+        setWeb({ running: false, log: [], summary: found.payload.answered ? 'Los buscadores no devolvieron empresas nuevas para esta zona y rubros. Probá con otros rubros.' : 'Los buscadores web no respondieron (pueden estar bloqueando consultas automáticas). Probá más tarde o usá la búsqueda en OpenStreetMap.' });
+        return;
+      }
+      const log = [];
+      let added = 0;
+      for (let index = 0; index < candidates.length; index += 1) {
+        const candidate = candidates[index];
+        setWeb({ running: true, log: [...log], summary: `Leyendo sitio ${index + 1} de ${candidates.length}: ${candidate.host}` });
+        const { ok, payload } = await api({ action: 'research', website: candidate.website, family: planFamily, rubros });
+        if (!ok) { log.push({ host: candidate.host, title: candidate.title, status: 'No se pudo leer', reasoning: [payload.error || 'El sitio no respondió.'] }); continue; }
+        const company = companyFromTitle(candidate.title, candidate.host);
+        if (payload.score >= 30 && !payload.blockedByRobots) {
+          const now = new Date().toISOString();
+          const base = blankProspect({ company, family: planFamily, rubro: rubros[0], city: zone.nombre, province: provinceName, website: payload.website || candidate.website, source: 'Investigación en la app', searchId, competitor: isCompetitor(company) }, { id: crypto.randomUUID(), now });
+          const made = applyResearch(base, payload, now).prospect;
+          setData((current) => ({ ...current, prospects: [...(Array.isArray(current.prospects) ? current.prospects : []), made] }));
+          added += 1;
+          log.push({ host: candidate.host, title: company, status: `Cargada · ${payload.label} ${payload.score}/100`, reasoning: payload.reasoning });
+        } else {
+          log.push({ host: candidate.host, title: companyFromTitle(candidate.title, candidate.host), status: `Descartada · ${payload.label} ${payload.score}/100`, reasoning: payload.reasoning });
+        }
+      }
+      const now = new Date().toISOString();
+      setData((current) => ({ ...current, prospectSearches: [...(Array.isArray(current.prospectSearches) ? current.prospectSearches : []), { id: searchId, family: planFamily, zoneId: zone.id, zoneName: zone.nombre, province: provinceName, date: now.slice(0, 10), source: 'Investigación en la app', rubros, status: 'ok', found: added, returned: candidates.length, fresh: added, createdAt: now }] }));
+      setWeb({ running: false, log, summary: `Investigación terminada en ${zone.nombre}: leí ${candidates.length} sitios y cargué ${added} que encajan.` });
+    } catch {
+      setWeb({ running: false, log: [], summary: 'Se cortó la investigación. Revisá tu conexión y probá de nuevo.' });
+    }
+  }
+
   function closeZone() {
     if (!zone) return;
     const now = new Date().toISOString();
@@ -649,10 +737,11 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         </div>
       </div>
 
-      <div className="panel research-panel">
+      <details className="panel research-panel">
+        <summary><strong>Opcional: investigación con tu propia IA (Claude, ChatGPT, Gemini)</strong></summary>
         <div className="prospect-search-head">
           <div>
-            <h3>Investigación profunda</h3>
+            <h3>Investigación con IA externa</h3>
             <p className="muted">La búsqueda de verdad: una IA con modo de investigación avanzada recorre Google, Maps, sitios y redes y devuelve una tabla con evidencia y fuente por empresa. Tarda entre {RESEARCH_MINUTES.min} y {RESEARCH_MINUTES.max} minutos y no cuesta nada extra: usa tu suscripción a Claude, ChatGPT, Gemini o Perplexity. El CRM arma el pedido (con las empresas que ya tenés excluidas) y después importa el resultado.</p>
           </div>
         </div>
@@ -728,7 +817,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
             })}
           </div>
         )}
-      </div>
+      </details>
 
       <div className="panel prospect-search">
         <div className="prospect-search-head">
@@ -786,8 +875,22 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
           <button type="button" className="primary big" disabled={!zone || searching || !session?.access_token} onClick={runSearch}>
             <Search size={18} /> {searching ? 'Buscando… puede tardar hasta 1 minuto' : zone ? `Buscar en ${zone.nombre}` : 'Elegí una zona'}
           </button>
+          <button type="button" className="primary big" disabled={!zone || web.running || !session?.access_token} onClick={runWebResearch}>
+            <Search size={18} /> {web.running ? 'Investigando…' : 'Investigar en la web (en la app)'}
+          </button>
           <button type="button" className="secondary" disabled={!zone} onClick={closeZone}>Terminé esta zona (por ahora)</button>
         </div>
+        {(web.running || web.summary) && (
+          <div className="web-research" role="status" aria-live="polite">
+            <p><strong>{web.summary}</strong></p>
+            {web.log.map((entry) => (
+              <details key={entry.host}>
+                <summary>{entry.title} <span className="muted small">({entry.host})</span> · {entry.status}</summary>
+                <ul>{(entry.reasoning || []).map((line, index) => <li key={index}>{line}</li>)}</ul>
+              </details>
+            ))}
+          </div>
+        )}
         {searching && (
           <div className="search-progress" role="status" aria-live="polite">
             <span className="bar" />
@@ -853,7 +956,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         </div>
         <button type="button" className="secondary" disabled={!shown.length} onClick={() => downloadCsv(shown)}>Descargar CSV ({shown.length})</button>
       </div>
-      {listView === 'cola' && <ProspectQueue queue={queue} byId={prospectsById} checks={checks} onMark={mark} onSkip={(id) => setSkipped((list) => [...list, id])} onOpen={setDetailId} onEnrich={async (prospect) => setMessage(await enrich(prospect))} />}
+      {listView === 'cola' && <ProspectQueue queue={queue} byId={prospectsById} checks={checks} onMark={mark} onSkip={(id) => setSkipped((list) => [...list, id])} onOpen={setDetailId} onEnrich={async (prospect) => setMessage(await enrich(prospect))} onResearch={async (prospect) => setMessage(await researchProspect(prospect))} />}
       {listView !== 'cola' && shown.length === 0 && <p className="muted">{prospects.length ? 'No hay prospectos con ese filtro.' : 'Todavía no cargaste prospectos.'}</p>}
       {listView === 'planilla' && shown.length > 0 && <ProspectSheet rows={shown} checks={checks} onMark={mark} onOpenClient={onOpenClient} onDelete={remove} onOpen={setDetailId} />}
       {listView === 'tarjetas' && (

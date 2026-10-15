@@ -13,6 +13,7 @@ export function prospectScore(prospect, check = { status: 'Nuevo' }) {
   if (prospect.instagram || prospect.facebook) score += 1;
   if (/evidencia/i.test(prospect.notes || '')) score += 2;
   if (prospect.family) score += 1;
+  if (prospect.research?.score) score += Math.round(prospect.research.score / 20);
   if (check.status === 'Posible duplicado') score -= 2;
   return score;
 }

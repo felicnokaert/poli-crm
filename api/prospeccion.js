@@ -1,5 +1,6 @@
 import { authenticatedCorporateUser } from '../lib/corporate-auth.mjs';
 import { enrichWebsite } from '../lib/prospect-enrich.mjs';
+import { discoverCandidates, researchWebsite } from '../lib/prospect-research.mjs';
 import { googleConfig, normalizeGoogle, searchGoogle, takeQuota } from '../lib/prospect-google.mjs';
 import { OVERPASS_ENDPOINTS, STAGE_TIMEOUTS_MS, buildOverpassStages, normalizeOverpass, radiusForPopulation, safeWord, searchOverpass, summarizeResults } from '../lib/prospect-osm.mjs';
 
@@ -17,6 +18,17 @@ export default async function handler(request, response) {
   }
   if (body.action === 'enrich') {
     const result = await enrichWebsite(String(body.website || ''));
+    return response.status(result.ok ? 200 : 422).json(result);
+  }
+  if (body.action === 'discover') {
+    const found = await discoverCandidates({
+      rubros: (Array.isArray(body.rubros) ? body.rubros : []).map(String).slice(0, 4),
+      city: String(body.city || '').slice(0, 80), province: String(body.province || '').slice(0, 80), family: String(body.family || '').slice(0, 40),
+    });
+    return response.status(200).json({ ok: true, ...found });
+  }
+  if (body.action === 'research') {
+    const result = await researchWebsite({ website: String(body.website || ''), family: String(body.family || ''), rubros: Array.isArray(body.rubros) ? body.rubros.map(String).slice(0, 8) : [] });
     return response.status(result.ok ? 200 : 422).json(result);
   }
   const lat = Number(body.lat);

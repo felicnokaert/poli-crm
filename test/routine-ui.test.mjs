@@ -36,3 +36,12 @@ test('el cierre del día lista lo pendiente y permite pasarlo al próximo día h
   fireEvent.click(screen.getByRole('button', { name: /Pasar al próximo día hábil/ }));
   assert.deepEqual(moved[0], ['t1', '2026-10-19']);
 });
+
+test('el buscador de la Academia encuentra productos y vendedores', async () => {
+  const { KnowledgeSearch } = await loadJsxModule('src/Academy.jsx');
+  render(React.createElement(KnowledgeSearch, { supabase: null, clients: [{ id: 'c1', company: 'Corralón Sur', rubro: 'aglupl' }] }));
+  fireEvent.change(screen.getByPlaceholderText(/adhesivo/), { target: { value: 'agluplast' } });
+  assert.ok(screen.getAllByText(/AGLUPLAST/).length >= 1);
+  fireEvent.change(screen.getByPlaceholderText(/adhesivo/), { target: { value: 'repuestos' } });
+  assert.ok(screen.getByText(/Juan · Gerente general/));
+});

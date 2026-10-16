@@ -50,3 +50,11 @@ test('postponeTask registra de dónde se movió y cuántas veces', () => {
   assert.equal(again.postponedCount, 2);
   assert.deepEqual(again.postponedFrom, ['2026-10-16', '2026-10-19']);
 });
+
+test('sin rutina propia el cierre solo mira las tareas', () => {
+  const r = reviewDay('2026-10-16', { tasks: [{ id: 'a', title: 'Llamar', done: false, dueDate: '2026-10-16' }], includeRoutine: false });
+  assert.equal(r.routine.missed.length, 0);
+  assert.equal(r.routine.score, null);
+  assert.doesNotMatch(r.headline, /Rutina/);
+  assert.equal(r.pendingTasks.length, 1);
+});

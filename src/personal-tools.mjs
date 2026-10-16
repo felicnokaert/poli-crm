@@ -3,7 +3,11 @@
 const OWNER_EMAILS = ['felipe@grupopoliplast.com.ar', 'felipecnokaert@gmail.com', 'marketing@grupopoliplast.com.ar'];
 
 export function ownsFelipeTools(email, onlineConfigured = true) {
-  if (!onlineConfigured) return true; // modo local: es el navegador de quien lo instaló
+  if (!onlineConfigured) {
+    // Modo local: es el navegador de quien lo instaló. Para probar cómo lo ve el resto del equipo
+    // sin tener sus cuentas: localStorage.setItem('poliplast-simulate-member', '1').
+    try { return globalThis.localStorage?.getItem('poliplast-simulate-member') !== '1'; } catch { return true; }
+  }
   return OWNER_EMAILS.includes(String(email || '').trim().toLowerCase());
 }
 

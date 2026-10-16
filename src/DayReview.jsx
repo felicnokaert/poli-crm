@@ -22,10 +22,10 @@ function Block({ title, tone, items, empty, render }) {
   );
 }
 
-export function DayReview({ date, planChecks = {}, tasks = [], onPostpone, onToggleTask }) {
+export function DayReview({ date, planChecks = {}, tasks = [], onPostpone, onToggleTask, includeRoutine = true }) {
   const [which, setWhich] = useState("hoy");
   const target = which === "hoy" ? date : previousWorkday(date);
-  const review = useMemo(() => reviewDay(target, { planChecks, tasks }), [target, planChecks, tasks]);
+  const review = useMemo(() => reviewDay(target, { planChecks, tasks, includeRoutine }), [target, planChecks, tasks, includeRoutine]);
   const move = (task) => onPostpone?.(task.id, nextWorkday(target > date ? target : date));
   return (
     <section className="day-review" aria-label="Cierre del día">
@@ -54,7 +54,7 @@ export function DayReview({ date, planChecks = {}, tasks = [], onPostpone, onTog
           <Block title={`Para ${review.tomorrow}`} empty="Nada cargado todavía." items={review.tomorrowTasks} render={(task) => <TaskLine key={task.id} task={task} />} />
         </div>
       )}
-      <p className="muted small"><CalendarClock size={12} /> Se arma solo con lo que marcás en la rutina y en tus tareas: cuanto más lo uses, más útil es.</p>
+      <p className="muted small"><CalendarClock size={12} /> {includeRoutine ? "Se arma solo con lo que marcás en la rutina y en tus tareas: cuanto más lo uses, más útil es." : "Se arma solo con lo que hacés y postergás en tus tareas: cuanto más lo uses, más útil es."}</p>
     </section>
   );
 }

@@ -89,3 +89,13 @@ test('Directorio del equipo: trae las empresas que faltan sin pisar las propias'
   await screen.findByText(/Se sumaron 1 empresas/);
   assert.equal(saved[0].length, 2);
 });
+
+test('en modo local se puede simular la vista de un miembro del equipo', async () => {
+  const { ownsFelipeTools } = await import('../src/personal-tools.mjs');
+  const store = new Map();
+  globalThis.localStorage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v) };
+  assert.equal(ownsFelipeTools('', false), true);
+  store.set('poliplast-simulate-member', '1');
+  assert.equal(ownsFelipeTools('', false), false);
+  delete globalThis.localStorage;
+});

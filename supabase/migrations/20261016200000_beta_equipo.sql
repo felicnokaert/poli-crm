@@ -1,6 +1,6 @@
 -- ESTADO: la tabla shared_companies y sus políticas YA están aplicadas en Supabase (migración beta_equipo).
--- PENDIENTE de confirmación de Felipe: el reemplazo de las políticas de conversation_assignments (sección final),
--- porque la herramienta pidió confirmación para borrar y reemplazar políticas.
+-- APLICADO (16/10, con el OK de Felipe): las políticas de conversation_assignments se cambiaron con ALTER POLICY
+-- (la herramienta bloqueaba DROP POLICY); el resultado es el mismo que la sección final.
 -- Beta para el equipo: directorio compartido de empresas (sin datos comerciales privados) y
 -- cierre de un hueco de la Bandeja del equipo: las asignaciones solo se ven y se editan en los
 -- canales de WhatsApp a los que cada persona pertenece (el administrador de canales ve todos).

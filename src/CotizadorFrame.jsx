@@ -33,7 +33,6 @@ export function CotizadorFrame({ session, client }) {
   return (
     <div className="cotizador-frame-wrap">
       <div className="cotizador-frame-bar">
-        <span className="muted small">Cotizador comercial · una cotización no se registra como venta; al guardarla se marca «Coticé hoy» en la empresa.</span>
         <a className="secondary" href={cotizadorUrl(client?.company || "", client?.phone || "")} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Abrir en otra pestaña</a>
       </div>
       <iframe ref={frameRef} key={src} className="cotizador-frame" src={src} title="Cotizador comercial" allow="clipboard-write" />

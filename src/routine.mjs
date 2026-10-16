@@ -80,7 +80,7 @@ export function hoursLabel(minutes) {
   return m ? `${h} h ${m} min` : `${h} h`;
 }
 
-function addDays(date, delta) {
+export function addDays(date, delta) {
   const { y, m, d } = parts(date);
   const next = new Date(y, m - 1, d + delta, 12);
   return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
@@ -105,4 +105,16 @@ export function weekDates(date) {
   const { weekday } = parts(date);
   const monday = addDays(date, -((weekday + 6) % 7));
   return [0, 1, 2, 3, 4].map((offset) => addDays(monday, offset));
+}
+
+export function nextWorkday(date) {
+  let next = addDays(date, 1);
+  while (!routineForDate(next).blocks.length) next = addDays(next, 1);
+  return next;
+}
+
+export function previousWorkday(date) {
+  let prev = addDays(date, -1);
+  while (!routineForDate(prev).blocks.length) prev = addDays(prev, -1);
+  return prev;
 }

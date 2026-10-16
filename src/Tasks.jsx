@@ -83,7 +83,7 @@ function taskListEmptyText({ items, filtered, filter, query }) {
   return "No hay tareas que coincidan con este filtro.";
 }
 
-function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, onNavigate, onImportPlan, onAddEvent }) {
+function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, onNavigate, onImportPlan, onAddEvent, onPostpone }) {
   const [tab, setTab] = useState("tareas");
   const [filter, setFilter] = useState("pending");
   const [query, setQuery] = useState("");
@@ -110,7 +110,7 @@ function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, o
     return (
       <div className="content-stack">
         {tabs}
-        <Routine date={today()} planChecks={planChecks || {}} onToggle={onTogglePlan} onNavigate={onNavigate} tasks={items} onToggleTask={onToggle} plan={TRELLO_PLAN} onImportPlan={onImportPlan} />
+        <Routine date={today()} planChecks={planChecks || {}} onToggle={onTogglePlan} onNavigate={onNavigate} tasks={items} onToggleTask={onToggle} plan={TRELLO_PLAN} onImportPlan={onImportPlan} onPostpone={onPostpone} />
       </div>
     );
   }

@@ -19,7 +19,8 @@ import { isChannelAdmin } from "./user-channels.mjs";
 import { KNOWLEDGE_TYPES, buildKnowledgePrompt, searchKnowledge } from "./knowledge-search.mjs";
 import { PRODUCT_CATALOG } from "./product-catalog.mjs";
 import { OBJECTIONS } from "./commercial-knowledge.mjs";
-import PriceMemory from "./PriceMemory";
+import { Competencia } from "./Competencia.jsx";
+import { PROSPECT_FAMILIES } from "./prospect-model.mjs";
 import { ProductQuestion } from "./ProductQuestion.jsx";
 import { buildBattlecard } from "./competitor-battlecard.mjs";
 import { Empty, Goal } from "./ui-primitives";
@@ -150,7 +151,10 @@ export function CompetitorTalk({ supabase }) {
 }
 
 function AcademyBase({ myChannels, interactions, data, setData, supabase, userEmail }) {
-  const [section, setSection] = useState("method");
+  // 5 pestañas (16/10, antes 8): Preguntar, Cómo vender (método, objeciones y perfiles), Competencia
+  // (cómo hablar de cada uno + la lista que antes estaba en Prospección), Equipo y Práctica.
+  const [section, setSection] = useState("search");
+  const [sellTopic, setSellTopic] = useState("method");
   const admin = isChannelAdmin(userEmail);
   const felipeNotes = useFelipeNotes(supabase, admin);
   return (
@@ -162,18 +166,29 @@ function AcademyBase({ myChannels, interactions, data, setData, supabase, userEm
           <p>Prepará conversaciones, practicá situaciones reales y convertí cada resultado en aprendizaje para el equipo.</p>
         </div>
         <div className="segmented">
-          <button className={section === "search" ? "selected" : ""} onClick={() => setSection("search")}>Buscar</button>
-          <button className={section === "method" ? "selected" : ""} onClick={() => setSection("method")}>Método</button>
-          <button className={section === "objections" ? "selected" : ""} onClick={() => setSection("objections")}>Objeciones</button>
-          <button className={section === "profiles" ? "selected" : ""} onClick={() => setSection("profiles")}>Perfiles</button>
+          <button className={section === "search" ? "selected" : ""} onClick={() => setSection("search")}>Preguntar</button>
+          <button className={section === "sell" ? "selected" : ""} onClick={() => setSection("sell")}>Cómo vender</button>
           <button className={section === "competition" ? "selected" : ""} onClick={() => setSection("competition")}>Competencia</button>
           <button className={section === "team" ? "selected" : ""} onClick={() => setSection("team")}>Equipo</button>
-          <button className={section === "library" ? "selected" : ""} onClick={() => setSection("library")}>Biblioteca y práctica</button>
-          <button className={section === "coach" ? "selected" : ""} onClick={() => setSection("coach")}>Evaluar conversaciones</button>
+          <button className={section === "practice" ? "selected" : ""} onClick={() => setSection("practice")}>Práctica</button>
         </div>
       </section>
-      {["method", "objections", "profiles"].includes(section) && <CommercialKnowledge section={section} />}
-      {section === "competition" && <CompetitorTalk supabase={supabase} />}
+      {section === "sell" && (
+        <>
+          <div className="segmented academy-subtabs" role="tablist" aria-label="Cómo vender">
+            {[["method", "Método"], ["objections", "Objeciones"], ["profiles", "Perfiles de cliente"]].map(([key, label]) => (
+              <button key={key} type="button" role="tab" aria-selected={sellTopic === key} className={sellTopic === key ? "selected" : ""} onClick={() => setSellTopic(key)}>{label}</button>
+            ))}
+          </div>
+          <CommercialKnowledge section={sellTopic} />
+        </>
+      )}
+      {section === "competition" && (
+        <>
+          <CompetitorTalk supabase={supabase} />
+          <Competencia supabase={supabase} userEmail={userEmail} families={PROSPECT_FAMILIES.map((item) => item.key)} />
+        </>
+      )}
       {section === "team" && (
         <>
           <TeamSelf supabase={supabase} userEmail={userEmail} isAdmin={admin} />
@@ -182,10 +197,9 @@ function AcademyBase({ myChannels, interactions, data, setData, supabase, userEm
       )}
       {section === "search" && <ProductQuestion supabase={supabase} />}
       {section === "search" && <KnowledgeSearch supabase={supabase} clients={data.clients || []} sellers={felipeNotes} />}
-      {section === "library" && <QuickReplies myChannels={myChannels} />}
-      {section === "coach" && (
+      {section === "practice" && (
         <>
-          <PriceMemory sales={data.sales || []} />
+          <QuickReplies myChannels={myChannels} />
           <Coach interactions={interactions} data={data} setData={setData} />
         </>
       )}

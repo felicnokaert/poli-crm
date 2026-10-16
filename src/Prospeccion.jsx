@@ -10,7 +10,6 @@ import { buildQueue, missingContact } from './prospect-queue.mjs';
 import { contactQuality } from './prospect-contact.mjs';
 import { applyResearch, companyFromTitle } from './prospect-research-apply.mjs';
 import { markProspect } from './prospect-convert.mjs';
-import { Competencia } from './Competencia.jsx';
 import { buildOutreachDraft } from './prospect-outreach.mjs';
 import { remoteLabel } from './prospect-requests.mjs';
 import { buildImportPlan, parseProspectsText, applyImportPlan, importFingerprint } from './prospect-import.mjs';
@@ -863,7 +862,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       </div>
 
       <div className="segmented prospect-tabs" role="tablist" aria-label="Secciones de Prospección">
-        {[['prospectos', 'Prospectos'], ['buscar', 'Buscar con IA'], ['competencia', 'Competencia']].map(([key, label]) => (
+        {[['prospectos', 'Prospectos'], ['buscar', 'Buscar con IA']].map(([key, label]) => (
           <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? 'selected' : ''} onClick={() => setTab(key)}>{label}</button>
         ))}
       </div>
@@ -964,7 +963,6 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       </details>
       </>)}
 
-      {tab === 'competencia' && <Competencia supabase={supabase} userEmail={userEmail} family={research.family || planFamily} families={PROSPECT_FAMILIES.map((item) => item.key)} />}
 
       {tab === 'buscar' && <details className="panel prospect-experimental">
         <summary><strong>Otras formas de buscar (experimental)</strong> <span className="muted small">búsqueda rápida en OpenStreetMap y en la web desde la app; los resultados pueden ser pocos o incompletos</span></summary>

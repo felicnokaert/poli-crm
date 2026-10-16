@@ -4,6 +4,7 @@ import { blankSale, computeGoalProgress, duplicateSale, GOAL_METRICS, netAmountI
 import { FAMILIES } from './families.mjs';
 import { useConfirm } from './ConfirmDialog';
 import { SalesHistory } from './SalesHistory.jsx';
+import PriceMemory from './PriceMemory';
 
 const money = (value) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(value || 0);
 const monthKey = (date) => String(date || '').slice(0, 7);
@@ -342,6 +343,7 @@ function SalesBase({ items, goals, businessUnits, clients, onSaveGoal, onDeleteG
       else { setPeriodMode('all'); }
       document.getElementById('ventas-realizadas')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
     }}/>
+    <PriceMemory sales={items} />
     <BusinessUnitsPanel businessUnits={businessUnits} onSave={onSaveBusinessUnit} onDelete={onDeleteBusinessUnit}/>
     <section className="panel" id="ventas-realizadas">
       <div className="panel-head">

@@ -34,7 +34,7 @@ describe("Academy.jsx - interacción real", () => {
     return { setDataCalls, data, setData };
   }
 
-  test("arranca en Método y navega a cada sección al clickear el segmented control", async () => {
+  test("navega por las 5 pestañas (Preguntar, Cómo vender, Competencia, Equipo, Práctica) y las subpestañas de Cómo vender", async () => {
     const mod = await loadJsxModule("src/Academy.jsx");
     const { data, setData } = renderAcademy();
     render(
@@ -46,8 +46,9 @@ describe("Academy.jsx - interacción real", () => {
       }),
     );
 
-    // Sección inicial: "method" -> muestra el proceso E-C-E-R-A, no
-    // objeciones ni perfiles.
+    // Arranca en Preguntar; Cómo vender abre en Método (proceso E-C-E-R-A).
+    assert.equal(screen.queryByText("Proceso y método E-C-E-R-A"), null);
+    fireEvent.click(screen.getByText("Cómo vender"));
     assert.ok(screen.getByText("Proceso y método E-C-E-R-A"));
 
     fireEvent.click(screen.getByText("Objeciones"));
@@ -55,19 +56,16 @@ describe("Academy.jsx - interacción real", () => {
     // El buscador de objeciones solo aparece en esta sección.
     assert.ok(screen.getByPlaceholderText("Buscar objeción o respuesta…"));
 
-    fireEvent.click(screen.getByText("Perfiles"));
+    fireEvent.click(screen.getByText("Perfiles de cliente"));
     assert.ok(screen.getByText("Perfiles y playbooks"));
     assert.equal(screen.queryByPlaceholderText("Buscar objeción o respuesta…"), null);
 
-    fireEvent.click(screen.getByText("Biblioteca y práctica"));
-    // Sección "library" -> QuickReplies (encabezado propio, no el de
-    // CommercialKnowledge).
+    // Práctica = respuestas rápidas + evaluar conversaciones (antes dos pestañas).
+    fireEvent.click(screen.getByText("Práctica"));
     assert.ok(screen.getByText("Biblioteca de respuestas rápidas"));
-
-    fireEvent.click(screen.getByText("Evaluar conversaciones"));
-    // Sección "coach" -> sin interacciones registradas, Coach muestra el
-    // Empty state en vez del formulario de evaluación.
     assert.ok(screen.getByText("Registrá una conversación para poder evaluarla."));
+
+    fireEvent.click(screen.getByText("Cómo vender"));
 
     // Volver a Método confirma que el estado no quedó pegado en la última
     // sección visitada.
@@ -87,6 +85,7 @@ describe("Academy.jsx - interacción real", () => {
       }),
     );
 
+    fireEvent.click(screen.getByText("Cómo vender"));
     fireEvent.click(screen.getByText("Objeciones"));
     const totalBefore = screen.getAllByText("Objeción").length;
     assert.ok(totalBefore > 1, "debería haber más de una objeción listada por defecto");
@@ -98,7 +97,7 @@ describe("Academy.jsx - interacción real", () => {
     assert.ok(screen.getByText("No encontramos una objeción con ese criterio."));
   });
 
-  test("en Evaluar conversaciones, cambiar puntajes de la rúbrica y guardar llama a setData con la evaluación", async () => {
+  test("en Práctica, cambiar puntajes de la rúbrica y guardar llama a setData con la evaluación", async () => {
     const mod = await loadJsxModule("src/Academy.jsx");
     const interaction = {
       id: "i1",
@@ -121,7 +120,7 @@ describe("Academy.jsx - interacción real", () => {
       }),
     );
 
-    fireEvent.click(screen.getByText("Evaluar conversaciones"));
+    fireEvent.click(screen.getByText("Práctica"));
     assert.ok(screen.getByText("Envases del Sur SA"));
 
     // Antes de puntuar, el total mostrado es 0/28.

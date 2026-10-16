@@ -21,7 +21,7 @@ Mails `nombre@grupopoliplast.com.ar`. Felipe (admin/marketing), Yuliani (jefa de
 Búsqueda global Ctrl+K; tarjeta Mi día en Inicio; menú en 5 grupos; Prospección en pestañas; Bandeja del equipo con vista Para seguimiento, urgencia por espera y tablero de números; Rutina con Cierre del día (salió bien / sin hacer / postergado / mañana); Ventas con historial en gráficos (mensual/trimestral/semestral por año, objetivos vs vendido); Academia con pestañas Buscar (conocimiento unificado) y Equipo (fichas de vendedores, borrador).
 
 ## Beta para el equipo (16/10)
-- Guía para pasarle al equipo: docs/GUIA_BETA_EQUIPO.pdf (18 páginas con diseño). Se regenera con scripts/capture-guia-beta.mjs (capturas en vista de miembro, localhost) + scripts/build-guia-beta.py + imprimir a PDF con Chromium; regenerar si cambia la interfaz.
+- Guía para pasarle al equipo: docs/GUIA_BETA_EQUIPO.pdf (18 páginas con diseño). Se regenera con scripts/capture-guia-beta.mjs (capturas en vista de miembro, localhost) + scripts/build-guia-beta.py + imprimir a PDF con Chromium; ya no hace falta regenerarla con cada cambio (Felipe, 16/10): solo si él lo pide.
 - Permisos de lo compartido: cualquiera del equipo carga (competidores, directorio, fichas); solo Felipe borra lo general. Lo personal lo borra cada uno y solo afecta a su cuenta.
 - Rutina, plan Trello y tablero Trello son solo de Felipe (src/personal-tools.mjs); el resto ve Cierre del día. Bandeja del equipo apagada (TEAM_INBOX_ENABLED=false).
 - Directorio de empresas compartido: tabla shared_companies (Felipe publica, cada uno trae desde Más → Datos). Solo viajan nombre, rubro, ubicación y contactos.

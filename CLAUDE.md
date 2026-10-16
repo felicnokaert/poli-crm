@@ -18,9 +18,12 @@ React + Vite (SPA), funciones en `api/*` (Vercel), Supabase proyecto `nghwmtccpo
 Mails `nombre@grupopoliplast.com.ar`. Felipe (admin/marketing), Yuliani (jefa de ventas, apoya a Brenda), Brenda (Poliplast/e-commerce, consultas generales de tiendas online; falta seguimiento), Ezequiel (Resinplast e Imperpur; falta seguimiento), Juan (gerente general y de operaciones; máquinas, sistemas de poliuretano, repuestos), David (dueño; la idea es que delegue). Las reglas de reparto son editables en la app.
 
 ## Hecho el 16/10 (noche)
-Menú en 5 grupos; Prospección en pestañas; Bandeja del equipo con vista Para seguimiento, urgencia por espera y tablero de números; Rutina con Cierre del día (salió bien / sin hacer / postergado / mañana); Academia con pestañas Buscar (conocimiento unificado) y Equipo (fichas de vendedores, borrador).
+Búsqueda global Ctrl+K; tarjeta Mi día en Inicio; menú en 5 grupos; Prospección en pestañas; Bandeja del equipo con vista Para seguimiento, urgencia por espera y tablero de números; Rutina con Cierre del día (salió bien / sin hacer / postergado / mañana); Academia con pestañas Buscar (conocimiento unificado) y Equipo (fichas de vendedores, borrador).
 
 ## Pendiente / próximos pasos
+- Bandeja del equipo: hoy muestra contactos que Felipe ya clasificó en su bandeja (no comerciales, cliente, etc.). Felipe quiere revisarlo: filtrar o ocultar los ya clasificados, y que lo clasificado se comparta con el equipo.
+- Cotizaciones/presupuestos: conectar con la API de Contabilium (credenciales en variables de entorno seguras de Vercel, nunca en el repo). Ya existen los radares de cotizaciones frías/vencidas en Inicio; la API reemplazaría la carga manual.
+- Respuestas sugeridas por marca (Resinplast, Imperpur, máquinas): requieren datos reales de producto; no inventar claims.
 - Fichas de vendedores: que cada uno las corrija (hoy son borrador con lo que contó Felipe).
 - Academia: sumar texto completo de fichas técnicas al buscador y más conocimiento de producto/usos.
 - Instagram/Facebook (@Resinplast, @grupopoliplast, @imperpur, @rapyp): requieren cuentas profesionales y revisión de app de Meta.

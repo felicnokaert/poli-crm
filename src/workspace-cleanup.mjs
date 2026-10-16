@@ -67,11 +67,12 @@ export function cleanCopiedWorkspace(state = {}, ownerStates = [], { allowedChan
   }
 
   // Tareas automáticas que el proceso diario creó por algo copiado de Felipe (sus empresas o los chats
-  // de su número): se sacan si siguen abiertas. Las que la persona ya resolvió quedan en su historial.
+  // de su número): no son de la persona, se sacan todas.
   const ownerClientIds = new Set(ownerClients.keys());
   // Solo números de WhatsApp (los nombres sueltos coincidirían de más).
   const ownerContactKeys = new Set(owner('inbox').map((event) => String(event?.customer_wa_id || '').replace(/\D/g, '')).filter((digits) => digits.length >= 8));
-  const autoFromOwner = (task) => !task?.done && String(task?.source || '').startsWith('auto-')
+  // Hechas o no: también las que el sistema cerró solo, que aparecían en su Cierre del día.
+  const autoFromOwner = (task) => String(task?.source || '').startsWith('auto-')
     && (ownerClientIds.has(task.clientId) || ownerClientIds.has(task.autoKey) || [...ownerContactKeys].some((key) => String(task.autoKey || '').includes(key)));
   const tasksNow = Array.isArray(next.tasks) ? next.tasks : [];
   const autoCopied = tasksNow.filter(autoFromOwner);

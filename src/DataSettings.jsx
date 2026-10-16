@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { onlineConfigured, supabase } from "./online";
 import { SharedDirectory } from "./SharedDirectory.jsx";
+import { AdminUsers } from "./AdminUsers.jsx";
 import { connectWhatsApp } from "./meta-onboarding";
 import {
   buildCommercialCohort,
@@ -22,7 +23,7 @@ import {
 import { clientsToCsv, mergeClientsCsv } from "./client-csv.mjs";
 import { readFileSmart } from "./text-decode.mjs";
 import { FAMILIES } from "./families.mjs";
-import { channelsForEmail, isChannelAdmin } from "./user-channels.mjs";
+import { CHANNEL_ADMINS, channelsForEmail, isChannelAdmin } from "./user-channels.mjs";
 import { ChannelsAdmin } from "./ChannelsAdmin";
 import { CHANNELS, initialState, today } from "./app-shared";
 
@@ -487,6 +488,7 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
           </div>
         </section>
       )}
+      {onlineConfigured && isChannelAdmin(session?.user?.email) && <AdminUsers supabase={supabase} session={session} adminEmails={CHANNEL_ADMINS} />}
       {onlineConfigured && <SharedDirectory supabase={supabase} session={session} clients={data.clients || []} setClients={(clients) => setData((current) => ({ ...current, clients }))} />}
       <section className="panel">
         <div className="panel-head">

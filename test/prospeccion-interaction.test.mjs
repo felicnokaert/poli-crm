@@ -48,7 +48,7 @@ describe("Prospeccion.jsx - interacción real", () => {
     fireEvent.click(screen.getByText(/Importar o pegar una lista de prospectos/));
     fireEvent.change(screen.getByLabelText("Lista de prospectos"), { target: { value: "Empresa;Localidad\nPierandrei;Parana\nFerretería Sur;Colón" } });
     fireEvent.click(screen.getByText("Revisar lista pegada"));
-    await waitFor(() => paragraph(/2 filas: 1 nuevas, 1 ya en el CRM, 0 posibles duplicadas/));
+    await waitFor(() => paragraph(/2 filas: 1 nuevas, 1 ya existen \(1 en Empresas\), 0 posibles duplicados/));
     fireEvent.click(screen.getByText("Confirmar importación (1)"));
     await waitFor(() => screen.getByText("Ferretería Sur"));
     assert.equal(screen.queryByText(/^Pierandrei$/), null, "la que ya es cliente no se carga como prospecto");
@@ -208,7 +208,7 @@ describe("Prospeccion.jsx - interacción real", () => {
     fireEvent.click(screen.getByText(/Importar o pegar una lista de prospectos/));
     fireEvent.change(screen.getByLabelText("Lista de prospectos"), { target: { value: RELEVAMIENTO } });
     fireEvent.click(screen.getByText("Revisar lista pegada"));
-    await waitFor(() => paragraph(/2 filas: 2 nuevas, 0 ya en el CRM, 0 posibles duplicadas, 0 ya cargadas como prospecto/));
+    await waitFor(() => paragraph(/2 filas: 2 nuevas, 0 ya existen \(0 en Empresas\), 0 posibles duplicados/));
     assert.equal(snapshots.length, 0, "todavía no se guardó nada");
     fireEvent.click(screen.getByText("Confirmar importación (2)"));
     await waitFor(() => assert.equal(snapshots.at(-1).prospects.length, 2));
@@ -231,9 +231,11 @@ describe("Prospeccion.jsx - interacción real", () => {
       target: { value: "Empresa;Ciudad\nSILVACOM;Concordia\nCorralón Norte S.A.;Colón\nFerretería Sur;Paraná\nFerretería Sur S.R.L.;Paraná" },
     });
     fireEvent.click(screen.getByText("Revisar lista pegada"));
-    await waitFor(() => paragraph(/4 filas: 1 nuevas, 0 ya en el CRM, 1 posibles duplicadas, 2 ya cargadas como prospecto/));
-    fireEvent.click(screen.getByText("Confirmar importación (2)"));
-    await waitFor(() => screen.getByText(/Se importaron 2 prospectos como "No contactado" \(fuente: importado\)\. Se omitieron 2/));
+    // Regla 7.3: la repetida del archivo y la ya cargada "ya existen"; SILVACOM (sin localidad en Empresas)
+    // es posible duplicado y no entra salvo que se elija.
+    await waitFor(() => paragraph(/4 filas: 1 nuevas, 2 ya existen \(0 en Empresas\), 1 posibles duplicados/));
+    fireEvent.click(screen.getByText("Confirmar importación (1)"));
+    await waitFor(() => screen.getByText(/Se importaron 1 prospectos como "No contactado"\. Se omitieron 3/));
   });
 
   test("también se puede subir un archivo CSV y ver la misma vista previa", async () => {

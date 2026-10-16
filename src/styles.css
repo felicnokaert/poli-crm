@@ -858,3 +858,8 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .technical-text-modal { max-width: 760px; width: min(760px, calc(100vw - 32px)); max-height: 80vh; display: flex; flex-direction: column; }
 .technical-text-modal .modal-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .technical-text-modal pre { overflow: auto; white-space: pre-wrap; font: 13px/1.5 'DM Sans', sans-serif; margin: 12px 0 0; padding: 12px; background: var(--color-panel-bg); border-radius: var(--radius-lg); }
+
+/* Prospección: vista previa del importador (regla 7.3). */
+.import-preview-73 .import-counts { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.import-preview-73 .import-counts span { padding: 6px 10px; border-radius: var(--radius-pill); background: #eeeeef; font-size: 12.5px; }
+.import-preview-73 .import-possible { display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; font-size: 12px; }

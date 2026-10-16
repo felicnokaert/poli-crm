@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildBoard, conversationKey, groupConversations, loadByMember, suggestOwner, suggestedReply, waitingLabel, urgencyOf, needsFollowUp } from '../src/team-inbox.mjs';
+import { buildBoard, conversationKey, groupConversations, loadByMember, suggestOwner, suggestedReply, waitingLabel, urgencyOf, needsFollowUp, teamStats } from '../src/team-inbox.mjs';
 
 const members = [{ id: 'm1', name: 'Juan', active: true }, { id: 'm2', name: 'Ezequiel', active: true }, { id: 'm3', name: 'David', active: false }];
 const rules = [{ id: 'r1', kind: 'canal', value: 'juan', member_id: 'm1' }, { id: 'r2', kind: 'palabra', value: 'náutica', member_id: 'm2' }, { id: 'r3', kind: 'palabra', value: 'fibra', member_id: 'm3' }];
@@ -71,4 +71,14 @@ test('urgencia y seguimiento por tiempo de espera', () => {
   assert.equal(needsFollowUp({ ...base, statusAt: '2026-10-15T12:00:00Z' }, now), false);
   assert.equal(needsFollowUp({ ...base, statusAt: '2026-09-20T12:00:00Z' }, now), false);
   assert.equal(needsFollowUp({ ...base, status: 'cerrada' }, now), false);
+});
+
+test('teamStats resume abiertas, riesgo, sin dueño y seguimiento', () => {
+  const now = new Date('2026-10-16T12:00:00Z').getTime();
+  const board = [
+    { open: true, memberId: null, lastAt: '2026-10-14T12:00:00Z', status: 'pendiente' },
+    { open: true, memberId: 'm1', lastAt: '2026-10-16T10:00:00Z', status: 'pendiente' },
+    { open: false, memberId: 'm1', status: 'respondida', statusAt: '2026-10-10T12:00:00Z', lastAt: '2026-10-09T12:00:00Z' },
+  ];
+  assert.deepEqual(teamStats(board, now), { open: 2, atRisk: 1, unassigned: 1, followUp: 1, avgWaitHours: 25 });
 });

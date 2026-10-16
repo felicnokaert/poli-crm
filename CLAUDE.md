@@ -17,8 +17,12 @@ React + Vite (SPA), funciones en `api/*` (Vercel), Supabase proyecto `nghwmtccpo
 ## Equipo (bandeja del equipo, pestaña Equipo)
 Mails `nombre@grupopoliplast.com.ar`. Felipe (admin/marketing), Yuliani (jefa de ventas, apoya a Brenda), Brenda (Poliplast/e-commerce, consultas generales de tiendas online; falta seguimiento), Ezequiel (Resinplast e Imperpur; falta seguimiento), Juan (gerente general y de operaciones; máquinas, sistemas de poliuretano, repuestos), David (dueño; la idea es que delegue). Las reglas de reparto son editables en la app.
 
+## Hecho el 16/10 (noche)
+Menú en 5 grupos; Prospección en pestañas; Bandeja del equipo con vista Para seguimiento, urgencia por espera y tablero de números; Rutina con Cierre del día (salió bien / sin hacer / postergado / mañana); Academia con pestañas Buscar (conocimiento unificado) y Equipo (fichas de vendedores, borrador).
+
 ## Pendiente / próximos pasos
-- Fichas por vendedor en Academia/Aprendizaje (cómo trabaja cada uno, para darle asistencia a medida).
+- Fichas de vendedores: que cada uno las corrija (hoy son borrador con lo que contó Felipe).
+- Academia: sumar texto completo de fichas técnicas al buscador y más conocimiento de producto/usos.
 - Instagram/Facebook (@Resinplast, @grupopoliplast, @imperpur, @rapyp): requieren cuentas profesionales y revisión de app de Meta.
 - WhatsApp de Meta sin entrega desde el 13/10 (caso de soporte abierto).
 - Borradores de pedidos con IA: diferido (requiere presupuesto).

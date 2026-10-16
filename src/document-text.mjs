@@ -7,7 +7,7 @@
 export const TEXT_FORMATS = Object.freeze({
   pdf: 'PDF', docx: 'Word', xlsx: 'Excel', pptx: 'PowerPoint', txt: 'Texto', md: 'Markdown (MarkItDown)', csv: 'CSV',
 });
-export const UPLOAD_ACCEPT = '.pdf,.docx,.doc,.xlsx,.xls,.pptx,.txt,.md,.csv';
+export const UPLOAD_ACCEPT = '.pdf,.docx,.doc,.xlsx,.xls,.pptx,.txt,.md,.csv,.jpg,.jpeg,.png,.webp,.heic';
 
 export const extensionOf = (name = '') => (String(name).match(/\.([a-z0-9]+)$/i)?.[1] || '').toLowerCase();
 export const canExtractText = (name) => Object.hasOwn(TEXT_FORMATS, extensionOf(name));
@@ -20,6 +20,7 @@ const CONTENT_TYPES = {
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   txt: 'text/plain', md: 'text/markdown', csv: 'text/csv',
+  jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', heic: 'image/heic',
 };
 export const contentTypeFor = (name) => CONTENT_TYPES[extensionOf(name)] || 'application/octet-stream';
 

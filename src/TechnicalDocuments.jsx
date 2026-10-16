@@ -3,6 +3,7 @@ import { FileCheck2 } from "lucide-react";
 import { useConfirm } from "./ConfirmDialog";
 import { Empty, Loading } from "./ui-primitives";
 import { TechnicalUpload } from "./TechnicalUpload.jsx";
+import { UPLOAD_ACCEPT, extensionOf } from "./document-text.mjs";
 
 const TECHNICAL_DOCUMENT_STATUS_LABELS = {
   inventariado: "Inventariado",
@@ -12,6 +13,10 @@ const TECHNICAL_DOCUMENT_STATUS_LABELS = {
   desactualizado: "Desactualizado",
   no_tecnico: "No técnico",
 };
+
+// Tipo de archivo adjunto, por la extensión de la ruta guardada.
+const KIND = { pdf: "PDF", docx: "Word", doc: "Word", xlsx: "Excel", xls: "Excel", pptx: "PowerPoint", txt: "texto", md: "texto", csv: "CSV", jpg: "foto", jpeg: "foto", png: "foto", webp: "foto", heic: "foto" };
+const fileKind = (doc) => KIND[extensionOf(doc.storagePath || "")] || "";
 
 // Borrado en tanda (solo Felipe): qué documentos entran en cada opción.
 const BULK_SCOPES = [
@@ -233,7 +238,7 @@ function TechnicalDocumentsAdminBase({ session }) {
     try {
       const { getTechnicalDocumentFileUrl } = await import("./technical-documents-repo.mjs");
       const url = await getTechnicalDocumentFileUrl(doc.storagePath);
-      if (!url) throw new Error("Esta ficha todavía no tiene un PDF adjunto.");
+      if (!url) throw new Error("Este documento todavía no tiene un archivo adjunto.");
       window.open(url, "_blank", "noopener,noreferrer");
       setMessage("");
     } catch (error) {
@@ -259,6 +264,14 @@ function TechnicalDocumentsAdminBase({ session }) {
   }
 
   const [bulkScope, setBulkScope] = useState("uploaded");
+  async function adminCall(body) {
+    const response = await fetch("/api/admin-users", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` }, body: JSON.stringify({ action: "technical", ...body }) });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "No se pudo completar.");
+    return result;
+  }
+  // Por el servidor (clave de servicio): antes se borraba desde el navegador y fallaban todos sin decir
+  // por qué ("Se borraron 0. 201 no se pudieron borrar"). Ahora, si algo falla, se ve el motivo.
   async function deleteInBulk() {
     const targets = documents.filter(BULK_FILTERS[bulkScope]);
     const label = BULK_SCOPES.find(([key]) => key === bulkScope)?.[1] || "";
@@ -266,15 +279,24 @@ function TechnicalDocumentsAdminBase({ session }) {
     if (!(await confirm(`Se borran ${targets.length} documento${targets.length === 1 ? "" : "s"} (${label.toLowerCase()}) con sus archivos. Esto no se puede deshacer. ¿Seguro?`, { title: "Borrar en tanda", danger: true, confirmLabel: `Borrar ${targets.length}` }))) return;
     setMessageIsError(false);
     setMessage(`Borrando ${targets.length}…`);
-    const { deleteTechnicalDocument } = await import("./technical-documents-repo.mjs");
-    const ids = new Set();
-    for (const doc of targets) {
-      try { await deleteTechnicalDocument(doc.id, doc.storagePath); ids.add(doc.id); } catch { /* sigue con el resto */ }
+    try {
+      const result = await adminCall({ mode: "delete", ids: targets.map((doc) => doc.id) });
+      await load();
+      setMessage(`Se borraron ${result.deleted} de ${result.requested}.${result.errors?.length ? ` No se pudieron borrar algunos: ${result.errors.join(" · ")}` : ""}`);
+      if (result.errors?.length) setMessageIsError(true);
+    } catch (error) {
+      setErrorMessage(error.message || "No se pudo borrar.");
     }
-    setDocuments((current) => current.filter((item) => !ids.has(item.id)));
-    const failed = targets.length - ids.size;
-    setMessage(`Se borraron ${ids.size}.${failed ? ` ${failed} no se pudieron borrar.` : ""}`);
-    if (failed) setMessageIsError(true);
+  }
+  async function allowAllTypes() {
+    setMessageIsError(false);
+    setMessage("Habilitando Word, Excel, PowerPoint, texto y fotos…");
+    try {
+      await adminCall({ mode: "allowTypes" });
+      setMessage("Listo: ya se pueden guardar Word, Excel, PowerPoint, texto y fotos. Los que quedaron sin archivo se adjuntan desde su ficha («Adjuntar archivo») o volviéndolos a subir con «Reemplazar».");
+    } catch (error) {
+      setErrorMessage(error.message || "No se pudo habilitar.");
+    }
   }
 
   // Borra todas las fichas cuya carpeta (folderFromSourceFile) sea justo
@@ -385,6 +407,7 @@ function TechnicalDocumentsAdminBase({ session }) {
               {BULK_SCOPES.map(([key, label]) => <option key={key} value={key}>{label} ({documents.filter(BULK_FILTERS[key]).length})</option>)}
             </select>
             <button type="button" className="secondary" disabled={!documents.some(BULK_FILTERS[bulkScope])} onClick={deleteInBulk}>Borrar…</button>
+            <button type="button" className="secondary" onClick={allowAllTypes} title="Hoy el espacio de archivos acepta solo PDF. Esto lo habilita una vez para Word, Excel, PowerPoint, texto y fotos.">Permitir Word, Excel y fotos</button>
           </div>
         )}
         <div className="list-toolbar inbox-filters">
@@ -445,6 +468,7 @@ function TechnicalDocumentsAdminBase({ session }) {
 export const TechnicalDocumentsAdmin = memo(TechnicalDocumentsAdminBase);
 
 export function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile, deleteDocument, moveDocumentToFolder }) {
+  const [textOpen, setTextOpen] = useState(false);
   const draft = draftFor(doc);
   const [folderFromSourceFile, setFolderFromSourceFile] = useState(null);
   useEffect(() => {
@@ -490,27 +514,42 @@ export function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleD
             Reemplazada por: {allDocuments.find((item) => item.id === doc.replacedBy)?.title || "documento eliminado"}
           </span>
         )}
-        <span className={doc.storagePath ? "technical-document-text-ok" : "technical-document-text-missing"}>
+        <span className={doc.storagePath || doc.extractedText ? "technical-document-text-ok" : "technical-document-text-missing"}>
           {doc.storagePath
-            ? `Ficha adjunta (PDF)${doc.extractedText ? " · el copiloto puede citarla si está vigente" : " · no se pudo leer el texto todavía"}`
-            : "Sin PDF adjunto todavía · el copiloto no puede citar datos de esta ficha"}
+            ? `Documento adjunto${fileKind(doc) ? ` (${fileKind(doc)})` : ""}${doc.extractedText ? " · el copiloto lee su texto" : ""}`
+            : doc.extractedText
+              ? "Texto guardado (sin archivo) · el copiloto lo lee"
+              : "Sin archivo ni texto todavía"}
           {" "}
           {doc.storagePath && (
             <button type="button" className="technical-document-file-link" onClick={() => viewFile(doc)}>
-              Ver ficha
+              Ver documento
+            </button>
+          )}
+          {!doc.storagePath && doc.extractedText && (
+            <button type="button" className="technical-document-file-link" onClick={() => setTextOpen(true)}>
+              Ver texto
             </button>
           )}
           {" "}
           <label className="technical-document-file-link">
-            {doc.storagePath ? "Reemplazar" : "Adjuntar PDF"}
+            {doc.storagePath ? "Reemplazar" : "Adjuntar archivo"}
             <input
               type="file"
-              accept="application/pdf"
+              accept={UPLOAD_ACCEPT}
               hidden
               onChange={(event) => attachFile(doc, event.target.files?.[0])}
             />
           </label>
         </span>
+        {textOpen && (
+          <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={`Texto de ${doc.title}`} onClick={() => setTextOpen(false)}>
+            <div className="modal technical-text-modal" onClick={(event) => event.stopPropagation()}>
+              <div className="modal-head"><h2>{doc.title}</h2><button type="button" className="secondary" onClick={() => setTextOpen(false)}>Cerrar</button></div>
+              <pre>{doc.extractedText}</pre>
+            </div>
+          </div>
+        )}
       </div>
       <div className="technical-document-options">
         <button

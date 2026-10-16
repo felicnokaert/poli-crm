@@ -863,3 +863,10 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .import-preview-73 .import-counts { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
 .import-preview-73 .import-counts span { padding: 6px 10px; border-radius: var(--radius-pill); background: #eeeeef; font-size: 12.5px; }
 .import-preview-73 .import-possible { display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; font-size: 12px; }
+
+/* Cotizador como pestaña del CRM (16/10). */
+.cotizador-frame-wrap { display: grid; gap: 10px; }
+.cotizador-frame-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.cotizador-frame-bar a.secondary { text-decoration: none; padding: 8px 12px; font-size: 12.5px; }
+.cotizador-frame { width: 100%; height: calc(100vh - 170px); min-height: 560px; border: 1px solid var(--color-border); border-radius: 16px; background: #fff; }
+@media (max-width: 760px) { .cotizador-frame { height: calc(100vh - 230px); min-height: 480px; } }

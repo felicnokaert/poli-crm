@@ -17,6 +17,7 @@ import { buildCommercialGuidance } from "./commercial-guidance.mjs";
 import { PIPELINE, commercialOutcome, commercialStage, cotizadorUrl as buildCotizadorUrl, useModalEscape } from "./app-shared";
 
 export function ClientDetail({
+  onQuote,
   client,
   interactions,
   tasks,
@@ -491,16 +492,15 @@ export function ClientDetail({
               >
                 Nueva tarea
               </button>
-              <a
-                className="secondary"
-                style={{ textDecoration: "none" }}
-                href={cotizadorUrl}
-                target="_blank"
-                rel="noreferrer"
-                title="Abre el cotizador en otra pestaña con esta empresa elegida. Al guardar la cotización se marca sola la fecha de «Coticé hoy» (no es una venta)."
-              >
-                <ExternalLink size={14} /> Cotizar
-              </a>
+              {onQuote ? (
+                <button type="button" className="secondary" onClick={() => onQuote(client)} title="Abre el cotizador adentro del CRM con esta empresa elegida. Al guardar la cotización se marca sola la fecha de «Coticé hoy» (no es una venta).">
+                  Cotizar
+                </button>
+              ) : (
+                <a className="secondary" style={{ textDecoration: "none" }} href={cotizadorUrl} target="_blank" rel="noreferrer" title="Abre el cotizador en otra pestaña con esta empresa elegida.">
+                  <ExternalLink size={14} /> Cotizar
+                </a>
+              )}
               <button
                 className="primary"
                 type="button"

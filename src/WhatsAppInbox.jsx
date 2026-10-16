@@ -171,7 +171,7 @@ function WhatsAppInboxBase({
               placeholder="Buscar contacto o mensaje…"
             />
           </label>
-          <select
+          <select aria-label="Familia"
             value={family}
             onChange={(event) => setFamily(event.target.value)}
           >
@@ -180,7 +180,7 @@ function WhatsAppInboxBase({
               <option key={item}>{item}</option>
             ))}
           </select>
-          <select
+          <select aria-label="Prioridad"
             value={priority}
             onChange={(event) => setPriority(event.target.value)}
           >
@@ -224,7 +224,7 @@ function WhatsAppInboxBase({
               >
                 Solo contexto
               </button>
-              <select
+              <select aria-label="Marcar como no comercial"
                 defaultValue=""
                 onChange={(event) => {
                   const category = event.target.value;

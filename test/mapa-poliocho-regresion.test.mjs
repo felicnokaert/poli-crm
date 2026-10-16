@@ -9,7 +9,8 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { buildMapClients } from '../src/map-clients-adapter.mjs';
 
-const sha = (path) => createHash('sha256').update(readFileSync(new URL(`../${path}`, import.meta.url))).digest('hex');
+// Se compara el contenido con finales de línea LF: en Windows git los cambia a CRLF y la huella daba distinta sin que el archivo cambiara.
+const sha = (path) => createHash('sha256').update(readFileSync(new URL(`../${path}`, import.meta.url), 'utf8').replace(/\r\n/g, '\n')).digest('hex');
 
 const BASELINE = {
   'public/mapa/app.js': '67b6b5fb410ccb222fb5858c5031b47d99bc4f49ea317bdb188cb2c8e11bdebf',

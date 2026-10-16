@@ -325,7 +325,7 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
         </div>
         {myChannels.length > 1 ? (
           <label className="whatsapp-number-row">
-            <select
+            <select aria-label="Número principal"
               value={myChannels.includes(data.primaryChannel) ? data.primaryChannel : myChannels[0]}
               onChange={(event) => setData({ ...data, primaryChannel: event.target.value })}
             >
@@ -430,7 +430,7 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
               Descargá toda la cartera o una familia. Cada persona o teléfono
               ocupa una fila y conserva su empresa.
             </p>
-            <select
+            <select aria-label="Familia a exportar"
               value={exportFamily}
               onChange={(event) => setExportFamily(event.target.value)}
             >

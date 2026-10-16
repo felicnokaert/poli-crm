@@ -258,7 +258,7 @@ export function TaskList({
             )}
           </strong>
           <span>
-            {task.company} ·{" "}
+            {task.company ? <>{task.company} ·{" "}</> : null}
             <span className={overdue ? "task-due-overdue" : undefined}>
               {overdue ? `Vencida · ${formatDate(task.dueDate)}` : formatDate(task.dueDate)}
             </span>

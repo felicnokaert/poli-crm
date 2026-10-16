@@ -397,13 +397,13 @@ function TechnicalDocumentsAdminBase({ session }) {
           </div>
         )}
         <div className="list-toolbar inbox-filters">
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+          <select aria-label="Estado" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
             <option value="all">Todos los estados</option>
             {Object.entries(TECHNICAL_DOCUMENT_STATUS_LABELS).map(([key, label]) => (
               <option key={key} value={key}>{label}</option>
             ))}
           </select>
-          <select value={familyFilter} onChange={(event) => setFamilyFilter(event.target.value)}>
+          <select aria-label="Familia" value={familyFilter} onChange={(event) => setFamilyFilter(event.target.value)}>
             <option value="all">Todas las familias</option>
             {families.map((family) => (
               <option key={family}>{family}</option>
@@ -547,7 +547,7 @@ export function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleD
         </button>
         {optionsOpen && (
           <div className="technical-document-actions">
-            <select
+            <select aria-label="Estado del documento"
               value={draft.status}
               onChange={(event) => updateDraft(doc.id, { status: event.target.value })}
             >
@@ -558,7 +558,7 @@ export function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleD
                 ))}
             </select>
             {draft.status === "desactualizado" && (
-              <select
+              <select aria-label="Reemplazada por"
                 value={draft.replacedBy || ""}
                 onChange={(event) => updateDraft(doc.id, { replacedBy: event.target.value })}
               >

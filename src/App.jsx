@@ -72,6 +72,7 @@ import { makeRequestsApi } from "./prospect-requests.mjs";
 import { planTasks } from "./trello-plan-import.mjs";
 import { makeTeamApi } from "./team-api.mjs";
 import { isChannelAdmin } from "./user-channels.mjs";
+import { ownsFelipeTools, TEAM_INBOX_ENABLED } from "./personal-tools.mjs";
 import { TRELLO_PLAN } from "./trello-plan.mjs";
 const Sales = lazy(() => import("./Sales"));
 // Vistas y modales que no se ven al abrir la app (la entrada es Hoy/dashboard):
@@ -1434,11 +1435,12 @@ export default function App() {
     setData((current) => ({ ...current, clients: aplicarUbicaciones(current.clients || [], cambios) }));
   }, []);
 
+  const isFelipeTools = ownsFelipeTools(session?.user?.email, onlineConfigured);
   const navGroups = [
     ["Hoy", [
       ["dashboard", "Inicio", LayoutDashboard],
       ["inbox", "Por revisar", Inbox],
-      ["team", "Equipo", UserCheck],
+      ...(TEAM_INBOX_ENABLED ? [["team", "Equipo", UserCheck]] : []),
       ["tasks", "Tareas", ClipboardList],
     ]],
     ["Ventas", [
@@ -1457,7 +1459,7 @@ export default function App() {
       ["techdocs", "Base técnica", FileCheck2],
     ]],
     ["Más", [
-      ["board", "Tablero / Trello", LayoutGrid],
+      ...(isFelipeTools ? [["board", "Tablero / Trello", LayoutGrid]] : []),
       ["profile", "Perfil", UserCog],
       ["settings", "Datos", Database],
     ]],
@@ -1706,6 +1708,7 @@ export default function App() {
             myChannels={myChannels}
             weeklyTargets={data.weeklyTargets}
             planChecks={data.planChecks}
+            showRoutine={isFelipeTools}
             showWelcome={shouldShowWelcome(data)}
             welcomeName={data.profileName}
             onDismissWelcome={dismissWelcome}
@@ -1762,8 +1765,9 @@ export default function App() {
             planChecks={data.planChecks}
             onTogglePlan={togglePlanCheck}
             onNavigate={setView}
-            onImportPlan={importTrelloPlan}
+            onImportPlan={isFelipeTools ? importTrelloPlan : undefined}
             onPostpone={postponeTaskTo}
+            personal={isFelipeTools}
             onAddEvent={addEvent}
           />
         )}

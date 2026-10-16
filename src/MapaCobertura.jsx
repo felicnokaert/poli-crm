@@ -250,6 +250,11 @@ function MapaCoberturaBase({ clients: clientsProp, prospects, onSetClientType, o
 
   useEffect(() => {
     let activo = true;
+    // Primero se manda lo que ya se sabe (zona por provincia/ciudad y los que ya estaban ubicados) y
+    // después, cuando Georef termina, los pines precisos. Antes se esperaba a Georef: con muchos
+    // aplicadores tardaba más de 20 s, el mapa se daba por vencido ("el CRM no envió los datos") y
+    // la pestaña RAPYP quedaba sin cargar.
+    setMapClients(withOwnCoordinates(buildMapClients(clients || []), prospectos ? prospects : []));
     (async () => {
       try {
         const cache = leerCache();

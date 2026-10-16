@@ -12,6 +12,7 @@ import { onlineConfigured, supabase } from "./online";
 import { SharedDirectory } from "./SharedDirectory.jsx";
 import { AdminUsers } from "./AdminUsers.jsx";
 import { WorkspaceCleanup } from "./WorkspaceCleanup.jsx";
+import { ErrorLog } from "./ErrorLog.jsx";
 import { connectWhatsApp } from "./meta-onboarding";
 import {
   buildCommercialCohort,
@@ -413,6 +414,7 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
       )}
       {onlineConfigured && isChannelAdmin(session?.user?.email) && <AdminUsers supabase={supabase} session={session} adminEmails={CHANNEL_ADMINS} />}
       {onlineConfigured && isChannelAdmin(session?.user?.email) && <WorkspaceCleanup session={session} />}
+      {onlineConfigured && isChannelAdmin(session?.user?.email) && <ErrorLog session={session} />}
       {onlineConfigured && <SharedDirectory supabase={supabase} session={session} clients={data.clients || []} setClients={(clients) => setData((current) => ({ ...current, clients }))} />}
       <section className="panel">
         <div className="panel-head">

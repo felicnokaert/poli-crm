@@ -1,4 +1,5 @@
 import { Component } from "react";
+import { reportClientError } from "./error-report.mjs";
 
 // Red de seguridad para errores de pantalla (16/10). Antes, un error en cualquier pantalla dejaba toda
 // la app en blanco (pasó con "Limpiar" y "Borrar usuario"). Ahora falla solo esa parte, se avisa y se
@@ -15,6 +16,7 @@ export class ErrorBoundary extends Component {
 
   componentDidCatch(error, info) {
     console.error("Error de pantalla", error, info?.componentStack);
+    reportClientError(error, { view: this.props.view || (this.props.full ? "app" : "") });
   }
 
   render() {

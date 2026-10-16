@@ -901,3 +901,6 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 @media (max-width: 760px) { .metric-grid.metric-grid-week { grid-template-columns: 1fr; } .alerts-tabs { overflow-x: auto; flex-wrap: nowrap; } .alerts-tabs button { white-space: nowrap; } }
 
 .academy-subtabs { width: fit-content; max-width: 100%; overflow-x: auto; }
+
+/* Celular: lo que quedaba chico para el dedo (16/10). */
+@media (max-width: 760px) { .local-chip { min-height: 32px; padding-block: 6px; } main .link-button { padding: 6px 4px; } }

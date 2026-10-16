@@ -1,6 +1,7 @@
 import { deleteUser } from '../lib/admin-users.mjs';
 import { cleanupWorkspaces } from '../lib/workspace-cleanup-admin.mjs';
 import { technicalAdmin } from '../lib/technical-admin.mjs';
+import { listClientErrors, logClientError } from '../lib/error-log.mjs';
 
 // Una sola función para las tareas de administrador (el plan de Vercel limita la cantidad de funciones):
 // borrar un usuario, revisar/limpiar espacios con datos de Felipe copiados (action: 'cleanup') o
@@ -10,6 +11,8 @@ export default async function handler(request, response) {
   const action = request.body?.action;
   const result = action === 'cleanup' ? await cleanupWorkspaces(request)
     : action === 'technical' ? await technicalAdmin(request)
+    : action === 'logError' ? await logClientError(request)
+    : action === 'listErrors' ? await listClientErrors(request)
     : await deleteUser(request);
   return response.status(result.status).json(result.body);
 }

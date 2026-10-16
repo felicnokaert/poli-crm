@@ -8,6 +8,7 @@
 // se les quitan solo los datos privados que son idénticos a los de Felipe (notas, compras, etapa...).
 // Lo que cada persona cargó por su cuenta (ids propios) no se toca.
 import { PUBLIC_FIELDS } from './shared-directory.mjs';
+import { closedBySystem } from './day-review.mjs';
 
 const COLLECTIONS = ['tasks', 'interactions', 'opportunities', 'sales', 'boardLists', 'boardCards', 'salesGoals', 'businessUnits', 'prospects', 'prospectSearches', 'researchJobs'];
 const LOGS = ['mergeLogs', 'duplicateReviewDecisions'];
@@ -86,8 +87,9 @@ export function cleanCopiedWorkspace(state = {}, ownerStates = [], { allowedChan
   // de su pipeline o que ya no están): las que quedaban en el Cierre del día de Juan.
   const workedIds = new Set((Array.isArray(next.clients) ? next.clients : []).filter((client) => client?.pipelineActive !== false).map((client) => client.id));
   const aboutUnworkedClient = (task) => ['auto-stale-client', 'auto-expired-quote'].includes(task?.source) && !workedIds.has(task.clientId || task.autoKey);
+  // Y las automáticas que el sistema ya cerró solo: no las hizo nadie y solo ensucian sus Tareas.
   const autoFromOwner = (task) => String(task?.source || '').startsWith('auto-')
-    && (ownerClientIds.has(task.clientId) || ownerClientIds.has(task.autoKey) || aboutUnworkedClient(task) || [...ownerContactKeys].some((key) => String(task.autoKey || '').includes(key)));
+    && (closedBySystem(task) || ownerClientIds.has(task.clientId) || ownerClientIds.has(task.autoKey) || aboutUnworkedClient(task) || [...ownerContactKeys].some((key) => String(task.autoKey || '').includes(key)));
   const tasksNow = Array.isArray(next.tasks) ? next.tasks : [];
   const autoCopied = tasksNow.filter(autoFromOwner);
   if (autoCopied.length) {

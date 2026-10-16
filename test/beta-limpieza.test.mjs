@@ -182,3 +182,14 @@ test('las automáticas cerradas por la corrida de las 6 (antes del arreglo) tamp
   assert.equal(closedBySystem({ source: 'auto-stale-client', done: true, completedAt: '2026-10-16T14:10:00.000Z' }), false);
   assert.equal(closedBySystem({ title: 'Mía', done: true, completedAt: '2026-10-16T06:05:00.000Z' }), false);
 });
+
+test('limpieza: también se van las automáticas que cerró el sistema solo (Juan las veía como hechas)', async () => {
+  const { cleanCopiedWorkspace } = await import('../src/workspace-cleanup.mjs');
+  const juan = { clients: [{ id: 'mia', company: 'Propia', pipelineActive: true }], tasks: [
+    { id: 'a', source: 'auto-hot-lead', autoKey: 'juan:5491100000000', done: true, autoClosed: true, completedAt: '2026-10-16T06:00:10Z' },
+    { id: 'b', source: 'auto-stale-client', clientId: 'mia', autoKey: 'mia', done: true, completedAt: '2026-10-15T06:00:20Z' },
+    { id: 'c', title: 'La hice yo', done: true, completedAt: '2026-10-16T15:00:00Z' },
+  ] };
+  const { state } = cleanCopiedWorkspace(juan, [{ clients: [] }], { allowedChannels: ['juan'] });
+  assert.deepEqual(state.tasks.map((t) => t.id), ['c']);
+});

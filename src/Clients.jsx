@@ -94,9 +94,9 @@ function ClientsBase({ clients, query, setQuery, onOpenClient, onMergeClients, m
           value={portfolio}
           onChange={(e) => setPortfolio(e.target.value)}
         >
-          <option>Todos</option>
-          <option>Activos</option>
-          <option>En cartera</option>
+          <option value="Todos">Todas</option>
+          <option value="Activos">En seguimiento</option>
+          <option value="En cartera">Sin seguimiento</option>
         </select>
         <select aria-label="Familia" value={family} onChange={(e) => setFamily(e.target.value)}>
           {families.map((item) => (

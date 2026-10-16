@@ -481,9 +481,11 @@ export function ClientDetail({
                   })
                 }
               >
+                {/* "En seguimiento" reemplaza a Cuentas activas (sacada del menú el 16/10): de esta marca
+                    dependen las tareas automáticas de "Retomar contacto". */}
                 {client.pipelineActive === false
-                  ? "Agregar al pipeline"
-                  : "Sacar del pipeline"}
+                  ? "Marcar en seguimiento"
+                  : "Dejar de seguir"}
               </button>
               <button
                 className="secondary"

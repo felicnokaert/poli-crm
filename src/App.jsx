@@ -13,7 +13,6 @@ import {
   Plus,
   Search,
   UserCheck,
-  Target,
   Trash2,
   GraduationCap,
   Database,
@@ -1496,7 +1495,6 @@ export default function App() {
       ["tasks", "Tareas", ClipboardList],
     ]],
     ["Ventas", [
-      ["pipeline", "Cuentas activas", Target],
       ["sales", "Ventas", ReceiptText],
       ["quoter", "Cotizador", Calculator],
       ["prospecting", "Prospección", Search],

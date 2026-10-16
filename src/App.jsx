@@ -1705,6 +1705,7 @@ export default function App() {
             inbox={data.inbox || EMPTY_ARRAY}
             myChannels={myChannels}
             weeklyTargets={data.weeklyTargets}
+            planChecks={data.planChecks}
             showWelcome={shouldShowWelcome(data)}
             welcomeName={data.profileName}
             onDismissWelcome={dismissWelcome}

@@ -29,6 +29,7 @@ import {
 } from "./daily-maintenance.mjs";
 import { Empty } from "./ui-primitives";
 import { today, TRELLO_BOARD_URL } from "./app-shared";
+import { todayPlan } from "./today-plan.mjs";
 import { TaskList } from "./Tasks";
 import { InteractionRow } from "./Interactions";
 
@@ -483,6 +484,45 @@ function DayHero({ name, overdueTasks, dueTodayTasks, hotLeads, tasks, onOpenTas
   );
 }
 
+function MyDay({ planChecks, tasks, onNavigate }) {
+  const now = new Date();
+  const plan = todayPlan(today(), { planChecks, tasks, nowMinutes: now.getHours() * 60 + now.getMinutes() });
+  if (plan.weekend) return null;
+  const pct = plan.progress.total ? Math.round((plan.progress.done / plan.progress.total) * 100) : 0;
+  return (
+    <section className="panel my-day" aria-label="Mi día">
+      <div className="panel-head">
+        <div>
+          <span className="eyebrow">Mi día</span>
+          <h2>{plan.progress.done} de {plan.progress.total} bloques · {plan.doneLabel}</h2>
+        </div>
+        <button type="button" className="secondary" onClick={() => onNavigate?.("tasks")}>Abrir rutina y cierre</button>
+      </div>
+      <div className="my-day-bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${pct}%` }} /></div>
+      <div className="my-day-grid">
+        <div>
+          <h4>Ahora toca</h4>
+          {plan.next
+            ? <p><strong>{plan.next.start} · {plan.next.title}</strong> <span className="muted small">{plan.next.minutes} min</span><br /><span className="muted small">{plan.next.detail}</span>{plan.next.view && <> <button type="button" className="link-button" onClick={() => onNavigate?.(plan.next.view)}>Ir</button></>}</p>
+            : <p className="muted small">Rutina completa. Buen día.</p>}
+        </div>
+        <div>
+          <h4>Con hora hoy</h4>
+          {plan.events.length
+            ? <ul>{plan.events.slice(0, 5).map((event) => <li key={event.id}><strong>{event.startTime}</strong> {event.title}</li>)}</ul>
+            : <p className="muted small">Sin visitas ni reuniones cargadas.</p>}
+        </div>
+        <div>
+          <h4>Quedó del día anterior</h4>
+          {plan.leftover
+            ? <p>{plan.leftover} {plan.leftover === 1 ? "tarea" : "tareas"} sin hacer. <button type="button" className="link-button" onClick={() => onNavigate?.("tasks")}>Resolver</button></p>
+            : <p className="muted small">Nada pendiente.</p>}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function DashboardBase({
   metrics,
   tasks,
@@ -500,6 +540,7 @@ function DashboardBase({
   onOpenEvent,
   onNavigate,
   weeklyTargets,
+  planChecks,
   showWelcome,
   welcomeName,
   onDismissWelcome,
@@ -581,6 +622,7 @@ function DashboardBase({
           onToggle={onToggle}
         />
       )}
+      {!showWelcome && <MyDay planChecks={planChecks || {}} tasks={tasks} onNavigate={onNavigate} />}
       <DayMode
         overdueTasks={overdueTasks}
         dueTodayTasks={dueTodayTasks}

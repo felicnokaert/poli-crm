@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, Search } from 'lucide-react';
 import { AI_TOOLS } from './prospect-playbook.mjs';
+import { buildCompetitorRow } from './competitor-battlecard.mjs';
+import { isChannelAdmin } from './user-channels.mjs';
 
 // Fichas de competidores (tabla compartida `competitors`, solo lectura) y pedidos de
 // profundización a Claude (tabla prospect_requests, familia "COMPETENCIA: <nombre>").
@@ -47,6 +49,8 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [form, setForm] = useState(null);
+  const [manual, setManual] = useState(null);
+  const canDelete = isChannelAdmin(userEmail);
 
   useEffect(() => { setFamily(initialFamily || 'Todas'); }, [initialFamily]);
 
@@ -95,6 +99,29 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
     }
   }
 
+  async function addManual(event) {
+    event.preventDefault();
+    const row = buildCompetitorRow(manual);
+    if (!row) return;
+    setError(''); setMessage('');
+    const { error: insertError } = await supabase.from('competitors').insert(row);
+    if (insertError) {
+      setError(insertError.code === '23505' ? 'Ya existe un competidor con ese nombre.' : 'No se pudo guardar el competidor.');
+      return;
+    }
+    setManual(null);
+    setMessage(`${row.name} quedó cargado para todo el equipo (sin revisar).`);
+    await load();
+  }
+
+  async function remove(item) {
+    if (!canDelete || !window.confirm(`¿Borrar a ${item.name} para todo el equipo?`)) return;
+    const { error: deleteError } = await supabase.from('competitors').delete().eq('id', item.id);
+    if (deleteError) { setError('No se pudo borrar.'); return; }
+    setMessage(`${item.name} se borró.`);
+    await load();
+  }
+
   async function copy(competitor) {
     try {
       await navigator.clipboard.writeText(buildCompetitorPrompt(competitor));
@@ -121,6 +148,35 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
         <div className="panel-head-actions">
           <button type="button" className="secondary" onClick={() => setForm(form ? null : { name: '', website: '', facebook: '', instagram: '', family: '' })}>+ Cargar un competidor nuevo</button>
         </div>
+      )}
+      {supabase && (
+        <div className="panel-head-actions">
+          <button type="button" className="secondary" onClick={() => setManual(manual ? null : { name: '', kind: 'fabricante', family: '', summary: '', website: '', location: '' })}>+ Agregar a mano</button>
+        </div>
+      )}
+      {manual && (
+        <form className="form-grid" onSubmit={addManual}>
+          <p className="muted small span-2">Cualquiera del equipo puede cargar un competidor. Queda visible para todos y marcado "sin revisar"; solo Felipe puede borrarlo.</p>
+          <label>Nombre<input required value={manual.name} onChange={(event) => setManual({ ...manual, name: event.target.value })} /></label>
+          <label>Tipo
+            <select value={manual.kind} onChange={(event) => setManual({ ...manual, kind: event.target.value })}>
+              <option value="fabricante">Fabricante</option><option value="equipos">Vende máquinas / equipos</option><option value="distribuidor">Distribuidor</option>
+            </select>
+          </label>
+          <label>Familia con la que compite
+            <select value={manual.family} onChange={(event) => setManual({ ...manual, family: event.target.value })}>
+              <option value="">No sé</option>
+              {families.map((name) => <option key={name}>{name}</option>)}
+            </select>
+          </label>
+          <label>Sitio web<input value={manual.website} onChange={(event) => setManual({ ...manual, website: event.target.value })} /></label>
+          <label>Dónde está<input value={manual.location} onChange={(event) => setManual({ ...manual, location: event.target.value })} /></label>
+          <label className="span-2">Qué sabés de ellos<input value={manual.summary} onChange={(event) => setManual({ ...manual, summary: event.target.value })} /></label>
+          <div className="panel-head-actions span-2">
+            <button type="submit" className="primary">Guardar</button>
+            <button type="button" className="secondary" onClick={() => setManual(null)}>Cancelar</button>
+          </div>
+        </form>
       )}
       {form && (
         <form className="form-grid" onSubmit={submitNew}>
@@ -180,6 +236,7 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
                     {req.result_markdown ? <pre className="competitor-result">{req.result_markdown}</pre> : <p className="muted small">Todavía sin resultado.</p>}
                   </details>
                 ))}
+                {canDelete && <button type="button" className="link-button" onClick={() => remove(item)}>Borrar (solo Felipe)</button>}
                 <details>
                   <summary>Profundizar sobre {item.name}</summary>
                   <p className="muted small">Sin Claude: copiá el pedido y pegalo en tu IA. Con el equipo: lo pedís acá y lo procesa Claude de Poliplast.</p>

@@ -44,3 +44,25 @@ export function buildBattlecard(competitor = {}) {
     ],
   };
 }
+
+// Alta directa de un competidor por cualquier persona del equipo: queda marcado "sin revisar" hasta que alguien lo verifique.
+export function slugifyCompetitor(name = '') {
+  return String(name).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+}
+
+export function buildCompetitorRow(input = {}, now = new Date().toISOString()) {
+  const name = String(input.name || '').trim();
+  if (!name) return null;
+  return {
+    id: slugifyCompetitor(name),
+    name,
+    kind: ['fabricante', 'equipos', 'distribuidor'].includes(input.kind) ? input.kind : 'fabricante',
+    families: input.family ? [input.family] : [],
+    summary: String(input.summary || '').trim(),
+    website: String(input.website || '').trim(),
+    location: String(input.location || '').trim(),
+    caveats: 'Cargada a mano por el equipo: falta verificar los datos.',
+    reviewed: false,
+    updated_at: now,
+  };
+}

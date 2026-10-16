@@ -12,6 +12,7 @@ import { useModalEscape } from "./app-shared";
 export function ShortcutsHelp({ onClose }) {
   useModalEscape(onClose);
   const shortcuts = [
+    ["Ctrl + K", "Buscar empresas, tareas y prospectos en todo el CRM"],
     ["/", "Buscar en la pantalla actual"],
     ["n", "Nueva tarea"],
     ["Esc", "Cerrar el formulario o ficha abierta"],

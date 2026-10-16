@@ -724,3 +724,9 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .team-stats strong{font-size:1.4rem}
 .team-stats span{font-size:.8rem;color:var(--brand-gray)}
 .team-stats .risk{border-left:4px solid #c0392b}
+
+.command-palette{max-width:560px;width:calc(100% - 32px);align-self:flex-start;margin-top:10vh}
+.palette-list{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:2px}
+.palette-list button{display:flex;gap:10px;align-items:baseline;width:100%;text-align:left;padding:9px 10px;border:0;border-radius:8px;background:transparent;cursor:pointer}
+.palette-list button.active{background:var(--color-bg-soft)}
+.palette-kind{font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:var(--brand-gray);min-width:68px}

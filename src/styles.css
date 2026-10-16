@@ -387,6 +387,10 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .price-memory-result { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 14px; padding: 14px; background: #f3f6f4; border-radius: 11px; flex-wrap: wrap; }
 .price-memory-result strong, .price-memory-result span { display: block; }
 .price-memory-result span { color: var(--color-text-muted); font-size: 12px; margin-top: 3px; }
+.price-memory-history { flex-basis: 100%; order: 2; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.price-memory-history li { padding: 9px 11px; border-radius: var(--radius-md); background: var(--color-white); border: 1px solid var(--color-border); }
+.price-memory-history li:first-child { border-color: var(--color-teal-mid); }
+.price-memory-result > button { order: 3; }
 .price-memory-result > div:nth-child(2) { text-align: right; }
 .price-memory-result > div:nth-child(2) strong { font: 800 20px 'Manrope'; margin-top: 2px; }
 .day-mode-list { display: grid; gap: 8px; margin-top: 6px; }

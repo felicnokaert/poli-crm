@@ -58,6 +58,16 @@ export default function PriceMemory({ sales }) {
             <span>{quantity} x {money(quote.unitPrice, quote.currency)} {ivaLabel(best)}</span>
             <strong>{money(quote.total, quote.currency)} <small>{ivaLabel(best)}</small></strong>
           </div>
+          {best.history?.length > 1 && (
+            <ol className="price-memory-history" aria-label="Últimos precios">
+              {best.history.map((item, index) => (
+                <li key={`${item.date}-${item.customer}-${index}`}>
+                  <strong>{money(item.unitPrice, item.currency)} {ivaLabel(item)}</strong>
+                  <span>{item.customer || 'sin nombre'} · {item.date || 'sin fecha'}{item.unit ? ` · ${item.unit}` : ''}</span>
+                </li>
+              ))}
+            </ol>
+          )}
           <button type="button" className="secondary" onClick={copyQuote}><Copy size={15}/> {copied ? 'Copiado ✓' : 'Copiar para WhatsApp'}</button>
         </div>
       )}

@@ -37,3 +37,11 @@ test('ignores items without a positive unit price', () => {
   ]);
   assert.equal(memory.size, 0);
 });
+
+test('guarda los últimos 3 precios de cada producto, el más nuevo primero', () => {
+  const sales = ['2026-08-01', '2026-09-01', '2026-07-01', '2026-10-01'].map((date, index) => ({ date, customer: `C${index}`, currency: 'USD', items: [{ description: '618', unitPrice: 5 + index / 10 }] }));
+  const [match] = findPriceMatches(buildPriceMemory(sales), '618');
+  assert.equal(match.date, '2026-10-01');
+  assert.deepEqual(match.history.map((item) => item.date), ['2026-10-01', '2026-09-01', '2026-08-01']);
+  assert.equal(match.unitPrice, 5.3);
+});

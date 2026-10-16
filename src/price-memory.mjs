@@ -8,8 +8,11 @@ function normalizeProduct(value = '') {
     .trim();
 }
 
-// Un producto puede haberse vendido varias veces; nos quedamos con la
-// cotización más reciente por descripción normalizada.
+export const PRICE_HISTORY_SIZE = 3;
+
+// Un producto puede haberse vendido varias veces: la entrada es la venta más
+// reciente por descripción normalizada, y `history` guarda las últimas 3
+// (más nueva primero) para comparar precios.
 export function buildPriceMemory(sales = []) {
   const byProduct = new Map();
   for (const sale of sales) {
@@ -29,7 +32,10 @@ export function buildPriceMemory(sales = []) {
         ivaPercent: Number(item.ivaPercent) || null,
       };
       const existing = byProduct.get(key);
-      if (!existing || String(entry.date) > String(existing.date)) byProduct.set(key, entry);
+      const history = [...(existing?.history || []), entry]
+        .sort((x, y) => String(y.date).localeCompare(String(x.date)))
+        .slice(0, PRICE_HISTORY_SIZE);
+      byProduct.set(key, { ...history[0], history });
     }
   }
   return byProduct;

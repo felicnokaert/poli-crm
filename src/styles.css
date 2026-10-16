@@ -564,6 +564,11 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 
 .queue-card { display: grid; gap: 10px; padding: 22px; border-radius: 16px; background: #ffffffd0; border: 1px solid #ffffffe0; box-shadow: 0 14px 40px #29292914; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); animation: glass-rise .4s ease both; }
 .queue-card h3 { margin: 0; font-size: 22px; }
+.queue-card p { margin: 0; }
+.queue-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
+.queue-actions select { max-width: 220px; }
+.prospect-coverage { margin-top: 16px; }
+.prospect-coverage summary { cursor: pointer; padding: 6px 0; }
 .queue-count { color: #ed1c24; font-size: 13px; }
 .queue-notes { margin: 0; padding: 10px 12px; border-radius: 10px; background: #f3f3f4; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
 .drawer-quick { display: flex; flex-wrap: wrap; gap: 8px; }

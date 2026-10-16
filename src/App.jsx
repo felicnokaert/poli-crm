@@ -110,6 +110,7 @@ import { scoreTriage, suggestTriage } from "./commercial-triage.mjs";
 import { shouldCreateFollowup } from "./followup-policy.mjs";
 import { useWorkspaceSync } from "./hooks/useWorkspaceSync";
 import { useSelectedRecords } from "./hooks/useSelectedRecords";
+import { postponeTask } from "./day-review.mjs";
 import { useNavGroups } from "./hooks/useNavGroups";
 import { useSalesActions } from "./hooks/useSalesActions";
 
@@ -487,6 +488,13 @@ export default function App() {
       const added = planTasks(TRELLO_PLAN, current.tasks);
       return added.length ? { ...current, tasks: [...(current.tasks || []), ...added] } : current;
     });
+  }, []);
+
+  const postponeTaskTo = useCallback((id, toDate) => {
+    setData((current) => ({
+      ...current,
+      tasks: current.tasks.map((task) => (task.id === id ? postponeTask(task, toDate) : task)),
+    }));
   }, []);
 
   const togglePlanCheck = useCallback((key, value) => {
@@ -1737,6 +1745,7 @@ export default function App() {
             onTogglePlan={togglePlanCheck}
             onNavigate={setView}
             onImportPlan={importTrelloPlan}
+            onPostpone={postponeTaskTo}
             onAddEvent={addEvent}
           />
         )}

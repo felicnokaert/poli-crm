@@ -11,8 +11,8 @@ test('la Rutina muestra los bloques del día, se tilda y lleva a la pantalla del
   const toggles = [];
   const navs = [];
   render(React.createElement(Routine, { date: '2026-10-16', planChecks: {}, onToggle: (key, value) => toggles.push([key, value]), onNavigate: (view) => navs.push(view) }));
-  assert.ok(screen.getByText(/Cierre comercial de la semana/));
-  assert.ok(screen.getByText(/Prospección B2B/));
+  assert.ok(screen.getAllByText(/Cierre comercial de la semana/).length >= 1);
+  assert.ok(screen.getAllByText(/Prospección B2B/).length >= 1);
   fireEvent.click(screen.getByLabelText('Marcar Prospección B2B'));
   assert.deepEqual(toggles[0], ['rutina:2026-10-16:prospeccion', true]);
   fireEvent.click(screen.getAllByRole('button', { name: /Ir/ })[1]);
@@ -24,5 +24,15 @@ test('la Rutina muestra los bloques del día, se tilda y lleva a la pantalla del
 test('fin de semana: sin rutina', async () => {
   const { Routine } = await loadJsxModule('src/Routine.jsx');
   render(React.createElement(Routine, { date: '2026-10-17', planChecks: {}, onToggle() {}, onNavigate() {} }));
-  assert.ok(screen.getByText(/sin rutina/i));
+  assert.ok(screen.getAllByText(/sin rutina/i).length >= 1);
+});
+
+test('el cierre del día lista lo pendiente y permite pasarlo al próximo día hábil', async () => {
+  const { DayReview } = await loadJsxModule('src/DayReview.jsx');
+  const moved = [];
+  const tasks = [{ id: 't1', title: 'Llamar a Pérez', done: false, dueDate: '2026-10-16', priority: 'Alta' }];
+  render(React.createElement(DayReview, { date: '2026-10-16', planChecks: {}, tasks, onPostpone: (id, to) => moved.push([id, to]) }));
+  assert.ok(screen.getByText('Llamar a Pérez'));
+  fireEvent.click(screen.getByRole('button', { name: /Pasar al próximo día hábil/ }));
+  assert.deepEqual(moved[0], ['t1', '2026-10-19']);
 });

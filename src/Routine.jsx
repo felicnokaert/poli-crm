@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { DayReview } from "./DayReview.jsx";
 import { planSummary, tasksForDay } from "./trello-plan-import.mjs";
 import { CheckCircle2, Circle, ArrowRight, Flame } from "lucide-react";
 import {
@@ -7,7 +8,7 @@ import {
 
 const DAY_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie"];
 
-export function Routine({ date, planChecks = {}, onToggle, onNavigate, tasks = [], onToggleTask, onImportPlan, plan = [] }) {
+export function Routine({ date, planChecks = {}, onToggle, onNavigate, tasks = [], onToggleTask, onImportPlan, plan = [], onPostpone }) {
   const [full, setFull] = useState(true);
   const day = useMemo(() => routineForDate(date), [date]);
   const progress = routineProgress(planChecks, date);
@@ -90,6 +91,8 @@ export function Routine({ date, planChecks = {}, onToggle, onNavigate, tasks = [
           ))}
         </div>
       )}
+
+      <DayReview date={date} planChecks={planChecks} tasks={tasks} onPostpone={onPostpone} onToggleTask={onToggleTask} />
 
       <div className="routine-week" aria-label="Semana">
         {week.map((item, index) => {

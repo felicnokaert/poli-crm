@@ -27,7 +27,12 @@ Búsqueda global Ctrl+K; tarjeta Mi día en Inicio; menú en 5 grupos; Prospecci
 - Directorio de empresas compartido: tabla shared_companies (Felipe publica, cada uno trae desde Más → Datos). Solo viajan nombre, rubro, ubicación y contactos.
 - conversation_assignments restringida por canal (aplicado 16/10 con OK de Felipe).
 - Para probar la vista del resto del equipo en localhost: `localStorage.setItem('poliplast-simulate-member','1')` y recargar.
-- Pendiente: cotizador integrado al CRM (hoy es una aplicación separada, ver docs/ADR-001).
+- Cotizador (decidido por Felipe 16/10): sigue en su propio repositorio (poliplast-cotizador), códigos separados. Una cotización NO es una venta: nunca guarda en Ventas, solo sirve para pasar precio. Puede buscar clientes del CRM, darlos de alta si no existen y marcar "Coticé hoy" (client.lastQuotedAt). Se le suman cosas del CRM (copiar para WhatsApp, gráficos, diseño).
+
+## Arreglos beta (16/10, tarde)
+- Bug corregido: al iniciar sesión con otra cuenta sin cerrar la anterior, el espacio de Felipe se guardaba en el de esa cuenta (remoteReady ahora es por cuenta; la copia local lleva dueño en `poliplast-sales-copilot-v1-owner`). Limpieza con vista previa: Más → Datos → "Datos tuyos en otras cuentas" (api/admin-users.js action 'cleanup', src/workspace-cleanup.mjs: saca registros con el mismo id que los de Felipe y los marca borrados; las empresas quedan sin sus datos privados).
+- Mapa RAPYP solo para Felipe, Juan y David (canSeeRapypMap). El directorio compartido lleva sourceType (clasificación de Felipe) y tipoCliente resuelto (aplicador) para que el resto vea su clasificación.
+- El plan Trello de Felipe se descarga solo en su cuenta (import dinámico); el resto tiene "Importar tareas de Trello" (JSON exportado de su tablero) en Tareas. Memoria de precios: todo es + IVA.
 
 ## Pendiente / próximos pasos
 - Usuarios registrados (16/10): panel solo para Felipe en Más → Datos ("Usuarios registrados": nombre, mail, fechas; borrar). Lista por función SQL admin_list_users() (solo admin de canales); borrado por api/admin-users.js con clave de servicio (no borra administradores ni a sí mismo; su espacio de trabajo queda guardado). El alta pide nombre y apellido (user_metadata.full_name). Las cuentas anteriores sin nombre lo toman de Perfil o de Academia → Equipo.

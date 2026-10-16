@@ -1,11 +1,11 @@
 import { memo, useEffect, useState } from "react";
-import { Bot, CheckCircle2, Download, Plus, Search, X } from "lucide-react";
+import { Bot, CheckCircle2, Download, Plus, Search, Upload, X } from "lucide-react";
 import { formatDate } from "./utils.mjs";
 import { Empty, Fact } from "./ui-primitives";
 import { Routine } from "./Routine.jsx";
 import { Calendar } from "./Calendar.jsx";
 import { DayReview } from "./DayReview.jsx";
-import { TRELLO_PLAN } from "./trello-plan.mjs";
+import { trelloJsonToTasks } from "./trello-json-import.mjs";
 import { addDaysToToday, googleCalendarUrl, today, TRELLO_BOARD_URL, useModalEscape } from "./app-shared";
 
 // Mismo patrón que clientsToCsv/salesToCsv (client-csv.mjs, sales-model.mjs):
@@ -84,7 +84,32 @@ function taskListEmptyText({ items, filtered, filter, query }) {
   return "No hay tareas que coincidan con este filtro.";
 }
 
-function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, onNavigate, onImportPlan, onAddEvent, onPostpone, personal = true }) {
+function TrelloImport({ items, onImportTasks }) {
+  const [message, setMessage] = useState("");
+  async function onFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      const added = trelloJsonToTasks(await file.text(), items);
+      if (added.length) onImportTasks(added);
+      setMessage(added.length ? `Se sumaron ${added.length} tareas de Trello.` : "Esas tarjetas ya estaban cargadas.");
+    } catch {
+      setMessage("No pude leer ese archivo. Tiene que ser el JSON que exporta Trello.");
+    }
+  }
+  return (
+    <>
+      <label className="secondary upload-button" title="En Trello: menú del tablero → Imprimir, exportar y compartir → Exportar como JSON">
+        <Upload size={16} /> Importar tareas de Trello
+        <input type="file" accept=".json,application/json" hidden onChange={onFile} />
+      </label>
+      {message && <div className="system-message">{message}</div>}
+    </>
+  );
+}
+
+function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, onNavigate, onImportPlan, onImportTasks, onAddEvent, onPostpone, personal = true, plan = [] }) {
   const [tab, setTab] = useState("tareas");
   const [filter, setFilter] = useState("pending");
   const [query, setQuery] = useState("");
@@ -112,7 +137,7 @@ function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, o
       <div className="content-stack">
         {tabs}
         {!personal && <section className="panel"><DayReview date={today()} planChecks={planChecks || {}} tasks={items} onPostpone={onPostpone} onToggleTask={onToggle} includeRoutine={false} /></section>}
-        {personal && <Routine date={today()} planChecks={planChecks || {}} onToggle={onTogglePlan} onNavigate={onNavigate} tasks={items} onToggleTask={onToggle} plan={TRELLO_PLAN} onImportPlan={onImportPlan} onPostpone={onPostpone} />}
+        {personal && <Routine date={today()} planChecks={planChecks || {}} onToggle={onTogglePlan} onNavigate={onNavigate} tasks={items} onToggleTask={onToggle} plan={plan} onImportPlan={onImportPlan} onPostpone={onPostpone} />}
       </div>
     );
   }
@@ -133,9 +158,12 @@ function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, o
           <span className="eyebrow">Agenda única</span>
           <h2>Tareas comerciales</h2>
         </div>
-        <button className="primary" type="button" onClick={onNew} title="Nueva tarea (n)">
-          <Plus size={17} /> Nueva tarea
-        </button>
+        <div className="panel-head-actions">
+          {onImportTasks && <TrelloImport items={items} onImportTasks={onImportTasks} />}
+          <button className="primary" type="button" onClick={onNew} title="Nueva tarea (n)">
+            <Plus size={17} /> Nueva tarea
+          </button>
+        </div>
       </div>
       <div className="list-toolbar">
         <label className="search">

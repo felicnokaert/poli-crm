@@ -30,7 +30,7 @@ export function TestCleanupPanel({ data, setData, session }) {
   }
 
   return (
-    <section className="panel">
+    <section className="panel" style={{ marginBottom: 14 }}>
       <div className="panel-head">
         <div>
           <span className="eyebrow">Higiene de datos</span>

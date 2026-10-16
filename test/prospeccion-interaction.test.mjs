@@ -47,7 +47,7 @@ describe("Prospeccion.jsx - interacción real", () => {
     await mount({ clients: [{ id: "c1", company: "PIERANDREI S.A.", city: "Paraná" }], prospects: [] });
     fireEvent.click(screen.getByText(/Importar o pegar una lista de prospectos/));
     fireEvent.change(screen.getByLabelText("Lista de prospectos"), { target: { value: "Empresa;Localidad\nPierandrei;Parana\nFerretería Sur;Colón" } });
-    fireEvent.click(screen.getByText("Revisar lista"));
+    fireEvent.click(screen.getByText("Revisar lista pegada"));
     await waitFor(() => paragraph(/2 filas: 1 nuevas, 1 ya en el CRM, 0 posibles duplicadas/));
     fireEvent.click(screen.getByText("Confirmar importación (1)"));
     await waitFor(() => screen.getByText("Ferretería Sur"));
@@ -207,7 +207,7 @@ describe("Prospeccion.jsx - interacción real", () => {
     const snapshots = await mount({ clients: [], prospects: [] }, { cities: CITIES });
     fireEvent.click(screen.getByText(/Importar o pegar una lista de prospectos/));
     fireEvent.change(screen.getByLabelText("Lista de prospectos"), { target: { value: RELEVAMIENTO } });
-    fireEvent.click(screen.getByText("Revisar lista"));
+    fireEvent.click(screen.getByText("Revisar lista pegada"));
     await waitFor(() => paragraph(/2 filas: 2 nuevas, 0 ya en el CRM, 0 posibles duplicadas, 0 ya cargadas como prospecto/));
     assert.equal(snapshots.length, 0, "todavía no se guardó nada");
     fireEvent.click(screen.getByText("Confirmar importación (2)"));
@@ -230,7 +230,7 @@ describe("Prospeccion.jsx - interacción real", () => {
     fireEvent.change(screen.getByLabelText("Lista de prospectos"), {
       target: { value: "Empresa;Ciudad\nSILVACOM;Concordia\nCorralón Norte S.A.;Colón\nFerretería Sur;Paraná\nFerretería Sur S.R.L.;Paraná" },
     });
-    fireEvent.click(screen.getByText("Revisar lista"));
+    fireEvent.click(screen.getByText("Revisar lista pegada"));
     await waitFor(() => paragraph(/4 filas: 1 nuevas, 0 ya en el CRM, 1 posibles duplicadas, 2 ya cargadas como prospecto/));
     fireEvent.click(screen.getByText("Confirmar importación (2)"));
     await waitFor(() => screen.getByText(/Se importaron 2 prospectos como "No contactado" \(fuente: importado\)\. Se omitieron 2/));

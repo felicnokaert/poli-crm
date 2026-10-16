@@ -387,6 +387,10 @@ main { padding: 30px 36px 56px; min-width: 0; }
 .price-memory-result { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 14px; padding: 14px; background: #f3f6f4; border-radius: 11px; flex-wrap: wrap; }
 .price-memory-result strong, .price-memory-result span { display: block; }
 .price-memory-result span { color: var(--color-text-muted); font-size: 12px; margin-top: 3px; }
+.price-memory-history { flex-basis: 100%; order: 2; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.price-memory-history li { padding: 9px 11px; border-radius: var(--radius-md); background: var(--color-white); border: 1px solid var(--color-border); }
+.price-memory-history li:first-child { border-color: var(--color-teal-mid); }
+.price-memory-result > button { order: 3; }
 .price-memory-result > div:nth-child(2) { text-align: right; }
 .price-memory-result > div:nth-child(2) strong { font: 800 20px 'Manrope'; margin-top: 2px; }
 .day-mode-list { display: grid; gap: 8px; margin-top: 6px; }
@@ -806,3 +810,22 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .admin-user-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 12px; }
 .admin-user-row > div { display: grid; gap: 2px; min-width: 0; }
 .admin-user-row .muted { overflow-wrap: anywhere; }
+.admin-user-row .pill { flex: none; border-radius: var(--radius-pill); padding: 4px 10px; font-size: 11px; font-weight: 700; }
+.admin-user-row .pill.ok { color: var(--color-success); background: var(--color-success-bg); }
+.admin-user-row .pill.warn { color: var(--color-amber-text); background: var(--color-amber-bg); }
+
+/* Cajas de importar y barras de herramientas (16/10): aire entre botones y campos. */
+.import-box { margin: 12px 0 16px; padding: 12px 14px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-panel-bg); }
+.import-box > summary { cursor: pointer; font-weight: 700; }
+.import-box > summary svg { vertical-align: -2px; margin-right: 4px; }
+.import-box[open] > summary { margin-bottom: 10px; }
+.import-box > p { margin: 0 0 10px; line-height: 1.5; }
+.import-box > textarea { display: block; width: 100%; box-sizing: border-box; min-height: 120px; resize: vertical; }
+.import-box-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
+.prospect-toolbar { justify-content: flex-start; gap: 10px; margin: 12px 0; }
+.data-cards article { display: flex; flex-direction: column; align-items: flex-start; }
+.data-cards article > p { align-self: stretch; }
+.data-cards article > :is(button, label, select) { margin-top: 8px; white-space: nowrap; }
+.data-cards article > select + button { margin-left: 0; }
+.data-cards article .modal-actions { flex-wrap: wrap; justify-content: flex-start; gap: 8px; margin-top: auto; padding-top: 8px; }
+.data-cards article .modal-actions > * { white-space: nowrap; }

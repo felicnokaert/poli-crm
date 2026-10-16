@@ -8,8 +8,11 @@ function normalizeProduct(value = '') {
     .trim();
 }
 
-// Un producto puede haberse vendido varias veces; nos quedamos con la
-// cotización más reciente por descripción normalizada.
+export const PRICE_HISTORY_SIZE = 3;
+
+// Un producto puede haberse vendido varias veces: la entrada es la venta más
+// reciente por descripción normalizada, y `history` guarda las últimas 3
+// (más nueva primero) para comparar precios.
 export function buildPriceMemory(sales = []) {
   const byProduct = new Map();
   for (const sale of sales) {
@@ -25,9 +28,14 @@ export function buildPriceMemory(sales = []) {
         date: sale.date || '',
         customer: sale.customer || '',
         unit: sale.unit || '',
+        // Los precios de la factura son netos: el IVA va aparte (21% o 10,5% según el producto).
+        ivaPercent: Number(item.ivaPercent) || null,
       };
       const existing = byProduct.get(key);
-      if (!existing || String(entry.date) > String(existing.date)) byProduct.set(key, entry);
+      const history = [...(existing?.history || []), entry]
+        .sort((x, y) => String(y.date).localeCompare(String(x.date)))
+        .slice(0, PRICE_HISTORY_SIZE);
+      byProduct.set(key, { ...history[0], history });
     }
   }
   return byProduct;
@@ -52,4 +60,9 @@ export function quotePrice(entry, quantity = 1) {
     total: Math.round(entry.unitPrice * qty * 100) / 100,
     currency: entry.currency,
   };
+}
+
+// "+ IVA" o "+ IVA 21%": todos los precios de la memoria son sin IVA (así salen de la factura).
+export function ivaLabel(entry) {
+  return entry?.ivaPercent ? `+ IVA ${String(entry.ivaPercent).replace('.', ',')}%` : '+ IVA';
 }

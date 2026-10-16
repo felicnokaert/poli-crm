@@ -14,6 +14,20 @@ import { resolveChannels } from "../user-channels.mjs";
 import { isIgnoredWhatsAppContact } from "../whatsapp-threads.mjs";
 import { findClientByWhatsApp } from "../client-contacts.mjs";
 
+// De qué cuenta es la copia del espacio guardada en este navegador (la escribe
+// App.jsx en "poliplast-sales-copilot-v1"). Si no coincide con la sesión, esa
+// copia no se muestra ni se guarda en la base.
+export const CACHE_OWNER_KEY = "poliplast-sales-copilot-v1-owner";
+function cacheOwner() {
+  try { return globalThis.localStorage?.getItem(CACHE_OWNER_KEY) ?? null; } catch { return null; }
+}
+function setCacheOwner(userId) {
+  try {
+    if (userId) globalThis.localStorage?.setItem(CACHE_OWNER_KEY, userId);
+    else globalThis.localStorage?.removeItem(CACHE_OWNER_KEY);
+  } catch { /* sin almacenamiento: se trabaja solo con lo de la base */ }
+}
+
 // El sufijo fuerza una única segunda pasada que también incluye las tareas
 // antiguas sin fecha de vencimiento, usando su fecha de creación.
 const TASKS_CLOSED_THROUGH = "2026-09-09.1";
@@ -35,6 +49,15 @@ export function reconcileLoadedWorkspaceState({ state, statusEvents }) {
     dirty = true;
   }
   return { nextState, dirty, statusEvents: statusEvents || [] };
+}
+
+// "Por revisar" muestra solo mensajes de los canales de la cuenta. La carga ya
+// los filtra; esto cubre lo que llega mezclado desde la base (un espacio que
+// quedó con mensajes de otra cuenta antes del arreglo de remoteReady).
+export function onlyMyChannels(state, channels = []) {
+  const inbox = state?.inbox || [];
+  const mine = inbox.filter((item) => channels.includes(item.channel));
+  return mine.length === inbox.length ? state : { ...state, inbox: mine };
 }
 
 // Lógica pura de cómo un evento entrante de WhatsApp (INSERT en tiempo real)
@@ -113,7 +136,15 @@ export function useWorkspaceSync(data, setData) {
   const channelsRef = useRef(myChannels);
   channelsRef.current = myChannels;
   const [authReady, setAuthReady] = useState(!onlineConfigured);
-  const [remoteReady, setRemoteReady] = useState(false);
+  // remoteReady es por cuenta: solo vale si lo que hay en pantalla se cargó de
+  // la cuenta con la que se está guardando. Antes era un booleano suelto y, si
+  // se iniciaba sesión con otra cuenta sin cerrar la anterior (otra pestaña,
+  // un link de confirmación), se guardaba el espacio de la cuenta anterior
+  // dentro del de la nueva: así le aparecieron a otras cuentas los chats, las
+  // tareas y el plan de Trello de Felipe.
+  const [loadedUserId, setLoadedUserId] = useState(null);
+  const remoteReady = Boolean(session?.user?.id) && loadedUserId === session.user.id;
+  const setRemoteReady = (ready) => { if (!ready) setLoadedUserId(null); };
   const [syncStatus, setSyncStatus] = useState(
     onlineConfigured ? "Conectando…" : "Modo local",
   );
@@ -144,7 +175,20 @@ export function useWorkspaceSync(data, setData) {
   useEffect(() => {
     if (!onlineConfigured || !session?.user?.id) {
       setRemoteReady(false);
+      // Sin sesión no queda en pantalla (ni en el navegador) el espacio de nadie.
+      if (onlineConfigured && authReady && cacheOwner() !== null) {
+        setCacheOwner(null);
+        setData(initialState);
+      }
       return undefined;
+    }
+    const userId = session.user.id;
+    setRemoteReady(false);
+    // Lo guardado en este navegador es de otra cuenta: se vacía antes de
+    // mostrar nada, y se espera a lo que traiga la base para esta cuenta.
+    if (cacheOwner() !== userId) {
+      setCacheOwner(null);
+      setData(initialState);
     }
     let active = true;
     setSyncStatus("Sincronizando…");
@@ -166,8 +210,9 @@ export function useWorkspaceSync(data, setData) {
           saveOnlineState(session.user.id, session.user.email, nextState).catch(() => {});
         }
         setData(nextState);
+        setCacheOwner(userId);
         setOutboundStatusEvents(statusEvents);
-        setRemoteReady(true);
+        setLoadedUserId(userId);
         setSyncStatus("Sincronizado");
       })
       .catch(() => active && setSyncStatus("Error al cargar"));
@@ -201,7 +246,7 @@ export function useWorkspaceSync(data, setData) {
         ({ new: row }) => {
           if (!row?.data) return;
           setData((current) => {
-            const merged = mergeWorkspaceState(current, row.data);
+            const merged = onlyMyChannels(mergeWorkspaceState(current, row.data), channelsRef.current);
             return workspaceStatesEqual(current, merged) ? current : merged;
           });
           setSyncStatus(
@@ -216,7 +261,7 @@ export function useWorkspaceSync(data, setData) {
       supabase.removeChannel(workspaceChannel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user?.id, loadAttempt]);
+  }, [session?.user?.id, authReady, loadAttempt]);
 
   useEffect(() => {
     if (!session?.access_token || syncStatus !== "Sincronizado") return;
@@ -233,13 +278,15 @@ export function useWorkspaceSync(data, setData) {
       return undefined;
     setSyncStatus("Guardando…");
     const timer = setTimeout(() => {
-      saveOnlineState(session.user.id, session.user.email, data)
+      const userId = session.user.id;
+      saveOnlineState(userId, session.user.email, data)
         .then((saved) => {
+          if (cacheOwner() !== userId) return;
           // Si mientras tanto el servidor (o otra pestaña) escribió algo, el
           // guardado lo unió con lo local en vez de pisarlo: lo mostramos.
           if (saved?.merged) {
             setData((current) => {
-              const next = mergeWorkspaceState(current, saved.data);
+              const next = onlyMyChannels(mergeWorkspaceState(current, saved.data), channelsRef.current);
               return workspaceStatesEqual(current, next) ? current : next;
             });
           }

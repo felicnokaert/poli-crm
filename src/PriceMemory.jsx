@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Copy, Search, Tags } from 'lucide-react';
-import { buildPriceMemory, findPriceMatches, quotePrice } from './price-memory.mjs';
+import { buildPriceMemory, findPriceMatches, ivaLabel, quotePrice } from './price-memory.mjs';
 
 const money = (value, currency) =>
   currency === 'USD'
@@ -18,7 +18,7 @@ export default function PriceMemory({ sales }) {
 
   async function copyQuote() {
     if (!quote || !best) return;
-    const text = `${best.description}: ${quantity} x ${money(quote.unitPrice, quote.currency)} = ${money(quote.total, quote.currency)}`;
+    const text = `${best.description}: ${quantity} x ${money(quote.unitPrice, quote.currency)} ${ivaLabel(best)} = ${money(quote.total, quote.currency)} ${ivaLabel(best)}`;
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
@@ -34,7 +34,7 @@ export default function PriceMemory({ sales }) {
         <div>
           <span className="eyebrow">Se aprende de cada venta cargada</span>
           <h2>Memoria de precios</h2>
-          <p>Buscá un producto que ya cotizaste (viene de las facturas subidas en Ventas) y calculá el total para otra cantidad.</p>
+          <p>Buscá un producto que ya cotizaste (viene de las facturas subidas en Ventas) y calculá el total para otra cantidad. Los precios son <strong>sin IVA</strong>: por ejemplo, USD 5,5 + IVA.</p>
         </div>
         <Tags size={22} />
       </div>
@@ -55,9 +55,19 @@ export default function PriceMemory({ sales }) {
             <span>Última vez: {best.customer || 'sin nombre'} · {best.date || 'sin fecha'} · {best.unit}</span>
           </div>
           <div>
-            <span>{quantity} x {money(quote.unitPrice, quote.currency)}</span>
-            <strong>{money(quote.total, quote.currency)}</strong>
+            <span>{quantity} x {money(quote.unitPrice, quote.currency)} {ivaLabel(best)}</span>
+            <strong>{money(quote.total, quote.currency)} <small>{ivaLabel(best)}</small></strong>
           </div>
+          {best.history?.length > 1 && (
+            <ol className="price-memory-history" aria-label="Últimos precios">
+              {best.history.map((item, index) => (
+                <li key={`${item.date}-${item.customer}-${index}`}>
+                  <strong>{money(item.unitPrice, item.currency)} {ivaLabel(item)}</strong>
+                  <span>{item.customer || 'sin nombre'} · {item.date || 'sin fecha'}{item.unit ? ` · ${item.unit}` : ''}</span>
+                </li>
+              ))}
+            </ol>
+          )}
           <button type="button" className="secondary" onClick={copyQuote}><Copy size={15}/> {copied ? 'Copiado ✓' : 'Copiar para WhatsApp'}</button>
         </div>
       )}

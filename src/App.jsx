@@ -74,8 +74,7 @@ import { makeTeamApi } from "./team-api.mjs";
 import { isChannelAdmin } from "./user-channels.mjs";
 import { applyTheme, nextTheme, readTheme } from "./theme.mjs";
 import { LocalInfo } from "./LocalInfo.jsx";
-import { ownsFelipeTools, TEAM_INBOX_ENABLED } from "./personal-tools.mjs";
-import { TRELLO_PLAN } from "./trello-plan.mjs";
+import { canSeeRapypMap, ownsFelipeTools, TEAM_INBOX_ENABLED } from "./personal-tools.mjs";
 const Sales = lazy(() => import("./Sales"));
 // Vistas y modales que no se ven al abrir la app (la entrada es Hoy/dashboard):
 // cada una va a su propio chunk y se baja al entrar por primera vez. Login,
@@ -496,11 +495,16 @@ export default function App() {
     }));
   }, []);
 
+  // El plan Trello de Felipe se descarga solo en su cuenta (ver el efecto que llena trelloPlan).
+  const [trelloPlan, setTrelloPlan] = useState([]);
   const importTrelloPlan = useCallback(() => {
     setData((current) => {
-      const added = planTasks(TRELLO_PLAN, current.tasks);
+      const added = planTasks(trelloPlan, current.tasks);
       return added.length ? { ...current, tasks: [...(current.tasks || []), ...added] } : current;
     });
+  }, [trelloPlan]);
+  const importTrelloTasks = useCallback((added) => {
+    setData((current) => ({ ...current, tasks: [...(current.tasks || []), ...added] }));
   }, []);
 
   const postponeTaskTo = useCallback((id, toDate) => {
@@ -1440,6 +1444,14 @@ export default function App() {
   }, []);
 
   const isFelipeTools = ownsFelipeTools(session?.user?.email, onlineConfigured);
+  const seesRapyp = canSeeRapypMap(session?.user?.email, onlineConfigured);
+  const shownMapTab = !seesRapyp && mapTab === "aplicadores" ? "ventas" : mapTab;
+  useEffect(() => {
+    if (!isFelipeTools) return undefined;
+    let active = true;
+    import("./trello-plan.mjs").then((module) => active && setTrelloPlan(module.TRELLO_PLAN)).catch(() => {});
+    return () => { active = false; };
+  }, [isFelipeTools]);
   const navGroups = [
     ["Hoy", [
       ["dashboard", "Inicio", LayoutDashboard],
@@ -1779,6 +1791,8 @@ export default function App() {
             onTogglePlan={togglePlanCheck}
             onNavigate={setView}
             onImportPlan={isFelipeTools ? importTrelloPlan : undefined}
+            onImportTasks={isFelipeTools ? undefined : importTrelloTasks}
+            plan={trelloPlan}
             onPostpone={postponeTaskTo}
             personal={isFelipeTools}
             onAddEvent={addEvent}
@@ -1876,14 +1890,14 @@ export default function App() {
         {view === "map" && (
           <>
             <div className="segmented" role="tablist" aria-label="Tipo de mapa" style={{ marginBottom: 12, width: "fit-content" }}>
-              {[["aplicadores", "Aplicadores (RAPYP)"], ["ventas", "Ventas (sin aplicadores)"], ["prospectos", "Prospectos"]].map(([key, label]) => (
-                <button key={key} type="button" role="tab" aria-selected={mapTab === key} className={mapTab === key ? "selected" : ""} onClick={() => setMapTab(key)}>{label}</button>
+              {[...(seesRapyp ? [["aplicadores", "Aplicadores (RAPYP)"]] : []), ["ventas", "Ventas (sin aplicadores)"], ["prospectos", "Prospectos"]].map(([key, label]) => (
+                <button key={key} type="button" role="tab" aria-selected={shownMapTab === key} className={shownMapTab === key ? "selected" : ""} onClick={() => setMapTab(key)}>{label}</button>
               ))}
             </div>
             <Suspense fallback={<Splash text="Cargando mapa…" />}>
-              {mapTab === "aplicadores" && <MapaCobertura key="aplicadores" clients={data.clients} onSetClientType={setClientType} onApplyLocations={applyClientLocations} userEmail={session?.user?.email} />}
-              {mapTab === "ventas" && <MapaCobertura key="ventas" modo="ventas" clients={data.clients} onSetClientType={setClientType} onApplyLocations={applyClientLocations} userEmail={session?.user?.email} />}
-              {mapTab === "prospectos" && <MapaCobertura key="prospectos" modo="prospectos" prospects={data.prospects || []} clients={[]} onSetClientType={setClientType} onApplyLocations={applyClientLocations} userEmail={session?.user?.email} />}
+              {shownMapTab === "aplicadores" && <MapaCobertura key="aplicadores" clients={data.clients} onSetClientType={setClientType} onApplyLocations={applyClientLocations} userEmail={session?.user?.email} />}
+              {shownMapTab === "ventas" && <MapaCobertura key="ventas" modo="ventas" clients={data.clients} onSetClientType={setClientType} onApplyLocations={applyClientLocations} userEmail={session?.user?.email} />}
+              {shownMapTab === "prospectos" && <MapaCobertura key="prospectos" modo="prospectos" prospects={data.prospects || []} clients={[]} onSetClientType={setClientType} onApplyLocations={applyClientLocations} userEmail={session?.user?.email} />}
             </Suspense>
           </>
         )}

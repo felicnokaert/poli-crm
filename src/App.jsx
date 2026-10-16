@@ -1448,6 +1448,20 @@ export default function App() {
   const isFelipeTools = ownsFelipeTools(session?.user?.email, onlineConfigured);
   const seesRapyp = canSeeRapypMap(session?.user?.email, onlineConfigured);
   const shownMapTab = !seesRapyp && mapTab === "aplicadores" ? "ventas" : mapTab;
+  // Juan y David ven el mapa RAPYP con las empresas de Felipe (las completas: ubicaciones, compras y
+  // tipo), que entrega el servidor solo a ellos (lib/rapyp-clients.mjs). Felipe usa las suyas.
+  const [rapypClients, setRapypClients] = useState(null);
+  const usesFelipeMapData = seesRapyp && !isFelipeTools && onlineConfigured;
+  useEffect(() => {
+    if (!usesFelipeMapData || view !== "map" || rapypClients || !session?.access_token) return undefined;
+    let active = true;
+    fetch("/api/mapa-publico?rapyp=1", { headers: { Authorization: `Bearer ${session.access_token}` } })
+      .then((response) => (response.ok ? response.json() : { clients: [] }))
+      .then((body) => active && setRapypClients(body.clients || []))
+      .catch(() => active && setRapypClients([]));
+    return () => { active = false; };
+  }, [usesFelipeMapData, view, rapypClients, session?.access_token]);
+  const companyMapClients = usesFelipeMapData ? rapypClients || EMPTY_ARRAY : data.clients;
   useEffect(() => {
     if (!isFelipeTools) return undefined;
     let active = true;
@@ -1899,8 +1913,8 @@ export default function App() {
               ))}
             </div>
             <Suspense fallback={<Splash text="Cargando mapa…" />}>
-              {shownMapTab === "aplicadores" && <MapaCobertura key="aplicadores" clients={data.clients} onSetClientType={setClientType} onApplyLocations={applyClientLocations} userEmail={session?.user?.email} />}
-              {shownMapTab === "ventas" && <MapaCobertura key="ventas" modo="ventas" clients={data.clients} onSetClientType={setClientType} onApplyLocations={applyClientLocations} userEmail={session?.user?.email} />}
+              {shownMapTab === "aplicadores" && <MapaCobertura key="aplicadores" clients={companyMapClients} onSetClientType={setClientType} onApplyLocations={applyClientLocations} userEmail={session?.user?.email} />}
+              {shownMapTab === "ventas" && <MapaCobertura key="ventas" modo="ventas" clients={companyMapClients} onSetClientType={setClientType} onApplyLocations={applyClientLocations} userEmail={session?.user?.email} />}
               {shownMapTab === "prospectos" && <MapaCobertura key="prospectos" modo="prospectos" prospects={data.prospects || []} clients={[]} onSetClientType={setClientType} onApplyLocations={applyClientLocations} userEmail={session?.user?.email} />}
             </Suspense>
           </>

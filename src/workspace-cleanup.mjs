@@ -57,11 +57,28 @@ export function cleanCopiedWorkspace(state = {}, ownerStates = [], { allowedChan
         if (!KEEP_ON_CLIENT.has(key) && key in source && same(value, source[key])) { changed = true; continue; }
         kept[key] = value;
       }
-      if (!changed) return client;
+      // Queda como empresa del directorio, fuera del pipeline de la persona: así no le genera tareas
+      // automáticas de "Retomar contacto" por cuentas que no trabaja.
+      if (!changed && client.pipelineActive === false) return client;
       clientsCleaned += 1;
-      return { ...kept, updatedAt: stamp };
+      return { ...kept, pipelineActive: false, source: 'Directorio del equipo', updatedAt: stamp };
     });
     if (clientsCleaned) removed.clientPrivateData = clientsCleaned;
+  }
+
+  // Tareas automáticas que el proceso diario creó por algo copiado de Felipe (sus empresas o los chats
+  // de su número): se sacan si siguen abiertas. Las que la persona ya resolvió quedan en su historial.
+  const ownerClientIds = new Set(ownerClients.keys());
+  // Solo números de WhatsApp (los nombres sueltos coincidirían de más).
+  const ownerContactKeys = new Set(owner('inbox').map((event) => String(event?.customer_wa_id || '').replace(/\D/g, '')).filter((digits) => digits.length >= 8));
+  const autoFromOwner = (task) => !task?.done && String(task?.source || '').startsWith('auto-')
+    && (ownerClientIds.has(task.clientId) || ownerClientIds.has(task.autoKey) || [...ownerContactKeys].some((key) => String(task.autoKey || '').includes(key)));
+  const tasksNow = Array.isArray(next.tasks) ? next.tasks : [];
+  const autoCopied = tasksNow.filter(autoFromOwner);
+  if (autoCopied.length) {
+    next.tasks = tasksNow.filter((task) => !autoFromOwner(task));
+    next.deletedRecordIds = { ...(next.deletedRecordIds || deletedRecordIds), tasks: [...new Set([...((next.deletedRecordIds || deletedRecordIds).tasks || []), ...autoCopied.map((task) => task.id)])].sort() };
+    removed.automaticTasks = autoCopied.length;
   }
 
   // "Por revisar": solo mensajes de los canales propios.

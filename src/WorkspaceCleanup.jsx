@@ -7,7 +7,8 @@ const LABELS = {
   boardLists: "listas del tablero", boardCards: "tarjetas del tablero", salesGoals: "objetivos de venta",
   businessUnits: "unidades de negocio", prospects: "prospectos", prospectSearches: "búsquedas de prospectos",
   researchJobs: "investigaciones", mergeLogs: "fusiones", duplicateReviewDecisions: "decisiones de duplicados",
-  clientPrivateData: "empresas con notas o compras tuyas (la empresa queda, sin esos datos)",
+  clientPrivateData: "empresas tuyas (quedan como directorio, sin tus notas ni compras y fuera de su pipeline)",
+  automaticTasks: "tareas automáticas («Retomar contacto», «Responder a…») creadas por tus empresas o chats",
   inbox: "chats de otros números en Por revisar", ignoredWhatsAppContacts: "contactos marcados como no comerciales",
   dismissedInboxEventIds: "mensajes descartados", planChecks: "marcas de tu rutina",
   profileName: "tu nombre de perfil", weeklyTargets: "tus metas semanales", prospectFocus: "tu foco de prospección",
@@ -77,7 +78,7 @@ export function WorkspaceCleanup({ session }) {
               <div>
                 <strong>{item.email}</strong>
                 <span className="muted small">{item.changed ? `Copiado de tu espacio: ${describe(item.removed)}` : "Limpio: no tiene nada tuyo."}</span>
-                {item.automaticTasks > 0 && <span className="muted small">Además tiene {item.automaticTasks} tareas automáticas pendientes, creadas por el CRM con los WhatsApp de su propio número (no son tuyas; no se borran).</span>}
+                {item.automaticTasks > 0 && <span className="muted small">Además tiene {item.automaticTasks} tareas automáticas pendientes, creadas por el CRM con sus propias empresas o su número de WhatsApp (no vienen de tu cuenta; no se borran).</span>}
               </div>
               <span className={`pill ${item.changed ? "warn" : "ok"}`}>{item.changed ? "Para limpiar" : "OK"}</span>
             </article>

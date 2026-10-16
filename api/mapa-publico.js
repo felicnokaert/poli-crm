@@ -1,6 +1,7 @@
 import { withRetry } from '../lib/retry.mjs';
 import { logError } from '../lib/log.mjs';
 import { fetchSnapshotByToken, isValidShareToken } from '../lib/map-share.mjs';
+import { rapypClients } from '../lib/rapyp-clients.mjs';
 
 // Lectura PUBLICA (sin login) del mapa compartido: /mapa?t=TOKEN -> /api/mapa-publico?t=TOKEN.
 // Devuelve solo la foto que alguien del equipo publico a proposito (sin CUIT, telefonos ni
@@ -11,6 +12,18 @@ export default async function handler(request, response) {
   if (request.method !== 'GET') return response.status(405).json({ error: 'Método no permitido, usar GET.' });
   response.setHeader('X-Robots-Tag', 'noindex, nofollow');
   response.setHeader('Cache-Control', 'no-store, max-age=0'); // revocar tiene que valer al instante
+
+  // ?rapyp=1 (con sesión): las empresas de Felipe para el mapa de aplicadores de Juan y David
+  // (lib/rapyp-clients.mjs). Va en esta misma función por el límite de funciones de Vercel.
+  if (request.query?.rapyp === '1') {
+    try {
+      const result = await rapypClients(request);
+      return response.status(result.status).json(result.body);
+    } catch (error) {
+      logError('mapa-publico', 'failed to read rapyp clients', {}, error);
+      return response.status(500).json({ error: 'Error interno.' });
+    }
+  }
 
   const token = request.query?.t;
   if (!isValidShareToken(token)) return response.status(404).json({ error: 'Mapa no disponible.' });

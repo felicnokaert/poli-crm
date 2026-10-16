@@ -11,6 +11,7 @@ import {
   Inbox,
   Plus,
   Search,
+  UserCheck,
   Target,
   Trash2,
   GraduationCap,
@@ -69,6 +70,8 @@ import {
 import { inferIntent } from "./commercial-intelligence.mjs";
 import { makeRequestsApi } from "./prospect-requests.mjs";
 import { planTasks } from "./trello-plan-import.mjs";
+import { makeTeamApi } from "./team-api.mjs";
+import { isChannelAdmin } from "./user-channels.mjs";
 import { TRELLO_PLAN } from "./trello-plan.mjs";
 const Sales = lazy(() => import("./Sales"));
 // Vistas y modales que no se ven al abrir la app (la entrada es Hoy/dashboard):
@@ -78,6 +81,7 @@ const Sales = lazy(() => import("./Sales"));
 const lazyNamed = (loader, name) => lazy(() => loader().then((m) => ({ default: m[name] })));
 const Pipeline = lazyNamed(() => import("./Pipeline"), "Pipeline");
 const Clients = lazyNamed(() => import("./Clients"), "Clients");
+const TeamInbox = lazyNamed(() => import("./TeamInbox"), "TeamInbox");
 const Prospeccion = lazyNamed(() => import("./Prospeccion"), "Prospeccion");
 const Contacts = lazyNamed(() => import("./Clients"), "Contacts");
 const Conversations = lazyNamed(() => import("./Conversations"), "Conversations");
@@ -223,6 +227,7 @@ export default function App() {
     return () => query.removeEventListener("change", onChange);
   }, []);
   const prospectRequests = useMemo(() => makeRequestsApi(supabase), []);
+  const teamApi = useMemo(() => makeTeamApi(supabase), []);
   const confirm = useConfirm();
   const [data, setData] = useState(loadState);
   const {
@@ -1417,6 +1422,7 @@ export default function App() {
     ["Ventas", [
       ["dashboard", "Inicio", LayoutDashboard],
       ["inbox", "Por revisar", Inbox],
+      ["team", "Equipo", UserCheck],
       ["conversations", "Historial", MessageCircle],
       ["tasks", "Tareas", ClipboardList],
       ["pipeline", "Cuentas activas", Target],
@@ -1781,6 +1787,11 @@ export default function App() {
               onMarkNotDuplicate={markNotDuplicate}
               onPostponeDuplicate={postponeDuplicate}
             />
+          </Suspense>
+        )}
+        {view === "team" && (
+          <Suspense fallback={<Splash text="Cargando equipo…" />}>
+            <TeamInbox api={teamApi} userEmail={session?.user?.email} isAdmin={isChannelAdmin(session?.user?.email)} />
           </Suspense>
         )}
         {view === "prospecting" && (

@@ -37,13 +37,30 @@ test('el cierre del día lista lo pendiente y permite pasarlo al próximo día h
   assert.deepEqual(moved[0], ['t1', '2026-10-19']);
 });
 
-test('el buscador de la Academia encuentra productos y vendedores', async () => {
+test('el buscador de la Academia encuentra productos y solo muestra las notas de vendedores a Felipe', async () => {
   const { KnowledgeSearch } = await loadJsxModule('src/Academy.jsx');
-  render(React.createElement(KnowledgeSearch, { supabase: null, clients: [{ id: 'c1', company: 'Corralón Sur', rubro: 'aglupl' }] }));
+  const view = render(React.createElement(KnowledgeSearch, { supabase: null, clients: [{ id: 'c1', company: 'Corralón Sur', rubro: 'aglupl' }] }));
   fireEvent.change(screen.getByPlaceholderText(/adhesivo/), { target: { value: 'agluplast' } });
   assert.ok(screen.getAllByText(/AGLUPLAST/).length >= 1);
   fireEvent.change(screen.getByPlaceholderText(/adhesivo/), { target: { value: 'repuestos' } });
+  assert.equal(screen.queryByText(/Juan · Gerente general/), null, 'el equipo no ve lo que Felipe escribió de los vendedores');
+  view.unmount();
+  render(React.createElement(KnowledgeSearch, { supabase: null, clients: [], showSellers: true }));
+  fireEvent.change(screen.getByPlaceholderText(/adhesivo/), { target: { value: 'repuestos' } });
   assert.ok(screen.getByText(/Juan · Gerente general/));
+});
+
+test('cada persona se describe a sí misma y se guarda con su mail', async () => {
+  const { TeamSelf } = await loadJsxModule('src/TeamSelf.jsx');
+  const saved = [];
+  const supabase = { from: () => ({ select: () => ({ order: () => Promise.resolve({ data: [], error: null }) }), upsert: (row) => { saved.push(row); return Promise.resolve({ error: null }); } }) };
+  render(React.createElement(TeamSelf, { supabase, userEmail: 'Brenda@grupopoliplast.com.ar', isAdmin: false }));
+  fireEvent.change(screen.getByLabelText(/¿Qué hacés\?/), { target: { value: 'Atiendo las tiendas online' } });
+  fireEvent.click(screen.getByRole('button', { name: /Guardar mi descripción/ }));
+  await screen.findByText(/Guardado/);
+  assert.equal(saved[0].email, 'brenda@grupopoliplast.com.ar');
+  assert.equal(saved[0].role_text, 'Atiendo las tiendas online');
+  assert.equal(screen.queryByText(/Lo que escribió el resto/), null);
 });
 
 test('la búsqueda global abre la empresa elegida con Enter', async () => {

@@ -1869,6 +1869,7 @@ export default function App() {
               data={data}
               setData={setData}
               supabase={supabase}
+              userEmail={session?.user?.email}
             />
           </Suspense>
         )}

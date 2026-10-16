@@ -15,6 +15,8 @@ import {
   findObjections,
 } from "./commercial-knowledge.mjs";
 import { SELLER_PROFILES, SELLER_PROFILES_META } from "./seller-profiles.mjs";
+import { TeamSelf } from "./TeamSelf.jsx";
+import { isChannelAdmin } from "./user-channels.mjs";
 import { KNOWLEDGE_TYPES, buildKnowledgePrompt, searchKnowledge } from "./knowledge-search.mjs";
 import { PRODUCT_CATALOG } from "./product-catalog.mjs";
 import { OBJECTIONS } from "./commercial-knowledge.mjs";
@@ -147,8 +149,9 @@ export function CompetitorTalk({ supabase }) {
   );
 }
 
-function AcademyBase({ myChannels, interactions, data, setData, supabase }) {
+function AcademyBase({ myChannels, interactions, data, setData, supabase, userEmail }) {
   const [section, setSection] = useState("method");
+  const admin = isChannelAdmin(userEmail);
   return (
     <div className="content-stack">
       <section className="panel academy-hero">
@@ -170,8 +173,13 @@ function AcademyBase({ myChannels, interactions, data, setData, supabase }) {
       </section>
       {["method", "objections", "profiles"].includes(section) && <CommercialKnowledge section={section} />}
       {section === "competition" && <CompetitorTalk supabase={supabase} />}
-      {section === "team" && <SellerProfiles />}
-      {section === "search" && <KnowledgeSearch supabase={supabase} clients={data.clients || []} />}
+      {section === "team" && (
+        <>
+          <TeamSelf supabase={supabase} userEmail={userEmail} isAdmin={admin} />
+          {admin && <SellerProfiles />}
+        </>
+      )}
+      {section === "search" && <KnowledgeSearch supabase={supabase} clients={data.clients || []} showSellers={admin} />}
       {section === "library" && <QuickReplies myChannels={myChannels} />}
       {section === "coach" && (
         <>
@@ -183,7 +191,7 @@ function AcademyBase({ myChannels, interactions, data, setData, supabase }) {
   );
 }
 
-export function KnowledgeSearch({ supabase, clients = [] }) {
+export function KnowledgeSearch({ supabase, clients = [], showSellers = false }) {
   const [query, setQuery] = useState("");
   const [docs, setDocs] = useState([]);
   const [competitors, setCompetitors] = useState([]);
@@ -194,7 +202,7 @@ export function KnowledgeSearch({ supabase, clients = [] }) {
       .then(({ data }) => setDocs(data || []));
     supabase.from("competitors").select("id,name,kind,families,summary,caveats").then(({ data }) => setCompetitors(data || []));
   }, [supabase]);
-  const sources = { products: PRODUCT_CATALOG, docs, clients, sellers: SELLER_PROFILES, objections: OBJECTIONS, competitors };
+  const sources = { products: PRODUCT_CATALOG, docs, clients, sellers: showSellers ? SELLER_PROFILES : [], objections: OBJECTIONS, competitors };
   const result = searchKnowledge(query, sources);
   async function copy() {
     try { await navigator.clipboard.writeText(buildKnowledgePrompt(query, result)); setCopied(true); } catch { setCopied(false); }
@@ -235,8 +243,8 @@ export function SellerProfiles() {
     <section className="panel commercial-knowledge">
       <div className="panel-head">
         <div>
-          <span className="eyebrow">{SELLER_PROFILES_META.status} · equipo comercial</span>
-          <h2>Cómo trabaja cada vendedor y cómo lo asistimos</h2>
+          <span className="eyebrow">Notas de Felipe · solo las ves vos</span>
+          <h2>Cómo trabaja cada vendedor (borrador tuyo)</h2>
         </div>
       </div>
       <div className="knowledge-grid profiles">

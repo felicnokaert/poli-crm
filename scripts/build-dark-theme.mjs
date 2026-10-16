@@ -87,7 +87,13 @@ body, .login-shell { background: #121214; }
 main { color: #e7e7e9; }
 a { color: #f0a0a4; }`;
 
-const scoped = (prefix) => `${prefix}{${vars}}\n${surfaceRules.split('\n').map((r) => `${prefix} ${r}`).join('\n')}\n${extras.split('\n').map((r) => (r.trim() ? `${prefix} ${r}` : r)).join('\n')}`;
+// Cada selector de una lista separada por comas necesita su propio prefijo, si no el segundo queda sin acotar.
+const scopeExtras = (prefix) => extras.split('\n').filter((r) => r.trim()).map((r) => {
+  const open = r.indexOf('{');
+  const selectors = r.slice(0, open).split(',').map((x) => `${prefix} ${x.trim()}`).join(', ');
+  return `${selectors} ${r.slice(open)}`;
+}).join('\n');
+const scoped = (prefix) => `${prefix}{${vars}}\n${surfaceRules.split('\n').map((r) => `${prefix} ${r}`).join('\n')}\n${scopeExtras(prefix)}`;
 const out = `/* GENERADO por scripts/build-dark-theme.mjs — no editar a mano. */
 ${scoped(':root[data-theme="dark"]')}
 @media (prefers-color-scheme: dark) {

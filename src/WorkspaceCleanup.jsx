@@ -38,9 +38,8 @@ export function WorkspaceCleanup({ session }) {
 
   async function apply() {
     const affected = (accounts || []).filter((item) => item.changed);
-    const ok = await confirm({
+    const ok = await confirm(`Se saca de ${affected.length} ${affected.length === 1 ? "cuenta" : "cuentas"} lo que vino de tu espacio. Lo que cada persona cargó por su cuenta no se toca, y las empresas quedan (sin tus notas ni compras). Conviene que después recarguen la página. ¿Seguimos?`, {
       title: "Limpiar espacios",
-      message: `Se saca de ${affected.length} ${affected.length === 1 ? "cuenta" : "cuentas"} lo que vino de tu espacio. Lo que cada persona cargó por su cuenta no se toca, y las empresas quedan (sin tus notas ni compras). Conviene que después recarguen la página. ¿Seguimos?`,
       confirmLabel: "Limpiar",
       danger: true,
     });

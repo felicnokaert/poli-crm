@@ -12,9 +12,12 @@ export function ConfirmProvider({ children }) {
   const resolverRef = useRef(null);
 
   const confirm = useCallback((message, options = {}) => {
+    // También acepta confirm({ title, message, ... }): antes un objeto como primer argumento llegaba
+    // a <p>{message}</p> y React tiraba la app entera (pantalla en blanco al "Limpiar" o "Borrar").
+    const request = message && typeof message === "object" ? { ...message, ...options } : { message, ...options };
     return new Promise((resolve) => {
       resolverRef.current = resolve;
-      setRequest({ message, ...options });
+      setRequest({ ...request, message: String(request.message ?? "") });
     });
   }, []);
 

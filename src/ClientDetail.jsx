@@ -14,7 +14,7 @@ import {
 import { canonicalFamily, FAMILIES } from "./families.mjs";
 import { lastPurchaseForClient } from "./client-purchase-history.mjs";
 import { buildCommercialGuidance } from "./commercial-guidance.mjs";
-import { PIPELINE, commercialOutcome, commercialStage, useModalEscape } from "./app-shared";
+import { PIPELINE, commercialOutcome, commercialStage, cotizadorUrl as buildCotizadorUrl, useModalEscape } from "./app-shared";
 
 export function ClientDetail({
   client,
@@ -71,14 +71,7 @@ export function ClientDetail({
   // cotizador no los consume todavia, el link simplemente abre su home sin
   // romper nada.
   const primaryContact = clientContacts(client).find((item) => item.primary) || clientContacts(client)[0];
-  const cotizadorUrl = (() => {
-    const params = new URLSearchParams();
-    if (client.company) params.set("empresa", client.company);
-    const phone = client.phone || primaryContact?.phone || primaryContact?.whatsappId;
-    if (phone) params.set("telefono", phone);
-    const query = params.toString();
-    return `https://poliplast-cotizador.vercel.app/${query ? `?${query}` : ""}`;
-  })();
+  const cotizadorUrl = buildCotizadorUrl(client.company || client.legalName, client.phone || primaryContact?.phone || primaryContact?.whatsappId);
   const guidance = buildCommercialGuidance({ client, interactions });
   function changeContact(contactId, fieldName, value) {
     setDraft((current) => updateClientContact(current, contactId, { [fieldName]: value }));
@@ -142,6 +135,7 @@ export function ClientDetail({
             >
               Marqué que coticé hoy
             </button>
+
           </div>
         </div>
         {!editing && (
@@ -503,9 +497,9 @@ export function ClientDetail({
                 href={cotizadorUrl}
                 target="_blank"
                 rel="noreferrer"
-                title="Abre el cotizador en una pestaña nueva, con la empresa y el teléfono precargados por URL cuando el cotizador los use."
+                title="Abre el cotizador en otra pestaña con esta empresa elegida. Al guardar la cotización se marca sola la fecha de «Coticé hoy» (no es una venta)."
               >
-                <ExternalLink size={14} /> Abrir en cotizador
+                <ExternalLink size={14} /> Cotizar
               </a>
               <button
                 className="primary"

@@ -842,3 +842,15 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .technical-upload-conflicts li > div:first-child { display: grid; gap: 2px; min-width: 0; }
 .technical-upload-conflicts .segmented button { white-space: nowrap; }
 @media (max-width: 760px) { .technical-upload-form { grid-template-columns: 1fr; } }
+
+/* Academia: Preguntale a tus productos (16/10). */
+.product-question-form { display: flex; gap: 10px; margin-top: 14px; }
+.product-question-form input { flex: 1; min-width: 0; }
+.product-question-answer { display: grid; gap: 10px; margin-top: 14px; }
+.product-question-answer article { padding: 12px 14px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-panel-bg); }
+.product-question-answer h3 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font: 700 14px 'Manrope'; }
+.product-question-answer ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.product-question-answer .pill { border-radius: var(--radius-pill); padding: 2px 8px; font-size: 10.5px; font-weight: 700; }
+.product-question-answer .pill.warn { color: var(--color-amber-text); background: var(--color-amber-bg); }
+.product-question-answer > button { justify-self: start; }
+@media (max-width: 760px) { .product-question-form { flex-direction: column; } }

@@ -20,6 +20,7 @@ import { KNOWLEDGE_TYPES, buildKnowledgePrompt, searchKnowledge } from "./knowle
 import { PRODUCT_CATALOG } from "./product-catalog.mjs";
 import { OBJECTIONS } from "./commercial-knowledge.mjs";
 import PriceMemory from "./PriceMemory";
+import { ProductQuestion } from "./ProductQuestion.jsx";
 import { buildBattlecard } from "./competitor-battlecard.mjs";
 import { Empty, Goal } from "./ui-primitives";
 
@@ -179,6 +180,7 @@ function AcademyBase({ myChannels, interactions, data, setData, supabase, userEm
           {admin && <SellerProfiles profiles={felipeNotes} />}
         </>
       )}
+      {section === "search" && <ProductQuestion supabase={supabase} />}
       {section === "search" && <KnowledgeSearch supabase={supabase} clients={data.clients || []} sellers={felipeNotes} />}
       {section === "library" && <QuickReplies myChannels={myChannels} />}
       {section === "coach" && (

@@ -16,7 +16,7 @@ const DAILY = [
   { id: 'prospeccion', start: '09:00', minutes: 90, title: 'Prospección B2B', detail: '3 contactos nuevos de la cola de trabajo: usá el borrador de la ficha y marcá el resultado. Foco: carroceros, frío industrial, náutica, constructoras y agro.', view: 'prospecting' },
   { id: 'seguimientos', start: '10:30', minutes: 90, title: 'Seguimientos y cotizaciones', detail: 'Responder, segundo intento y armar las cotizaciones o propuestas pendientes. Nada de "¿alguna novedad?": aportá algo nuevo.', view: 'tasks' },
   { id: 'dia', start: '13:30', minutes: 90, title: '', detail: '', view: null },
-  { id: 'efectivos', start: '15:00', minutes: 60, title: 'Contactos efectivos', detail: 'Llamadas, visitas o relevamientos técnicos con clientes y prospectos con interés.', view: 'pipeline' },
+  { id: 'efectivos', start: '15:00', minutes: 60, title: 'Contactos efectivos', detail: 'Llamadas, visitas o relevamientos técnicos con clientes y prospectos con interés.', view: 'clients' },
   { id: 'competencia', start: '16:00', minutes: 30, title: 'Competencia e investigación', detail: 'Cargar un competidor que apareció, pedir investigaciones y revisar las fichas sin revisar.', view: 'prospecting', extra: true },
   { id: 'academia', start: '16:30', minutes: 30, title: 'Academia', detail: 'Un role-play o repasar una objeción; sumar un aprendizaje reutilizable.', view: 'academy', extra: true },
   { id: 'datos', start: '17:00', minutes: 30, title: 'Orden de datos', detail: 'Posibles duplicados, fichas incompletas y datos de contacto que faltan.', view: 'clients', extra: true },

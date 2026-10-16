@@ -130,3 +130,18 @@ test('el historial de ventas muestra el año, cambia a trimestral y salta al per
   assert.equal(screen.queryByText(/Ver los números en tabla/), null);
   assert.equal(screen.queryByText(/Cumplimiento/), null);
 });
+
+test('Usuarios registrados: lista mail y nombre, no deja borrar administradores y confirma antes de borrar', async () => {
+  const { AdminUsersWithConfirm } = await loadJsxModule('test/fixtures/admin-users-with-confirm.jsx');
+  const rows = [
+    { id: '11111111-1111-1111-1111-111111111111', email: 'felipe@grupopoliplast.com.ar', name: 'Felipe', created_at: '2026-08-29T00:00:00Z', last_sign_in_at: '2026-10-15T00:00:00Z', confirmed: true },
+    { id: '22222222-2222-2222-2222-222222222222', email: 'brenda@grupopoliplast.com.ar', name: 'Brenda', created_at: '2026-10-16T00:00:00Z', last_sign_in_at: null, confirmed: false },
+  ];
+  const supabase = { rpc: async () => ({ data: rows, error: null }) };
+  render(React.createElement(AdminUsersWithConfirm, { supabase, session: { access_token: 't' }, adminEmails: ['felipe@grupopoliplast.com.ar'] }));
+  await screen.findByText('Brenda');
+  assert.ok(screen.getByText('brenda@grupopoliplast.com.ar'));
+  assert.ok(screen.getByText(/mail sin confirmar/));
+  assert.equal(screen.getAllByRole('button', { name: /Borrar/ }).length, 1, 'solo el que no es administrador tiene botón');
+  assert.ok(screen.getByText('Administrador'));
+});

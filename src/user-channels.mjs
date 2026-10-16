@@ -33,7 +33,7 @@ export function resolveChannels(email, rows = []) {
 
 // Quien puede administrar canales en pantalla. La autoridad real es la policy
 // de la base (is_poliplast_channel_admin); esto solo decide si se muestra el panel.
-const CHANNEL_ADMINS = ['felipe@grupopoliplast.com.ar', 'felipecnokaert@gmail.com'];
+export const CHANNEL_ADMINS = ['felipe@grupopoliplast.com.ar', 'felipecnokaert@gmail.com'];
 export function isChannelAdmin(email) {
   return CHANNEL_ADMINS.includes(String(email || '').trim().toLowerCase());
 }

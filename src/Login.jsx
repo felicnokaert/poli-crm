@@ -7,6 +7,7 @@ export function LoginScreen() {
   const [mode, setMode] = useState("signin"); // 'signin' | 'signup' | 'magic' | 'reset'
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [message, setMessage] = useState("");
 
   async function submitPassword(event) {
@@ -21,7 +22,7 @@ export function LoginScreen() {
         ? await supabase.auth.signUp({
             email: email.trim(),
             password,
-            options: { emailRedirectTo: window.location.origin },
+            options: { emailRedirectTo: window.location.origin, data: { full_name: fullName.trim() } },
           })
         : await supabase.auth.signInWithPassword({
             email: email.trim(),
@@ -122,6 +123,12 @@ export function LoginScreen() {
           </form>
         ) : (
           <form onSubmit={submitPassword}>
+            {mode === "signup" && (
+              <label>
+                Nombre y apellido
+                <input type="text" required value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Ej.: Brenda Pérez" autoComplete="name" />
+              </label>
+            )}
             <label>
               Correo
               <input

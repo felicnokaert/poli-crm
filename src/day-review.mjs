@@ -25,7 +25,10 @@ const byPriority = (a, b) => (b.priority === 'Alta') - (a.priority === 'Alta') |
 
 export function reviewDay(date, { planChecks = {}, tasks = [], includeRoutine = true } = {}) {
   const day = includeRoutine ? routineForDate(date) : { ...routineForDate(date), blocks: [] };
-  const real = tasks.filter((task) => task.kind !== 'evento' && !task.deleted);
+  // Las tareas automáticas ("Retomar contacto", "Responder a…") son alertas, no tareas que la persona
+  // se puso: viven en Alertas de Inicio. Al Cierre del día solo llegan si la persona las resolvió (16/10).
+  const auto = (task) => String(task.source || '').startsWith('auto-');
+  const real = tasks.filter((task) => task.kind !== 'evento' && !task.deleted && (!auto(task) || (task.done && !closedBySystem(task))));
   const blocksDone = day.blocks.filter((block) => planChecks[routineKey(date, block.id)] === true);
   const blocksMissed = day.blocks.filter((block) => !block.extra && planChecks[routineKey(date, block.id)] !== true);
   // Lo que el sistema cerró solo por vencido no es algo que "salió bien".

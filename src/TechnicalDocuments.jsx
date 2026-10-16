@@ -4,6 +4,7 @@ import { useConfirm } from "./ConfirmDialog";
 import { Empty, Loading } from "./ui-primitives";
 import { TechnicalUpload } from "./TechnicalUpload.jsx";
 import { ProductSheets } from "./ProductSheets.jsx";
+import { ProductQuestion } from "./ProductQuestion.jsx";
 import { supabase } from "./online.js";
 import { UPLOAD_ACCEPT, extensionOf } from "./document-text.mjs";
 
@@ -31,92 +32,6 @@ const BULK_FILTERS = {
   empty: (doc) => !doc.storagePath && !String(doc.extractedText || "").trim(),
   all: () => true,
 };
-
-// Solo recibe `session` (referencia estable salvo cambio real de sesión) -
-// sin memo, cada tick de syncStatus en App.jsx (autoguardado, que ocurre
-// aunque el usuario esté viendo Base técnica) volvía a renderizar toda esta
-// pantalla sin ningún prop distinto.
-// Pregunta libre ("qué producto me recomendás para...") contra las fichas
-// vigentes de Base técnica. Sin IA conectada (Felipe, 07/09/2026: nada pago
-// todavía) - busca por palabra clave y arma el texto para pegar a mano en
-// Claude/ChatGPT, con los extractos reales de las fichas que aplican en vez
-// de que la IA externa invente sin ver el catálogo de Poliplast.
-function ProductRecommendationQuery({ documents }) {
-  const [question, setQuestion] = useState("");
-  const [result, setResult] = useState(null);
-  const [copied, setCopied] = useState(false);
-
-  async function prepare() {
-    const [{ findRelevantDocuments, prepareProductRecommendationQuery }] = await Promise.all([
-      import("./ai-provider.mjs"),
-    ]);
-    const matches = findRelevantDocuments(question, documents);
-    const text = prepareProductRecommendationQuery(question, documents);
-    setResult({ matches, text });
-    setCopied(false);
-  }
-
-  async function copy() {
-    if (!result) return;
-    try {
-      await navigator.clipboard.writeText(result.text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 3000);
-    } catch {
-      setCopied(false);
-    }
-  }
-
-  return (
-    <section className="panel">
-      <div className="panel-head">
-        <div>
-          <span className="eyebrow">Sin IA conectada todavía - búsqueda por palabra clave</span>
-          <h2>Preguntale al catálogo</h2>
-          <p>
-            Escribí qué necesitás (ej. "algo que aísle térmicamente y sea
-            espuma rígida de PU") y armamos una consulta con las fichas
-            vigentes que aplican, lista para pegar en Claude o ChatGPT. Solo
-            busca fichas marcadas "Vigente" - las demás no están validadas
-            todavía.
-          </p>
-        </div>
-      </div>
-      <textarea
-        className="product-query-input"
-        rows={3}
-        placeholder="¿Qué producto necesitás?"
-        value={question}
-        onChange={(event) => setQuestion(event.target.value)}
-      />
-      <div className="list-toolbar">
-        <button type="button" className="secondary" onClick={prepare} disabled={!question.trim()}>
-          Buscar fichas y preparar consulta
-        </button>
-        {result && (
-          <button type="button" className="secondary" onClick={copy}>
-            {copied ? "Copiado" : "Copiar para pegar en la IA"}
-          </button>
-        )}
-      </div>
-      {result && (
-        result.matches.length > 0 ? (
-          <ul>
-            {result.matches.map((doc) => (
-              <li key={doc.id}>{doc.product || doc.title} — {doc.family}</li>
-            ))}
-          </ul>
-        ) : (
-          <p className="copilot-suggestion-pending">
-            Ninguna ficha vigente coincide con esa pregunta todavía. Puede que
-            el producto exista pero su ficha esté sin marcar "Vigente" más
-            abajo, o que directamente falte cargarla.
-          </p>
-        )
-      )}
-    </section>
-  );
-}
 
 function TechnicalDocumentsAdminBase({ session }) {
   const confirm = useConfirm();
@@ -371,7 +286,7 @@ function TechnicalDocumentsAdminBase({ session }) {
 
   return (
     <div className="content-stack">
-      <ProductRecommendationQuery documents={documents} />
+      <ProductQuestion supabase={supabase} eyebrow="Base técnica" title="Preguntale al catálogo" />
       <TechnicalUpload documents={documents} onDone={load} />
       <ProductSheets supabase={supabase} documents={documents} isAdmin={isAdmin} onChanged={load} />
       <section className="panel">

@@ -5,7 +5,7 @@ import { answerQuestion, questionPrompt } from "./product-answer.mjs";
 // "Preguntale a tus productos": responde con las líneas literales de las fichas técnicas cargadas en
 // Base técnica (PDF, Word, Excel o .md de MarkItDown). Sin IA paga: si hace falta algo más elaborado,
 // arma la consulta con el texto de las fichas para pegar en el Claude o ChatGPT de cada uno.
-export function ProductQuestion({ supabase }) {
+export function ProductQuestion({ supabase, eyebrow = "Responde con tus fichas técnicas", title = "Preguntale a tus productos" }) {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -48,9 +48,9 @@ export function ProductQuestion({ supabase }) {
     <section className="panel product-question">
       <div className="panel-head">
         <div>
-          <span className="eyebrow">Responde con tus fichas técnicas</span>
-          <h2><MessageCircleQuestionMark size={18} /> Preguntale a tus productos</h2>
-          <p>Ej.: «¿con qué temperatura se trabaja el 618 SP?» o «¿cuánto rinde Penosil Easy Spray?». Busca en las fichas de Base técnica y te muestra lo que dicen, con la fuente. Si no está escrito, no lo inventa.</p>
+          <span className="eyebrow">{eyebrow}</span>
+          <h2><MessageCircleQuestionMark size={18} /> {title}</h2>
+          <p>Preguntá por un producto («¿con qué temperatura se trabaja el 618 SP?», «¿cuánto rinde el Easy Spray?») o pedí una solución («algo que aísle térmicamente y sea espuma rígida de PU»). Busca en todas las fichas de Base técnica, en español o inglés, y te muestra lo que dicen y de dónde sale. Si no está escrito, no lo inventa.</p>
         </div>
       </div>
       <form className="product-question-form" onSubmit={ask}>
@@ -60,12 +60,14 @@ export function ProductQuestion({ supabase }) {
       {error && <div className="system-message error">{error}</div>}
       {answer && (
         <div className="product-question-answer">
+          {answer.mode === "recomendacion" && <p><strong>Pueden servir</strong> <span className="muted small">(ordenadas por cuánto de tu pedido cubren)</span></p>}
           {!answer.results.length && <p className="muted">No encontré una ficha de ese producto. Probá con el código o el nombre como figura en la ficha (ej. «618», «Easy Spray»), o subila en Base técnica.</p>}
           {answer.results.length > 0 && !answer.topics.length && <p className="muted">Encontré estas fichas. Decime qué dato buscás (temperatura, rendimiento, densidad, tiempos, mezcla, almacenamiento…) y te muestro la línea exacta.</p>}
           {answer.results.length > 0 && answer.topics.length > 0 && !answer.answered && <p className="muted">Las fichas de ese producto no mencionan {answer.topicLabels.join(" ni ").toLowerCase()}. No lo invento: podés consultarlo con la IA abajo o con el proveedor.</p>}
-          {answer.results.map(({ doc, lines }) => (
+          {answer.results.map(({ doc, lines, covered, total }) => (
             <article key={doc.id}>
               <h3><FileText size={15} /> {doc.title} {doc.status !== "vigente" && <span className="pill warn">sin validar</span>}</h3>
+              {covered && <p className="muted small">Cubre {covered.length} de {total} partes de tu pedido.</p>}
               {lines.length > 0 ? <ul>{lines.map((line) => <li key={line}>{line}</li>)}</ul> : answer.topics.length > 0 && <p className="muted small">Esta ficha no lo dice.</p>}
             </article>
           ))}

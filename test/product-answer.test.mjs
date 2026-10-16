@@ -52,3 +52,19 @@ test('responde con una ficha de Penosil en inglés (Technical Data Sheet)', () =
   const vence = answerQuestion('¿cuánto dura almacenado el easyspray?', docs);
   assert.ok(vence.results[0].lines.some((line) => line.includes('12 months')));
 });
+
+test('pedido de solución: ordena las fichas por cuánto encajan y muestra por qué', async () => {
+  const { answerQuestion, needConcepts } = await import('../src/product-answer.mjs');
+  const catalog = [
+    { id: 'rigida', title: 'isoBUNKER 618-SP', status: 'vigente', extractedText: 'Sistema de espuma rígida de poliuretano proyectable\nAislación térmica de techos y cámaras\nConductividad térmica 0,022 W/mK' },
+    { id: 'spray', title: 'PENOSIL EasySpray Foam 111', status: 'inventariado', extractedText: 'Sprayable gun foam\nHigh thermal and acoustic insulation value\nThermal conductivity 0,033 W/(m·K)' },
+    { id: 'epoxi', title: 'Poxiplast', extractedText: 'Adhesivo epoxi bicomponente para metal y madera' },
+  ];
+  assert.deepEqual(needConcepts('algo que aísle térmicamente y sea espuma rígida de PU').map((c) => c.key), ['aisl', 'termic', 'espuma', 'rigid', 'poliuretano']);
+  const answer = answerQuestion('algo que aísle térmicamente y sea espuma rígida de PU', catalog);
+  assert.equal(answer.mode, 'recomendacion');
+  assert.equal(answer.results[0].doc.id, 'rigida', 'la que cubre más partes del pedido va primero');
+  assert.ok(answer.results.some((r) => r.doc.id === 'spray'), 'encuentra también la ficha en inglés');
+  assert.ok(!answer.results.some((r) => r.doc.id === 'epoxi'));
+  assert.ok(answer.results[0].lines.length > 0);
+});

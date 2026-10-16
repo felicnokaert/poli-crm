@@ -58,3 +58,17 @@ test('sin rutina propia el cierre solo mira las tareas', () => {
   assert.doesNotMatch(r.headline, /Rutina/);
   assert.equal(r.pendingTasks.length, 1);
 });
+
+test('el Cierre del día no se llena con tareas automáticas pendientes (son alertas)', async () => {
+  const { reviewDay } = await import('../src/day-review.mjs');
+  const tasks = [
+    { id: 'a1', title: 'Retomar contacto con X', source: 'auto-stale-client', dueDate: '2026-10-16', done: false },
+    { id: 'a2', title: 'Responder a Y', source: 'auto-hot-lead', dueDate: '2026-10-14', done: false },
+    { id: 'a3', title: 'Responder a Z', source: 'auto-hot-lead', done: true, completedAt: '2026-10-16T15:00:00Z' },
+    { id: 'm1', title: 'Llamar a Ana', dueDate: '2026-10-16', done: false },
+  ];
+  const review = reviewDay('2026-10-16', { tasks, includeRoutine: false });
+  assert.deepEqual(review.pendingTasks.map((t) => t.id), ['m1']);
+  assert.deepEqual(review.carried.map((t) => t.id), []);
+  assert.deepEqual(review.doneTasks.map((t) => t.id), ['a3'], 'una automática que la persona resolvió sí cuenta');
+});

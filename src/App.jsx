@@ -12,7 +12,6 @@ import {
   Inbox,
   Plus,
   Search,
-  UserCheck,
   Trash2,
   GraduationCap,
   Database,
@@ -72,11 +71,10 @@ import {
 import { inferIntent } from "./commercial-intelligence.mjs";
 import { makeRequestsApi } from "./prospect-requests.mjs";
 import { planTasks } from "./trello-plan-import.mjs";
-import { makeTeamApi } from "./team-api.mjs";
 import { isChannelAdmin } from "./user-channels.mjs";
 import { applyTheme, nextTheme, readTheme } from "./theme.mjs";
 import { LocalInfo } from "./LocalInfo.jsx";
-import { canSeeRapypMap, ownsFelipeTools, TEAM_INBOX_ENABLED } from "./personal-tools.mjs";
+import { canSeeRapypMap, ownsFelipeTools } from "./personal-tools.mjs";
 const Sales = lazy(() => import("./Sales"));
 // Vistas y modales que no se ven al abrir la app (la entrada es Hoy/dashboard):
 // cada una va a su propio chunk y se baja al entrar por primera vez. Login,
@@ -85,7 +83,6 @@ const Sales = lazy(() => import("./Sales"));
 const lazyNamed = (loader, name) => lazy(() => loader().then((m) => ({ default: m[name] })));
 const Pipeline = lazyNamed(() => import("./Pipeline"), "Pipeline");
 const Clients = lazyNamed(() => import("./Clients"), "Clients");
-const TeamInbox = lazyNamed(() => import("./TeamInbox"), "TeamInbox");
 const Prospeccion = lazyNamed(() => import("./Prospeccion"), "Prospeccion");
 const Contacts = lazyNamed(() => import("./Clients"), "Contacts");
 const Conversations = lazyNamed(() => import("./Conversations"), "Conversations");
@@ -233,7 +230,6 @@ export default function App() {
     return () => query.removeEventListener("change", onChange);
   }, []);
   const prospectRequests = useMemo(() => makeRequestsApi(supabase), []);
-  const teamApi = useMemo(() => makeTeamApi(supabase), []);
   const confirm = useConfirm();
   const [data, setData] = useState(loadState);
   const {
@@ -1491,7 +1487,6 @@ export default function App() {
     ["Hoy", [
       ["dashboard", "Inicio", LayoutDashboard],
       ["inbox", "Por revisar", Inbox],
-      ...(TEAM_INBOX_ENABLED ? [["team", "Equipo", UserCheck]] : []),
       ["tasks", "Tareas", ClipboardList],
     ]],
     ["Ventas", [
@@ -1899,11 +1894,6 @@ export default function App() {
               onMarkNotDuplicate={markNotDuplicate}
               onPostponeDuplicate={postponeDuplicate}
             />
-          </Suspense>
-        )}
-        {view === "team" && (
-          <Suspense fallback={<Splash text="Cargando equipo…" />}>
-            <TeamInbox api={teamApi} userEmail={session?.user?.email} isAdmin={isChannelAdmin(session?.user?.email)} />
           </Suspense>
         )}
         {view === "prospecting" && (

@@ -40,3 +40,15 @@ test('si la ficha no tiene el dato, no inventa', () => {
 test('sin producto reconocible no devuelve fichas al azar', () => {
   assert.equal(answerQuestion('qué temperatura', docs).results.length, 0);
 });
+
+test('responde con una ficha de Penosil en inglés (Technical Data Sheet)', () => {
+  const tds = 'PENOSIL EasySpray Foam 111\nSprayable gun foam\nDensity 12…16 kg/m³\nOutput (1 layer) 1 m²/can\nAir temperature during use: +10 °C to +30 °C.\nCan temperature during application: +18 °C to +28 °C, best results at +20 °C.\nGuaranteed shelf life is 12 months from production date';
+  const docs = [{ id: 'pen111', title: 'PENOSIL EasySpray Foam 111 - Ficha técnica (TDS)', status: 'inventariado', extractedText: tds }];
+  const rinde = answerQuestion('¿cuánto rinde Penosil Easy Spray?', docs);
+  assert.equal(rinde.results[0].doc.id, 'pen111');
+  assert.ok(rinde.results[0].lines.some((line) => line.includes('1 m²/can')));
+  const temp = answerQuestion('¿a qué temperatura se aplica el easyspray?', docs);
+  assert.ok(temp.results[0].lines.some((line) => line.includes('+10 °C to +30 °C')));
+  const vence = answerQuestion('¿cuánto dura almacenado el easyspray?', docs);
+  assert.ok(vence.results[0].lines.some((line) => line.includes('12 months')));
+});

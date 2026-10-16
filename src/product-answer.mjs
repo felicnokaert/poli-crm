@@ -1,4 +1,6 @@
 // "Preguntale a tus productos" (Academia): responde con lo que dicen las fichas técnicas, sin IA y sin
+// inventar (en español o en inglés: las fichas de Penosil vienen en inglés, Technical Data Sheet).
+//
 // inventar. 1) Reconoce de qué producto se habla y qué dato se busca (temperatura, rendimiento...).
 // 2) Elige las fichas de ese producto. 3) Devuelve las líneas literales que tienen ese dato, con su
 // fuente. Si la ficha no lo dice, lo dice. El día que haya una IA conectada, esto es lo que se le pasa.
@@ -6,19 +8,19 @@ import { plain } from './knowledge-search.mjs';
 
 // Qué dato se pregunta -> palabras con que aparece en una ficha.
 export const TOPICS = [
-  ['temperatura', 'Temperatura', ['temperatura', 'temp.', '°c', 'ºc', ' grados', 'precalent', 'calentamiento', 'calentador', 'termico']],
-  ['rendimiento', 'Rendimiento / consumo', ['rinde', 'rendimiento', 'cobertura', 'consumo', 'm2', 'm²', 'kg/m', 'l/m', 'por metro', 'cubre']],
-  ['densidad', 'Densidad', ['densidad', 'kg/m3', 'kg/m³', 'g/cm', 'peso especifico']],
-  ['tiempos', 'Tiempos (crema, hilo, secado, curado)', ['crema', 'hilo', 'tack', 'secado', 'curado', 'gel', 'pot life', 'vida util de la mezcla', 'tiempo de', 'segundos', 'minutos', 'horas']],
-  ['mezcla', 'Relación de mezcla', ['relacion', 'proporcion', 'mezcla', 'a:b', '1:1', 'partes', 'componente a', 'componente b']],
-  ['viscosidad', 'Viscosidad', ['viscosidad', 'cps', 'mpa']],
-  ['espesor', 'Espesor', ['espesor', 'mm', 'micrones', 'mils']],
-  ['presion', 'Presión de trabajo', ['presion', 'bar', 'psi']],
-  ['almacenamiento', 'Almacenamiento y vencimiento', ['almacen', 'vida util', 'vencimiento', 'conservar', 'meses', 'shelf']],
-  ['aplicacion', 'Aplicación / modo de uso', ['aplicacion', 'aplicar', 'modo de uso', 'pistola', 'proyect', 'rodillo', 'pincel', 'superficie', 'sustrato']],
-  ['seguridad', 'Seguridad', ['seguridad', 'precaucion', 'proteccion', 'guantes', 'mascara', 'toxic', 'inflamable']],
-  ['presentacion', 'Presentación / envase', ['envase', 'presentacion', 'tambor', 'bidon', 'lata', 'aerosol', 'kit', 'cartucho']],
-  ['colores', 'Colores', ['color', 'colores', 'blanco', 'gris', 'negro']],
+  ['temperatura', 'Temperatura', ['temperature', 'temperatura', 'temp.', '°c', 'ºc', ' grados', 'precalent', 'calentamiento', 'calentador', 'termico']],
+  ['rendimiento', 'Rendimiento / consumo', ['output', 'yield', 'coverage', 'm²/can', 'm2/can', 'rinde', 'rendimiento', 'cobertura', 'consumo', 'm2', 'm²', 'kg/m', 'l/m', 'por metro', 'cubre']],
+  ['densidad', 'Densidad', ['density', 'densidad', 'kg/m3', 'kg/m³', 'g/cm', 'peso especifico']],
+  ['tiempos', 'Tiempos (crema, hilo, secado, curado)', ['tack free', 'rise time', 'cured', 'curing', 'cutting time', 'drying', 'crema', 'hilo', 'tack', 'secado', 'curado', 'gel', 'pot life', 'vida util de la mezcla', 'tiempo de', 'segundos', 'minutos', 'horas']],
+  ['mezcla', 'Relación de mezcla', ['mixing ratio', 'mix ratio', 'relacion', 'proporcion', 'mezcla', 'a:b', '1:1', 'partes', 'componente a', 'componente b']],
+  ['viscosidad', 'Viscosidad', ['viscosity', 'viscosidad', 'cps', 'mpa']],
+  ['espesor', 'Espesor', ['thickness', 'espesor', 'mm', 'micrones', 'mils']],
+  ['presion', 'Presión de trabajo', ['pressure', 'presion', 'bar', 'psi']],
+  ['almacenamiento', 'Almacenamiento y vencimiento', ['storage', 'shelf life', 'almacen', 'vida util', 'vencimiento', 'conservar', 'meses', 'shelf']],
+  ['aplicacion', 'Aplicación / modo de uso', ['application', 'aplicacion', 'aplicar', 'modo de uso', 'pistola', 'proyect', 'rodillo', 'pincel', 'superficie', 'sustrato']],
+  ['seguridad', 'Seguridad', ['safety', 'hazard', 'seguridad', 'precaucion', 'proteccion', 'guantes', 'mascara', 'toxic', 'inflamable']],
+  ['presentacion', 'Presentación / envase', ['package', 'aerosol can', 'envase', 'presentacion', 'tambor', 'bidon', 'lata', 'aerosol', 'kit', 'cartucho']],
+  ['colores', 'Colores', ['colour', 'color', 'colores', 'blanco', 'gris', 'negro']],
 ];
 
 // Palabras que hablan del dato, no del producto (no sirven para reconocer la ficha).

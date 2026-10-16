@@ -32,8 +32,19 @@ import { CHANNELS, initialState, today } from "./app-shared";
 // nada acá - sin memo, cualquier otro estado ajeno de App.jsx (abrir el
 // modal de tarea, tipear en el buscador de otra pantalla, el tick de
 // syncStatus) volvía a renderizar todo este panel sin ningún prop distinto.
-function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myChannelsProp }) {
+function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myChannelsProp, devPanel = null }) {
   const myChannels = myChannelsProp || channelsForEmail(session?.user?.email);
+  const isAdmin = isChannelAdmin(session?.user?.email);
+  // Pestañas (QA 16/10: para Felipe eran ~10 paneles apilados). Cada uno ve solo las que puede usar.
+  const sections = [
+    ["respaldos", "Respaldos"],
+    ...(onlineConfigured ? [["directorio", "Directorio"]] : []),
+    ...(myChannels.length > 0 || (onlineConfigured && isAdmin) ? [["whatsapp", "WhatsApp"]] : []),
+    ...(onlineConfigured && isAdmin ? [["equipo", "Equipo y cuentas"]] : []),
+    ...((onlineConfigured && isAdmin) || devPanel ? [["errores", "Errores y pruebas"]] : []),
+  ];
+  const [section, setSection] = useState("respaldos");
+  const shown = sections.some(([key]) => key === section) ? section : "respaldos";
   const [message, setMessage] = useState("");
   const [messageIsError, setMessageIsError] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -315,6 +326,19 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
   ];
   return (
     <div className="content-stack">
+      {sections.length > 1 && (
+        <div className="segmented routine-tabs" role="tablist" aria-label="Secciones de Datos" style={{ width: "fit-content", maxWidth: "100%", overflowX: "auto" }}>
+          {sections.map(([key, label]) => (
+            <button key={key} type="button" role="tab" aria-selected={shown === key} className={shown === key ? "selected" : ""} onClick={() => setSection(key)}>{label}</button>
+          ))}
+        </div>
+      )}
+      {message && (
+        <div className={`system-message${messageIsError ? " error" : ""}`} role="status" aria-live="polite">
+          {message}
+        </div>
+      )}
+      {shown === "whatsapp" && (<>
       {myChannels.length > 0 && (
       <section className="panel">
         <div className="panel-head">
@@ -345,11 +369,6 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
               Sincronizar
             </button>
           </p>
-        )}
-        {message && (
-          <div className={`system-message${messageIsError ? " error" : ""}`}>
-            {message}
-          </div>
         )}
         {isChannelAdmin(session?.user?.email) && myChannels.length > 0 && (
           <>
@@ -412,10 +431,17 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
           </div>
         </section>
       )}
-      {onlineConfigured && isChannelAdmin(session?.user?.email) && <AdminUsers supabase={supabase} session={session} adminEmails={CHANNEL_ADMINS} />}
-      {onlineConfigured && isChannelAdmin(session?.user?.email) && <WorkspaceCleanup session={session} />}
-      {onlineConfigured && isChannelAdmin(session?.user?.email) && <ErrorLog session={session} />}
-      {onlineConfigured && <SharedDirectory supabase={supabase} session={session} clients={data.clients || []} setClients={(clients) => setData((current) => ({ ...current, clients }))} />}
+      </>)}
+      {shown === "equipo" && onlineConfigured && isAdmin && (<>
+        <AdminUsers supabase={supabase} session={session} adminEmails={CHANNEL_ADMINS} />
+        <WorkspaceCleanup session={session} />
+      </>)}
+      {shown === "errores" && (<>
+        {onlineConfigured && isAdmin && <ErrorLog session={session} />}
+        {devPanel}
+      </>)}
+      {shown === "directorio" && onlineConfigured && <SharedDirectory supabase={supabase} session={session} clients={data.clients || []} setClients={(clients) => setData((current) => ({ ...current, clients }))} />}
+      {shown === "respaldos" && (<>
       <section className="panel">
         <div className="panel-head">
           <div>
@@ -585,6 +611,7 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
           </button>
         )}
       </section>
+      </>)}
     </div>
   );
 }

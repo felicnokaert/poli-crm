@@ -765,12 +765,6 @@ export default function App() {
             <Profile data={data} setData={setData} session={session} />
           </Suspense>
         )}
-        {/* "Pruebas de desarrollo": herramienta de prueba, solo para Felipe (16/10). */}
-        {view === "settings" && (!onlineConfigured || isChannelAdmin(session?.user?.email)) && (
-          <Suspense fallback={<Splash text="Cargando ajustes…" />}>
-            <TestCleanupPanel data={data} setData={setData} session={session} />
-          </Suspense>
-        )}
         {view === "settings" && (
           <Suspense fallback={<Splash text="Cargando datos…" />}>
             <DataSettings
@@ -779,6 +773,8 @@ export default function App() {
               session={session}
               syncStatus={syncStatus}
               myChannels={myChannels}
+              /* "Pruebas de desarrollo": herramienta de prueba, solo para Felipe (16/10). */
+              devPanel={(!onlineConfigured || isChannelAdmin(session?.user?.email)) ? <TestCleanupPanel data={data} setData={setData} session={session} /> : null}
             />
           </Suspense>
         )}

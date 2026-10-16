@@ -76,15 +76,14 @@ Alcance: historial git, `vercel.json`, los 10 endpoints de `api/`, `lib/`.
 
 | # | Observación | Severidad | Sugerencia |
 |---|---|---|---|
-| 1 | `scripts/attach-technical-pdfs.mjs` trae la anon key de Supabase como valor por defecto. Es rol `anon` (público por diseño, protegido por RLS), pero el repo es público. | Baja | Quitar el valor por defecto y exigir la variable de entorno. |
+| 1 | `scripts/attach-technical-pdfs.mjs` trae la anon key de Supabase como valor por defecto. Es rol `anon` y es la misma clave que el navegador ya recibe en el bundle (`VITE_SUPABASE_ANON_KEY`); lo protege RLS. | Baja | **Aceptado, sin cambio:** quitarla no reduce exposición y rompería el script. |
 | 2 | CSP general: `style-src 'unsafe-inline'` e `img-src https:`. | Baja | Aceptable; endurecer solo si se migra el estilo inline. |
-| 3 | `connect-src` aún lista `api.mercadolibre.com` aunque la integración ML se retiró. | Baja | Quitarlo. |
+| 3 | `connect-src` aún listaba `api.mercadolibre.com` aunque la integración ML se retiró. | Baja | **Resuelto** (PR de pendientes): quitado de la CSP y las variables `MELI_*` de `.env.example`. |
 | 4 | `inbox-delete` borra por `event_id` sin acotar al workspace del usuario. | Media, depende del modelo | Confirmar si la bandeja es compartida por diseño. |
 | 5 | Sin rate limiting en endpoints (todos van detrás de bearer/firma). | Baja | No hace falta hoy. |
 
-Sin tocar: 1 y 3 son cambios de bajo riesgo, pero 3 modifica la CSP de
-producción y 1 un script operativo, así que quedan para decisión de Felipe.
-El punto 4 es una decisión de modelo de datos.
+Estado: 3 resuelto; 1 aceptado sin cambio; 4 queda como decisión de Felipe
+(modelo de datos); 2 y 5 sin acción.
 
 ## 4. Puntajes (estimación)
 

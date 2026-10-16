@@ -83,7 +83,7 @@ export function TechnicalUpload({ documents = [], onDone }) {
       const withoutText = plan.create.concat(plan.replace).filter((item) => !canExtractText(item.fileName)).length;
       setMessage([
         `Listo: ${created.length - created.filter((r) => r.error && !r.document?.id).length} subidos, ${replaced} reemplazados, ${plan.skip.length} omitidos.`,
-        failed ? `${failed} no se pudieron guardar del todo; probá de nuevo con esos.` : "",
+        failed ? `${failed} no se pudieron guardar del todo: ${created.filter((r) => r.error).slice(0, 3).map((r) => `${r.document?.title || "archivo"} (${r.error?.message || "error"})`).join("; ")}.` : "",
         withoutText ? `${withoutText} son de un formato que el navegador no lee (por ejemplo .doc viejo): quedan guardados, pero para que el copiloto aprenda de ellos pasalos por MarkItDown y subí el .md.` : "",
         "Nada quedó \"vigente\" solo: falta tu validación.",
       ].filter(Boolean).join(" "));

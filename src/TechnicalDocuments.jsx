@@ -13,6 +13,18 @@ const TECHNICAL_DOCUMENT_STATUS_LABELS = {
   no_tecnico: "No técnico",
 };
 
+// Borrado en tanda (solo Felipe): qué documentos entran en cada opción.
+const BULK_SCOPES = [
+  ["uploaded", "Subidos con «Subir fichas y documentos»"],
+  ["empty", "Sin archivo y sin texto"],
+  ["all", "Todos los documentos"],
+];
+const BULK_FILTERS = {
+  uploaded: (doc) => doc.source === "other",
+  empty: (doc) => !doc.storagePath && !String(doc.extractedText || "").trim(),
+  all: () => true,
+};
+
 // Solo recibe `session` (referencia estable salvo cambio real de sesión) -
 // sin memo, cada tick de syncStatus en App.jsx (autoguardado, que ocurre
 // aunque el usuario esté viendo Base técnica) volvía a renderizar toda esta
@@ -229,64 +241,6 @@ function TechnicalDocumentsAdminBase({ session }) {
     }
   }
 
-  // Adjuntar de a una lleva 68 clicks - esto lo hace en un solo paso: Felipe
-  // elige la carpeta local de Drive una sola vez, y cada archivo se empareja
-  // con la ficha que ya tiene ese mismo camino relativo guardado en
-  // source_file (mismo criterio que usó el import original). Nada se
-  // reimporta ni se duplica - solo se completa lo que le faltaba.
-  async function bulkAttachFiles(event) {
-    const files = [...(event.target.files || [])];
-    event.target.value = "";
-    if (!files.length) return;
-    const bySourceFile = new Map();
-    for (const file of files) {
-      const relative = (file.webkitRelativePath || "").split("/").slice(1).join("/");
-      if (relative) bySourceFile.set(relative, file);
-    }
-    const missingBefore = documents.filter((doc) => !doc.storagePath);
-    // Las fichas cuyo archivo original es .docx/.doc nunca van a matchear
-    // acá - el bucket solo acepta PDF (Felipe: "los .doc puedo verlos yo y
-    // voy subiendo luego los pdf"). Avisarlo de entrada evita que parezca
-    // un error cuando en realidad es esperado.
-    const nonPdfCount = missingBefore.filter((doc) => !/\.pdf$/i.test(doc.sourceFile || "")).length;
-    const pending = missingBefore.filter((doc) => bySourceFile.has(doc.sourceFile));
-    if (!pending.length) {
-      setErrorMessage(
-        `Ningún archivo de esa carpeta coincide con una ficha sin PDF adjunto. Revisá que hayas elegido la carpeta "FICHAS TÉCNICAS" completa (no una de adentro).` +
-        (nonPdfCount > 0 ? ` (${nonPdfCount} fichas pendientes son Word, no PDF - esas nunca van a matchear acá, hay que convertirlas primero.)` : ""),
-      );
-      return;
-    }
-    setMessage(`Adjuntando ${pending.length} de ${missingBefore.length} fichas pendientes…`);
-    setMessageIsError(false);
-    try {
-      const { attachTechnicalDocumentFile } = await import("./technical-documents-repo.mjs");
-      let firstError = "";
-      const results = await Promise.all(pending.map(async (doc) => {
-        try {
-          return await attachTechnicalDocumentFile(doc.id, bySourceFile.get(doc.sourceFile));
-        } catch (error) {
-          if (!firstError) firstError = error.message || String(error);
-          return null;
-        }
-      }));
-      const succeeded = results.filter(Boolean);
-      setDocuments((current) => current.map((item) => succeeded.find((updated) => updated.id === item.id) || item));
-      const stillMissing = missingBefore.length - succeeded.length;
-      const stillMissingNonPdf = Math.min(nonPdfCount, stillMissing);
-      const stillMissingOther = stillMissing - stillMissingNonPdf;
-      setMessage(
-        `${succeeded.length} fichas quedaron con su PDF adjunto.` +
-        (stillMissingNonPdf > 0 ? ` ${stillMissingNonPdf} son Word, no PDF - convertilas y volvé a adjuntar.` : "") +
-        (stillMissingOther > 0 ? ` ${stillMissingOther} no tenían un archivo con ese mismo nombre/carpeta en lo que elegiste.` : "") +
-        (stillMissing === 0 ? " No queda ninguna pendiente." : "") +
-        (succeeded.length === 0 && firstError ? ` Error: ${firstError}` : ""),
-      );
-      if (succeeded.length === 0 && firstError) setMessageIsError(true);
-    } catch (error) {
-      setErrorMessage(error.message || "No se pudo adjuntar los archivos.");
-    }
-  }
 
   // Solo Felipe (RLS: "Admin elimina documentos tecnicos" - cualquier otro
   // intento lo rechaza la base, no solo esta pantalla). Es una ficha de
@@ -302,6 +256,25 @@ function TechnicalDocumentsAdminBase({ session }) {
     } catch (error) {
       setErrorMessage(error.message || "No se pudo eliminar el documento.");
     }
+  }
+
+  const [bulkScope, setBulkScope] = useState("uploaded");
+  async function deleteInBulk() {
+    const targets = documents.filter(BULK_FILTERS[bulkScope]);
+    const label = BULK_SCOPES.find(([key]) => key === bulkScope)?.[1] || "";
+    if (!targets.length) return;
+    if (!(await confirm(`Se borran ${targets.length} documento${targets.length === 1 ? "" : "s"} (${label.toLowerCase()}) con sus archivos. Esto no se puede deshacer. ¿Seguro?`, { title: "Borrar en tanda", danger: true, confirmLabel: `Borrar ${targets.length}` }))) return;
+    setMessageIsError(false);
+    setMessage(`Borrando ${targets.length}…`);
+    const { deleteTechnicalDocument } = await import("./technical-documents-repo.mjs");
+    const ids = new Set();
+    for (const doc of targets) {
+      try { await deleteTechnicalDocument(doc.id, doc.storagePath); ids.add(doc.id); } catch { /* sigue con el resto */ }
+    }
+    setDocuments((current) => current.filter((item) => !ids.has(item.id)));
+    const failed = targets.length - ids.size;
+    setMessage(`Se borraron ${ids.size}.${failed ? ` ${failed} no se pudieron borrar.` : ""}`);
+    if (failed) setMessageIsError(true);
   }
 
   // Borra todas las fichas cuya carpeta (folderFromSourceFile) sea justo
@@ -380,7 +353,6 @@ function TechnicalDocumentsAdminBase({ session }) {
   }
 
   const families = [...new Set(documents.map((doc) => doc.family))].sort();
-  const missingFilesCount = documents.filter((doc) => !doc.storagePath).length;
   const filtered = documents.filter(
     (doc) =>
       (statusFilter === "all" || doc.status === statusFilter) &&
@@ -404,22 +376,15 @@ function TechnicalDocumentsAdminBase({ session }) {
           </div>
           <FileCheck2 size={22} />
         </div>
-        {missingFilesCount > 0 && (
+        {/* El aviso "X fichas no tienen su PDF" se sacó (16/10): Word, Excel y .md de MarkItDown quedan
+            con su texto sin PDF, y eso está bien. Para Felipe queda el borrado en tanda. */}
+        {isAdmin && documents.length > 0 && (
           <div className="technical-document-bulk-attach">
-            <span>
-              {missingFilesCount} {missingFilesCount === 1 ? "ficha todavía no tiene" : "fichas todavía no tienen"} su PDF adjunto.
-            </span>
-            <label className="secondary">
-              Adjuntar PDFs faltantes (elegí la carpeta completa de Drive)
-              <input
-                type="file"
-                webkitdirectory=""
-                directory=""
-                multiple
-                hidden
-                onChange={bulkAttachFiles}
-              />
-            </label>
+            <span>Borrar en tanda:</span>
+            <select value={bulkScope} onChange={(event) => setBulkScope(event.target.value)} aria-label="Qué documentos borrar">
+              {BULK_SCOPES.map(([key, label]) => <option key={key} value={key}>{label} ({documents.filter(BULK_FILTERS[key]).length})</option>)}
+            </select>
+            <button type="button" className="secondary" disabled={!documents.some(BULK_FILTERS[bulkScope])} onClick={deleteInBulk}>Borrar…</button>
           </div>
         )}
         <div className="list-toolbar inbox-filters">

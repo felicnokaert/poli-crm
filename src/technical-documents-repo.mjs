@@ -127,7 +127,6 @@ export async function attachTechnicalDocumentFile(id, file, extra = {}) {
   const { error: uploadError } = await supabase.storage
     .from(STORAGE_BUCKET)
     .upload(path, file, { upsert: true, contentType: isPdf ? 'application/pdf' : contentTypeFor(file.name) });
-  if (uploadError && isPdf) throw uploadError;
   let extractedText = null;
   try {
     // Import dinamico a proposito: pdfjs-dist pesa ~1.7MB y solo se baja si
@@ -144,6 +143,8 @@ export async function attachTechnicalDocumentFile(id, file, extra = {}) {
     .select()
     .maybeSingle();
   if (error) throw error;
+  // El texto quedó guardado igual (el copiloto aprende); se avisa que el PDF en sí no se pudo subir.
+  if (uploadError && isPdf) throw new Error(`el PDF no se pudo guardar (${uploadError.message || uploadError.error || 'error de Storage'})`);
   return data ? fromRow(data) : null;
 }
 

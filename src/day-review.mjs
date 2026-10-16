@@ -14,8 +14,8 @@ export function localDate(iso) {
 
 const byPriority = (a, b) => (b.priority === 'Alta') - (a.priority === 'Alta') || String(a.title).localeCompare(String(b.title));
 
-export function reviewDay(date, { planChecks = {}, tasks = [] } = {}) {
-  const day = routineForDate(date);
+export function reviewDay(date, { planChecks = {}, tasks = [], includeRoutine = true } = {}) {
+  const day = includeRoutine ? routineForDate(date) : { ...routineForDate(date), blocks: [] };
   const real = tasks.filter((task) => task.kind !== 'evento' && !task.deleted);
   const blocksDone = day.blocks.filter((block) => planChecks[routineKey(date, block.id)] === true);
   const blocksMissed = day.blocks.filter((block) => !block.extra && planChecks[routineKey(date, block.id)] !== true);

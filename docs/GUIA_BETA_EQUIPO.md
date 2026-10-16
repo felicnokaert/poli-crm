@@ -41,7 +41,6 @@ Siempre a la vista, arriba de cada pantalla.
 
 ### Inicio
 Tu panel del día.
-- (La tarjeta "Mi día" con la rutina diaria es una herramienta personal de Felipe; tu Inicio no la muestra.)
 - Qué hacer hoy: tareas vencidas y de hoy, conversaciones calientes sin responder.
 - Plan de hoy: una lista tuya para anotar y tildar lo que querés resolver.
 - Metas de la semana: contactos, contactos efectivos y propuestas activas contra tu objetivo.
@@ -55,7 +54,6 @@ Los mensajes de WhatsApp que entran a tu número, para clasificar y registrar.
 ### Tareas
 Todo lo que tenés que hacer, con fecha. Tiene tres pestañas.
 - Tareas: crear, completar y buscar tareas con empresa, fecha y prioridad. Podés exportarlas a CSV.
-- (La pestaña "Rutina" de las capturas es de Felipe; en tu cuenta esa pestaña se llama "Cierre del día".)
 - Cierre del día: al terminar (o al empezar) el día te muestra qué salió bien, qué quedó sin hacer, qué se postergó y qué viene mañana. Cada tarea pendiente se puede pasar al próximo día hábil con un toque.
 - Calendario: tus tareas y eventos con hora (visitas, reuniones, llamadas) en un mes. Se puede exportar a Google Calendar (archivo .ics) o abrir una tarea directo en Google Calendar.
 

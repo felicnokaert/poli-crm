@@ -111,7 +111,7 @@ function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, o
     return (
       <div className="content-stack">
         {tabs}
-        {!personal && <section className="panel"><DayReview date={today()} planChecks={planChecks || {}} tasks={items} onPostpone={onPostpone} onToggleTask={onToggle} /></section>}
+        {!personal && <section className="panel"><DayReview date={today()} planChecks={planChecks || {}} tasks={items} onPostpone={onPostpone} onToggleTask={onToggle} includeRoutine={false} /></section>}
         {personal && <Routine date={today()} planChecks={planChecks || {}} onToggle={onTogglePlan} onNavigate={onNavigate} tasks={items} onToggleTask={onToggle} plan={TRELLO_PLAN} onImportPlan={onImportPlan} onPostpone={onPostpone} />}
       </div>
     );

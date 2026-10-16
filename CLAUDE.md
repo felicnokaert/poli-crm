@@ -24,7 +24,8 @@ Búsqueda global Ctrl+K; tarjeta Mi día en Inicio; menú en 5 grupos; Prospecci
 - Guía para pasarle al equipo: docs/GUIA_BETA_EQUIPO.pdf (fuente: scripts/build-guia-beta.py + capturas; regenerar si cambia la interfaz).
 - Rutina, plan Trello y tablero Trello son solo de Felipe (src/personal-tools.mjs); el resto ve Cierre del día. Bandeja del equipo apagada (TEAM_INBOX_ENABLED=false).
 - Directorio de empresas compartido: tabla shared_companies (Felipe publica, cada uno trae desde Más → Datos). Solo viajan nombre, rubro, ubicación y contactos.
-- PENDIENTE confirmación de Felipe: migración que restringe conversation_assignments por canal (supabase/migrations/20261016200000_beta_equipo.sql, sección final). La herramienta pidió confirmación para reemplazar políticas.
+- conversation_assignments restringida por canal (aplicado 16/10 con OK de Felipe).
+- Para probar la vista del resto del equipo en localhost: `localStorage.setItem('poliplast-simulate-member','1')` y recargar.
 - Pendiente: cotizador integrado al CRM (hoy es una aplicación separada, ver docs/ADR-001).
 
 ## Pendiente / próximos pasos

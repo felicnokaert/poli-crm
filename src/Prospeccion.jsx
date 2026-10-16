@@ -385,6 +385,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const prospects = Array.isArray(data.prospects) ? data.prospects : EMPTY;
   const clients = Array.isArray(data.clients) ? data.clients : EMPTY;
   const switches = data.prospectSwitches || {};
+  const [tab, setTab] = useState('prospectos');
   const [familyFilter, setFamilyFilter] = useState('Todas');
   const [stateFilter, setStateFilter] = useState('Todos');
   const [dailyList, setDailyList] = useState(null);
@@ -822,10 +823,17 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
           <p>Empresas que todavía no son clientes. Al marcar un prospecto como Contactado o Con interés pasa a Empresas y desde ahí rige toda la lógica del CRM. Nunca se envían mensajes desde acá: el contacto es siempre manual.</p>
         </div>
         <div className="panel-head-actions">
-          <button type="button" className="primary" onClick={() => setForm(blankProspect({ family: familyFilter !== 'Todas' ? familyFilter : '' }))}><Plus size={16} /> Cargar prospecto</button>
+          <button type="button" className="primary" onClick={() => { setTab('prospectos'); setForm(blankProspect({ family: familyFilter !== 'Todas' ? familyFilter : '' })); }}><Plus size={16} /> Cargar prospecto</button>
         </div>
       </div>
 
+      <div className="segmented prospect-tabs" role="tablist" aria-label="Secciones de Prospección">
+        {[['prospectos', 'Prospectos'], ['buscar', 'Buscar con IA'], ['competencia', 'Competencia']].map(([key, label]) => (
+          <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? 'selected' : ''} onClick={() => setTab(key)}>{label}</button>
+        ))}
+      </div>
+
+      {tab === 'buscar' && (<>
       <details className="panel research-panel" open>
         <summary><strong>Investigación profunda: Claude investiga por vos en la web</strong></summary>
         <div className="prospect-search-head">
@@ -919,10 +927,11 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
           </details>
         )}
       </details>
+      </>)}
 
-      <Competencia supabase={supabase} userEmail={userEmail} family={research.family || planFamily} families={PROSPECT_FAMILIES.map((item) => item.key)} />
+      {tab === 'competencia' && <Competencia supabase={supabase} userEmail={userEmail} family={research.family || planFamily} families={PROSPECT_FAMILIES.map((item) => item.key)} />}
 
-      <details className="panel prospect-experimental">
+      {tab === 'buscar' && <details className="panel prospect-experimental">
         <summary><strong>Otras formas de buscar (experimental)</strong> <span className="muted small">búsqueda rápida en OpenStreetMap y en la web desde la app; los resultados pueden ser pocos o incompletos</span></summary>
       <div className="panel prospect-search">
         <div className="prospect-search-head">
@@ -1004,9 +1013,10 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         )}
 
       </div>
-      </details>
+      </details>}
       {message && <div className="system-message">{message}</div>}
 
+      {tab === 'prospectos' && (<>
       {form && (
         <form className="form-grid" onSubmit={submitForm}>
           <label>Empresa<input required value={form.company} onChange={(event) => setForm({ ...form, company: event.target.value })} /></label>
@@ -1088,6 +1098,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
           </table>
         </>
       )}
+      </>)}
       {detail && (
         <ProspectDetail
           key={detail.id} defaultSender={String(userEmail || '').split('@')[0].split(/[._-]/)[0].replace(/^./, (c) => c.toLocaleUpperCase('es-AR'))} prospect={detail} check={checks.get(detail.id) || { status: 'Nuevo', matches: [] }}

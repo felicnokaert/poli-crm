@@ -127,7 +127,7 @@ const STORAGE_KEY = "poliplast-sales-copilot-v1";
 // Mismos 6 grupos que arma navGroups más abajo - repetidos acá porque hacen
 // falta antes de que el componente pueda armar navGroups (son el estado
 // inicial "todo colapsado").
-const NAV_GROUP_NAMES = ["Ventas", "Organización", "Canales", "Cartera", "Recursos", "Sistema"];
+const NAV_GROUP_NAMES = ["Hoy", "Ventas", "Cartera", "Aprender", "Más"];
 
 function addDays(days) {
   const date = new Date();
@@ -1419,29 +1419,29 @@ export default function App() {
   }, []);
 
   const navGroups = [
-    ["Ventas", [
+    ["Hoy", [
       ["dashboard", "Inicio", LayoutDashboard],
       ["inbox", "Por revisar", Inbox],
       ["team", "Equipo", UserCheck],
-      ["conversations", "Historial", MessageCircle],
       ["tasks", "Tareas", ClipboardList],
+    ]],
+    ["Ventas", [
       ["pipeline", "Cuentas activas", Target],
       ["sales", "Ventas", ReceiptText],
-    ]],
-    ["Organización", [
-      ["board", "Tablero / Trello", LayoutGrid],
+      ["prospecting", "Prospección", Search],
+      ["conversations", "Historial", MessageCircle],
     ]],
     ["Cartera", [
       ["clients", "Empresas", Building2],
-      ["prospecting", "Prospección", Search],
       ["contacts", "Contactos", Users],
       ["map", "Mapa", MapPin],
     ]],
-    ["Recursos", [
+    ["Aprender", [
       ["academy", "Academia comercial", GraduationCap],
       ["techdocs", "Base técnica", FileCheck2],
     ]],
-    ["Sistema", [
+    ["Más", [
+      ["board", "Tablero / Trello", LayoutGrid],
       ["profile", "Perfil", UserCog],
       ["settings", "Datos", Database],
     ]],

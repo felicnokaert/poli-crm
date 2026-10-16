@@ -12,6 +12,15 @@ export function localDate(iso) {
   return date.toLocaleDateString('en-CA', { timeZone: TZ });
 }
 
+// La cerró el sistema, no la persona: marcadas desde el 16/10 (autoClosed) o, las de antes, tareas
+// automáticas cerradas en la corrida diaria de las 6:00 UTC (3:00 en Argentina).
+export function closedBySystem(task = {}) {
+  if (task.autoClosed) return true;
+  if (!String(task.source || '').startsWith('auto-') || !task.completedAt) return false;
+  const time = String(task.completedAt).slice(11, 16);
+  return time >= '06:00' && time < '06:30';
+}
+
 const byPriority = (a, b) => (b.priority === 'Alta') - (a.priority === 'Alta') || String(a.title).localeCompare(String(b.title));
 
 export function reviewDay(date, { planChecks = {}, tasks = [], includeRoutine = true } = {}) {
@@ -20,7 +29,7 @@ export function reviewDay(date, { planChecks = {}, tasks = [], includeRoutine = 
   const blocksDone = day.blocks.filter((block) => planChecks[routineKey(date, block.id)] === true);
   const blocksMissed = day.blocks.filter((block) => !block.extra && planChecks[routineKey(date, block.id)] !== true);
   // Lo que el sistema cerró solo por vencido no es algo que "salió bien".
-  const doneTasks = real.filter((task) => task.done && !task.autoClosed && localDate(task.completedAt) === date).sort(byPriority);
+  const doneTasks = real.filter((task) => task.done && !closedBySystem(task) && localDate(task.completedAt) === date).sort(byPriority);
   const pendingTasks = real.filter((task) => !task.done && task.dueDate === date).sort(byPriority);
   const postponedTasks = real.filter((task) => !task.done && (task.postponedFrom || []).includes(date)).sort(byPriority);
   const carried = real.filter((task) => !task.done && task.dueDate && task.dueDate < date).sort(byPriority);

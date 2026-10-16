@@ -157,3 +157,28 @@ test('Inicio no muestra "Retomar contacto" guardado de empresas que ya no se tra
   const src = (await import('node:fs')).readFileSync(new URL('../src/Dashboard.jsx', import.meta.url), 'utf8');
   assert.match(src, /dailySignals\.staleClients \|\| \[\]\)\.filter\(stillWorked\)/);
 });
+
+test('limpieza: empresas que Felipe borró y sus tareas automáticas también se van', async () => {
+  const { cleanCopiedWorkspace } = await import('../src/workspace-cleanup.mjs');
+  const owner = { clients: [], deletedRecordIds: { clients: ['corbeb'] } };
+  const juan = {
+    clients: [{ id: 'corbeb', company: 'CORBEB S R L', createdAt: '2026-09-01' }, { id: 'propia', company: 'Propia', pipelineActive: true }],
+    tasks: [
+      { id: 't1', source: 'auto-stale-client', clientId: 'corbeb', autoKey: 'corbeb', done: true, title: 'Retomar contacto con CORBEB S R L' },
+      { id: 't2', source: 'auto-stale-client', clientId: 'propia', autoKey: 'propia', done: false },
+      { id: 't3', title: 'Mía', done: true },
+    ],
+  };
+  const { state, removed } = cleanCopiedWorkspace(juan, [owner], { allowedChannels: ['juan'] });
+  assert.deepEqual(state.clients.map((c) => c.id), ['propia']);
+  assert.deepEqual(state.tasks.map((t) => t.id), ['t2', 't3']);
+  assert.equal(removed.deletedClients, 1);
+  assert.ok(state.deletedRecordIds.clients.includes('corbeb'));
+});
+
+test('las automáticas cerradas por la corrida de las 6 (antes del arreglo) tampoco cuentan', async () => {
+  const { closedBySystem } = await import('../src/day-review.mjs');
+  assert.equal(closedBySystem({ source: 'auto-stale-client', done: true, completedAt: '2026-10-16T06:00:41.000Z' }), true);
+  assert.equal(closedBySystem({ source: 'auto-stale-client', done: true, completedAt: '2026-10-16T14:10:00.000Z' }), false);
+  assert.equal(closedBySystem({ title: 'Mía', done: true, completedAt: '2026-10-16T06:05:00.000Z' }), false);
+});

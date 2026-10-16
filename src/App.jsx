@@ -51,6 +51,7 @@ const CotizadorFrame = lazy(() => import("./CotizadorFrame").then((m) => ({ defa
 // chunk no arrastra nada que este archivo necesite.
 const Academy = lazy(() => import("./Academy").then((m) => ({ default: m.Academy })));
 import { LoginScreen } from "./Login";
+import { ErrorBoundary } from "./ErrorBoundary.jsx";
 const DataSettings = lazy(() => import("./DataSettings").then((m) => ({ default: m.DataSettings })));
 import { InteractionDetail } from "./Interactions";
 import { ProjectBoardGateway, Dashboard } from "./Dashboard";
@@ -1757,6 +1758,7 @@ export default function App() {
             )}
           </div>
         </header>
+        <ErrorBoundary key={view}>
 
         {view === "dashboard" && (
           <Dashboard
@@ -1968,6 +1970,7 @@ export default function App() {
             />
           </Suspense>
         )}
+        </ErrorBoundary>
       </main>
 
       <Suspense fallback={null}>

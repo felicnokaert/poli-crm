@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Copy, Plus, Search, Trash2 } from "lucide-react";
-import { buildBoard, groupConversations, loadByMember, needsFollowUp, suggestedReply, urgencyOf, waitingLabel } from "./team-inbox.mjs";
+import { buildBoard, groupConversations, loadByMember, needsFollowUp, teamStats, suggestedReply, urgencyOf, waitingLabel } from "./team-inbox.mjs";
 
 const STATUSES = [["pendiente", "Pendiente"], ["derivada", "Derivada"], ["respondida", "Respondida"], ["cerrada", "Cerrada"]];
 const CHANNEL_LABEL = { general: "WhatsApp General", juan: "WhatsApp Juan", penosil: "WhatsApp Penosil", rapyp: "WhatsApp RAPYP" };
@@ -26,6 +26,7 @@ export function TeamInbox({ api, userEmail, isAdmin }) {
   const me = members.find((member) => member.email && member.email === String(userEmail || "").toLowerCase());
   const board = useMemo(() => state ? buildBoard(groupConversations(state.events, state.statusEvents), state.assignments, state.rules, members) : [], [state, members]);
   const load = useMemo(() => loadByMember(board, activeMembers), [board, activeMembers]);
+  const stats = useMemo(() => teamStats(board), [board]);
   const channels = [...new Set(board.map((item) => item.channel))];
   const q = filters.query.trim().toLowerCase();
   const shown = board.filter((item) =>
@@ -67,6 +68,13 @@ export function TeamInbox({ api, userEmail, isAdmin }) {
 
       {state && (
         <>
+          <div className="team-stats" aria-label="Resumen de la bandeja">
+            <button type="button" onClick={() => setFilters({ ...filters, view: "abiertas", member: "" })}><strong>{stats.open}</strong><span>Abiertas</span></button>
+            <button type="button" className={stats.atRisk ? "risk" : ""} onClick={() => setFilters({ ...filters, view: "abiertas", member: "" })}><strong>{stats.atRisk}</strong><span>En riesgo (+24 h)</span></button>
+            <button type="button" onClick={() => setFilters({ ...filters, view: "abiertas", member: "sin" })}><strong>{stats.unassigned}</strong><span>Sin dueño</span></button>
+            <button type="button" onClick={() => setFilters({ ...filters, view: "seguimiento", member: "" })}><strong>{stats.followUp}</strong><span>Para seguimiento</span></button>
+            <div><strong>{stats.avgWaitHours} h</strong><span>Espera promedio</span></div>
+          </div>
           <div className="team-chips">
             <button type="button" className={!filters.member ? "selected" : ""} onClick={() => setFilters({ ...filters, member: "" })}>Todos</button>
             {activeMembers.map((member) => (

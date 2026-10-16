@@ -88,6 +88,19 @@ export function needsFollowUp(item, now = Date.now()) {
   return days >= 3 && days <= 14 && quiet >= 3;
 }
 
+// Tablero de números: lo que está abierto, en riesgo, sin dueño y para seguimiento.
+export function teamStats(board = [], now = Date.now()) {
+  const open = board.filter((item) => item.open);
+  const waits = open.map((item) => (now - new Date(item.lastAt).getTime()) / 3600000);
+  return {
+    open: open.length,
+    atRisk: open.filter((item) => urgencyOf(item, now) === 'late').length,
+    unassigned: open.filter((item) => !item.memberId).length,
+    followUp: board.filter((item) => needsFollowUp(item, now)).length,
+    avgWaitHours: waits.length ? Math.round(waits.reduce((a, b) => a + b, 0) / waits.length) : 0,
+  };
+}
+
 export function waitingLabel(isoDate, now = Date.now()) {
   const ms = Math.max(0, now - new Date(isoDate).getTime());
   const minutes = Math.floor(ms / 60000);

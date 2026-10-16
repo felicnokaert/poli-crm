@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { availableYears, bucketsFor, salesSeries, seriesSummary } from '../src/sales-history.mjs';
+import { availableYears, bucketsFor, defaultMetric, salesSeries, seriesSummary } from '../src/sales-history.mjs';
 
 const sales = [
   { id: '1', date: '2026-01-10', unit: 'Resinplast', netAmount: 1000, currency: 'ARS' },
@@ -26,18 +26,24 @@ test('serie trimestral con objetivo y porcentaje; ignora otros años', () => {
   assert.equal(s[0].target, 3000);
   assert.equal(s[0].pct, 50);
   assert.equal(s[1].value, 200000);
-  assert.equal(s[1].target, 100000);
+  assert.equal(s[1].target, 100005);
   assert.equal(s[1].pct, 200);
   assert.equal(s[3].value, 0);
 });
 
-test('el semestre suma los trimestres y los objetivos con alcance propio no entran', () => {
+test('el semestre suma los trimestres y los objetivos con unidad propia entran (también al filtrar esa unidad)', () => {
   const s = salesSeries(sales, goals, { year: 2026, granularity: 'semester', metric: 'netArs' });
   assert.equal(s[0].value, 201500);
-  assert.equal(s[0].target, 103000);
-  const byUnit = salesSeries(sales, goals, { year: 2026, granularity: 'month', metric: 'count', unit: 'Resinplast' });
-  assert.equal(byUnit[0].value, 1);
-  assert.equal(byUnit[0].target, null);
+  assert.equal(s[0].target, 103005);
+  const resin = salesSeries(sales, goals, { year: 2026, granularity: 'month', metric: 'netArs', unit: 'Resinplast' });
+  assert.equal(resin[5].target, 5);
+  const imper = salesSeries(sales, goals, { year: 2026, granularity: 'month', metric: 'netArs', unit: 'Imperpur' });
+  assert.equal(imper[5].target, null);
+});
+
+test('la métrica por defecto es la de los objetivos cargados', () => {
+  assert.equal(defaultMetric([{ metric: 'commission', target: 10 }, { metric: 'commission', target: 5 }, { metric: 'count', target: 3 }]), 'commission');
+  assert.equal(defaultMetric([]), 'netArs');
 });
 
 test('años disponibles y resumen', () => {

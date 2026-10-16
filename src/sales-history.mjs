@@ -28,22 +28,31 @@ function saleValue(sale, metric, units, fallbackRate) {
   return 1;
 }
 
-// Objetivos "generales" (todas las unidades, puntos de venta y familias) de la misma métrica, repartidos a los meses que cubren.
-function targetFor(goals, metric, bucketMonths) {
+// Suma los objetivos de la misma métrica que caen en el período (los trimestrales se reparten entre sus meses).
+// Con una unidad elegida solo entran los objetivos de esa unidad o los generales.
+function targetFor(goals, metric, bucketMonths, unit = 'Todas') {
   let total = 0; let found = false;
   const covered = new Set(bucketMonths);
   for (const goal of goals) {
     if (goal.metric !== metric) continue;
-    if ((goal.unit && goal.unit !== 'Todas') || (goal.pointOfSale && goal.pointOfSale !== 'Todas') || (goal.family && goal.family !== 'Todas')) continue;
+    if (unit !== 'Todas' && goal.unit && goal.unit !== 'Todas' && goal.unit !== unit) continue;
     const target = Number(goal.target) || 0;
     if (!target) continue;
     if (goal.periodType === 'quarter') {
       const months = monthOfQuarterGoal(goal.period);
-      if (months && months.every((m) => covered.has(m))) { total += target; found = true; }
-      else if (months && months.some((m) => covered.has(m))) { total += target * (months.filter((m) => covered.has(m)).length / 3); found = true; }
+      const inside = months ? months.filter((m) => covered.has(m)).length : 0;
+      if (inside) { total += target * (inside / 3); found = true; }
     } else if (covered.has(goal.period)) { total += target; found = true; }
   }
   return found ? total : null;
+}
+
+// Métrica con la que más objetivos cargaste, para que el gráfico arranque mostrándolos.
+export function defaultMetric(goals = []) {
+  const counts = {};
+  for (const goal of goals) if (goal.metric && Number(goal.target) > 0) counts[goal.metric] = (counts[goal.metric] || 0) + 1;
+  const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+  return top ? top[0] : 'netArs';
 }
 
 export function salesSeries(sales = [], goals = [], { year, granularity = 'month', metric = 'netArs', unit = 'Todas', units = {}, fallbackRate = 0 } = {}) {
@@ -51,7 +60,7 @@ export function salesSeries(sales = [], goals = [], { year, granularity = 'month
     const set = new Set(bucket.months);
     const inBucket = sales.filter((sale) => set.has(String(sale.date || '').slice(0, 7)) && (unit === 'Todas' || sale.unit === unit));
     const value = inBucket.reduce((sum, sale) => sum + saleValue(sale, metric, units, fallbackRate), 0);
-    const target = unit === 'Todas' ? targetFor(goals, metric, bucket.months) : null;
+    const target = targetFor(goals, metric, bucket.months, unit);
     return { key: bucket.key, label: bucket.label, months: bucket.months, count: inBucket.length, value, target, pct: target ? Math.round((value / target) * 100) : null };
   });
 }

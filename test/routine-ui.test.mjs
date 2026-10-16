@@ -127,5 +127,6 @@ test('el historial de ventas muestra el año, cambia a trimestral y salta al per
   const bar = screen.getByRole('button', { name: /T1: .*objetivo/ });
   fireEvent.click(bar);
   assert.deepEqual(picked[0], ['quarter', '2026-Q1']);
-  assert.ok(screen.getAllByText('50%').length >= 1);
+  assert.equal(screen.queryByText(/Ver los números en tabla/), null);
+  assert.equal(screen.queryByText(/Cumplimiento/), null);
 });

@@ -24,7 +24,7 @@ export function describeWeather(code) {
 }
 
 export const weatherUrl = (place) => `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,weather_code&timezone=auto`;
-export const geocodeUrl = (text) => `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(String(text).trim())}&count=1&language=es&format=json`;
+export const geocodeUrl = (text, count = 1) => `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(String(text).trim())}&count=${count}&language=es&format=json`;
 
 export function parseWeather(json) {
   const cur = json?.current;
@@ -37,4 +37,14 @@ export function parseGeocode(json) {
   const hit = json?.results?.[0];
   if (!hit) return null;
   return { name: [hit.name, hit.admin1].filter(Boolean).join(', '), latitude: hit.latitude, longitude: hit.longitude, timezone: hit.timezone || HOME_TZ };
+}
+
+// Varias sugerencias para el buscador de ciudades (mientras se escribe).
+export function parseGeocodeList(json) {
+  return (json?.results || []).map((hit) => ({
+    name: [hit.name, hit.admin1, hit.country].filter(Boolean).join(', '),
+    latitude: hit.latitude,
+    longitude: hit.longitude,
+    timezone: hit.timezone || HOME_TZ,
+  }));
 }

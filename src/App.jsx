@@ -33,7 +33,6 @@ import {
   blankTask,
   commercialOutcome,
   commercialStage,
-  cotizadorUrl,
   googleCalendarUrl,
   initialState,
   longToday,
@@ -45,6 +44,7 @@ const TechnicalDocumentsAdmin = lazy(() =>
   import("./TechnicalDocuments").then((m) => ({ default: m.TechnicalDocumentsAdmin }))
 );
 const MapaCobertura = lazy(() => import("./MapaCobertura").then((m) => ({ default: m.MapaCobertura })));
+const CotizadorFrame = lazy(() => import("./CotizadorFrame").then((m) => ({ default: m.CotizadorFrame })));
 // Único de los cinco named exports de Academy.jsx que se usa acá - los
 // otros (CommercialKnowledge, Coach, QuickReplies, Training) son internos,
 // consumidos solo por el propio <Academy> - así que separarla en su propio
@@ -251,6 +251,8 @@ export default function App() {
   const whatsappHealth = useWhatsAppHealth(session);
   const [view, setView] = useState("dashboard");
   const [mapTab, setMapTab] = useState("aplicadores");
+  // Empresa con la que se abre el cotizador (desde "Cotizar" en la ficha); null = cotización libre.
+  const [quoterClient, setQuoterClient] = useState(null);
   const [collapsedNavGroups, setCollapsedNavGroups] = useNavGroups(NAV_GROUP_NAMES);
   const [showForm, setShowForm] = useState(false);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
@@ -1495,7 +1497,7 @@ export default function App() {
     ["Ventas", [
       ["pipeline", "Cuentas activas", Target],
       ["sales", "Ventas", ReceiptText],
-      ["quoter", "Cotizador ↗", Calculator],
+      ["quoter", "Cotizador", Calculator],
       ["prospecting", "Prospección", Search],
       ["conversations", "Historial", MessageCircle],
     ]],
@@ -1633,8 +1635,7 @@ export default function App() {
                     <button
                       key={id}
                       className={view === id ? "active" : ""}
-                      onClick={() => (id === "quoter" ? window.open(cotizadorUrl(), "_blank", "noopener,noreferrer") : setView(id))}
-                      title={id === "quoter" ? "Abre el cotizador en otra pestaña" : undefined}
+                      onClick={() => { if (id === "quoter") setQuoterClient(null); setView(id); }}
                     >
                       <Icon size={19} /> {label}
                       {id === "tasks" && overdueTaskCount > 0 && (
@@ -1922,6 +1923,11 @@ export default function App() {
             />
           </Suspense>
         )}
+        {view === "quoter" && (
+          <Suspense fallback={<Splash text="Cargando cotizador…" />}>
+            <CotizadorFrame session={session} client={quoterClient} />
+          </Suspense>
+        )}
         {view === "map" && (
           <>
             <div className="segmented" role="tablist" aria-label="Tipo de mapa" style={{ marginBottom: 12, width: "fit-content" }}>
@@ -2024,6 +2030,7 @@ export default function App() {
           )}
           sales={data.sales}
           onClose={() => setSelectedClientId(null)}
+          onQuote={(client) => { setQuoterClient({ company: client.company || client.legalName || "", phone: client.phone || "" }); setSelectedClientId(null); setView("quoter"); }}
           onOpenInteraction={setSelectedInteractionId}
           onNewInteraction={startClientInteraction}
           onNewTask={startClientTask}

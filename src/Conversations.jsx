@@ -61,13 +61,13 @@ function ConversationsBase({ items, clients, onOpen, onOpenClient }) {
             placeholder="Buscar cliente o conversación…"
           />
         </label>
-        <select value={family} onChange={(event) => setFamily(event.target.value)}>
+        <select aria-label="Familia" value={family} onChange={(event) => setFamily(event.target.value)}>
           <option value="all">Todas las familias</option>
           {FAMILIES.map((item) => (
             <option key={item}>{item}</option>
           ))}
         </select>
-        <select value={temperature} onChange={(event) => setTemperature(event.target.value)}>
+        <select aria-label="Temperatura" value={temperature} onChange={(event) => setTemperature(event.target.value)}>
           <option value="all">Todas las temperaturas</option>
           <option>Caliente</option>
           <option>Tibio</option>

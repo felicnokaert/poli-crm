@@ -83,14 +83,14 @@ function ClientsBase({ clients, query, setQuery, onOpenClient, onMergeClients, m
         </label>
       </div>
       <div className="client-filters">
-        <select value={review} onChange={(e) => setReview(e.target.value)}>
+        <select aria-label="Revisión" value={review} onChange={(e) => setReview(e.target.value)}>
           <option>Por validar</option>
           <option>Clientes</option>
           <option>Prospectos</option>
           <option>Descartados</option>
           <option>Todos</option>
         </select>
-        <select
+        <select aria-label="Cartera"
           value={portfolio}
           onChange={(e) => setPortfolio(e.target.value)}
         >
@@ -98,12 +98,12 @@ function ClientsBase({ clients, query, setQuery, onOpenClient, onMergeClients, m
           <option>Activos</option>
           <option>En cartera</option>
         </select>
-        <select value={family} onChange={(e) => setFamily(e.target.value)}>
+        <select aria-label="Familia" value={family} onChange={(e) => setFamily(e.target.value)}>
           {families.map((item) => (
             <option key={item}>{item}</option>
           ))}
         </select>
-        <select value={contact} onChange={(e) => setContact(e.target.value)}>
+        <select aria-label="Datos de contacto" value={contact} onChange={(e) => setContact(e.target.value)}>
           <option>Todos</option>
           <option>Con contacto</option>
           <option>Falta contacto</option>

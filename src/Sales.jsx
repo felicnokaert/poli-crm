@@ -171,24 +171,24 @@ function GoalsPanel({ goals, sales, businessUnits, currentMonth, currentQuarter,
         </p>
       )}
       <form className="goal-form" onSubmit={addGoal}>
-        <select value={draft.periodType} onChange={(e) => selectPeriodType(e.target.value)}>
+        <select aria-label="Período del objetivo" value={draft.periodType} onChange={(e) => selectPeriodType(e.target.value)}>
           <option value="month">Este mes</option>
           <option value="quarter">Este trimestre</option>
         </select>
-        <select value={draft.metric} onChange={(e) => updateDraft('metric', e.target.value)}>
+        <select aria-label="Medida del objetivo" value={draft.metric} onChange={(e) => updateDraft('metric', e.target.value)}>
           {Object.entries(GOAL_METRICS).map(([key, meta]) => <option key={key} value={key}>{meta.label}</option>)}
         </select>
-        <select value={draft.unit} onChange={(e) => updateDraft('unit', e.target.value)}>
+        <select aria-label="Unidad de negocio" value={draft.unit} onChange={(e) => updateDraft('unit', e.target.value)}>
           <option value="Todas">Todas las unidades</option>
           {Object.keys(units).map((name) => <option key={name} value={name}>{name}</option>)}
         </select>
         {draft.unit !== 'Todas' && (
-          <select value={draft.pointOfSale} onChange={(e) => updateDraft('pointOfSale', e.target.value)}>
+          <select aria-label="Punto de venta" value={draft.pointOfSale} onChange={(e) => updateDraft('pointOfSale', e.target.value)}>
             <option value="Todas">Todos los puntos de venta</option>
             {(units[draft.unit]?.invoicePoints || []).map((point) => <option key={point} value={point}>{point}</option>)}
           </select>
         )}
-        <select value={draft.family} onChange={(e) => updateDraft('family', e.target.value)}>
+        <select aria-label="Familia" value={draft.family} onChange={(e) => updateDraft('family', e.target.value)}>
           <option value="Todas">Todas las familias</option>
           {FAMILIES.map((item) => <option key={item} value={item}>{item}</option>)}
         </select>
@@ -378,18 +378,18 @@ function SalesBase({ items, goals, businessUnits, clients, onSaveGoal, onDeleteG
         />
       )}
       <div className="list-toolbar">
-        <select value={periodMode} onChange={(event) => setPeriodMode(event.target.value)}>
+        <select aria-label="Período" value={periodMode} onChange={(event) => setPeriodMode(event.target.value)}>
           <option value="month">Por mes</option>
           <option value="quarter">Por trimestre</option>
           <option value="all">Todo el histórico</option>
         </select>
-        {periodMode === 'month' && <input type="month" value={month} onChange={(event) => setMonth(event.target.value)}/>}
+        {periodMode === 'month' && <input type="month" aria-label="Mes" value={month} onChange={(event) => setMonth(event.target.value)}/>}
         {periodMode === 'quarter' && (
-          <select value={quarter} onChange={(event) => setQuarter(event.target.value)}>
+          <select aria-label="Trimestre" value={quarter} onChange={(event) => setQuarter(event.target.value)}>
             {quarterOptions.map((q) => <option key={q} value={q}>{q}</option>)}
           </select>
         )}
-        <select value={unit} onChange={(event) => setUnit(event.target.value)}><option>Todas</option>{unitNames.map((name) => <option key={name}>{name}</option>)}</select>
+        <select aria-label="Unidad de negocio" value={unit} onChange={(event) => setUnit(event.target.value)}><option>Todas</option>{unitNames.map((name) => <option key={name}>{name}</option>)}</select>
         <input type="search" placeholder="Buscar cliente…" value={search} onChange={(event) => setSearch(event.target.value)}/>
         <button type="button" className="secondary" onClick={() => exportSalesCsv(filtered, month, unit)} disabled={!filtered.length}><Download size={15}/> Exportar CSV</button>
       </div>
@@ -474,7 +474,7 @@ function BulkReviewTable({ rows, selected, existingSales, units, unitNames, onTo
                   <td className="bulk-file-cell" title={row.sourceFile}>{row.sourceFile}{duplicate && <span className="bulk-duplicate-tag" title={`Ya existe: ${duplicate.customer}`}>duplicada</span>}</td>
                   <td><input type="date" value={row.date} onChange={(e) => onChange(row.rowId, 'date', e.target.value)}/></td>
                   <td>
-                    <select value={row.unit} onChange={(e) => onChange(row.rowId, 'unit', e.target.value)}>
+                    <select aria-label="Unidad" value={row.unit} onChange={(e) => onChange(row.rowId, 'unit', e.target.value)}>
                       {unitNames.map((name) => <option key={name}>{name}</option>)}
                     </select>
                   </td>
@@ -482,7 +482,7 @@ function BulkReviewTable({ rows, selected, existingSales, units, unitNames, onTo
                   <td>{row.pointOfSale}-{row.documentNumber}</td>
                   <td><input type="number" min="0" step="0.01" value={row.netAmount} onChange={(e) => onChange(row.rowId, 'netAmount', Number(e.target.value) || 0)}/></td>
                   <td>
-                    <select value={row.currency} onChange={(e) => onChange(row.rowId, 'currency', e.target.value)}>
+                    <select aria-label="Moneda" value={row.currency} onChange={(e) => onChange(row.rowId, 'currency', e.target.value)}>
                       <option value="ARS">ARS</option><option value="USD">USD</option>
                     </select>
                   </td>

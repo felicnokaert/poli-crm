@@ -207,9 +207,12 @@ export function blankTask() {
 
 // Cotizador comercial: aplicación aparte (repo poliplast-cotizador, misma base). Se abre en otra
 // pestaña; con ?cliente= llega con la empresa ya elegida. Cotizar nunca registra una venta.
-export const COTIZADOR_URL = "https://cotizador-poliplast.vercel.app/";
-export function cotizadorUrl(company = "", phone = "") {
+// VITE_COTIZADOR_URL solo para probar en la compu con el cotizador local (npm run maqueta).
+export const COTIZADOR_URL = import.meta.env?.VITE_COTIZADOR_URL || "https://cotizador-poliplast.vercel.app/";
+export const COTIZADOR_ORIGIN = new URL(COTIZADOR_URL).origin;
+export function cotizadorUrl(company = "", phone = "", { embed = false } = {}) {
   const params = new URLSearchParams();
+  if (embed) params.set("embed", "1");
   if (String(company || "").trim()) params.set("cliente", String(company).trim());
   if (String(phone || "").trim()) params.set("telefono", String(phone).trim());
   const query = params.toString();

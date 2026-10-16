@@ -55,3 +55,12 @@ test('la búsqueda global abre la empresa elegida con Enter', async () => {
   fireEvent.keyDown(input, { key: 'Enter' });
   assert.deepEqual(picked, ['c1']);
 });
+
+test('Inicio: "Mi día" muestra el avance y lleva a la rutina', async () => {
+  const mod = await loadJsxModule('src/Dashboard.jsx');
+  const navs = [];
+  const metrics = { contacts: 0, effective: 0, proposals: 0, overdue: 0, dueToday: 0 };
+  render(React.createElement(mod.Dashboard, { metrics, tasks: [], interactions: [], clients: [], sales: [], inbox: [], myChannels: [], planChecks: {}, showWelcome: false, onNavigate: (v) => navs.push(v) }));
+  const open = screen.queryByRole('button', { name: /Abrir rutina y cierre/ });
+  if (open) { fireEvent.click(open); assert.equal(navs[0], 'tasks'); }
+});

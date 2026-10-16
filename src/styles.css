@@ -730,3 +730,9 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .palette-list button{display:flex;gap:10px;align-items:baseline;width:100%;text-align:left;padding:9px 10px;border:0;border-radius:8px;background:transparent;cursor:pointer}
 .palette-list button.active{background:var(--color-bg-soft)}
 .palette-kind{font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:var(--brand-gray);min-width:68px}
+
+.my-day-bar{height:8px;border-radius:99px;background:var(--color-bg-soft);overflow:hidden;margin:8px 0 14px}
+.my-day-bar span{display:block;height:100%;background:var(--brand-red)}
+.my-day-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.my-day-grid h4{margin:0 0 6px;font-size:.85rem;color:var(--brand-gray);text-transform:uppercase;letter-spacing:.04em}
+.my-day-grid ul{list-style:none;margin:0;padding:0;display:grid;gap:4px}

@@ -72,3 +72,16 @@ test('el Cierre del día no se llena con tareas automáticas pendientes (son ale
   assert.deepEqual(review.carried.map((t) => t.id), []);
   assert.deepEqual(review.doneTasks.map((t) => t.id), ['a3'], 'una automática que la persona resolvió sí cuenta');
 });
+
+test('cierre en tanda de una versión vieja (misma hora exacta) no cuenta como "salió bien"', async () => {
+  const { reviewDay } = await import('../src/day-review.mjs');
+  const stamp = '2026-10-16T14:03:11.482Z';
+  const tasks = [
+    { id: 'a', title: 'Retomar contacto con CARROCERIAS 02 SRL - lleva 36 días sin actividad', source: 'auto-stale-client', done: true, completedAt: stamp, dueDate: '2026-10-15' },
+    { id: 'b', title: 'Retomar contacto con CORBEB S R L - lleva 45 días sin actividad', source: 'auto-stale-client', done: true, completedAt: stamp, dueDate: '2026-10-15' },
+    { id: 'c', title: 'Llamar a Juan', done: true, completedAt: '2026-10-16T15:20:00.000Z', dueDate: '2026-10-16' },
+    { id: 'd', title: 'Retomar contacto con X', source: 'auto-stale-client', done: true, completedAt: '2026-10-16T16:00:00.000Z' },
+  ];
+  const review = reviewDay('2026-10-16', { tasks, includeRoutine: false });
+  assert.deepEqual(review.doneTasks.map((task) => task.id).sort(), ['c', 'd']);
+});

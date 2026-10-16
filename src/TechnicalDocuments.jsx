@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { FileCheck2 } from "lucide-react";
 import { useConfirm } from "./ConfirmDialog";
 import { Empty, Loading } from "./ui-primitives";
@@ -7,6 +7,7 @@ import { ProductSheets } from "./ProductSheets.jsx";
 import { ProductQuestion } from "./ProductQuestion.jsx";
 import { supabase } from "./online.js";
 import { UPLOAD_ACCEPT, extensionOf } from "./document-text.mjs";
+import { QUALITY_FILTERS, docProductMap, keyFacts, matchesSearch } from "./technical-insights.mjs";
 
 const TECHNICAL_DOCUMENT_STATUS_LABELS = {
   inventariado: "Inventariado",
@@ -52,6 +53,14 @@ function TechnicalDocumentsAdminBase({ session }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [titleDrafts, setTitleDrafts] = useState({});
   const [groupByFolder, setGroupByFolder] = useState(true);
+  const [search, setSearch] = useState("");
+  const [qualityFilter, setQualityFilter] = useState("all");
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [sheetDocId, setSheetDocId] = useState("");
+  // Catálogo del cotizador y vínculos: los lee «Fichas por producto» y los pasa acá para saber qué
+  // productos usa cada ficha (filtro «sin vincular» y la ficha del documento).
+  const [catalog, setCatalog] = useState({ products: [], links: [] });
+  const productsByDoc = useMemo(() => docProductMap(catalog.products, documents, catalog.links), [catalog, documents]);
 
   async function load() {
     setLoading(true);
@@ -277,18 +286,54 @@ function TechnicalDocumentsAdminBase({ session }) {
     }
   }
 
+  // Validar en tanda (solo Felipe): las seleccionadas pasan a «vigente» de un saque.
+  function toggleSelect(docId) {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(docId)) next.delete(docId); else next.add(docId);
+      return next;
+    });
+  }
+  async function validateSelected() {
+    const targets = documents.filter((doc) => selectedIds.has(doc.id) && doc.status !== "vigente");
+    if (!targets.length || !isAdmin) return;
+    if (!(await confirm(`Se marcan ${targets.length} documento${targets.length === 1 ? "" : "s"} como «vigente». Desde ahí el copiloto los puede citar. ¿Seguro?`, { title: "Validar en tanda", confirmLabel: `Marcar ${targets.length} vigente${targets.length === 1 ? "" : "s"}` }))) return;
+    setMessageIsError(false);
+    const { updateTechnicalDocumentStatus } = await import("./technical-documents-repo.mjs");
+    const updated = [];
+    const errors = new Set();
+    for (const [index, doc] of targets.entries()) {
+      setMessage(`Validando ${index + 1} de ${targets.length}…`);
+      try {
+        updated.push(await updateTechnicalDocumentStatus(doc.id, { status: "vigente", notes: "Validada en tanda", verifiedByUserId: session?.user?.id, verifiedByEmail: session?.user?.email }));
+      } catch (error) {
+        errors.add(error.message || "error");
+      }
+    }
+    setDocuments((current) => current.map((item) => updated.find((doc) => doc.id === item.id) || item));
+    setSelectedIds(new Set());
+    const failed = targets.length - updated.length;
+    setMessage(`Quedaron vigentes ${updated.length} de ${targets.length}.${failed ? ` No se pudieron ${failed}. Motivo: ${[...errors].join(" · ")}` : ""}`);
+    if (failed) setMessageIsError(true);
+  }
+
   const families = [...new Set(documents.map((doc) => doc.family))].sort();
+  const linkedIds = useMemo(() => new Set(productsByDoc.keys()), [productsByDoc]);
   const filtered = documents.filter(
     (doc) =>
       (statusFilter === "all" || doc.status === statusFilter) &&
-      (familyFilter === "all" || doc.family === familyFilter),
+      (familyFilter === "all" || doc.family === familyFilter) &&
+      QUALITY_FILTERS[qualityFilter][1](doc, linkedIds) &&
+      matchesSearch(doc, search),
   );
+  const selectedCount = documents.filter((doc) => selectedIds.has(doc.id)).length;
+  const sheetDoc = documents.find((doc) => doc.id === sheetDocId);
 
   return (
     <div className="content-stack">
       <ProductQuestion supabase={supabase} eyebrow="Base técnica" title="Preguntale al catálogo" />
       <TechnicalUpload documents={documents} onDone={load} />
-      <ProductSheets supabase={supabase} documents={documents} isAdmin={isAdmin} onChanged={load} />
+      <ProductSheets supabase={supabase} documents={documents} isAdmin={isAdmin} onChanged={load} onCatalog={setCatalog} />
       <section className="panel">
         <div className="panel-head">
           <div>
@@ -315,6 +360,12 @@ function TechnicalDocumentsAdminBase({ session }) {
           </div>
         )}
         <div className="list-toolbar inbox-filters">
+          <input type="search" className="technical-document-search" placeholder="Buscar por nombre o código (ej. 618, MS-35)" aria-label="Buscar documento" value={search} onChange={(event) => setSearch(event.target.value)} />
+          <select aria-label="Revisar" value={qualityFilter} onChange={(event) => setQualityFilter(event.target.value)}>
+            {Object.entries(QUALITY_FILTERS).map(([key, [label, test]]) => (
+              <option key={key} value={key}>{key === "all" ? "Todos los documentos" : `${label} (${documents.filter((doc) => test(doc, linkedIds)).length})`}</option>
+            ))}
+          </select>
           <select aria-label="Estado" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
             <option value="all">Todos los estados</option>
             {Object.entries(TECHNICAL_DOCUMENT_STATUS_LABELS).map(([key, label]) => (
@@ -332,6 +383,17 @@ function TechnicalDocumentsAdminBase({ session }) {
             Agrupar por carpeta (como en Drive)
           </label>
         </div>
+        {isAdmin && (
+          <div className="technical-document-bulk-attach technical-document-validate-bar">
+            <span>Validar en tanda: tildá las fichas revisadas.</span>
+            <button type="button" className="secondary" disabled={!filtered.length} onClick={() => setSelectedIds(new Set(filtered.filter((doc) => doc.status !== "vigente").map((doc) => doc.id)))}>Tildar las {filtered.filter((doc) => doc.status !== "vigente").length} sin validar que se ven</button>
+            {selectedCount > 0 && <button type="button" className="secondary" onClick={() => setSelectedIds(new Set())}>Destildar</button>}
+            <button type="button" disabled={!selectedCount} onClick={validateSelected}>Marcar {selectedCount || ""} vigente{selectedCount === 1 ? "" : "s"}</button>
+          </div>
+        )}
+        {(search || qualityFilter !== "all" || statusFilter !== "all" || familyFilter !== "all") && !loading && (
+          <p className="muted small">Se ven {filtered.length} de {documents.length} documentos.</p>
+        )}
         {message && (
           <div
             className={`system-message ${messageIsError ? "error" : ""}`}
@@ -360,18 +422,25 @@ function TechnicalDocumentsAdminBase({ session }) {
             deleteFolder={deleteFolder}
             renameFolderTo={renameFolderTo}
             moveDocumentToFolder={moveDocumentToFolder}
+            selectedIds={selectedIds}
+            toggleSelect={toggleSelect}
+            openSheet={setSheetDocId}
+            productsByDoc={productsByDoc}
           />
+        ) : documents.length ? (
+          <Empty text="Ningún documento coincide con la búsqueda o los filtros." />
         ) : (
           <Empty text="No hay documentos importados todavía. Subilas con «Subir fichas y documentos», acá arriba." />
         )}
       </section>
+      {sheetDoc && <TechnicalDocumentSheet doc={sheetDoc} products={productsByDoc.get(sheetDoc.id) || []} viewFile={viewFile} onClose={() => setSheetDocId("")} />}
     </div>
   );
 }
 
 export const TechnicalDocumentsAdmin = memo(TechnicalDocumentsAdminBase);
 
-export function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile, deleteDocument, moveDocumentToFolder }) {
+export function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile, deleteDocument, moveDocumentToFolder, selectedIds, toggleSelect, openSheet, productsByDoc }) {
   const [textOpen, setTextOpen] = useState(false);
   const draft = draftFor(doc);
   const [folderFromSourceFile, setFolderFromSourceFile] = useState(null);
@@ -383,7 +452,10 @@ export function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleD
   useEffect(() => setFolderDraft(currentFolder), [currentFolder]);
   const [optionsOpen, setOptionsOpen] = useState(false);
   return (
-    <article className="technical-document-row">
+    <article className={`technical-document-row ${selectedIds?.has(doc.id) ? "selected" : ""}`}>
+      {isAdmin && toggleSelect && (
+        <input type="checkbox" className="technical-document-select" aria-label={`Seleccionar ${doc.title}`} checked={selectedIds.has(doc.id)} onChange={() => toggleSelect(doc.id)} />
+      )}
       <div>
         <input
           className="technical-document-title-input"
@@ -425,6 +497,12 @@ export function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleD
               ? "Texto guardado (sin archivo) · el copiloto lo lee"
               : "Sin archivo ni texto todavía"}
           {" "}
+          {openSheet && (
+            <button type="button" className="technical-document-file-link" onClick={() => openSheet(doc.id)}>
+              Ficha completa
+            </button>
+          )}
+          {" "}
           {doc.storagePath && (
             <button type="button" className="technical-document-file-link" onClick={() => viewFile(doc)}>
               Ver documento
@@ -446,6 +524,13 @@ export function TechnicalDocumentRow({ doc, allDocuments, titleDrafts, setTitleD
             />
           </label>
         </span>
+        {productsByDoc && (
+          <span className="muted small">
+            {(productsByDoc.get(doc.id) || []).length
+              ? `Producto${productsByDoc.get(doc.id).length === 1 ? "" : "s"}: ${productsByDoc.get(doc.id).slice(0, 3).map((product) => product.name).join(" · ")}${productsByDoc.get(doc.id).length > 3 ? ` y ${productsByDoc.get(doc.id).length - 3} más` : ""}`
+              : "Sin vincular a un producto del catálogo"}
+          </span>
+        )}
         {textOpen && (
           <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={`Texto de ${doc.title}`} onClick={() => setTextOpen(false)}>
             <div className="modal technical-text-modal" onClick={(event) => event.stopPropagation()}>
@@ -583,12 +668,12 @@ export function TechnicalDocumentFolderNode({ node, depth, rowProps }) {
   );
 }
 
-export function TechnicalDocumentGroups({ documents, groupByFolder, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile, deleteDocument, deleteFolder, renameFolderTo, moveDocumentToFolder }) {
+export function TechnicalDocumentGroups({ documents, groupByFolder, ...rest }) {
   const [buildFolderTree, setBuildFolderTree] = useState(null);
   useEffect(() => {
     import("./technical-documents-mapping.mjs").then(({ buildFolderTree: fn }) => setBuildFolderTree(() => fn));
   }, []);
-  const rowProps = { allDocuments: documents, titleDrafts, setTitleDrafts, saveTitle, draftFor, updateDraft, saveStatus, isAdmin, attachFile, viewFile, deleteDocument, deleteFolder, renameFolderTo, moveDocumentToFolder };
+  const rowProps = { allDocuments: documents, ...rest };
   if (!groupByFolder || !buildFolderTree) {
     return (
       <div className="conversation-list">
@@ -602,6 +687,56 @@ export function TechnicalDocumentGroups({ documents, groupByFolder, titleDrafts,
   return (
     <div className="conversation-list technical-document-tree">
       <TechnicalDocumentFolderNode node={tree} depth={0} rowProps={rowProps} />
+    </div>
+  );
+}
+
+// Todo de una ficha en una sola vista: archivo, datos clave (las líneas tal cual están escritas) y
+// productos del catálogo que la usan.
+export function TechnicalDocumentSheet({ doc, products = [], viewFile, onClose }) {
+  const facts = keyFacts(doc);
+  const [showText, setShowText] = useState(false);
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={`Ficha de ${doc.title}`} onClick={onClose}>
+      <div className="modal technical-sheet-modal" onClick={(event) => event.stopPropagation()}>
+        <div className="modal-head">
+          <div>
+            <span className="eyebrow">{doc.family}{doc.product ? ` · ${doc.product}` : ""}</span>
+            <h2>{doc.title}</h2>
+            <span className={`pill ${doc.status === "vigente" ? "" : "warn"}`}>{TECHNICAL_DOCUMENT_STATUS_LABELS[doc.status] || doc.status}</span>
+            {doc.status === "vigente" && doc.verifiedByEmail && <span className="muted small"> Validada por {doc.verifiedByEmail}{doc.verifiedAt ? ` el ${new Date(doc.verifiedAt).toLocaleDateString("es-AR")}` : ""}</span>}
+          </div>
+          <button type="button" className="secondary" onClick={onClose}>Cerrar</button>
+        </div>
+        <div className="technical-sheet-actions">
+          {doc.storagePath && <button type="button" className="primary" onClick={() => viewFile(doc)}>Ver documento{fileKind(doc) ? ` (${fileKind(doc)})` : ""}</button>}
+          {doc.extractedText && <button type="button" className="secondary" onClick={() => setShowText((value) => !value)}>{showText ? "Ocultar texto" : "Ver texto completo"}</button>}
+          {!doc.storagePath && !doc.extractedText && <p className="muted">Este documento no tiene archivo ni texto todavía.</p>}
+        </div>
+        <h3>Datos clave</h3>
+        {facts.length ? (
+          <dl className="technical-sheet-facts">
+            {facts.map((fact) => (
+              <div key={fact.key}>
+                <dt>{fact.label}</dt>
+                {fact.lines.map((line) => <dd key={line}>{line}</dd>)}
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p className="muted">{doc.extractedText ? "No encontré temperatura, rendimiento, densidad, tiempos ni almacenamiento escritos en esta ficha." : "Sin texto leído: no se pueden sacar datos clave (¿PDF escaneado como imagen?)."}</p>
+        )}
+        <p className="muted small">Copiado tal cual de la ficha. Revisá el documento antes de pasárselo a un cliente.</p>
+        <h3>Productos del catálogo que la usan</h3>
+        {products.length ? (
+          <ul className="technical-sheet-products">
+            {products.map((product) => <li key={product.id}>{product.name}{product.family ? <span className="muted small"> · {product.family}</span> : null}</li>)}
+          </ul>
+        ) : (
+          <p className="muted">Ninguno todavía. Se vincula desde «Fichas por producto»: en el producto, «o vincular una existente…».</p>
+        )}
+        {showText && <pre className="technical-sheet-text">{doc.extractedText}</pre>}
+      </div>
     </div>
   );
 }

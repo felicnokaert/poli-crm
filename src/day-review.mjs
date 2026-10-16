@@ -12,10 +12,20 @@ export function localDate(iso) {
   return date.toLocaleDateString('en-CA', { timeZone: TZ });
 }
 
-// La cerró el sistema, no la persona: marcadas desde el 16/10 (autoClosed) o, las de antes, tareas
-// automáticas cerradas en la corrida diaria de las 6:00 UTC (3:00 en Argentina).
-export function closedBySystem(task = {}) {
+// Instantes de cierre que comparten dos o más tareas: una persona no tilda dos tareas en el mismo
+// milisegundo, el cierre automático de vencidas sí (todas con la misma hora). Sirve para las que
+// cerró una versión vieja de la app, abierta en otra compu, que todavía no las marcaba (autoClosed).
+export function batchStamps(tasks = []) {
+  const count = new Map();
+  for (const task of tasks) if (task.done && task.completedAt) count.set(task.completedAt, (count.get(task.completedAt) || 0) + 1);
+  return new Set([...count].filter(([, total]) => total > 1).map(([stamp]) => stamp));
+}
+
+// La cerró el sistema, no la persona: marcadas desde el 16/10 (autoClosed), cerradas en tanda
+// (batchStamps) o, las de antes, tareas automáticas cerradas en la corrida diaria de las 6:00 UTC.
+export function closedBySystem(task = {}, stamps = null) {
   if (task.autoClosed) return true;
+  if (stamps && task.completedAt && stamps.has(task.completedAt)) return true;
   if (!String(task.source || '').startsWith('auto-') || !task.completedAt) return false;
   const time = String(task.completedAt).slice(11, 16);
   return time >= '06:00' && time < '06:30';
@@ -28,11 +38,13 @@ export function reviewDay(date, { planChecks = {}, tasks = [], includeRoutine = 
   // Las tareas automáticas ("Retomar contacto", "Responder a…") son alertas, no tareas que la persona
   // se puso: viven en Alertas de Inicio. Al Cierre del día solo llegan si la persona las resolvió (16/10).
   const auto = (task) => String(task.source || '').startsWith('auto-');
-  const real = tasks.filter((task) => task.kind !== 'evento' && !task.deleted && (!auto(task) || (task.done && !closedBySystem(task))));
+  const stamps = batchStamps(tasks);
+  const bySystem = (task) => closedBySystem(task, stamps);
+  const real = tasks.filter((task) => task.kind !== 'evento' && !task.deleted && (!auto(task) || (task.done && !bySystem(task))));
   const blocksDone = day.blocks.filter((block) => planChecks[routineKey(date, block.id)] === true);
   const blocksMissed = day.blocks.filter((block) => !block.extra && planChecks[routineKey(date, block.id)] !== true);
   // Lo que el sistema cerró solo por vencido no es algo que "salió bien".
-  const doneTasks = real.filter((task) => task.done && !closedBySystem(task) && localDate(task.completedAt) === date).sort(byPriority);
+  const doneTasks = real.filter((task) => task.done && !bySystem(task) && localDate(task.completedAt) === date).sort(byPriority);
   const pendingTasks = real.filter((task) => !task.done && task.dueDate === date).sort(byPriority);
   const postponedTasks = real.filter((task) => !task.done && (task.postponedFrom || []).includes(date)).sort(byPriority);
   const carried = real.filter((task) => !task.done && task.dueDate && task.dueDate < date).sort(byPriority);

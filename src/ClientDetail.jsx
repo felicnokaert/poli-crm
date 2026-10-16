@@ -4,6 +4,7 @@ import { formatDate } from "./utils.mjs";
 import { Empty, Fact } from "./ui-primitives";
 import { InteractionRow } from "./Interactions";
 import { TaskList } from "./Tasks";
+import { ClientTechnicalSuggestions } from "./ClientTechnicalSuggestions.jsx";
 import {
   clientContacts,
   removeClientContact,
@@ -155,6 +156,7 @@ export function ClientDetail({
             <details><summary>Por qué aparece esta sugerencia</summary><ul>{guidance.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul><p>Fuente: {guidance.source}</p></details>
           </div>
         )}
+        {!editing && client && <ClientTechnicalSuggestions key={client.id} client={client} boughtProducts={lastPurchaseForClient(client, sales || [])?.products || []} />}
         {editing ? (
           <form onSubmit={submit}>
             <div className="form-grid">

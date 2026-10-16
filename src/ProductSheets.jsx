@@ -6,7 +6,7 @@ import { UPLOAD_ACCEPT } from "./document-text.mjs";
 // Fichas por producto: el catálogo completo (el del cotizador) contra las fichas de Base técnica.
 // Muestra qué falta y deja subir la ficha de cada producto desde acá; si la sube Felipe, queda
 // vinculada al producto y el cotizador la muestra también.
-export function ProductSheets({ supabase, documents = [], isAdmin, onChanged }) {
+export function ProductSheets({ supabase, documents = [], isAdmin, onChanged, onCatalog }) {
   const [products, setProducts] = useState(null);
   const [links, setLinks] = useState([]);
   const [error, setError] = useState("");
@@ -24,9 +24,11 @@ export function ProductSheets({ supabase, documents = [], isAdmin, onChanged }) 
       rows.push(...(data || []));
       if (!data || data.length < 1000) break;
     }
-    setProducts(rows.filter((product) => product.status !== "excluido"));
+    const active = rows.filter((product) => product.status !== "excluido");
+    setProducts(active);
     const { data: linkRows } = await supabase.from("product_document_links").select("document_id,scope_type,product_id,family,subfamily");
     setLinks(linkRows || []);
+    onCatalog?.({ products: active, links: linkRows || [] });
   }
   useEffect(() => { load(); }, [supabase]);
 

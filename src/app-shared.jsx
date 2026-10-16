@@ -204,3 +204,14 @@ export function blankTask() {
     trigger: "",
   };
 }
+
+// Cotizador comercial: aplicación aparte (repo poliplast-cotizador, misma base). Se abre en otra
+// pestaña; con ?cliente= llega con la empresa ya elegida. Cotizar nunca registra una venta.
+export const COTIZADOR_URL = "https://cotizador-poliplast.vercel.app/";
+export function cotizadorUrl(company = "", phone = "") {
+  const params = new URLSearchParams();
+  if (String(company || "").trim()) params.set("cliente", String(company).trim());
+  if (String(phone || "").trim()) params.set("telefono", String(phone).trim());
+  const query = params.toString();
+  return query ? `${COTIZADOR_URL}?${query}` : COTIZADOR_URL;
+}

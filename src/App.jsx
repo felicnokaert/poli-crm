@@ -5,6 +5,7 @@ import {
   ChevronRight,
   CircleAlert,
   ReceiptText,
+  Calculator,
   ClipboardList,
   LayoutDashboard,
   MessageCircle,
@@ -32,6 +33,7 @@ import {
   blankTask,
   commercialOutcome,
   commercialStage,
+  cotizadorUrl,
   googleCalendarUrl,
   initialState,
   longToday,
@@ -1462,6 +1464,7 @@ export default function App() {
     ["Ventas", [
       ["pipeline", "Cuentas activas", Target],
       ["sales", "Ventas", ReceiptText],
+      ["quoter", "Cotizador ↗", Calculator],
       ["prospecting", "Prospección", Search],
       ["conversations", "Historial", MessageCircle],
     ]],
@@ -1599,7 +1602,8 @@ export default function App() {
                     <button
                       key={id}
                       className={view === id ? "active" : ""}
-                      onClick={() => setView(id)}
+                      onClick={() => (id === "quoter" ? window.open(cotizadorUrl(), "_blank", "noopener,noreferrer") : setView(id))}
+                      title={id === "quoter" ? "Abre el cotizador en otra pestaña" : undefined}
                     >
                       <Icon size={19} /> {label}
                       {id === "tasks" && overdueTaskCount > 0 && (

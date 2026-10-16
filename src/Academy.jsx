@@ -14,6 +14,7 @@ import {
   PLAYBOOKS,
   findObjections,
 } from "./commercial-knowledge.mjs";
+import { SELLER_PROFILES, SELLER_PROFILES_META } from "./seller-profiles.mjs";
 import PriceMemory from "./PriceMemory";
 import { buildBattlecard } from "./competitor-battlecard.mjs";
 import { Empty, Goal } from "./ui-primitives";
@@ -158,12 +159,14 @@ function AcademyBase({ myChannels, interactions, data, setData, supabase }) {
           <button className={section === "objections" ? "selected" : ""} onClick={() => setSection("objections")}>Objeciones</button>
           <button className={section === "profiles" ? "selected" : ""} onClick={() => setSection("profiles")}>Perfiles</button>
           <button className={section === "competition" ? "selected" : ""} onClick={() => setSection("competition")}>Competencia</button>
+          <button className={section === "team" ? "selected" : ""} onClick={() => setSection("team")}>Equipo</button>
           <button className={section === "library" ? "selected" : ""} onClick={() => setSection("library")}>Biblioteca y práctica</button>
           <button className={section === "coach" ? "selected" : ""} onClick={() => setSection("coach")}>Evaluar conversaciones</button>
         </div>
       </section>
       {["method", "objections", "profiles"].includes(section) && <CommercialKnowledge section={section} />}
       {section === "competition" && <CompetitorTalk supabase={supabase} />}
+      {section === "team" && <SellerProfiles />}
       {section === "library" && <QuickReplies myChannels={myChannels} />}
       {section === "coach" && (
         <>
@@ -172,6 +175,34 @@ function AcademyBase({ myChannels, interactions, data, setData, supabase }) {
         </>
       )}
     </div>
+  );
+}
+
+export function SellerProfiles() {
+  return (
+    <section className="panel commercial-knowledge">
+      <div className="panel-head">
+        <div>
+          <span className="eyebrow">{SELLER_PROFILES_META.status} · equipo comercial</span>
+          <h2>Cómo trabaja cada vendedor y cómo lo asistimos</h2>
+        </div>
+      </div>
+      <div className="knowledge-grid profiles">
+        {SELLER_PROFILES.map((item) => (
+          <article key={item.id}>
+            <span>{item.role}</span>
+            <h3>{item.name}</h3>
+            <p><strong>Área:</strong> {item.area}</p>
+            <p><strong>Le llega:</strong> {item.receives}</p>
+            <p><strong>Riesgo:</strong> {item.risk}</p>
+            <p><strong>Asistencia del CRM:</strong></p>
+            <ul>{item.assist.map((line) => <li key={line}>{line}</li>)}</ul>
+            <small><strong>Hábito sugerido:</strong> {item.habit}</small>
+          </article>
+        ))}
+      </div>
+      <div className="quality-note"><CircleAlert size={19} /><p>{SELLER_PROFILES_META.note}</p></div>
+    </section>
   );
 }
 

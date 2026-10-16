@@ -893,3 +893,11 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .product-sheets-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .product-sheets-actions select { max-width: 260px; }
 .product-sheets .check { margin-top: 10px; display: flex; gap: 8px; align-items: center; font-size: 12.5px; }
+
+/* Inicio: metas de la semana (3) y un solo panel de Alertas con pestañas (16/10). */
+.metric-grid.metric-grid-week { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.alerts-tabs { flex-wrap: wrap; margin: 10px 0 6px; width: fit-content; max-width: 100%; }
+.alerts-tabs .alerts-count { display: inline-flex; min-width: 18px; justify-content: center; margin-left: 4px; padding: 0 6px; border-radius: var(--radius-pill); background: #00000010; font-size: 11px; }
+@media (max-width: 760px) { .metric-grid.metric-grid-week { grid-template-columns: 1fr; } .alerts-tabs { overflow-x: auto; flex-wrap: nowrap; } .alerts-tabs button { white-space: nowrap; } }
+
+.academy-subtabs { width: fit-content; max-width: 100%; overflow-x: auto; }

@@ -279,10 +279,8 @@ export function DayMode({
           },
         ]
       : []),
-    ...coldQuotes.map((item) => ({ id: `cold:${item.eventId}`, label: `Retomar cotización fría — ${item.customer}` })),
-    ...staleClients.map((item) => ({ id: `stale:${item.clientId}`, label: `Retomar contacto — ${item.company} (${item.daysSince}d sin actividad)` })),
-    ...expiredQuotes.map((item) => ({ id: `expired:${item.clientId}`, label: `Seguimiento de cotización — ${item.company} (${item.daysSince}d sin cerrar)` })),
-    ...repurchaseRadar.map((item) => ({ id: `repurchase:${item.customer}-${item.product}`, label: `Ofrecer recompra — ${item.customer} (${item.product})` })),
+    // Solo lo del día: cotizaciones frías/vencidas, sin contacto y recompra ya están en Alertas, abajo
+    // (antes aparecían dos veces en Inicio, 16/10). Se suman al plan desde ahí si hace falta.
     ...(myChannels || []).flatMap((channel) => PINNED_TASKS_BY_CHANNEL[channel] || []),
   ].filter((item) => !planIds.has(item.id)).slice(0, 10);
 
@@ -587,24 +585,6 @@ function DashboardBase({
     ["Contactos esta semana", metrics.contacts, `Meta: ${targets.contacts}`, MessageCircle],
     ["Contactos efectivos", metrics.effective, `Meta: ${targets.effective}`, CheckCircle2],
     ["Propuestas activas", metrics.proposals, `Meta: ${targets.proposals}`, BarChart3],
-    [
-      "Seguimientos vencidos",
-      metrics.overdue,
-      metrics.overdue
-        ? "Necesitan acción hoy"
-        : metrics.dueToday
-          ? `${metrics.dueToday} vencen hoy`
-          : "Ninguno pendiente",
-      CircleAlert,
-      metrics.overdue > 0,
-    ],
-    [
-      "Calientes sin responder",
-      hotLeads.length,
-      hotLeads.length ? "Mensajes urgentes en la bandeja" : "Ninguno por ahora",
-      Flame,
-      hotLeads.length > 0,
-    ],
   ];
   return (
     <div className="content-stack">
@@ -641,7 +621,7 @@ function DashboardBase({
         onOpenTask={onOpenTask}
         onOpenEvent={onOpenEvent}
       />
-      <section className="metric-grid">
+      <section className="metric-grid metric-grid-week">
         {cards.map(([label, value, note, Icon, urgent]) => (
           <article className={`metric-card${urgent ? " is-urgent" : ""}`} key={label}>
             <Icon size={20} />
@@ -658,187 +638,62 @@ function DashboardBase({
           <button type="button" className="secondary" onClick={() => onNavigate("settings")}>Ir a Datos para el diagnóstico</button>
         </section>
       )}
+      <AlertsPanel hotLeads={hotLeads} coldQuotes={coldQuotes} expiredQuotes={expiredQuotes} staleClients={staleClients} repurchaseRadar={repurchaseRadar} onNavigate={onNavigate} />
       <AutomationSummary tasks={tasks} cronStatus={cronStatus} />
-      <section className="two-columns">
-        <article className="panel">
-          <div className="panel-head">
-            <div>
-              <span className="eyebrow">Prioridad</span>
-              <h2>Próximas acciones</h2>
-            </div>
-            <CalendarCheck size={22} />
-          </div>
-          <TaskList
-            items={tasks
-              .filter((task) => !task.done)
-              .sort((a, b) => (a.dueDate || "").localeCompare(b.dueDate || ""))
-              .slice(0, 6)}
-            onToggle={onToggle}
-            onOpen={onOpenTask}
-            emptyText="Sin tareas por ahora. Registrá una conversación para que el copiloto te ayude a definir el próximo paso."
-          />
-        </article>
-        <article className="panel">
-          <div className="panel-head">
-            <div>
-              <span className="eyebrow">Actividad</span>
-              <h2>Últimas conversaciones</h2>
-            </div>
-            <MessageCircle size={22} />
-          </div>
-          {latestByContact.length ? (
-            latestByContact
-              .slice(0, 5)
-              .map((item) => (
-                <InteractionRow
-                  item={item}
-                  key={item.id}
-                  onOpen={onOpenInteraction}
-                  liveTemperature={clientsById.get(item.clientId)?.temperature}
-                />
-              ))
-          ) : (
-            <Empty text="Todavía no hay conversaciones registradas. La primera que cargues inicia la memoria comercial." />
-          )}
-        </article>
-      </section>
-      <section className="two-columns">
-        <article className="panel">
-          <div className="panel-head">
-            <div>
-              <span className="eyebrow">Se calcula solo, sin IA</span>
-              <h2>Para reponer</h2>
-            </div>
-            <RefreshCw size={22} />
-          </div>
-          {repurchaseRadar.length ? (
-            repurchaseRadar.map((item) => (
-              <article className="radar-row" key={`${item.customer}-${item.product}`}>
-                <div>
-                  <strong>{item.customer}</strong>
-                  <span>{item.product}</span>
-                </div>
-                <div>
-                  <span className="radar-badge overdue">+{item.overdueDays}d</span>
-                  <small>
-                    cada {item.avgIntervalDays}d, último hace {item.daysSinceLast}d
-                    {item.avgQuantity ? ` · ~${item.avgQuantity} por compra` : ""}
-                  </small>
-                </div>
-              </article>
-            ))
-          ) : (
-            <Empty text="Todavía no hay suficientes ventas repetidas por cliente y producto para estimar ciclos de reposición." />
-          )}
-        </article>
-        <article className="panel">
-          <div className="panel-head">
-            <div>
-              <span className="eyebrow">Cotizaron y no volvieron</span>
-              <h2>Cotizaciones frías</h2>
-            </div>
-            <Snowflake size={22} />
-          </div>
-          {coldQuotes.length ? (
-            coldQuotes.map((item) => (
-              <article className="radar-row" key={item.eventId}>
-                <div>
-                  <strong>{item.customer}</strong>
-                  <span>{item.text}</span>
-                </div>
-                <div>
-                  <span className="radar-badge cold">{item.daysSince}d</span>
-                </div>
-              </article>
-            ))
-          ) : (
-            <Empty text="No hay cotizaciones sin seguimiento por ahora." />
-          )}
-        </article>
-      </section>
-      {staleClients.length > 0 && (
-        <section className="panel">
-          <div className="panel-head">
-            <div>
-              <span className="eyebrow">Activos, pero se enfrían</span>
-              <h2>Clientes sin contacto</h2>
-              <p>Cuentas con resultado abierto sin ninguna venta ni mensaje de WhatsApp en 30 días o más.</p>
-            </div>
-            <UserX size={22} />
-          </div>
-          {staleClients.map((item) => (
-            <button
-              type="button"
-              className="radar-row radar-row-clickable"
-              key={item.clientId}
-              onClick={() => onNavigate("clients")}
-            >
-              <div>
-                <strong>{item.company}</strong>
-              </div>
-              <div>
-                <span className="radar-badge cold">{item.daysSince}d</span>
-              </div>
-            </button>
-          ))}
-        </section>
-      )}
-      {expiredQuotes.length > 0 && (
-        <section className="panel">
-          <div className="panel-head">
-            <div>
-              <span className="eyebrow">Marcadas con "Coticé hoy", sin cerrar</span>
-              <h2>Cotizaciones vencidas</h2>
-              <p>Cuentas donde marcaste que enviaste una cotización y pasaron 15 días o más sin registrar una venta.</p>
-            </div>
-            <Clock3 size={22} />
-          </div>
-          {expiredQuotes.map((item) => (
-            <button
-              type="button"
-              className="radar-row radar-row-clickable"
-              key={item.clientId}
-              onClick={() => onNavigate("clients")}
-            >
-              <div>
-                <strong>{item.company}</strong>
-              </div>
-              <div>
-                <span className="radar-badge cold">{item.daysSince}d</span>
-              </div>
-            </button>
-          ))}
-        </section>
-      )}
-      {hotLeads.length > 0 && (
-        <section className="panel">
-          <div className="panel-head">
-            <div>
-              <span className="eyebrow">Urgente + comercial, sin clasificar</span>
-              <h2>Calientes sin responder</h2>
-              <p>Mensajes en "Por revisar" que suenan urgentes (hoy, mañana, para el viernes) y comerciales (precio, cantidad, stock), pero llevan más de 2 días sin que nadie los toque.</p>
-            </div>
-            <Flame size={22} />
-          </div>
-          {hotLeads.map((item) => (
-            <button
-              type="button"
-              className="radar-row radar-row-clickable"
-              key={item.eventId}
-              onClick={() => onNavigate("inbox")}
-            >
-              <div>
-                <strong>{item.customer}</strong>
-                <span>{item.text}</span>
-              </div>
-              <div>
-                <span className="radar-badge hot">{item.daysSince}d</span>
-              </div>
-            </button>
-          ))}
-        </section>
-      )}
     </div>
+  );
+}
+
+// Inicio (16/10): las cinco alertas que antes eran cinco paneles sueltos van en uno solo con pestañas,
+// cada una con su cantidad. Arranca en la primera que tenga algo.
+function AlertsPanel({ hotLeads, coldQuotes, expiredQuotes, staleClients, repurchaseRadar, onNavigate }) {
+  const tabs = [
+    ["hot", "Calientes sin responder", hotLeads, "Mensajes en «Por revisar» que suenan urgentes y comerciales, con más de 2 días sin tocar."],
+    ["cold", "Cotizaciones frías", coldQuotes, "Pidieron precio por WhatsApp y no volvieron."],
+    ["expired", "Cotizaciones vencidas", expiredQuotes, "Marcaste «Coticé hoy» hace 15 días o más y no hay venta."],
+    ["stale", "Clientes sin contacto", staleClients, "Empresas en seguimiento sin venta ni mensaje en 30 días o más."],
+    ["repurchase", "Para reponer", repurchaseRadar, "Por su ritmo de compra, ya deberían haber vuelto a comprar."],
+  ];
+  const firstWithItems = tabs.find(([, , items]) => items.length)?.[0] || "hot";
+  const [tab, setTab] = useState(firstWithItems);
+  const [key, label, items, help] = tabs.find(([k]) => k === tab) || tabs[0];
+  const total = tabs.reduce((sum, [, , list]) => sum + list.length, 0);
+  const row = (item) => {
+    if (key === "repurchase") {
+      return (
+        <article className="radar-row" key={`${item.customer}-${item.product}`}>
+          <div><strong>{item.customer}</strong><span>{item.product}</span></div>
+          <div><span className="radar-badge overdue">+{item.overdueDays}d</span><small>cada {item.avgIntervalDays}d, último hace {item.daysSinceLast}d{item.avgQuantity ? ` · ~${item.avgQuantity} por compra` : ""}</small></div>
+        </article>
+      );
+    }
+    const target = key === "hot" || key === "cold" ? "inbox" : "clients";
+    return (
+      <button type="button" className="radar-row radar-row-clickable" key={item.eventId || item.clientId || item.customer} onClick={() => onNavigate(target)}>
+        <div><strong>{item.customer || item.company}</strong>{item.text ? <span>{item.text}</span> : null}</div>
+        <div><span className={`radar-badge ${key === "hot" ? "hot" : "cold"}`}>{item.daysSince}d</span></div>
+      </button>
+    );
+  };
+  return (
+    <section className="panel alerts-panel">
+      <div className="panel-head">
+        <div>
+          <span className="eyebrow">Se calcula solo, todos los días</span>
+          <h2>Alertas{total ? ` (${total})` : ""}</h2>
+        </div>
+        <Flame size={22} />
+      </div>
+      <div className="segmented alerts-tabs" role="tablist" aria-label="Tipo de alerta">
+        {tabs.map(([k, name, list]) => (
+          <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? "selected" : ""} onClick={() => setTab(k)}>
+            {name} <span className="alerts-count">{list.length}</span>
+          </button>
+        ))}
+      </div>
+      <p className="muted small">{help}</p>
+      {items.length ? items.map(row) : <Empty text={`Nada en «${label}» por ahora.`} />}
+    </section>
   );
 }
 

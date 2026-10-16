@@ -477,7 +477,8 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
               />
             </label>
           </article>
-          <article>
+          {/* Herramienta de prueba de la bandeja: solo Felipe la ve (16/10). */}
+          {(!onlineConfigured || isChannelAdmin(session?.user?.email)) && <article>
             <Inbox size={24} />
             <h3>Importar eventos WhatsApp</h3>
             <p>
@@ -492,7 +493,7 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
                 onChange={importWebhookEvents}
               />
             </label>
-          </article>
+          </article>}
           <article>
             <Upload size={24} />
             <h3>Fichas técnicas</h3>

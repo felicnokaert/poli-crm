@@ -16,7 +16,6 @@ import {
   GraduationCap,
   Database,
   Users,
-  LayoutGrid,
   UserCog,
   FileCheck2,
   HelpCircle,
@@ -1504,7 +1503,6 @@ export default function App() {
       ["techdocs", "Base técnica", FileCheck2],
     ]],
     ["Más", [
-      ...(isFelipeTools ? [["board", "Tablero / Trello", LayoutGrid]] : []),
       ["profile", "Perfil", UserCog],
       ["settings", "Datos", Database],
     ]],
@@ -1942,7 +1940,8 @@ export default function App() {
             <Profile data={data} setData={setData} session={session} />
           </Suspense>
         )}
-        {view === "settings" && (
+        {/* "Pruebas de desarrollo": herramienta de prueba, solo para Felipe (16/10). */}
+        {view === "settings" && (!onlineConfigured || isChannelAdmin(session?.user?.email)) && (
           <Suspense fallback={<Splash text="Cargando ajustes…" />}>
             <TestCleanupPanel data={data} setData={setData} session={session} />
           </Suspense>

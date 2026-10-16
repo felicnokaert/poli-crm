@@ -43,7 +43,7 @@ export default function PriceMemory({ sales }) {
           <Search size={17} />
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Ej: kit de poliuretano"/>
         </label>
-        <input type="number" min="1" step="1" value={quantity} onChange={(e) => setQuantity(Number(e.target.value) || 1)} style={{ maxWidth: 90 }}/>
+        <input type="number" aria-label="Cantidad" min="1" step="1" value={quantity} onChange={(e) => setQuantity(Number(e.target.value) || 1)} style={{ maxWidth: 90 }}/>
       </div>
       {query && !matches.length && (
         <p className="form-warning">No encontré ese producto en ventas cargadas todavía. A medida que subas facturas, se va a poder buscar.</p>

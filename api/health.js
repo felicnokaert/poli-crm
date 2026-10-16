@@ -1,4 +1,5 @@
 import { handleReadiness } from '../lib/readiness.mjs';
+import { authenticatedCorporateUser } from '../lib/corporate-auth.mjs';
 
 async function checkDatabase(environment = process.env, request = fetch) {
   const url = environment.SUPABASE_URL;
@@ -14,7 +15,11 @@ async function checkDatabase(environment = process.env, request = fetch) {
   }
 }
 
-async function handleHealth(_request, response) {
+// Sin sesión solo responde que está vivo: qué integraciones hay configuradas y si la base contesta es
+// información interna, y consultar la base en cada llamada anónima no tiene sentido (QA 16/10).
+async function handleHealth(request, response) {
+  const user = await authenticatedCorporateUser(request).catch(() => null);
+  if (!user) return response.status(200).json({ ok: true });
   const databaseConfigured = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
   return response.status(200).json({
     ok: true,

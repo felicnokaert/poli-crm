@@ -252,15 +252,7 @@ function TechnicalDocumentsAdminBase({ session }) {
   // referencia compartida por todo el equipo, no algo para borrar por error.
   async function deleteDocument(doc) {
     if (!(await confirm(`¿Eliminar "${doc.title}" de Base técnica? Esto no se puede deshacer.`, { danger: true, confirmLabel: "Eliminar" }))) return;
-    setMessageIsError(false);
-    try {
-      const { deleteTechnicalDocument } = await import("./technical-documents-repo.mjs");
-      await deleteTechnicalDocument(doc.id, doc.storagePath);
-      setDocuments((current) => current.filter((item) => item.id !== doc.id));
-      setMessage(`"${doc.title}" se eliminó.`);
-    } catch (error) {
-      setErrorMessage(error.message || "No se pudo eliminar el documento.");
-    }
+    await deleteDocumentsOnServer([doc], `("${doc.title}")`);
   }
 
   const [bulkScope, setBulkScope] = useState("uploaded");
@@ -272,21 +264,33 @@ function TechnicalDocumentsAdminBase({ session }) {
   }
   // Por el servidor (clave de servicio): antes se borraba desde el navegador y fallaban todos sin decir
   // por qué ("Se borraron 0. 201 no se pudieron borrar"). Ahora, si algo falla, se ve el motivo.
+  // Borrado por el servidor (clave de servicio), de a 40 por pedido para que ninguno se quede sin
+  // tiempo. Sirve para la tanda y para "Eliminar carpeta"; si la base rechaza algo, se muestra el motivo.
+  async function deleteDocumentsOnServer(targets, label) {
+    setMessageIsError(false);
+    let deleted = 0;
+    const errors = new Set();
+    for (let index = 0; index < targets.length; index += 40) {
+      setMessage(`Borrando ${Math.min(index + 40, targets.length)} de ${targets.length}…`);
+      try {
+        const result = await adminCall({ mode: "delete", ids: targets.slice(index, index + 40).map((doc) => doc.id) });
+        deleted += result.deleted || 0;
+        for (const error of result.errors || []) errors.add(error);
+      } catch (error) {
+        errors.add(error.message || "error del servidor");
+      }
+    }
+    await load();
+    const failed = targets.length - deleted;
+    setMessage(`Se borraron ${deleted} de ${targets.length} ${label}.${failed ? ` No se pudieron borrar ${failed}. Motivo: ${[...errors].join(" · ") || "la base no devolvió detalle"}` : ""}`);
+    if (failed) setMessageIsError(true);
+  }
   async function deleteInBulk() {
     const targets = documents.filter(BULK_FILTERS[bulkScope]);
     const label = BULK_SCOPES.find(([key]) => key === bulkScope)?.[1] || "";
     if (!targets.length) return;
     if (!(await confirm(`Se borran ${targets.length} documento${targets.length === 1 ? "" : "s"} (${label.toLowerCase()}) con sus archivos. Esto no se puede deshacer. ¿Seguro?`, { title: "Borrar en tanda", danger: true, confirmLabel: `Borrar ${targets.length}` }))) return;
-    setMessageIsError(false);
-    setMessage(`Borrando ${targets.length}…`);
-    try {
-      const result = await adminCall({ mode: "delete", ids: targets.map((doc) => doc.id) });
-      await load();
-      setMessage(`Se borraron ${result.deleted} de ${result.requested}.${result.errors?.length ? ` No se pudieron borrar algunos: ${result.errors.join(" · ")}` : ""}`);
-      if (result.errors?.length) setMessageIsError(true);
-    } catch (error) {
-      setErrorMessage(error.message || "No se pudo borrar.");
-    }
+    await deleteDocumentsOnServer(targets, `(${label.toLowerCase()})`);
   }
   async function allowAllTypes() {
     setMessageIsError(false);
@@ -304,25 +308,7 @@ function TechnicalDocumentsAdminBase({ session }) {
   // parecido por accidente.
   async function deleteFolder(folderPath, docsInFolder) {
     if (!(await confirm(`¿Eliminar la carpeta "${folderPath}" y sus ${docsInFolder.length} ficha${docsInFolder.length === 1 ? "" : "s"}? Esto no se puede deshacer.`, { danger: true, confirmLabel: "Eliminar carpeta" }))) return;
-    setMessageIsError(false);
-    try {
-      const { deleteTechnicalDocument } = await import("./technical-documents-repo.mjs");
-      const ids = new Set();
-      for (const doc of docsInFolder) {
-        try {
-          await deleteTechnicalDocument(doc.id, doc.storagePath);
-          ids.add(doc.id);
-        } catch {
-          // sigue con el resto - un error puntual no debe dejar la carpeta a medio borrar sin aviso
-        }
-      }
-      setDocuments((current) => current.filter((item) => !ids.has(item.id)));
-      const failed = docsInFolder.length - ids.size;
-      setMessage(`${ids.size} ficha${ids.size === 1 ? "" : "s"} eliminada${ids.size === 1 ? "" : "s"} de "${folderPath}".${failed > 0 ? ` ${failed} no se pudieron eliminar.` : ""}`);
-      if (failed > 0) setMessageIsError(true);
-    } catch (error) {
-      setErrorMessage(error.message || "No se pudo eliminar la carpeta.");
-    }
+    await deleteDocumentsOnServer(docsInFolder, `de "${folderPath}"`);
   }
 
   // Renombrar una carpeta de verdad, como en el explorador de Windows o

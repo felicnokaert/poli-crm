@@ -16,7 +16,9 @@ function ClientsBase({ clients, query, setQuery, onOpenClient, onMergeClients, m
   const [page, setPage] = useState(1);
   const pageSize = 50;
   const duplicateCandidates = useMemo(
-    () => applyDuplicateReviewDecisions(detectDuplicateClientCandidates(clients), duplicateReviewDecisions),
+    // Las empresas del directorio del equipo (las trae cada uno, o quedaron de una copia) las depura
+    // Felipe en su cuenta: al resto no se le piden "posibles duplicados" que no son suyos.
+    () => applyDuplicateReviewDecisions(detectDuplicateClientCandidates(clients.filter((client) => client.source !== "Directorio del equipo")), duplicateReviewDecisions),
     [clients, duplicateReviewDecisions],
   );
   const duplicateCounts = duplicateCandidates.reduce(

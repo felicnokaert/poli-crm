@@ -877,3 +877,19 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .error-boundary h2 { margin: 0 0 6px; font: 700 18px 'Manrope'; }
 .error-boundary .panel-head-actions { justify-content: flex-start; margin-top: 10px; }
 .error-boundary-full { max-width: 560px; margin: 12vh auto; }
+
+/* Base técnica: Fichas por producto (16/10). */
+.product-sheets .import-counts { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.product-sheets .import-counts span { padding: 6px 10px; border-radius: var(--radius-pill); background: #eeeeef; font-size: 12.5px; }
+.product-sheets-families { display: grid; gap: 8px; }
+.product-sheets-families article { border: 1px solid var(--color-border); border-radius: var(--radius-lg); }
+.product-sheets-family { width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 12px; border: 0; background: none; text-align: left; cursor: pointer; }
+.product-sheets-family .pill { border-radius: var(--radius-pill); padding: 2px 9px; font-size: 11px; font-weight: 700; }
+.product-sheets-family .pill.warn { color: var(--color-amber-text); background: var(--color-amber-bg); }
+.product-sheets-family .pill.ok { color: var(--color-success); background: var(--color-success-bg); }
+.product-sheets-families ul { list-style: none; margin: 0; padding: 0 12px 10px; display: grid; gap: 6px; }
+.product-sheets-families li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: var(--radius-md); background: var(--color-panel-bg); }
+.product-sheets-families li.has-sheet, .product-sheets-families li.not-needed { background: none; padding-block: 4px; }
+.product-sheets-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.product-sheets-actions select { max-width: 260px; }
+.product-sheets .check { margin-top: 10px; display: flex; gap: 8px; align-items: center; font-size: 12.5px; }

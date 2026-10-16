@@ -34,7 +34,7 @@ Búsqueda global Ctrl+K; tarjeta Mi día en Inicio; menú en 5 grupos; Prospecci
 - Bandeja del equipo: hoy muestra contactos que Felipe ya clasificó en su bandeja (no comerciales, cliente, etc.). Felipe quiere revisarlo: filtrar o ocultar los ya clasificados, y que lo clasificado se comparta con el equipo.
 - Cotizaciones/presupuestos: conectar con la API de Contabilium (credenciales en variables de entorno seguras de Vercel, nunca en el repo). Ya existen los radares de cotizaciones frías/vencidas en Inicio; la API reemplazaría la carga manual.
 - Respuestas sugeridas por marca (Resinplast, Imperpur, máquinas): requieren datos reales de producto; no inventar claims.
-- Academia → Equipo: cada persona se describe a sí misma (tabla team_self_profiles; la ven solo ella y Felipe). Lo que Felipe escribió de cada vendedor (src/seller-profiles.mjs) es solo para él y no aparece en el buscador del resto. Pendiente: sumar lo que cada uno diga.
+- Academia → Equipo: cada persona se describe a sí misma (tabla team_self_profiles; la ven solo ella y Felipe). Lo que Felipe escribió de cada vendedor vive en la base (tabla team_felipe_notes, solo la lee Felipe; ya no está en el código de la app) y no aparece en el buscador del resto. Pendiente: sumar lo que cada uno diga.
 - Academia: sumar texto completo de fichas técnicas al buscador y más conocimiento de producto/usos.
 - Instagram/Facebook (@Resinplast, @grupopoliplast, @imperpur, @rapyp): requieren cuentas profesionales y revisión de app de Meta.
 - WhatsApp de Meta sin entrega desde el 13/10 (caso de soporte abierto).

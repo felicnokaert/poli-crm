@@ -14,7 +14,6 @@ import {
   PLAYBOOKS,
   findObjections,
 } from "./commercial-knowledge.mjs";
-import { SELLER_PROFILES, SELLER_PROFILES_META } from "./seller-profiles.mjs";
 import { TeamSelf } from "./TeamSelf.jsx";
 import { isChannelAdmin } from "./user-channels.mjs";
 import { KNOWLEDGE_TYPES, buildKnowledgePrompt, searchKnowledge } from "./knowledge-search.mjs";
@@ -152,6 +151,7 @@ export function CompetitorTalk({ supabase }) {
 function AcademyBase({ myChannels, interactions, data, setData, supabase, userEmail }) {
   const [section, setSection] = useState("method");
   const admin = isChannelAdmin(userEmail);
+  const felipeNotes = useFelipeNotes(supabase, admin);
   return (
     <div className="content-stack">
       <section className="panel academy-hero">
@@ -176,10 +176,10 @@ function AcademyBase({ myChannels, interactions, data, setData, supabase, userEm
       {section === "team" && (
         <>
           <TeamSelf supabase={supabase} userEmail={userEmail} isAdmin={admin} />
-          {admin && <SellerProfiles />}
+          {admin && <SellerProfiles profiles={felipeNotes} />}
         </>
       )}
-      {section === "search" && <KnowledgeSearch supabase={supabase} clients={data.clients || []} showSellers={admin} />}
+      {section === "search" && <KnowledgeSearch supabase={supabase} clients={data.clients || []} sellers={felipeNotes} />}
       {section === "library" && <QuickReplies myChannels={myChannels} />}
       {section === "coach" && (
         <>
@@ -191,7 +191,7 @@ function AcademyBase({ myChannels, interactions, data, setData, supabase, userEm
   );
 }
 
-export function KnowledgeSearch({ supabase, clients = [], showSellers = false }) {
+export function KnowledgeSearch({ supabase, clients = [], sellers = [] }) {
   const [query, setQuery] = useState("");
   const [docs, setDocs] = useState([]);
   const [competitors, setCompetitors] = useState([]);
@@ -202,7 +202,7 @@ export function KnowledgeSearch({ supabase, clients = [], showSellers = false })
       .then(({ data }) => setDocs(data || []));
     supabase.from("competitors").select("id,name,kind,families,summary,caveats").then(({ data }) => setCompetitors(data || []));
   }, [supabase]);
-  const sources = { products: PRODUCT_CATALOG, docs, clients, sellers: showSellers ? SELLER_PROFILES : [], objections: OBJECTIONS, competitors };
+  const sources = { products: PRODUCT_CATALOG, docs, clients, sellers, objections: OBJECTIONS, competitors };
   const result = searchKnowledge(query, sources);
   async function copy() {
     try { await navigator.clipboard.writeText(buildKnowledgePrompt(query, result)); setCopied(true); } catch { setCopied(false); }
@@ -238,7 +238,18 @@ export function KnowledgeSearch({ supabase, clients = [], showSellers = false })
   );
 }
 
-export function SellerProfiles() {
+// Notas de Felipe sobre cada vendedor: viven en la base (tabla team_felipe_notes, solo la lee Felipe), no en el código de la app.
+export function useFelipeNotes(supabase, enabled) {
+  const [notes, setNotes] = useState([]);
+  useEffect(() => {
+    if (!supabase || !enabled) { setNotes([]); return; }
+    supabase.from("team_felipe_notes").select("id,data").order("id").then(({ data }) => setNotes((data || []).map((row) => row.data)));
+  }, [supabase, enabled]);
+  return notes;
+}
+
+export function SellerProfiles({ profiles = [] }) {
+  if (!profiles.length) return null;
   return (
     <section className="panel commercial-knowledge">
       <div className="panel-head">
@@ -248,7 +259,7 @@ export function SellerProfiles() {
         </div>
       </div>
       <div className="knowledge-grid profiles">
-        {SELLER_PROFILES.map((item) => (
+        {profiles.map((item) => (
           <article key={item.id}>
             <span>{item.role}</span>
             <h3>{item.name}</h3>
@@ -256,12 +267,12 @@ export function SellerProfiles() {
             <p><strong>Le llega:</strong> {item.receives}</p>
             <p><strong>Riesgo:</strong> {item.risk}</p>
             <p><strong>Asistencia del CRM:</strong></p>
-            <ul>{item.assist.map((line) => <li key={line}>{line}</li>)}</ul>
+            <ul>{(item.assist || []).map((line) => <li key={line}>{line}</li>)}</ul>
             <small><strong>Hábito sugerido:</strong> {item.habit}</small>
           </article>
         ))}
       </div>
-      <div className="quality-note"><CircleAlert size={19} /><p>{SELLER_PROFILES_META.note}</p></div>
+      <div className="quality-note"><CircleAlert size={19} /><p>Son tus notas. Cada persona se describe a sí misma arriba; con eso vamos ajustando.</p></div>
     </section>
   );
 }

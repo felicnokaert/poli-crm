@@ -37,15 +37,16 @@ test('el cierre del día lista lo pendiente y permite pasarlo al próximo día h
   assert.deepEqual(moved[0], ['t1', '2026-10-19']);
 });
 
-test('el buscador de la Academia encuentra productos y solo muestra las notas de vendedores a Felipe', async () => {
+test('el buscador de la Academia encuentra productos; las notas de vendedores solo aparecen si se las pasan (Felipe)', async () => {
   const { KnowledgeSearch } = await loadJsxModule('src/Academy.jsx');
   const view = render(React.createElement(KnowledgeSearch, { supabase: null, clients: [{ id: 'c1', company: 'Corralón Sur', rubro: 'aglupl' }] }));
   fireEvent.change(screen.getByPlaceholderText(/adhesivo/), { target: { value: 'agluplast' } });
   assert.ok(screen.getAllByText(/AGLUPLAST/).length >= 1);
   fireEvent.change(screen.getByPlaceholderText(/adhesivo/), { target: { value: 'repuestos' } });
-  assert.equal(screen.queryByText(/Juan · Gerente general/), null, 'el equipo no ve lo que Felipe escribió de los vendedores');
+  assert.equal(screen.queryByText(/Juan · Gerente general/), null);
   view.unmount();
-  render(React.createElement(KnowledgeSearch, { supabase: null, clients: [], showSellers: true }));
+  const notes = [{ id: 'juan', name: 'Juan', role: 'Gerente general', area: 'máquinas y repuestos', assist: [] }];
+  render(React.createElement(KnowledgeSearch, { supabase: null, clients: [], sellers: notes }));
   fireEvent.change(screen.getByPlaceholderText(/adhesivo/), { target: { value: 'repuestos' } });
   assert.ok(screen.getByText(/Juan · Gerente general/));
 });

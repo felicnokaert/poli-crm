@@ -19,6 +19,7 @@ export function TechnicalUpload({ documents = [], onDone }) {
   const [newFolder, setNewFolder] = useState("");
   const [keepStructure, setKeepStructure] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState("");
   const [message, setMessage] = useState("");
   const folders = useMemo(() => folderOptions(documents), [documents]);
   const destination = folder === NEW_FOLDER ? newFolder.trim() : folder;
@@ -30,10 +31,16 @@ export function TechnicalUpload({ documents = [], onDone }) {
     if (!picked.length) return;
     setBusy(true); setMessage(""); setItems(null); setChoices({});
     const { sha256Hex } = await import("./file-hash.mjs");
-    const list = await Promise.all(picked.map(async (file, index) => ({
-      key: `${index}-${file.webkitRelativePath || file.name}`, name: file.name, relativePath: file.webkitRelativePath || file.name,
-      size: file.size, sha256: await sha256Hex(file), file,
-    })));
+    // De a uno y con avance: para detectar repetidos hay que leer cada archivo entero, y si la carpeta
+    // está en OneDrive "solo en la nube", Windows lo baja en ese momento. Todos juntos colgaban la página.
+    const list = [];
+    for (const [index, file] of picked.entries()) {
+      setProgress(`Leyendo ${index + 1} de ${picked.length}: ${file.name}`);
+      let sha256 = null;
+      try { sha256 = await sha256Hex(file); } catch { sha256 = null; }
+      list.push({ key: `${index}-${file.webkitRelativePath || file.name}`, name: file.name, relativePath: file.webkitRelativePath || file.name, size: file.size, sha256, file });
+    }
+    setProgress("");
     setFiles(list);
     setBusy(false);
   }
@@ -55,6 +62,7 @@ export function TechnicalUpload({ documents = [], onDone }) {
       const plan = resolveUpload(items, choices);
       const byKey = new Map(files.map((entry) => [entry.key, entry]));
       const { createUploadedDocuments, replaceTechnicalDocumentFile } = await import("./technical-documents-repo.mjs");
+      const total = plan.create.length + plan.replace.length;
       const created = await createUploadedDocuments(plan.create.map((item) => {
         const entry = byKey.get(item.key);
         return {
@@ -64,10 +72,11 @@ export function TechnicalUpload({ documents = [], onDone }) {
             sourceFile: item.target, sizeBytes: entry.size, sha256: entry.sha256,
           },
         };
-      }));
+      }), (done) => setProgress(`Subiendo ${done} de ${total}…`));
       let replaced = 0;
       for (const item of plan.replace) {
         const entry = byKey.get(item.key);
+        setProgress(`Subiendo ${plan.create.length + replaced + 1} de ${total}…`);
         try { await replaceTechnicalDocumentFile(item.existing, entry.file, { sha256: entry.sha256, sizeBytes: entry.size }); replaced += 1; } catch { /* se informa abajo */ }
       }
       const failed = created.filter((result) => result.error).length + (plan.replace.length - replaced);
@@ -78,7 +87,7 @@ export function TechnicalUpload({ documents = [], onDone }) {
         withoutText ? `${withoutText} son de un formato que el navegador no lee (por ejemplo .doc viejo): quedan guardados, pero para que el copiloto aprenda de ellos pasalos por MarkItDown y subí el .md.` : "",
         "Nada quedó \"vigente\" solo: falta tu validación.",
       ].filter(Boolean).join(" "));
-      setFiles([]); setItems(null); setChoices({});
+      setFiles([]); setItems(null); setChoices({}); setProgress("");
       onDone?.();
     } catch (error) {
       setMessage(error.message || "No se pudo subir.");
@@ -102,7 +111,7 @@ export function TechnicalUpload({ documents = [], onDone }) {
         <label className="secondary upload-button"><FolderPlus size={15} /> Elegir una carpeta entera
           <input type="file" webkitdirectory="" directory="" multiple hidden onChange={pick} disabled={busy} />
         </label>
-        {busy && <span className="muted small">Procesando…</span>}
+        {busy && <span className="muted small" role="status">{progress || "Procesando…"}</span>}
       </div>
 
       {files.length > 0 && !items && (
@@ -172,7 +181,7 @@ export function TechnicalUpload({ documents = [], onDone }) {
             </>
           )}
           <div className="import-box-actions">
-            <button type="button" className="primary" onClick={save} disabled={busy}>{busy ? "Subiendo…" : "Subir"}</button>
+            <button type="button" className="primary" onClick={save} disabled={busy}>{busy ? progress || "Subiendo…" : "Subir"}</button>
             <button type="button" className="secondary" onClick={() => setItems(null)} disabled={busy}>Volver</button>
           </div>
         </div>

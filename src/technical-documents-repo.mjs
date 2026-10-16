@@ -192,10 +192,11 @@ export async function fetchTechnicalDocumentHistory(documentId) {
 
 // Subida desde Base técnica (technical-upload-plan.mjs ya decidió nombres y conflictos):
 // crea cada documento nuevo con su ruta final y le adjunta el archivo con su texto.
-export async function createUploadedDocuments(entries = []) {
+export async function createUploadedDocuments(entries = [], onProgress = () => {}) {
   assertOnlineConfigured();
   const results = [];
-  for (const { document, file } of entries) {
+  for (const [index, { document, file }] of entries.entries()) {
+    onProgress(index + 1);
     const { data, error } = await supabase.from('technical_documents').insert(toRow(document)).select().maybeSingle();
     if (error) { results.push({ document, error }); continue; }
     try {

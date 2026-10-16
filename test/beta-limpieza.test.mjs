@@ -105,3 +105,39 @@ test('el mapa RAPYP lo ven solo Felipe, Juan y David', () => {
   for (const email of ['felipe@grupopoliplast.com.ar', 'Juan@grupopoliplast.com.ar', 'david@grupopoliplast.com.ar']) assert.equal(canSeeRapypMap(email), true, email);
   for (const email of ['brenda@grupopoliplast.com.ar', 'yuliani@grupopoliplast.com.ar', '']) assert.equal(canSeeRapypMap(email), false, email);
 });
+
+test('limpieza: las empresas copiadas salen del pipeline y se van las tareas automáticas que generaron', async () => {
+  const { cleanCopiedWorkspace } = await import('../src/workspace-cleanup.mjs');
+  const owner = { clients: [{ id: 'c9', company: 'Ruben', outcome: 'Abierto' }], inbox: [{ customer_wa_id: '5491155551234', channel: 'general' }] };
+  const juan = {
+    clients: [{ id: 'c9', company: 'Ruben' }, { id: 'mia', company: 'Propia', pipelineActive: true }],
+    tasks: [
+      { id: 'a1', source: 'auto-stale-client', autoKey: 'c9', clientId: 'c9', done: false },
+      { id: 'a2', source: 'auto-hot-lead', autoKey: 'general:5491155551234', done: false },
+      { id: 'a3', source: 'auto-stale-client', autoKey: 'mia', clientId: 'mia', done: false },
+      { id: 'a4', source: 'auto-stale-client', autoKey: 'c9', clientId: 'c9', done: true },
+    ],
+  };
+  const { state, removed } = cleanCopiedWorkspace(juan, [owner], { allowedChannels: ['juan'], stamp: 'S' });
+  assert.deepEqual(state.tasks.map((t) => t.id), ['a3', 'a4']);
+  assert.equal(removed.automaticTasks, 2);
+  assert.equal(state.clients.find((c) => c.id === 'c9').pipelineActive, false);
+  assert.equal(state.clients.find((c) => c.id === 'mia').pipelineActive, true);
+});
+
+test('"Retomar contacto" no se genera para empresas fuera del pipeline (directorio)', async () => {
+  const { findStaleClients } = await import('../src/stale-clients-radar.mjs');
+  const old = '2026-08-01T00:00:00Z';
+  const found = findStaleClients([{ id: 'x', company: 'X', createdAt: old, pipelineActive: false }, { id: 'y', company: 'Y', createdAt: old }], [], [], { today: new Date('2026-10-16') });
+  assert.deepEqual(found.map((item) => item.clientId), ['y']);
+});
+
+test('RAPYP para Juan y David: une las cuentas de Felipe y deja solo campos del mapa', async () => {
+  const { mergeOwnerClients } = await import('../lib/rapyp-clients.mjs');
+  const merged = mergeOwnerClients([
+    { clients: [{ id: '1', company: 'Spray', city: 'Rosario', notes: 'privado', updatedAt: '1', polio8: { products: [{ name: 'X SP' }] } }, { id: '2', company: 'Borrada' }], deletedRecordIds: { clients: ['2'] } },
+    { clients: [{ id: '1', company: 'Spray SA', city: 'Rosario', updatedAt: '2' }] },
+  ]);
+  assert.deepEqual(merged.map((c) => c.company), ['Spray SA']);
+  assert.equal(merged[0].notes, undefined);
+});

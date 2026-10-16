@@ -66,6 +66,10 @@ export function findStaleClients(clients = [], sales = [], inboxEvents = [], { t
   const results = [];
   for (const client of clients) {
     if (!isOpenOutcome(client)) continue;
+    // Solo cuentas que la persona trabaja: las sacadas del pipeline y las que vinieron del directorio
+    // del equipo (pipelineActive: false) no generan "Retomar contacto". Antes a Juan le aparecían
+    // tareas por empresas que nunca trabajó (16/10).
+    if (client.pipelineActive === false) continue;
     const saleAt = lastSaleAt(client, sales);
     const contactAt = lastInboxContactAt(client, inboxEvents);
     const lastActivity = [saleAt, contactAt, client.createdAt].filter(Boolean).sort().pop();

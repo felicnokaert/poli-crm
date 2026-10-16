@@ -68,12 +68,23 @@ export function PoliplastMark({ size = 84 }) {
   );
 }
 
+// Pantalla de carga: el isologo real (sin recortes ni máscaras que lo partan) con un aro que gira alrededor,
+// un halo que respira y un destello que recorre la silueta. Solo anima transform/opacity y el fondo del destello.
 export function Splash({ text }) {
   return (
     <div className="login-shell" role="status" aria-live="polite">
-      <section className="login-card splash-card">
-        <PoliplastMark />
-        <p>{text}</p>
+      <section className="splash-screen">
+        <div className="splash-logo">
+          <span className="splash-glow" aria-hidden="true" />
+          <span className="splash-ring" aria-hidden="true" />
+          <span className="splash-ring splash-ring-slow" aria-hidden="true" />
+          <span className="splash-mark">
+            <img src="/poliplast-isotipo-color.png" alt="Grupo Poliplast" width="96" height="96" />
+            <i className="splash-shine" aria-hidden="true" />
+          </span>
+        </div>
+        <p className="splash-text">{String(text).replace(/[….]+$/, "")}<span className="splash-dots" aria-hidden="true"><b>.</b><b>.</b><b>.</b></span></p>
+        <span className="splash-bar" aria-hidden="true"><i /></span>
       </section>
     </div>
   );

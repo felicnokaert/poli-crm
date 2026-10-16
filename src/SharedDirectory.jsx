@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
 import { Users } from "lucide-react";
-import { isChannelAdmin } from "./user-channels.mjs";
 import { mergeDirectory, publishableClients, toDirectoryRecord } from "./shared-directory.mjs";
 
 const CHUNK = 200;
 
 export function SharedDirectory({ supabase, session, clients, setClients }) {
   const email = session?.user?.email || "";
-  const admin = isChannelAdmin(email);
   const [available, setAvailable] = useState(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -61,13 +59,13 @@ export function SharedDirectory({ supabase, session, clients, setClients }) {
         <div>
           <span className="eyebrow">Beta · compartido</span>
           <h2><Users size={18} /> Directorio de empresas del equipo</h2>
-          <p>Las empresas, el mapa y los contactos sirven para todos. Lo que es de cada persona (ventas, comisiones, notas, números, etapas) no se comparte nunca.</p>
+          <p>Las empresas, el mapa y los contactos sirven para todos: cualquiera puede sumar las suyas, y solo Felipe puede borrar del directorio. Lo que es de cada persona (ventas, comisiones, notas, números, etapas) no se comparte nunca.</p>
         </div>
       </div>
       <p className="muted">{available === null ? "Consultando…" : `Hay ${available} empresas en el directorio del equipo.`}</p>
       <div className="panel-head-actions">
         <button type="button" className="primary" disabled={busy || !available} onClick={bring}>Traer empresas del equipo</button>
-        {admin && <button type="button" className="secondary" disabled={busy} onClick={publish}>Publicar mis empresas ({publishableClients(clients).length})</button>}
+        <button type="button" className="secondary" disabled={busy} onClick={publish}>Publicar mis empresas ({publishableClients(clients).length})</button>
       </div>
       {message && <div className="system-message">{message}</div>}
     </section>

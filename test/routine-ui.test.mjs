@@ -83,7 +83,7 @@ test('Directorio del equipo: trae las empresas que faltan sin pisar las propias'
   const saved = [];
   const supabase = { from: () => ({ select: (_cols, opts) => opts?.head ? Promise.resolve({ count: 2, error: null }) : { range: () => Promise.resolve({ data: [{ data: { id: 'a', company: 'Nueva SA', city: 'Salta' } }, { data: { id: 'b', company: 'Mía SA', city: 'Rosario' } }], error: null }) } }) };
   render(React.createElement(SharedDirectory, { supabase, session: { user: { email: 'brenda@grupopoliplast.com.ar' } }, clients: [{ id: 'z', company: 'Mía SA', city: 'Rosario' }], setClients: (c) => saved.push(c) }));
-  assert.equal(screen.queryByRole('button', { name: /Publicar mis empresas/ }), null);
+  assert.ok(screen.getByRole('button', { name: /Publicar mis empresas/ }));
   await screen.findByText(/Hay 2 empresas/);
   fireEvent.click(screen.getByRole('button', { name: /Traer empresas del equipo/ }));
   await screen.findByText(/Se sumaron 1 empresas/);

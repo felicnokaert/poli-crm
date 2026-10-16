@@ -37,3 +37,15 @@ test('Academia: elegir al competidor nombrado muestra su guía y oculta a los cl
   assert.ok(screen.getByText('Fabrica máquinas.'));
   cleanup();
 });
+
+import { buildCompetitorRow, slugifyCompetitor } from '../src/competitor-battlecard.mjs';
+
+test('alta directa de competidor: id, sin revisar y tipo válido', () => {
+  assert.equal(slugifyCompetitor('Spinna Poliuretano S.R.L.'), 'spinna-poliuretano-s-r-l');
+  const row = buildCompetitorRow({ name: ' Nuevo Equipos ', kind: 'raro', family: 'Poliuretano', summary: 'vende máquinas' }, 'T');
+  assert.equal(row.id, 'nuevo-equipos');
+  assert.equal(row.kind, 'fabricante');
+  assert.deepEqual(row.families, ['Poliuretano']);
+  assert.equal(row.reviewed, false);
+  assert.equal(buildCompetitorRow({ name: '  ' }), null);
+});

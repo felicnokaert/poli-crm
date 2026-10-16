@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { BarChart3 } from "lucide-react";
 import { GOAL_METRICS } from "./sales-model.mjs";
-import { GRANULARITIES, availableYears, salesSeries, seriesSummary } from "./sales-history.mjs";
+import { GRANULARITIES, availableYears, defaultMetric, salesSeries, seriesSummary } from "./sales-history.mjs";
 
 const compact = (value, metric) => {
   const n = Number(value) || 0;
@@ -17,7 +17,7 @@ export function SalesHistory({ sales = [], goals = [], units = {}, unitNames = [
   const years = useMemo(() => availableYears(sales, goals), [sales, goals]);
   const [year, setYear] = useState(years[0]);
   const [granularity, setGranularity] = useState("month");
-  const [metric, setMetric] = useState("netArs");
+  const [metric, setMetric] = useState(() => defaultMetric(goals));
   const [unit, setUnit] = useState("Todas");
   const [rate, setRate] = useState(() => String(goals.find((goal) => Number(goal.fallbackRate) > 0)?.fallbackRate || ""));
   const series = useMemo(() => salesSeries(sales, goals, { year, granularity, metric, unit, units, fallbackRate: Number(rate) || 0 }), [sales, goals, year, granularity, metric, unit, units, rate]);
@@ -51,7 +51,6 @@ export function SalesHistory({ sales = [], goals = [], units = {}, unitNames = [
       <div className="sales-history-summary">
         <div><span>Total {year}</span><strong>{format(summary.total)}</strong></div>
         <div><span>Mejor período</span><strong>{summary.best ? `${summary.best.label} · ${compact(summary.best.value, metric)}` : "—"}</strong></div>
-        <div><span>Cumplimiento de objetivos</span><strong>{summary.pct === null ? "Sin objetivos" : `${summary.pct}%`}</strong></div>
       </div>
       <svg className="sales-chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Gráfico ${GRANULARITIES[granularity].toLowerCase()} de ${GOAL_METRICS[metric].label.toLowerCase()} ${year}`}>
         <line x1={left} x2={W - right} y1={top + plotH} y2={top + plotH} stroke="currentColor" opacity=".2" />
@@ -62,7 +61,7 @@ export function SalesHistory({ sales = [], goals = [], units = {}, unitNames = [
           const hit = item.target && item.value >= item.target;
           return (
             <g key={item.key} className="sales-bar" role="button" tabIndex={0} aria-label={`${item.label}: ${format(item.value)}${item.target ? `, objetivo ${format(item.target)}` : ""}`} onClick={() => pick(item)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); pick(item); } }}>
-              <title>{`${item.label} ${year}: ${format(item.value)} · ${item.count} ${item.count === 1 ? "venta" : "ventas"}${item.target ? ` · objetivo ${format(item.target)} (${item.pct}%)` : ""}`}</title>
+              <title>{`${item.label} ${year}: ${format(item.value)} · ${item.count} ${item.count === 1 ? "venta" : "ventas"}${item.target ? ` · objetivo ${format(item.target)}` : ""}`}</title>
               <rect x={left + slot * index} y={top} width={slot} height={plotH + bottom} fill="transparent" />
               <rect x={x} y={y} width={barW} height={Math.max(h, item.value > 0 ? 2 : 0)} rx="5" fill={hit ? "#2e7d32" : "#ed1c24"} opacity={item.value > 0 ? 1 : .15} />
               {item.target ? <line x1={x - 6} x2={x + barW + 6} y1={top + plotH - (item.target / max) * plotH} y2={top + plotH - (item.target / max) * plotH} stroke="currentColor" strokeWidth="2.5" strokeDasharray="4 3" /> : null}
@@ -72,14 +71,7 @@ export function SalesHistory({ sales = [], goals = [], units = {}, unitNames = [
           );
         })}
       </svg>
-      <p className="muted small"><span className="sales-legend-bar" /> Vendido · <span className="sales-legend-target" /> Objetivo general del período (uno trimestral se reparte en partes iguales entre sus meses){unit !== "Todas" ? " (con una unidad elegida no se comparan objetivos)" : ""}. Los objetivos con unidad, punto de venta o familia propios se ven en su tarjeta de Objetivos.</p>
-      <details>
-        <summary>Ver los números en tabla</summary>
-        <table className="sales-history-table">
-          <thead><tr><th>Período</th><th>Ventas</th><th>Valor</th><th>Objetivo</th><th>%</th></tr></thead>
-          <tbody>{series.map((item) => <tr key={item.key}><td>{item.label} {year}</td><td>{item.count}</td><td>{format(item.value)}</td><td>{item.target ? format(item.target) : "—"}</td><td>{item.pct === null ? "—" : `${item.pct}%`}</td></tr>)}</tbody>
-        </table>
-      </details>
+      <p className="muted small"><span className="sales-legend-bar" /> Vendido · <span className="sales-legend-target" /> Objetivo del período: suma de los objetivos de esa medida (uno trimestral se reparte en partes iguales entre sus meses). Verde: llegaste.</p>
     </section>
   );
 }

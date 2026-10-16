@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { MapPin } from "lucide-react";
-import { DEFAULT_PLACES, HOME_TZ, geocodeUrl, parseGeocode, parseWeather, timeIn, weatherUrl } from "./local-info.mjs";
+import { DEFAULT_PLACES, HOME_TZ, geocodeUrl, parseGeocodeList, parseWeather, timeIn, weatherUrl } from "./local-info.mjs";
 
 const STORE_KEY = "poliplast-custom-place";
 const REFRESH_MS = 15 * 60 * 1000;
@@ -18,6 +18,7 @@ export function LocalInfo({ fetcher = (...args) => fetch(...args) }) {
   const [asking, setAsking] = useState(false);
   const [text, setText] = useState("");
   const [error, setError] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
   const [weather, setWeather] = useState({});
   const places = custom ? [...DEFAULT_PLACES, custom] : DEFAULT_PLACES;
   const placesKey = places.map((place) => place.name).join("|");
@@ -39,16 +40,27 @@ export function LocalInfo({ fetcher = (...args) => fetch(...args) }) {
     return () => { cancelled = true; clearInterval(id); };
   }, [placesKey]);
 
-  async function addPlace(event) {
+  useEffect(() => {
+    const query = text.trim();
+    if (!asking || query.length < 2) { setSuggestions([]); return undefined; }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetcher(geocodeUrl(query, 6));
+        const list = parseGeocodeList(await response.json());
+        if (!cancelled) { setSuggestions(list); setError(list.length ? "" : "No encontré ese lugar."); }
+      } catch { if (!cancelled) { setSuggestions([]); setError("No se pudo buscar el lugar."); } }
+    }, 300);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [text, asking]);
+
+  function choose(place) {
+    setCustom(place); writePlace(place); setAsking(false); setText(""); setSuggestions([]); setError("");
+  }
+
+  function addPlace(event) {
     event.preventDefault();
-    if (!text.trim()) return;
-    setError("");
-    try {
-      const response = await fetcher(geocodeUrl(text));
-      const place = parseGeocode(await response.json());
-      if (!place) { setError("No encontré ese lugar."); return; }
-      setCustom(place); writePlace(place); setAsking(false); setText("");
-    } catch { setError("No se pudo buscar el lugar."); }
+    if (suggestions[0]) choose(suggestions[0]);
   }
   function removePlace() { setCustom(null); writePlace(null); }
 
@@ -67,9 +79,13 @@ export function LocalInfo({ fetcher = (...args) => fetch(...args) }) {
       {!custom && !asking && <button type="button" className="local-chip local-add" onClick={() => setAsking(true)}><MapPin size={12} /> ¿Dónde estás?</button>}
       {asking && (
         <form className="local-form" onSubmit={addPlace}>
-          <input autoFocus value={text} onChange={(event) => setText(event.target.value)} placeholder="Ciudad…" aria-label="Ciudad" />
-          <button type="submit" className="link-button">Ver</button>
-          <button type="button" className="link-button" onClick={() => { setAsking(false); setError(""); }}>Cancelar</button>
+          <input autoFocus value={text} onChange={(event) => setText(event.target.value)} placeholder="Escribí tu ciudad…" aria-label="Ciudad" autoComplete="off" />
+          <button type="button" className="link-button" onClick={() => { setAsking(false); setError(""); setSuggestions([]); setText(""); }}>Cancelar</button>
+          {suggestions.length > 0 && (
+            <ul className="local-suggestions" role="listbox" aria-label="Sugerencias de ciudades">
+              {suggestions.map((place) => <li key={`${place.name}-${place.latitude}`}><button type="button" role="option" onClick={() => choose(place)}>{place.name}</button></li>)}
+            </ul>
+          )}
         </form>
       )}
       {error && <span className="muted small">{error}</span>}

@@ -1,4 +1,5 @@
 import { memo, useEffect, useMemo, useState } from "react";
+import { MERGE_UNDO_DAYS, canUndoMerge, mergeUndoDaysLeft } from "./workspace.mjs";
 import { Search } from "lucide-react";
 import { formatDate } from "./utils.mjs";
 import { Empty } from "./ui-primitives";
@@ -173,11 +174,11 @@ function ClientsBase({ clients, query, setQuery, onOpenClient, onMergeClients, m
             })}
             {!duplicateCandidates.length && <Empty text="No se detectaron posibles duplicados." />}
           </div>
-          {mergeLogs.filter((log) => !log.deshecho).length > 0 && (
+          {mergeLogs.filter((log) => canUndoMerge(log)).length > 0 && (
             <div className="merge-log-list">
-              <p className="duplicate-note">Fusiones recientes · se pueden deshacer</p>
+              <p className="duplicate-note">Fusiones recientes · se pueden deshacer durante {MERGE_UNDO_DAYS} días</p>
               {mergeLogs
-                .filter((log) => !log.deshecho)
+                .filter((log) => canUndoMerge(log))
                 .slice(-8)
                 .reverse()
                 .map((log) => {
@@ -188,6 +189,7 @@ function ClientsBase({ clients, query, setQuery, onOpenClient, onMergeClients, m
                       <span>
                         "{mergedName}" se fusionó dentro de "{survivor?.company || log.snapshotAntes?.survivor?.company || "ficha"}"
                         {log.fecha ? ` · ${formatDate(log.fecha)}` : ""}
+                        {` · queda${mergeUndoDaysLeft(log) === 1 ? "" : "n"} ${mergeUndoDaysLeft(log)} día${mergeUndoDaysLeft(log) === 1 ? "" : "s"} para deshacer`}
                       </span>
                       <button type="button" onClick={() => onUndoMerge(log.id)}>
                         Deshacer

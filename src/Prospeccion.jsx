@@ -13,7 +13,7 @@ import { markProspect } from './prospect-convert.mjs';
 import { Competencia } from './Competencia.jsx';
 import { buildOutreachDraft } from './prospect-outreach.mjs';
 import { remoteLabel } from './prospect-requests.mjs';
-import { buildImportPlan, parseProspectsText } from './prospect-import.mjs';
+import { buildImportPlan, parseProspectsText, applyImportPlan, importFingerprint } from './prospect-import.mjs';
 import { AI_TOOLS, RESEARCH_COOLDOWN_DAYS, RESEARCH_MINUTES, buildResearchPrompt, exclusionNames } from './prospect-playbook.mjs';
 import { readFileSmart } from './text-decode.mjs';
 import { applyEnrichment } from './prospect-enrich-apply.mjs';
@@ -400,6 +400,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const [message, setMessage] = useState('');
   const [importText, setImportText] = useState('');
   const [importPlan, setImportPlan] = useState(null);
+  const [includePossible, setIncludePossible] = useState([]);
   const [form, setForm] = useState(null);
   const [cities, setCities] = useState(citiesProp || []);
   const [provinces, setProvinces] = useState(provincesProp || {});
@@ -475,11 +476,16 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   }
 
   // Paso 1: leer la lista y mostrar la vista previa (todavía no se guarda nada).
-  function analyzeImport(text, jobId = null) {
+  function analyzeImport(text, jobId = null, fileName = '') {
     setImportJobId(jobId);
-    const { rows, ignored, error } = parseProspectsText(text);
+    setIncludePossible([]);
+    const { rows, ignored, cellErrors = [], error } = parseProspectsText(text);
     if (error) { setMessage(error); setImportPlan(null); return; }
-    setImportPlan({ ...buildImportPlan(rows, clients, prospects), ignored });
+    // Huella del archivo (regla 7.3): si ya se importó, se avisa; igual se puede revisar, y lo que ya
+    // existe no se toca.
+    const fingerprint = importFingerprint(text);
+    const repeated = (data.prospectImportLog || []).find((item) => item.hash === fingerprint) || null;
+    setImportPlan({ ...buildImportPlan(rows, clients, prospects), ignored, cellErrors, fingerprint, fileName, repeated });
     setMessage('');
   }
 
@@ -487,23 +493,33 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
-    try { analyzeImport(await readFileSmart(file)); } catch { setMessage('No se pudo leer el archivo. Probá guardarlo como CSV o pegá las filas.'); }
+    try { analyzeImport(await readFileSmart(file), null, file.name); } catch { setMessage('No se pudo leer el archivo. Probá guardarlo como CSV o pegá las filas.'); }
   }
 
-  // Paso 2: confirmar. Entran las nuevas y las posibles duplicadas (con su etiqueta);
-  // las que ya están en el CRM o ya cargadas se omiten.
+  // Paso 2: confirmar. Entran las nuevas y solo los posibles duplicados que se eligieron; a los que ya
+  // existen se les completan los campos vacíos (nunca se pisa uno con valor ni el estado/notas/marcas).
   function confirmImport() {
     if (!importPlan) return;
     const job = researchJobs.find((item) => item.id === importJobId);
-    const made = importPlan.toImport.map((item) => (job ? { ...item, family: item.family || job.family, researchJobId: job.id, source: 'Investigación IA' } : item));
-    setData((current) => ({
-      ...current,
-      prospects: [...(Array.isArray(current.prospects) ? current.prospects : []), ...made],
-      researchJobs: job ? (current.researchJobs || []).map((item) => (item.id === job.id ? { ...item, status: 'Importada', importedCount: made.length, updatedAt: new Date().toISOString() } : item)) : current.researchJobs,
-    }));
-    const skipped = importPlan.counts.enCrm + importPlan.counts.yaCargadas;
-    setMessage(`Se importaron ${made.length} prospectos como "No contactado" (fuente: importado).${skipped ? ` Se omitieron ${skipped} que ya estaban en el CRM o ya cargadas.` : ''}`);
+    const now = new Date().toISOString();
+    const plan = job
+      ? { ...importPlan, toImport: importPlan.toImport.map((item) => ({ ...item, family: item.family || job.family, researchJobId: job.id, source: 'Investigación IA' })), possibles: importPlan.possibles.map((item) => ({ ...item, family: item.family || job.family, researchJobId: job.id, source: 'Investigación IA' })) }
+      : importPlan;
+    const result = applyImportPlan(prospects, plan, { includePossibleIds: includePossible, now });
+    const logEntry = { hash: importPlan.fingerprint, name: importPlan.fileName || (job ? `Investigación ${job.family || ''}`.trim() : 'Lista pegada'), rows: importPlan.counts.total, created: result.created, updated: result.updated, createdAt: now, updatedAt: now };
+    setData((current) => {
+      const applied = applyImportPlan(Array.isArray(current.prospects) ? current.prospects : [], plan, { includePossibleIds: includePossible, now });
+      return {
+        ...current,
+        prospects: applied.prospects,
+        prospectImportLog: [...(current.prospectImportLog || []).filter((item) => item.hash !== logEntry.hash), logEntry],
+        researchJobs: job ? (current.researchJobs || []).map((item) => (item.id === job.id ? { ...item, status: 'Importada', importedCount: applied.created, updatedAt: now } : item)) : current.researchJobs,
+      };
+    });
+    const skipped = importPlan.counts.existentes + importPlan.counts.posibles - includePossible.length;
+    setMessage(`Se importaron ${result.created} prospectos como "No contactado"${result.updated ? ` y se completaron datos vacíos de ${result.updated} que ya estaban` : ''}.${skipped ? ` Se omitieron ${skipped} que ya existían o eran posibles duplicados.` : ''}`);
     setImportPlan(null);
+    setIncludePossible([]);
     setImportText('');
     if (job) setJobText((current) => ({ ...current, [job.id]: '' }));
     setImportJobId(null);
@@ -784,28 +800,47 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const prospectsById = useMemo(() => new Map(prospects.map((item) => [item.id, item])), [prospects]);
   const shown = dailyList ? bySearch.filter((item) => dailyList.includes(item.id)) : bySearch;
 
+  const togglePossible = (id) => setIncludePossible((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  const phoneErrors = importPlan ? (importPlan.cellErrors || []).filter((item) => item.field === 'phone').length : 0;
   const importPreview = importPlan && (
-    <div className="panel">
+    <div className="panel import-preview-73">
       <h3>Vista previa de la importación</h3>
-      <p>
-        {importPlan.counts.total} filas: <strong>{importPlan.counts.nuevas} nuevas</strong>, {importPlan.counts.enCrm} ya en el CRM,
-        {' '}{importPlan.counts.posibles} posibles duplicadas, {importPlan.counts.yaCargadas} ya cargadas como prospecto
-        {importPlan.ignored ? `, ${importPlan.ignored} sin nombre (se ignoran)` : ''}.
-      </p>
+      {importPlan.repeated && (
+        <p className="form-warning">Este archivo ya se importó el {new Date(importPlan.repeated.createdAt).toLocaleDateString('es-AR')} ({importPlan.repeated.rows} filas). Volver a importarlo no crea ni cambia nada de lo que ya está.</p>
+      )}
+      {(importPlan.cellErrors || []).length > 0 && (
+        <p className="form-warning">{phoneErrors ? `${phoneErrors} teléfono${phoneErrors === 1 ? '' : 's'} llegaron como "#ERROR!" y se tomaron como vacíos.` : ''} {importPlan.cellErrors.length - phoneErrors > 0 ? `${importPlan.cellErrors.length - phoneErrors} celda${importPlan.cellErrors.length - phoneErrors === 1 ? '' : 's'} más con error de planilla también quedaron vacías.` : ''} Revisalas en la planilla.</p>
+      )}
+      <p>{importPlan.counts.total} filas: <strong>{importPlan.counts.nuevas} nuevas</strong>, {importPlan.counts.existentes} ya existen ({importPlan.counts.enCrm} en Empresas), {importPlan.counts.posibles} posibles duplicados{importPlan.ignored ? `, ${importPlan.ignored} sin nombre (se ignoran)` : ''}.</p>
+      <div className="import-counts">
+        <span><strong>{importPlan.counts.total}</strong> filas</span>
+        <span><strong>{importPlan.counts.nuevas}</strong> nuevas</span>
+        <span><strong>{importPlan.counts.existentes}</strong> ya existen{importPlan.counts.enCrm ? ` (${importPlan.counts.enCrm} en Empresas)` : ''}</span>
+        <span><strong>{importPlan.counts.posibles}</strong> posibles duplicados</span>
+        {importPlan.counts.aCompletar > 0 && <span><strong>{importPlan.counts.aCompletar}</strong> con datos vacíos para completar</span>}
+        {importPlan.ignored ? <span><strong>{importPlan.ignored}</strong> sin nombre (se ignoran)</span> : null}
+      </div>
+      {importPlan.updates.length > 0 && <p className="muted small">Al confirmar también se completan datos vacíos de {importPlan.updates.length} prospecto{importPlan.updates.length === 1 ? '' : 's'} que ya estaban.</p>}
+      <p className="muted small">Los que ya existen no se pisan: el estado, la etapa, las notas y las marcas del equipo siempre ganan sobre el archivo. Solo se completan los datos que estén vacíos.</p>
       <table>
-        <thead><tr><th>Empresa</th><th>Familia</th><th>Ciudad</th><th>Cruce</th></tr></thead>
+        <thead><tr><th>Empresa</th><th>Familia</th><th>Ciudad</th><th>Resultado</th></tr></thead>
         <tbody>
           {importPlan.items.slice(0, 15).map((item) => (
             <tr key={item.prospect.id}>
               <td>{item.prospect.company}</td><td>{item.prospect.family || item.prospect.imported?.familyRaw || '–'}</td><td>{item.prospect.city || '–'}</td>
-              <td>{item.status}{item.match ? ` · ${item.match.name}` : ''}</td>
+              <td>
+                {item.status}{item.match ? ` · ${item.match.name}${item.where ? ` (${item.where})` : ''}` : ''}
+                {item.status === 'Posible duplicado' && (
+                  <label className="check import-possible"><input type="checkbox" checked={includePossible.includes(item.prospect.id)} onChange={() => togglePossible(item.prospect.id)} /> importar igual</label>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
       {importPlan.items.length > 15 && <p className="muted">Se muestran las primeras 15 de {importPlan.items.length}.</p>}
       <div className="panel-head-actions">
-        <button type="button" className="primary" disabled={!importPlan.toImport.length} onClick={confirmImport}>Confirmar importación ({importPlan.toImport.length})</button>
+        <button type="button" className="primary" disabled={!importPlan.toImport.length && !includePossible.length && !importPlan.updates.length} onClick={confirmImport}>Confirmar importación ({importPlan.toImport.length + includePossible.length})</button>
         <button type="button" className="secondary" onClick={() => setImportPlan(null)}>Cancelar</button>
       </div>
     </div>

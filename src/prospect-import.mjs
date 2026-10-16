@@ -9,6 +9,7 @@ const HEADERS = new Map([
   ['telefono', 'phone'], ['tel', 'phone'], ['celular', 'phone'], ['whatsapp', 'phone'],
   ['sitio web', 'website'], ['web', 'website'], ['website', 'website'], ['pagina web', 'website'],
   ['email', 'email'], ['mail', 'email'], ['correo', 'email'],
+  ['cuit', 'cuit'], ['cuil', 'cuit'], ['cuit cuil', 'cuit'],
   ['provincia', 'province'], ['ciudad', 'city'], ['localidad', 'city'],
   ['familia', 'family'], ['rubro', 'rubro'], ['subfamilia', 'subfamily'],
   ['domicilio', 'address'], ['direccion', 'address'], ['fuente', 'source'],
@@ -58,6 +59,10 @@ function splitLine(line, delimiter) {
   return cells.map((cell) => cell.trim());
 }
 
+// Celdas con error de Excel/Sheets ("#ERROR!", "#N/A", "#¡VALOR!"...): se toman como vacías y se avisa.
+const SHEET_ERROR = /^#(error!?|n\/a|n\/d|value!|valor!|¡valor!|ref!|¡ref!|div\/0!|name\?|nombre\?|num!|null!)$/i;
+export const isSheetError = (value) => SHEET_ERROR.test(String(value ?? '').trim());
+
 export function parseProspectsText(text = '') {
   const lines = normalizeMarkdownTable(text).split(/\r?\n/).filter((line) => line.trim());
   if (lines.length < 2) return { rows: [], ignored: 0, error: 'Pegá una tabla con encabezados en la primera fila y al menos un prospecto.' };
@@ -65,15 +70,20 @@ export function parseProspectsText(text = '') {
   const columns = splitLine(lines[0], delimiter).map((header) => HEADERS.get(plain(header)) || '');
   if (!columns.includes('company')) return { rows: [], ignored: 0, error: 'No encontré la columna "Empresa" (o "Nombre") en los encabezados.' };
   const rows = [];
+  const cellErrors = [];
   let ignored = 0;
-  for (const line of lines.slice(1)) {
+  for (const [lineIndex, line] of lines.slice(1).entries()) {
     const cells = splitLine(line, delimiter);
     const row = {};
-    columns.forEach((field, index) => { if (field && cells[index]) row[field] = cells[index]; });
+    columns.forEach((field, index) => {
+      if (!field || !cells[index]) return;
+      if (isSheetError(cells[index])) { cellErrors.push({ row: lineIndex + 2, field, value: cells[index] }); return; }
+      row[field] = cells[index];
+    });
     if (!row.company) { ignored += 1; continue; }
     rows.push(row);
   }
-  return { rows, ignored, error: '' };
+  return { rows, ignored, cellErrors, error: '' };
 }
 
 // Campos que solo existen en la planilla: se guardan juntos en `imported`.
@@ -104,24 +114,97 @@ export function prospectFieldsFromRow(row) {
   return fields;
 }
 
-// Vista previa: cruza cada fila contra las Empresas del CRM, los prospectos ya
-// cargados y las filas anteriores del mismo archivo. Nada se guarda todavía.
+// Huella de un archivo o texto importado (mismo contenido = misma huella, sin importar finales de línea
+// ni espacios al final): para avisar si se vuelve a subir el mismo.
+export function importFingerprint(text = '') {
+  const clean = String(text).replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').split('\n').map((line) => line.trimEnd()).join('\n').trim();
+  let h1 = 0xdeadbeef ^ clean.length;
+  let h2 = 0x41c6ce57 ^ clean.length;
+  for (let index = 0; index < clean.length; index += 1) {
+    const code = clean.charCodeAt(index);
+    h1 = Math.imul(h1 ^ code, 2654435761);
+    h2 = Math.imul(h2 ^ code, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return `${(h2 >>> 0).toString(16).padStart(8, '0')}${(h1 >>> 0).toString(16).padStart(8, '0')}`;
+}
+
+// Campos que un CSV puede completar en un prospecto que ya existe, solo si están vacíos. Nunca se tocan
+// el estado, la etapa, las notas ni las marcas del equipo (Contactado, Con interés, Sin interés): esos
+// siempre ganan sobre el CSV.
+export const FILLABLE_FIELDS = ['family', 'rubro', 'address', 'city', 'province', 'phone', 'website', 'email', 'instagram', 'facebook', 'contact', 'machine', 'currentSupplier', 'cuit'];
+const empty = (value) => value === undefined || value === null || String(value).trim() === '';
+
+export function emptyFieldsToFill(existing = {}, incoming = {}) {
+  const fill = {};
+  for (const key of FILLABLE_FIELDS) if (empty(existing[key]) && !empty(incoming[key])) fill[key] = incoming[key];
+  return fill;
+}
+
+// Vista previa (regla 7.3): cada fila se compara por CUIT, teléfono (últimos 8 dígitos), nombre+localidad
+// y sitio web contra Empresas, contra los prospectos ya cargados y contra las filas anteriores del archivo.
+// Resultado: "Nuevo", "Ya existe" o "Posible duplicado". Solo los nuevos se crean; los posibles
+// duplicados se importan únicamente si la persona los elige uno por uno. A los prospectos que ya existen
+// se les completan los campos vacíos, nunca se pisa uno con valor. Por eso importar el mismo CSV dos
+// veces no crea ni cambia nada. Nada se guarda acá.
 export function buildImportPlan(rows = [], clients = [], prospects = [], { now = new Date().toISOString(), makeId = () => crypto.randomUUID() } = {}) {
   const pool = [...prospects];
+  const fresh = new Map();
   const items = [];
-  const counts = { total: rows.length, nuevas: 0, enCrm: 0, yaCargadas: 0, posibles: 0 };
+  const fills = new Map();
+  const counts = { total: rows.length, nuevas: 0, existentes: 0, posibles: 0, enCrm: 0, aCompletar: 0 };
   for (const row of rows) {
     const candidate = blankProspect({ ...prospectFieldsFromRow(row), source: 'importado', competitor: isCompetitor(row.company) }, { id: makeId(), now });
     const check = matchProspect(candidate, clients, pool);
-    const status = check.status;
-    items.push({ prospect: candidate, status, match: check.matches[0] || null });
-    if (status === 'Nuevo') counts.nuevas += 1;
-    else if (status === 'Ya en el CRM') counts.enCrm += 1;
-    else if (status === 'Ya cargado') counts.yaCargadas += 1;
-    else counts.posibles += 1;
-    // Las que se van a cargar entran al pool para detectar repetidas dentro del mismo archivo.
-    if (status === 'Nuevo' || status === 'Posible duplicado') pool.push(candidate);
+    const match = check.matches[0] || null;
+    const status = check.status === 'Nuevo' ? 'Nuevo' : check.status === 'Posible duplicado' ? 'Posible duplicado' : 'Ya existe';
+    let where = '';
+    let fill = {};
+    if (status === 'Ya existe') {
+      counts.existentes += 1;
+      if (match.kind === 'cliente') { where = 'Empresas'; counts.enCrm += 1; }
+      else if (fresh.has(match.id)) {
+        // Repetida dentro del mismo archivo: lo que traiga de más completa a la primera.
+        where = 'este archivo';
+        Object.assign(fresh.get(match.id), emptyFieldsToFill(fresh.get(match.id), candidate));
+      } else {
+        where = 'Prospectos';
+        const existing = pool.find((item) => item.id === match.id);
+        fill = emptyFieldsToFill({ ...existing, ...(fills.get(match.id) || {}) }, candidate);
+        if (Object.keys(fill).length) fills.set(match.id, { ...(fills.get(match.id) || {}), ...fill });
+      }
+    } else if (status === 'Nuevo') {
+      counts.nuevas += 1;
+      pool.push(candidate);
+      fresh.set(candidate.id, candidate);
+    } else {
+      counts.posibles += 1;
+      where = match?.kind === 'cliente' ? 'Empresas' : fresh.has(match?.id) ? 'este archivo' : 'Prospectos';
+    }
+    items.push({ prospect: candidate, status, where, match, fill });
   }
-  const toImport = items.filter((item) => item.status === 'Nuevo' || item.status === 'Posible duplicado').map((item) => item.prospect);
-  return { items, counts, toImport };
+  counts.aCompletar = fills.size;
+  const updates = [...fills.entries()].map(([id, fill]) => ({ id, fill }));
+  const toImport = items.filter((item) => item.status === 'Nuevo').map((item) => item.prospect);
+  const possibles = items.filter((item) => item.status === 'Posible duplicado').map((item) => item.prospect);
+  return { items, counts, toImport, possibles, updates };
+}
+
+// Aplica el plan confirmado a los prospectos: suma los nuevos (y los posibles duplicados elegidos) y
+// completa los vacíos de los existentes. Devuelve la lista nueva y cuántos cambió.
+export function applyImportPlan(prospects = [], plan = {}, { includePossibleIds = [], now = new Date().toISOString() } = {}) {
+  const chosen = new Set(includePossibleIds);
+  const byId = new Map((plan.updates || []).map((update) => [update.id, update.fill]));
+  let updated = 0;
+  const next = prospects.map((prospect) => {
+    const fill = byId.get(prospect.id);
+    if (!fill) return prospect;
+    const safe = emptyFieldsToFill(prospect, fill);
+    if (!Object.keys(safe).length) return prospect;
+    updated += 1;
+    return { ...prospect, ...safe, updatedAt: now };
+  });
+  const created = [...(plan.toImport || []), ...(plan.possibles || []).filter((item) => chosen.has(item.id))];
+  return { prospects: [...next, ...created], created: created.length, updated };
 }

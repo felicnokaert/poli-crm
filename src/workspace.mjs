@@ -151,6 +151,8 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
     ...(local.welcomeDismissed || remote.welcomeDismissed ? { welcomeDismissed: true } : {}),
     mergeLogs: mergeRecords(local.mergeLogs, remote.mergeLogs),
     duplicateReviewDecisions: mergeRecords(local.duplicateReviewDecisions, remote.duplicateReviewDecisions),
+    // Huellas de los archivos de prospectos ya importados (regla 7.3: avisar si se sube el mismo).
+    ...(local.prospectImportLog || remote.prospectImportLog ? { prospectImportLog: mergeRecords(local.prospectImportLog, remote.prospectImportLog, 'hash') } : {}),
     // dailySignals lo escribe SOLO el cron (servidor): el navegador nunca lo
     // genera, asi que se conserva la version mas reciente en vez de
     // descartarla (antes este merge lo tiraba y el proximo guardado del
@@ -228,10 +230,23 @@ export function mergeClients(state = EMPTY_STATE, survivorId, mergedId, options 
 // registros que la fusión efectivamente reescribió (affectedRecordIds), no
 // en todo lo que hoy apunte al sobreviviente (que puede incluir cosas que ya
 // le pertenecían antes de fusionar, o de otra fusión posterior).
-export function undoClientMerge(state = EMPTY_STATE, mergeLogId) {
+// Una fusión se puede deshacer durante 7 días (pedido de Felipe, 16/10); después queda firme. El
+// registro se conserva igual como historial.
+export const MERGE_UNDO_DAYS = 7;
+export function canUndoMerge(log = {}, now = new Date()) {
+  if (!log || log.deshecho) return false;
+  const when = new Date(log.fecha || log.createdAt || 0).getTime();
+  return Number.isFinite(when) && when > 0 && now.getTime() - when <= MERGE_UNDO_DAYS * 86400000;
+}
+export function mergeUndoDaysLeft(log = {}, now = new Date()) {
+  const when = new Date(log.fecha || log.createdAt || 0).getTime();
+  return Math.max(0, Math.ceil((when + MERGE_UNDO_DAYS * 86400000 - now.getTime()) / 86400000));
+}
+
+export function undoClientMerge(state = EMPTY_STATE, mergeLogId, now = new Date()) {
   const logs = Array.isArray(state.mergeLogs) ? state.mergeLogs : [];
   const log = logs.find((entry) => entry.id === mergeLogId && !entry.deshecho);
-  if (!log) return state;
+  if (!log || !canUndoMerge(log, now)) return state;
   const { survivor, merged } = log.snapshotAntes;
   const affected = log.affectedRecordIds || {};
   const rewireBack = (records = [], ids = []) => {

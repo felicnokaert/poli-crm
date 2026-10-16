@@ -53,10 +53,12 @@ test('el plan cruza contra el CRM, los prospectos y las filas anteriores sin gua
   ];
   let n = 0;
   const plan = buildImportPlan(rows, clients, prospects, { makeId: () => `id${n += 1}`, now: '2026-10-14T00:00:00Z' });
-  assert.deepEqual(plan.counts, { total: 6, nuevas: 2, enCrm: 1, yaCargadas: 2, posibles: 1 });
-  assert.deepEqual(plan.toImport.map((item) => item.company), ['SILVACOM', 'Ferretería Sur', 'Argenpur Sur']);
+  // Regla 7.3: solo los nuevos se crean; el posible duplicado (SILVACOM, otra localidad) se elige a mano.
+  assert.deepEqual(plan.counts, { total: 6, nuevas: 2, existentes: 3, posibles: 1, enCrm: 1, aCompletar: 0 });
+  assert.deepEqual(plan.toImport.map((item) => item.company), ['Ferretería Sur', 'Argenpur Sur']);
+  assert.deepEqual(plan.possibles.map((item) => item.company), ['SILVACOM']);
   assert.ok(plan.toImport.every((item) => item.state === 'No contactado' && item.source === 'importado'));
-  assert.equal(plan.toImport[2].competitor, true);
+  assert.equal(plan.toImport[1].competitor, true);
   assert.equal(prospects.length, 1, 'no modifica los prospectos existentes');
 });
 

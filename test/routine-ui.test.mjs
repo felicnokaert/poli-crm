@@ -45,3 +45,13 @@ test('el buscador de la Academia encuentra productos y vendedores', async () => 
   fireEvent.change(screen.getByPlaceholderText(/adhesivo/), { target: { value: 'repuestos' } });
   assert.ok(screen.getByText(/Juan · Gerente general/));
 });
+
+test('la búsqueda global abre la empresa elegida con Enter', async () => {
+  const { CommandPalette } = await loadJsxModule('src/CommandPalette.jsx');
+  const picked = [];
+  render(React.createElement(CommandPalette, { clients: [{ id: 'c1', company: 'Corralón Sur' }], tasks: [], prospects: [], onPick: (item) => picked.push(item.id), onClose() {} }));
+  const input = screen.getByPlaceholderText(/Buscar empresa/);
+  fireEvent.change(input, { target: { value: 'corralon' } });
+  fireEvent.keyDown(input, { key: 'Enter' });
+  assert.deepEqual(picked, ['c1']);
+});

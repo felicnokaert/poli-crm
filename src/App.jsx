@@ -91,6 +91,7 @@ const TestCleanupPanel = lazyNamed(() => import("./Settings"), "TestCleanupPanel
 const InteractionForm = lazyNamed(() => import("./InteractionForm"), "InteractionForm");
 const InboxDraftModal = lazyNamed(() => import("./InboxComponents"), "InboxDraftModal");
 const ClientDetail = lazyNamed(() => import("./ClientDetail"), "ClientDetail");
+const CommandPalette = lazyNamed(() => import("./CommandPalette"), "CommandPalette");
 const ShortcutsHelp = lazyNamed(() => import("./ShortcutsHelp"), "ShortcutsHelp");
 import { moveCard, reorderList } from "./board-model.mjs";
 import {
@@ -249,6 +250,7 @@ export default function App() {
   const [collapsedNavGroups, setCollapsedNavGroups] = useNavGroups(NAV_GROUP_NAMES);
   const [showForm, setShowForm] = useState(false);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+  const [showPalette, setShowPalette] = useState(false);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [taskForm, setTaskForm] = useState(blankTask);
   const [editingInteractionId, setEditingInteractionId] = useState(null);
@@ -269,6 +271,7 @@ export default function App() {
     showForm ||
     showTaskForm ||
     showShortcutsHelp ||
+    showPalette ||
     Boolean(inboxDraft) ||
     Boolean(selectedInteractionId) ||
     Boolean(selectedClientId) ||
@@ -276,6 +279,11 @@ export default function App() {
 
   useEffect(() => {
     function handleGlobalShortcut(event) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setShowPalette(true);
+        return;
+      }
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       const target = document.activeElement;
       const isTyping =
@@ -1658,6 +1666,15 @@ export default function App() {
             <button
               type="button"
               className="icon-button"
+              aria-label="Buscar en todo el CRM"
+              title="Buscar en todo el CRM (Ctrl+K)"
+              onClick={() => setShowPalette(true)}
+            >
+              <Search size={18} />
+            </button>
+            <button
+              type="button"
+              className="icon-button"
               aria-label="Ver atajos de teclado"
               title="Atajos de teclado"
               onClick={() => setShowShortcutsHelp(true)}
@@ -1961,6 +1978,20 @@ export default function App() {
           }}
           onDelete={async (id) => {
             if (await deleteTask(id)) setSelectedTaskId(null);
+          }}
+        />
+      )}
+      {showPalette && (
+        <CommandPalette
+          clients={data.clients || []}
+          tasks={data.tasks || []}
+          prospects={data.prospects || []}
+          onClose={() => setShowPalette(false)}
+          onPick={(item) => {
+            setShowPalette(false);
+            if (item.kind === "empresa") setSelectedClientId(item.id);
+            else if (item.kind === "tarea") setSelectedTaskId(item.id);
+            else setView("prospecting");
           }}
         />
       )}

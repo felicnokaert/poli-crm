@@ -6,6 +6,8 @@ import { loadJsxModule } from "./helpers/load-jsx.mjs";
 
 afterEach(cleanup);
 
+const openSearchTab = () => fireEvent.click(screen.getByRole("tab", { name: "Buscar con IA" }));
+
 describe("Prospeccion.jsx - interacción real", () => {
   const PROVINCES = { "14": "Córdoba", "30": "Entre Ríos" };
   const pickZone = (provinceCode, cityId) => {
@@ -99,6 +101,7 @@ describe("Prospeccion.jsx - interacción real", () => {
     };
     try {
       const snapshots = await mount({ clients: [], prospects: [], prospectSearches: [], prospectSwitches: {} }, { cities: CITIES, session: { access_token: "t" } });
+    openSearchTab();
       fireEvent.change(screen.getByLabelText("Familia de hoy"), { target: { value: "Poliuretano" } });
       pickZone("14", "1");
       fireEvent.click(screen.getByText("Investigar en la web (en la app)"));
@@ -127,6 +130,7 @@ describe("Prospeccion.jsx - interacción real", () => {
     };
     try {
       const snapshots = await mount({ clients: [], prospects: [], prospectSearches: [], prospectSwitches: {} }, { cities: CITIES, session: { access_token: "t" } });
+    openSearchTab();
       fireEvent.change(screen.getByLabelText("Familia de hoy"), { target: { value: "Penosil" } });
       pickZone("14", "1");
       fireEvent.click(screen.getByText("Buscar en Córdoba"));
@@ -140,10 +144,12 @@ describe("Prospeccion.jsx - interacción real", () => {
       assert.ok(screen.getByText("Córdoba · OpenStreetMap devolvió 2 (1 con teléfono, 0 con sitio web) · 2 nuevos, 0 repetidos · 3,4 s."));
       assert.equal(snapshots.at(-1).prospectSearches[0].ms, 3400);
       assert.equal(snapshots.at(-1).prospectSearches[0].endpoint, "overpass-api.de");
+      fireEvent.click(screen.getByRole("tab", { name: "Prospectos" }));
       fireEvent.click(screen.getByText(/Historial de búsquedas \(1\)/));
       assert.ok(screen.getByText(/Devolvió 2 · 1 con teléfono/));
 
       // misma zona otra vez: lo ya cargado no se duplica
+      openSearchTab();
       fireEvent.click(screen.getByText("Buscar en Córdoba"));
       await waitFor(() => assert.equal(snapshots.at(-1).prospectSearches.length, 2));
       assert.equal(snapshots.at(-1).prospects.length, 2);
@@ -161,6 +167,7 @@ describe("Prospeccion.jsx - interacción real", () => {
     globalThis.fetch = async () => ({ ok: false, json: async () => ({ error: reason, kind: "timeout", attempts: 2, ms: 26000 }) });
     try {
       const snapshots = await mount({ clients: [], prospects: [], prospectSearches: [] }, { cities: CITIES, session: { access_token: "t" } });
+    openSearchTab();
       fireEvent.change(screen.getByLabelText("Familia de hoy"), { target: { value: "Penosil" } });
       pickZone("14", "1");
       fireEvent.click(screen.getByText(/^Buscar en /));
@@ -169,6 +176,7 @@ describe("Prospeccion.jsx - interacción real", () => {
       assert.deepEqual([logged.status, logged.failed, logged.ms], ["error", true, 26000]);
       assert.equal(snapshots.at(-1).prospects.length, 0);
       assert.ok(screen.getAllByText(/Pendiente/).length > 0, "la zona sigue pendiente");
+      fireEvent.click(screen.getByRole("tab", { name: "Prospectos" }));
       fireEvent.click(screen.getByText(/Historial de búsquedas \(1\)/));
       assert.ok(screen.getAllByText((text) => text.includes("OpenStreetMap tardó demasiado")).length >= 2);
     } finally {
@@ -178,6 +186,7 @@ describe("Prospeccion.jsx - interacción real", () => {
 
   test("'Terminé esta zona' la deja agotada y deja de sugerirse", async () => {
     const snapshots = await mount({ clients: [], prospects: [], prospectSearches: [] }, { cities: CITIES, session: { access_token: "t" } });
+    openSearchTab();
     fireEvent.change(screen.getByLabelText("Familia de hoy"), { target: { value: "Penosil" } });
     pickZone("14", "1");
     fireEvent.click(screen.getByText("Terminé esta zona (por ahora)"));
@@ -278,6 +287,7 @@ describe("Prospeccion.jsx - investigación profunda", () => {
       return React.createElement(mod.Prospeccion, { data: state, setData, userEmail: "a@b.com", onOpenClient: () => {}, cities: [], provinces: {} });
     }
     render(React.createElement(Wrapper));
+    openSearchTab();
     fireEvent.change(screen.getByLabelText("Familia a investigar"), { target: { value: "Química" } });
     fireEvent.change(screen.getByLabelText("Alcance de la investigación"), { target: { value: "Santa Fe y Córdoba" } });
     fireEvent.click(screen.getByText("Preparar investigación"));
@@ -300,6 +310,7 @@ describe("Prospeccion.jsx - investigación profunda", () => {
       return React.createElement(mod.Prospeccion, { data: state, setData, userEmail: "a@b.com", onOpenClient: () => {}, cities: [], provinces: {} });
     }
     render(React.createElement(Wrapper));
+    openSearchTab();
     fireEvent.change(screen.getByLabelText("Resultado de Penosil"), { target: { value: "| Empresa | Ubicación | Evidencia |\n|---|---|---|\n| Ferrenet | Paraná, Entre Ríos | Fischer aerosol |" } });
     fireEvent.click(screen.getByText("Revisar resultado"));
     await waitFor(() => screen.getByText(/Confirmar importación \(1\)/));
@@ -394,6 +405,7 @@ describe("Prospeccion.jsx - pedido a Claude", () => {
       return React.createElement(mod.Prospeccion, { data: state, setData, userEmail: "a@b.com", onOpenClient: () => {}, cities: [], provinces: {}, requests });
     }
     render(React.createElement(Wrapper));
+    openSearchTab();
     fireEvent.click(screen.getByText("Pedir a Claude que investigue"));
     await waitFor(() => assert.equal(snapshots.at(-1).researchJobs.length, 1));
     assert.equal(snapshots.at(-1).researchJobs[0].remote, true);

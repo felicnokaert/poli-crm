@@ -705,3 +705,5 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 
 .team-row.wait-warn{border-left:4px solid #d9a400}
 .team-row.wait-late{border-left:4px solid #c0392b}
+
+.prospect-tabs{margin:4px 0 16px;width:fit-content;max-width:100%;overflow-x:auto}

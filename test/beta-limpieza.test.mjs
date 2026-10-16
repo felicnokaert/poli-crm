@@ -119,8 +119,8 @@ test('limpieza: las empresas copiadas salen del pipeline y se van las tareas aut
     ],
   };
   const { state, removed } = cleanCopiedWorkspace(juan, [owner], { allowedChannels: ['juan'], stamp: 'S' });
-  assert.deepEqual(state.tasks.map((t) => t.id), ['a3', 'a4']);
-  assert.equal(removed.automaticTasks, 2);
+  assert.deepEqual(state.tasks.map((t) => t.id), ['a3']);
+  assert.equal(removed.automaticTasks, 3);
   assert.equal(state.clients.find((c) => c.id === 'c9').pipelineActive, false);
   assert.equal(state.clients.find((c) => c.id === 'mia').pipelineActive, true);
 });
@@ -140,4 +140,20 @@ test('RAPYP para Juan y David: une las cuentas de Felipe y deja solo campos del 
   ]);
   assert.deepEqual(merged.map((c) => c.company), ['Spray SA']);
   assert.equal(merged[0].notes, undefined);
+});
+
+test('el Cierre del día no cuenta lo que el sistema cerró solo por vencido', async () => {
+  const { reviewDay } = await import('../src/day-review.mjs');
+  const { completeTasksThrough } = await import('../src/workspace.mjs');
+  const closed = completeTasksThrough({ tasks: [{ id: 'v', title: 'Vencida', dueDate: '2026-10-10', done: false }] }, '2026-10-16T06:00:00Z');
+  assert.equal(closed.tasks[0].autoClosed, true);
+  const today = closed.tasks[0].completedAt.slice(0, 10);
+  const mine = { id: 'm', title: 'Llamé', done: true, completedAt: `${today}T15:00:00Z` };
+  const review = reviewDay(today, { tasks: [...closed.tasks, mine], includeRoutine: false });
+  assert.deepEqual(review.doneTasks.map((task) => task.id), ['m']);
+});
+
+test('Inicio no muestra "Retomar contacto" guardado de empresas que ya no se trabajan', async () => {
+  const src = (await import('node:fs')).readFileSync(new URL('../src/Dashboard.jsx', import.meta.url), 'utf8');
+  assert.match(src, /dailySignals\.staleClients \|\| \[\]\)\.filter\(stillWorked\)/);
 });

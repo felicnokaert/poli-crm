@@ -93,7 +93,8 @@ export function completeTasksThrough(state = EMPTY_STATE, cutoff = '') {
     tasks: (state.tasks || []).map((task) => {
       const taskDate = task.dueDate || String(task.createdAt || '').slice(0, 10);
       return !task.done && taskDate && taskDate <= cutoffDate
-        ? { ...task, done: true, completedAt: stamp, updatedAt: stamp }
+        // autoClosed: la cerró el sistema por vencida, no la persona (el Cierre del día no la cuenta).
+        ? { ...task, done: true, completedAt: stamp, updatedAt: stamp, autoClosed: true }
         : task;
     }),
     tasksClosedThrough: cutoff,

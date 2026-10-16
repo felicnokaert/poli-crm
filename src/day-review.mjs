@@ -19,7 +19,8 @@ export function reviewDay(date, { planChecks = {}, tasks = [], includeRoutine = 
   const real = tasks.filter((task) => task.kind !== 'evento' && !task.deleted);
   const blocksDone = day.blocks.filter((block) => planChecks[routineKey(date, block.id)] === true);
   const blocksMissed = day.blocks.filter((block) => !block.extra && planChecks[routineKey(date, block.id)] !== true);
-  const doneTasks = real.filter((task) => task.done && localDate(task.completedAt) === date).sort(byPriority);
+  // Lo que el sistema cerró solo por vencido no es algo que "salió bien".
+  const doneTasks = real.filter((task) => task.done && !task.autoClosed && localDate(task.completedAt) === date).sort(byPriority);
   const pendingTasks = real.filter((task) => !task.done && task.dueDate === date).sort(byPriority);
   const postponedTasks = real.filter((task) => !task.done && (task.postponedFrom || []).includes(date)).sort(byPriority);
   const carried = real.filter((task) => !task.done && task.dueDate && task.dueDate < date).sort(byPriority);

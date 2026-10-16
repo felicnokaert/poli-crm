@@ -560,8 +560,12 @@ function DashboardBase({
   const repurchaseRadar = (signalsAreFresh ? dailySignals.repurchase : buildRepurchaseRadar(sales)).slice(0, 6);
   const coldQuotes = (signalsAreFresh ? dailySignals.coldQuotes : findColdQuotes(inbox, sales)).slice(0, 6);
   const hotLeads = (signalsAreFresh ? dailySignals.hotLeads : findStaleHotLeads(inbox)).slice(0, 6);
-  const staleClients = (signalsAreFresh ? dailySignals.staleClients : findStaleClients(clients, sales, inbox)).slice(0, 6);
-  const expiredQuotes = (signalsAreFresh ? dailySignals.expiredQuotes : findExpiredQuotes(clients, sales)).slice(0, 6);
+  // Lo guardado por el proceso de las 6 de la mañana puede nombrar empresas que después se limpiaron o
+  // se sacaron del pipeline (le pasó a Juan, 16/10): solo se muestran las que siguen activas hoy.
+  const workedClientIds = new Set(clients.filter((client) => client.pipelineActive !== false).map((client) => client.id));
+  const stillWorked = (item) => workedClientIds.has(item.clientId);
+  const staleClients = (signalsAreFresh ? (dailySignals.staleClients || []).filter(stillWorked) : findStaleClients(clients, sales, inbox)).slice(0, 6);
+  const expiredQuotes = (signalsAreFresh ? (dailySignals.expiredQuotes || []).filter(stillWorked) : findExpiredQuotes(clients, sales)).slice(0, 6);
   const overdueTasks = tasks.filter((task) => !task.done && task.kind !== "evento" && task.dueDate && task.dueDate < now);
   const dueTodayTasks = tasks.filter((task) => !task.done && task.dueDate === now);
   const latestByContact = [];

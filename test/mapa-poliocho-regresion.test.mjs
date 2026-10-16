@@ -30,7 +30,9 @@ test('los archivos del mapa de aplicadores (RAPYP) no cambiaron', () => {
 test('el mapa de POLIOCHO recibe solo las empresas, nunca los prospectos', () => {
   const app = readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8');
   const line = app.split('\n').find((item) => item.includes('<MapaCobertura '));
-  assert.ok(line && line.includes('clients={companyMapClients}') && /const companyMapClients = .*: data.clients;/.test(app));
+  assert.ok(line && line.includes('clients={companyMapClients}') && /const companyMapClients = useRapypClients\(\{[^}]*clients: data\.clients \}\);/.test(app));
+  const hook = readFileSync(new URL('../src/hooks/useRapypClients.js', import.meta.url), 'utf8');
+  assert.match(hook, /return usesFelipeMapData \? rapypClients \|\| EMPTY_ARRAY : clients;/);
   assert.ok(!/prospect/i.test(line));
   // Solo la pestaña Prospectos recibe prospectos; las de aplicadores y ventas reciben únicamente empresas.
   const lines = app.split('\n').filter((item) => item.includes('<MapaCobertura '));

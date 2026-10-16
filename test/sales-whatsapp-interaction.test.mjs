@@ -1,16 +1,6 @@
-// Tests de interacción real para Pipeline.jsx, Sales.jsx y WhatsAppInbox.jsx —
-// ver test/components-interaction.test.mjs para el patrón general (render con
-// @testing-library/react sobre jsdom real, fireEvent para disparar eventos de
-// usuario de verdad, no smoke test de renderToStaticMarkup).
-//
-// Board.jsx queda deliberadamente afuera: no se agregan tests porque, según
-// src/App.jsx (línea ~1645-1647), la vista "board" en realidad renderiza
-// `ProjectBoardGateway` (definido en src/Dashboard.jsx), no el componente
-// exportado por src/Board.jsx. Una búsqueda de "Board" en src/App.jsx confirma
-// que Board.jsx no se importa ni se usa desde ningún lado del código de
-// producción — es código muerto. Agregarle tests de interacción no aportaría
-// cobertura real (nadie ejercita ese código al usar la app) y quedaría como
-// mantenimiento sin beneficio.
+// Tests de interacción real para Sales.jsx y WhatsAppInbox.jsx: render con @testing-library/react
+// sobre jsdom real y fireEvent para disparar eventos de usuario de verdad.
+// (Pipeline.jsx se borró el 16/10: «Cuentas activas» ya no está en el menú.)
 import { test, describe, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import React from "react";
@@ -18,83 +8,6 @@ import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { loadJsxModule } from "./helpers/load-jsx.mjs";
 
 afterEach(cleanup);
-
-describe("Pipeline.jsx - interacción real", () => {
-  const clients = [
-    { id: "c1", company: "Envases del Sur SA", family: "envases", contact: "Juan", stage: "Preparación" },
-    { id: "c2", company: "Foam Norte SRL", family: "foam", contact: "Ana", stage: "Apertura" },
-  ];
-
-  test("arrastrar una tarjeta a otra columna llama a onChangeStage con el id y la nueva etapa", async () => {
-    const mod = await loadJsxModule("src/Pipeline.jsx");
-    const calls = [];
-    render(
-      React.createElement(mod.Pipeline, {
-        clients,
-        onOpenClient: () => {},
-        onChangeStage: (id, stage) => calls.push([id, stage]),
-        onDelete: () => {},
-        onAdd: () => {},
-      }),
-    );
-    const card = screen.getByText("Envases del Sur SA").closest("article");
-    assert.ok(card, "debería existir la tarjeta de Envases del Sur SA");
-    // La columna destino ("Apertura") se identifica por su <header><strong>.
-    const targetColumn = screen.getByText("Apertura").closest("section");
-    assert.ok(targetColumn, "debería existir la columna 'Apertura'");
-
-    fireEvent.dragStart(card);
-    fireEvent.drop(targetColumn);
-
-    assert.deepEqual(calls, [["c1", "Apertura"]]);
-  });
-
-  test("click en 'Cuenta' abre el formulario, y enviarlo llama a onAdd con el nombre y la etapa de esa columna", async () => {
-    const mod = await loadJsxModule("src/Pipeline.jsx");
-    const calls = [];
-    render(
-      React.createElement(mod.Pipeline, {
-        clients,
-        onOpenClient: () => {},
-        onChangeStage: () => {},
-        onDelete: () => {},
-        onAdd: (name, stage) => calls.push([name, stage]),
-      }),
-    );
-    // Todas las columnas comparten el mismo botón "Cuenta" - se toma el de la
-    // columna "Preparación" (la primera, ya que hay una tarjeta en ella).
-    const preparacionColumn = screen.getByText("Preparación").closest("section");
-    const addButton = preparacionColumn.querySelector("button.board-add-card");
-    fireEvent.click(addButton);
-
-    const input = preparacionColumn.querySelector("input[placeholder='Nombre de la empresa']");
-    assert.ok(input, "debería aparecer el input para el nombre de la empresa");
-    fireEvent.change(input, { target: { value: "Nueva Cuenta SA" } });
-    fireEvent.submit(preparacionColumn.querySelector("form.board-add-card-form"));
-
-    assert.deepEqual(calls, [["Nueva Cuenta SA", "Preparación"]]);
-  });
-
-  test("click en el botón de eliminar llama a onDelete con el id de esa cuenta, sin abrir la ficha", async () => {
-    const mod = await loadJsxModule("src/Pipeline.jsx");
-    const deleteCalls = [];
-    const openCalls = [];
-    render(
-      React.createElement(mod.Pipeline, {
-        clients,
-        onOpenClient: (id) => openCalls.push(id),
-        onChangeStage: () => {},
-        onDelete: (id) => deleteCalls.push(id),
-        onAdd: () => {},
-      }),
-    );
-    // Hay una tarjeta por cliente - tomamos el primer botón "Eliminar cuenta"
-    // (el de Envases del Sur SA, que va primero en `clients`).
-    fireEvent.click(screen.getAllByLabelText("Eliminar cuenta")[0]);
-    assert.deepEqual(deleteCalls, ["c1"]);
-    assert.deepEqual(openCalls, [], "no debería abrir la ficha del cliente al eliminar");
-  });
-});
 
 describe("Sales.jsx - interacción real", () => {
   // Sales.jsx es grande (objetivos, unidades de negocio, importación de PDF,

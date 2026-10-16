@@ -736,3 +736,10 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .my-day-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
 .my-day-grid h4{margin:0 0 6px;font-size:.85rem;color:var(--brand-gray);text-transform:uppercase;letter-spacing:.04em}
 .my-day-grid ul{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+
+@media (max-width: 1050px) {
+  .academy-hero { min-width: 0; }
+  .academy-hero > div { min-width: 0; max-width: 100%; }
+  .academy-hero .segmented { width: 100%; box-sizing: border-box; }
+  .academy-hero .segmented button { flex: 0 0 auto; white-space: nowrap; }
+}

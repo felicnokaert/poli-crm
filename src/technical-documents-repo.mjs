@@ -111,34 +111,35 @@ export async function updateTechnicalDocumentSourceFile(id, sourceFile) {
 // estado ni dispara historial de validación - es contenido, no una decisión
 // de gobernanza. Se usa tanto al importar como para adjuntar/reemplazar el
 // PDF de una ficha que ya existía sin archivo.
-export async function attachTechnicalDocumentFile(id, file) {
+export async function attachTechnicalDocumentFile(id, file, extra = {}) {
   assertOnlineConfigured();
-  if (!/\.pdf$/i.test(file.name)) throw new Error(`"${file.name}" no es un PDF - el bucket solo acepta PDF.`);
+  const { contentTypeFor, extensionOf } = await import('./document-text.mjs');
+  const isPdf = extensionOf(file.name) === 'pdf';
   const path = `${id}/${Date.now()}-${safeStorageFileName(file.name)}`;
   // Forzamos 'application/pdf' siempre, sin mirar file.type: eligiendo una
   // carpeta entera (vs. un archivo suelto) algunos navegadores/SO reportan
   // un MIME genérico (ej. application/octet-stream) en vez de application/pdf
   // - el bucket lo rechaza (allowed_mime_types) y la ficha queda "sin
   // adjuntar" en silencio, sin ningún aviso claro de por qué.
+  // Word, Excel y demás van con su tipo real. Si el bucket no los acepta (puede tener una lista de
+  // tipos permitidos), el documento igual queda con su texto para que el copiloto aprenda de él: solo
+  // falta el archivo original para descargar.
   const { error: uploadError } = await supabase.storage
     .from(STORAGE_BUCKET)
-    .upload(path, file, { upsert: true, contentType: 'application/pdf' });
-  if (uploadError) throw uploadError;
+    .upload(path, file, { upsert: true, contentType: isPdf ? 'application/pdf' : contentTypeFor(file.name) });
+  if (uploadError && isPdf) throw uploadError;
   let extractedText = null;
   try {
-    // Import dinamico a proposito (mismo patron que Sales.jsx con las
-    // facturas): pdfjs-dist pesa ~1.7MB entre el worker y el parser de
-    // texto. Si esto fuera un import estatico, ese peso se cargaria apenas
-    // alguien abre Base tecnica, aunque nunca suba un PDF - confirmado con
-    // Network en el navegador antes de este cambio.
-    const { extractPdfText } = await import('./pdf-text.js');
-    extractedText = sanitizeExtractedText(await extractPdfText(file));
+    // Import dinamico a proposito: pdfjs-dist pesa ~1.7MB y solo se baja si
+    // alguien sube un PDF (ver document-text.mjs).
+    const { extractDocumentText } = await import('./document-text.mjs');
+    extractedText = sanitizeExtractedText(await extractDocumentText(file)) || null;
   } catch {
     extractedText = null;
   }
   const { data, error } = await supabase
     .from('technical_documents')
-    .update({ storage_path: path, extracted_text: extractedText })
+    .update({ ...(uploadError ? {} : { storage_path: path }), extracted_text: extractedText, ...extra })
     .eq('id', id)
     .select()
     .maybeSingle();
@@ -187,4 +188,32 @@ export async function fetchTechnicalDocumentHistory(documentId) {
     .order('changed_at', { ascending: true });
   if (error) throw error;
   return (data || []).map(historyFromRow);
+}
+
+// Subida desde Base técnica (technical-upload-plan.mjs ya decidió nombres y conflictos):
+// crea cada documento nuevo con su ruta final y le adjunta el archivo con su texto.
+export async function createUploadedDocuments(entries = []) {
+  assertOnlineConfigured();
+  const results = [];
+  for (const { document, file } of entries) {
+    const { data, error } = await supabase.from('technical_documents').insert(toRow(document)).select().maybeSingle();
+    if (error) { results.push({ document, error }); continue; }
+    try {
+      results.push({ document: await attachTechnicalDocumentFile(data.id, file) });
+    } catch (attachError) {
+      results.push({ document: fromRow(data), error: attachError });
+    }
+  }
+  return results;
+}
+
+// "Reemplazar": el mismo documento (misma fila, mismo historial) pasa a tener el archivo nuevo. Si
+// estaba vigente, primero vuelve a "inventariado" (el contenido cambió y hay que validarlo de nuevo; y
+// RLS solo deja tocar un documento vigente al administrador).
+export async function replaceTechnicalDocumentFile(existing, file, { sha256 = null, sizeBytes = null } = {}) {
+  assertOnlineConfigured();
+  if (existing.status === 'vigente') {
+    await updateTechnicalDocumentStatus(existing.id, { status: 'inventariado', notes: 'Se reemplazó el archivo por uno nuevo: falta validarlo otra vez.' });
+  }
+  return attachTechnicalDocumentFile(existing.id, file, { sha256, size_bytes: sizeBytes });
 }

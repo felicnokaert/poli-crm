@@ -829,3 +829,16 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .data-cards article > select + button { margin-left: 0; }
 .data-cards article .modal-actions { flex-wrap: wrap; justify-content: flex-start; gap: 8px; margin-top: auto; padding-top: 8px; }
 .data-cards article .modal-actions > * { white-space: nowrap; }
+
+/* Base técnica: subir fichas y documentos (16/10). */
+.technical-upload-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; padding: 14px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-panel-bg); }
+.technical-upload-form > p, .technical-upload-form > .check, .technical-upload-form > .import-box-actions { grid-column: 1 / -1; margin: 0; }
+.technical-upload-form label { display: grid; gap: 6px; font-size: 12px; font-weight: 700; }
+.technical-upload-form label.check { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.technical-upload-review { margin-top: 14px; display: grid; gap: 10px; }
+.technical-upload-review > p { margin: 0; }
+.technical-upload-conflicts { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.technical-upload-conflicts li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); }
+.technical-upload-conflicts li > div:first-child { display: grid; gap: 2px; min-width: 0; }
+.technical-upload-conflicts .segmented button { white-space: nowrap; }
+@media (max-width: 760px) { .technical-upload-form { grid-template-columns: 1fr; } }

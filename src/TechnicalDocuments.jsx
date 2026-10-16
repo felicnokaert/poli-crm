@@ -2,6 +2,7 @@ import { memo, useEffect, useState } from "react";
 import { FileCheck2 } from "lucide-react";
 import { useConfirm } from "./ConfirmDialog";
 import { Empty, Loading } from "./ui-primitives";
+import { TechnicalUpload } from "./TechnicalUpload.jsx";
 
 const TECHNICAL_DOCUMENT_STATUS_LABELS = {
   inventariado: "Inventariado",
@@ -389,14 +390,15 @@ function TechnicalDocumentsAdminBase({ session }) {
   return (
     <div className="content-stack">
       <ProductRecommendationQuery documents={documents} />
+      <TechnicalUpload documents={documents} onDone={load} />
       <section className="panel">
         <div className="panel-head">
           <div>
             <span className="eyebrow">Catálogo compartido con el PDF adjunto</span>
             <h2>Base técnica</h2>
             <p>
-              Documentos importados desde Drive, con su PDF real guardado acá
-              adentro. Solo Felipe puede marcar un documento "vigente" - hasta
+              Fichas y documentos (de Drive o subidos acá arriba), con el
+              archivo real guardado acá adentro. Solo Felipe puede marcar un documento "vigente" - hasta
               entonces, ninguna sugerencia del copiloto puede citarlo.
             </p>
           </div>
@@ -468,7 +470,7 @@ function TechnicalDocumentsAdminBase({ session }) {
             moveDocumentToFolder={moveDocumentToFolder}
           />
         ) : (
-          <Empty text="No hay documentos importados todavía. Subí fichas desde Datos → Importar fichas técnicas." />
+          <Empty text="No hay documentos importados todavía. Subilas con «Subir fichas y documentos», acá arriba." />
         )}
       </section>
     </div>

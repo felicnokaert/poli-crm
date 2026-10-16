@@ -750,3 +750,8 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .local-add{cursor:pointer}
 .local-form{display:inline-flex;gap:6px;align-items:center}
 .local-form input{padding:2px 8px;font-size:.78rem;width:130px}
+
+/* Academia: con 8 pestañas la barra va debajo del título en cualquier ancho. */
+.academy-hero { flex-direction: column; align-items: flex-start; }
+.academy-hero .segmented { width: 100%; max-width: 100%; flex-wrap: wrap; overflow-x: visible; gap: 2px; }
+@media (max-width: 760px) { .academy-hero .segmented { flex-wrap: nowrap; overflow-x: auto; } }

@@ -14,11 +14,11 @@ export const SELLER_PROFILES = [
     receives: 'Consultas derivadas y casos que necesitan una decisión comercial.',
     risk: 'Que todo pase por ella y se convierta en cuello de botella.',
     assist: [
-      'Vista "Para seguimiento": conversaciones respondidas sin novedades de 3 a 14 días.',
-      'Consultas con más de 24 h de espera, marcadas en rojo.',
-      'Carga por persona en la Bandeja del equipo para repartir mejor.',
+      'Cierre del día: qué quedó sin hacer y qué se postergó, para repartir mejor.',
+      'Búsqueda global (Ctrl+K) para encontrar al instante empresas, tareas y prospectos.',
+      'Directorio de empresas compartido, para derivar sin buscar.',
     ],
-    habit: 'Revisar cada mañana las consultas en rojo y repartir las que no tienen dueño.',
+    habit: 'Cada mañana, revisar Cuentas activas y el Cierre del día del equipo.',
   },
   {
     id: 'brenda',
@@ -28,11 +28,11 @@ export const SELLER_PROFILES = [
     receives: 'Consultas de tiendas online, mayormente de público general.',
     risk: 'Casi no prospecta ni hace posventa: las consultas se enfrían sin seguimiento y se pierden ventas grandes.',
     assist: [
-      'Respuesta sugerida en la Bandeja para contestar rápido y con el mismo tono.',
-      'Vista "Para seguimiento" para retomar a quien no volvió a escribir.',
+      'Respuestas tipo en Academia (Biblioteca y práctica) para contestar rápido y con el mismo tono.',
+      'Tareas con fecha de seguimiento: cada consulta sin respuesta queda recordada.',
       'Rutina de posventa: preguntar a los 7 días cómo les fue con el producto.',
     ],
-    habit: 'Antes de cerrar el día, pasar por "Para seguimiento" y retomar al menos 3 conversaciones.',
+    habit: 'Antes de cerrar el día, retomar al menos 3 conversaciones que quedaron sin respuesta.',
   },
   {
     id: 'ezequiel',
@@ -42,9 +42,9 @@ export const SELLER_PROFILES = [
     receives: 'Consultas técnicas y de precio de sus dos marcas.',
     risk: 'Igual que Brenda: poco seguimiento, y cada cotización sin respuesta es una venta que se escapa.',
     assist: [
-      'Reparto automático de lo que menciona Resinplast, Imperpur, fibra de vidrio o gel coat.',
-      'Respuesta sugerida con datos a validar antes de enviar (precio, ficha, stock).',
-      'Recordatorio de seguimiento a cotizaciones sin respuesta.',
+      'Buscador de la Academia: productos, fichas técnicas y usos de Resinplast e Imperpur en un solo lugar.',
+      'Respuestas tipo con datos a validar antes de enviar (precio, ficha, stock).',
+      'Radar de cotizaciones frías en Inicio, para no dejar escapar presupuestos sin respuesta.',
     ],
     habit: 'Toda cotización enviada queda con una fecha de seguimiento a 3 días.',
   },
@@ -56,11 +56,11 @@ export const SELLER_PROFILES = [
     receives: 'Consultas de máquinas, repuestos y proyectado, más lo que se deriva de arriba.',
     risk: 'Sabe todo y vende, pero opera sobre muchas cosas a la vez: lo comercial puede quedar relegado.',
     assist: [
-      'Reparto automático de máquina, repuesto, Purmac, proyectar e inyección.',
-      'Batalla de competencia (Academia) para responder cuando preguntan "¿por qué ustedes?".',
-      'Resumen de carga por persona para decidir qué delegar.',
+      'Competencia en Academia: cómo hablar frente a Satch, Spinna o Integral cuando preguntan "¿por qué ustedes?".',
+      'Mapa de aplicadores para ver dónde hay cobertura y dónde falta.',
+      'Cierre del día para ver de un vistazo qué quedó pendiente.',
     ],
-    habit: 'Una revisión corta al día de la Bandeja: solo lo que está en rojo.',
+    habit: 'Una revisión corta al día de Cuentas activas: solo lo que lleva más de 3 días sin movimiento.',
   },
   {
     id: 'david',
@@ -70,10 +70,10 @@ export const SELLER_PROFILES = [
     receives: 'Lo que decide derivar; la idea es que delegue más y se ocupe menos del día a día.',
     risk: 'Que las consultas le lleguen directo y se acumulen sin pasar por el reparto.',
     assist: [
-      'Derivar desde la Bandeja a quien corresponda, con una nota.',
-      'Vista de carga y de espera para ver el estado sin entrar en cada chat.',
+      'Directorio compartido y Cuentas activas para ver el estado sin entrar en cada chat.',
+      'Cierre del día para revisar lo pendiente en un minuto y delegar lo demás.',
     ],
-    habit: 'Derivar apenas llega la consulta y volver a mirar solo lo que está en rojo.',
+    habit: 'Derivar apenas llega la consulta y volver a mirar solo lo que sigue sin respuesta.',
   },
 ];
 

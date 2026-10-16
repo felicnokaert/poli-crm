@@ -298,12 +298,11 @@
 :root[data-theme="dark"] .routine-streak { color: #b4b5b9; }
 :root[data-theme="dark"] .calendar-cell em { color: #b4b5b9; }
 :root[data-theme="dark"] .calendar-time { color: #b4b5b9; }
-
-:root[data-theme="dark"] body, .login-shell { background: #121214; }
-:root[data-theme="dark"] .commercial-guidance, .prospect-glass::before { background: #1c1c1f; }
+:root[data-theme="dark"] body, :root[data-theme="dark"] .login-shell { background: #121214; }
+:root[data-theme="dark"] .commercial-guidance, :root[data-theme="dark"] .prospect-glass::before { background: #1c1c1f; }
 :root[data-theme="dark"] .segmented { background: #2a2a2e; }
 :root[data-theme="dark"] .segmented button.selected { background: #3a3a40; color: #fff; }
-:root[data-theme="dark"] .sidebar, .sidebar * { color-scheme: dark; }
+:root[data-theme="dark"] .sidebar, :root[data-theme="dark"] .sidebar * { color-scheme: dark; }
 :root[data-theme="dark"] .modal-backdrop { background: rgba(0,0,0,.6); }
 :root[data-theme="dark"] main { color: #e7e7e9; }
 :root[data-theme="dark"] a { color: #f0a0a4; }
@@ -607,12 +606,11 @@
   :root:not([data-theme="light"]) .routine-streak { color: #b4b5b9; }
   :root:not([data-theme="light"]) .calendar-cell em { color: #b4b5b9; }
   :root:not([data-theme="light"]) .calendar-time { color: #b4b5b9; }
-  
-  :root:not([data-theme="light"]) body, .login-shell { background: #121214; }
-  :root:not([data-theme="light"]) .commercial-guidance, .prospect-glass::before { background: #1c1c1f; }
+  :root:not([data-theme="light"]) body, :root:not([data-theme="light"]) .login-shell { background: #121214; }
+  :root:not([data-theme="light"]) .commercial-guidance, :root:not([data-theme="light"]) .prospect-glass::before { background: #1c1c1f; }
   :root:not([data-theme="light"]) .segmented { background: #2a2a2e; }
   :root:not([data-theme="light"]) .segmented button.selected { background: #3a3a40; color: #fff; }
-  :root:not([data-theme="light"]) .sidebar, .sidebar * { color-scheme: dark; }
+  :root:not([data-theme="light"]) .sidebar, :root:not([data-theme="light"]) .sidebar * { color-scheme: dark; }
   :root:not([data-theme="light"]) .modal-backdrop { background: rgba(0,0,0,.6); }
   :root:not([data-theme="light"]) main { color: #e7e7e9; }
   :root:not([data-theme="light"]) a { color: #f0a0a4; }

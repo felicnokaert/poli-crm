@@ -255,6 +255,7 @@ export default function App() {
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
   const [theme, setTheme] = useState(readTheme);
+  const [clientsTab, setClientsTab] = useState("empresas");
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [taskForm, setTaskForm] = useState(blankTask);
   const [editingInteractionId, setEditingInteractionId] = useState(null);
@@ -1453,8 +1454,7 @@ export default function App() {
       ["conversations", "Historial", MessageCircle],
     ]],
     ["Cartera", [
-      ["clients", "Empresas", Building2],
-      ["contacts", "Contactos", Users],
+      ["clients", "Empresas y contactos", Building2],
       ["map", "Mapa", MapPin],
     ]],
     ["Aprender", [
@@ -1817,6 +1817,24 @@ export default function App() {
           <ProjectBoardGateway />
         )}
         {view === "clients" && (
+          <div className="segmented routine-tabs" role="tablist" aria-label="Empresas y contactos" style={{ marginBottom: 12, width: "fit-content" }}>
+            {[["empresas", "Empresas"], ["contactos", "Personas de contacto"]].map(([key, label]) => (
+              <button key={key} type="button" role="tab" aria-selected={clientsTab === key} className={clientsTab === key ? "selected" : ""} onClick={() => setClientsTab(key)}>{label}</button>
+            ))}
+          </div>
+        )}
+        {view === "clients" && clientsTab === "contactos" && (
+          <Suspense fallback={<Splash text="Cargando contactos…" />}>
+            <Contacts
+              clients={data.clients}
+              query={query}
+              setQuery={setQuery}
+              searchInputRef={searchInputRef}
+              onOpenClient={setSelectedClientId}
+            />
+          </Suspense>
+        )}
+        {view === "clients" && clientsTab === "empresas" && (
           <Suspense fallback={<Splash text="Cargando clientes…" />}>
             <Clients
               clients={filteredClients}
@@ -1841,17 +1859,6 @@ export default function App() {
         {view === "prospecting" && (
           <Suspense fallback={<Splash text="Cargando prospección…" />}>
             <Prospeccion data={data} setData={setData} userEmail={session?.user?.email} session={session} onOpenClient={setSelectedClientId} requests={prospectRequests} supabase={supabase} />
-          </Suspense>
-        )}
-        {view === "contacts" && (
-          <Suspense fallback={<Splash text="Cargando contactos…" />}>
-            <Contacts
-              clients={data.clients}
-              query={query}
-              setQuery={setQuery}
-              searchInputRef={searchInputRef}
-              onOpenClient={setSelectedClientId}
-            />
           </Suspense>
         )}
         {view === "academy" && (

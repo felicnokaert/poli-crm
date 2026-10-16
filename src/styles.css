@@ -177,7 +177,7 @@ main { padding: 30px 36px 56px; min-width: 0; }
 @media (max-width: 850px) { .opportunity-row { grid-template-columns: 1fr auto; }.opportunity-row > div:last-child { grid-column: 1 / -1; text-align: left; }.product-line { grid-template-columns: 1fr 1fr; }.product-line label:first-child, .product-warning { grid-column: 1 / -1; } }
 .decision-buttons, .processed-actions { padding-top: 6px; gap: 6px; }
 .channel-strip { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin-bottom: 22px; }.channel-card { background: white; padding: 15px 18px; border: 1px solid #dfe5e1; border-radius: 14px; gap: 12px; }.channel-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }.channel-card strong, .channel-card span { display: block; }.channel-card div span { color: #72847f; font-size: 12px; margin-top: 3px; }.status { margin-left: auto; color: var(--color-success); background: #e8f5ef; border-radius: var(--radius-pill); padding: 5px 9px; font-size: 11px; font-weight: 700; white-space: nowrap; }.status.waiting { color: #8b671e; background: #fff3d9; }.status.offline { color: #8a5148; background: #f8e9e6; }
-.content-stack { display: grid; gap: 14px; }.metric-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }.sales-metric-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.content-stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }.metric-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }.sales-metric-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .automation-note { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: var(--radius-lg); background: var(--color-success-bg); color: var(--color-success); font-size: 12px; font-weight: 600; }.automation-note svg { flex-shrink: 0; }.automation-note.is-quiet { background: #eef1ef; color: var(--color-text-faint); }.automation-note.is-warning { background: var(--color-danger-bg); color: var(--color-danger-text); }
 @media (max-width: 1100px) { .sales-metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .metric-grid, .sales-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }.metric-card, .panel { background: var(--color-white); border: 1px solid #dfe5e1; border-radius: 16px; }.metric-card { padding: 18px; display: grid; grid-template-columns: 1fr auto; gap: 8px; }.metric-card svg { color: var(--color-text-gray); }.metric-card span { grid-column: 1; font-size: 13px; color: var(--color-text-body); }.metric-card strong { grid-column: 1; font: 800 28px 'Manrope'; }.metric-card small { grid-column: 1 / -1; color: #82908c; }
@@ -922,3 +922,11 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 
 /* Celular: lo que quedaba chico para el dedo (16/10). */
 @media (max-width: 760px) { .local-chip { min-height: 32px; padding-block: 6px; } main .link-button { padding: 6px 4px; } }
+
+/* Celular: todo lo que se toca mide al menos 40 px (ronda 3 de QA: había 42 botones más chicos que un dedo). */
+@media (max-width: 760px) {
+  main .link-button, main .day-mode-candidate-label { min-height: 40px; min-width: 40px; display: inline-flex; align-items: center; justify-content: center; }
+  main .icon-button { min-width: 40px; min-height: 40px; display: inline-grid; place-items: center; }
+  main a.secondary, main a.primary, main button:not(.link-button):not(.icon-button):not(.day-mode-candidate-label):not(.task-check) { min-height: 40px; }
+  main .task-check { flex: 0 0 40px; width: 40px; height: 40px; }
+}

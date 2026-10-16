@@ -14,13 +14,11 @@ function responseRecorder() {
   };
 }
 
-test('health exposes configuration state without secret values', async () => {
+test('health sin sesión solo dice que está vivo (no muestra integraciones ni consulta la base)', async () => {
   const response = responseRecorder();
-  await health({}, response);
+  await health({ headers: {} }, response);
   assert.equal(response.statusCode, 200);
-  assert.equal(response.payload.ok, true);
-  assert.deepEqual(Object.keys(response.payload), ['ok', 'database', 'databaseReachable', 'metaWebhook', 'generalChannel', 'penosilChannel', 'browserBridge', 'simulator']);
-  assert.equal(response.payload.databaseReachable, false);
+  assert.deepEqual(response.payload, { ok: true });
 });
 
 test('simulator rejects requests without its bearer token', async () => {
@@ -68,10 +66,9 @@ test('health.js despacha a la logica de readiness cuando la URL pedida es /api/r
 
 test('health.js sigue respondiendo su propio chequeo cuando la URL pedida es /api/health', async () => {
   const response = responseRecorder();
-  await health({ url: '/api/health' }, response);
+  await health({ url: '/api/health', headers: {} }, response);
   assert.equal(response.statusCode, 200);
-  assert.equal(response.payload.ok, true);
-  assert.equal(response.payload.databaseReachable, false);
+  assert.deepEqual(response.payload, { ok: true });
 });
 
 test('permanent inbox deletion requires an authenticated user', async () => {

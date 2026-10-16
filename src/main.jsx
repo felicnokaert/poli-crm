@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { ConfirmProvider } from './ConfirmDialog';
+import { ErrorBoundary } from './ErrorBoundary.jsx';
 import './styles.css';
 import './theme-dark.css';
 import { applyTheme, readTheme } from './theme.mjs';
@@ -10,9 +11,11 @@ applyTheme(readTheme());
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <ConfirmProvider>
-      <App />
-    </ConfirmProvider>
+    <ErrorBoundary full>
+      <ConfirmProvider>
+        <App />
+      </ConfirmProvider>
+    </ErrorBoundary>
   </React.StrictMode>,
 );
 

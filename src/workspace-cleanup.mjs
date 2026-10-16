@@ -64,6 +64,16 @@ export function cleanCopiedWorkspace(state = {}, ownerStates = [], { allowedChan
       return { ...kept, pipelineActive: false, source: 'Directorio del equipo', updatedAt: stamp };
     });
     if (clientsCleaned) removed.clientPrivateData = clientsCleaned;
+    // Empresas que se copiaron de Felipe y que él después borró o fusionó: ya no existen en su cuenta,
+    // así que se sacan también de la copia.
+    const ownerDeleted = new Set(ownerStates.flatMap((item) => item?.deletedRecordIds?.clients || []));
+    const gone = next.clients.filter((client) => ownerDeleted.has(client?.id));
+    if (gone.length) {
+      next.clients = next.clients.filter((client) => !ownerDeleted.has(client?.id));
+      const base = next.deletedRecordIds || deletedRecordIds;
+      next.deletedRecordIds = { ...base, clients: [...new Set([...(base.clients || []), ...gone.map((client) => client.id)])].sort() };
+      removed.deletedClients = gone.length;
+    }
   }
 
   // Tareas automáticas que el proceso diario creó por algo copiado de Felipe (sus empresas o los chats
@@ -72,8 +82,12 @@ export function cleanCopiedWorkspace(state = {}, ownerStates = [], { allowedChan
   // Solo números de WhatsApp (los nombres sueltos coincidirían de más).
   const ownerContactKeys = new Set(owner('inbox').map((event) => String(event?.customer_wa_id || '').replace(/\D/g, '')).filter((digits) => digits.length >= 8));
   // Hechas o no: también las que el sistema cerró solo, que aparecían en su Cierre del día.
+  // También las de "Retomar contacto" / cotización vencida de empresas que la persona no trabaja (fuera
+  // de su pipeline o que ya no están): las que quedaban en el Cierre del día de Juan.
+  const workedIds = new Set((Array.isArray(next.clients) ? next.clients : []).filter((client) => client?.pipelineActive !== false).map((client) => client.id));
+  const aboutUnworkedClient = (task) => ['auto-stale-client', 'auto-expired-quote'].includes(task?.source) && !workedIds.has(task.clientId || task.autoKey);
   const autoFromOwner = (task) => String(task?.source || '').startsWith('auto-')
-    && (ownerClientIds.has(task.clientId) || ownerClientIds.has(task.autoKey) || [...ownerContactKeys].some((key) => String(task.autoKey || '').includes(key)));
+    && (ownerClientIds.has(task.clientId) || ownerClientIds.has(task.autoKey) || aboutUnworkedClient(task) || [...ownerContactKeys].some((key) => String(task.autoKey || '').includes(key)));
   const tasksNow = Array.isArray(next.tasks) ? next.tasks : [];
   const autoCopied = tasksNow.filter(autoFromOwner);
   if (autoCopied.length) {

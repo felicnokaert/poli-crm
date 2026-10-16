@@ -8,6 +8,7 @@ const LABELS = {
   businessUnits: "unidades de negocio", prospects: "prospectos", prospectSearches: "búsquedas de prospectos",
   researchJobs: "investigaciones", mergeLogs: "fusiones", duplicateReviewDecisions: "decisiones de duplicados",
   clientPrivateData: "empresas tuyas (quedan como directorio, sin tus notas ni compras y fuera de su pipeline)",
+  deletedClients: "empresas que vos ya borraste o fusionaste",
   automaticTasks: "tareas automáticas («Retomar contacto», «Responder a…») creadas por tus empresas o chats",
   inbox: "chats de otros números en Por revisar", ignoredWhatsAppContacts: "contactos marcados como no comerciales",
   dismissedInboxEventIds: "mensajes descartados", planChecks: "marcas de tu rutina",

@@ -29,6 +29,11 @@ Búsqueda global Ctrl+K; tarjeta Mi día en Inicio; menú en 5 grupos; Prospecci
 - Para probar la vista del resto del equipo en localhost: `localStorage.setItem('poliplast-simulate-member','1')` y recargar.
 - Pendiente: cotizador integrado al CRM (hoy es una aplicación separada, ver docs/ADR-001).
 
+## Arreglos beta (16/10, tarde)
+- Bug corregido: al iniciar sesión con otra cuenta sin cerrar la anterior, el espacio de Felipe se guardaba en el de esa cuenta (remoteReady ahora es por cuenta; la copia local lleva dueño en `poliplast-sales-copilot-v1-owner`). Limpieza con vista previa: Más → Datos → "Datos tuyos en otras cuentas" (api/admin-users.js action 'cleanup', src/workspace-cleanup.mjs: saca registros con el mismo id que los de Felipe y los marca borrados; las empresas quedan sin sus datos privados).
+- Mapa RAPYP solo para Felipe, Juan y David (canSeeRapypMap). El directorio compartido lleva sourceType (clasificación de Felipe) y tipoCliente resuelto (aplicador) para que el resto vea su clasificación.
+- El plan Trello de Felipe se descarga solo en su cuenta (import dinámico); el resto tiene "Importar tareas de Trello" (JSON exportado de su tablero) en Tareas. Memoria de precios: todo es + IVA.
+
 ## Pendiente / próximos pasos
 - Usuarios registrados (16/10): panel solo para Felipe en Más → Datos ("Usuarios registrados": nombre, mail, fechas; borrar). Lista por función SQL admin_list_users() (solo admin de canales); borrado por api/admin-users.js con clave de servicio (no borra administradores ni a sí mismo; su espacio de trabajo queda guardado). El alta pide nombre y apellido (user_metadata.full_name). Las cuentas anteriores sin nombre lo toman de Perfil o de Academia → Equipo.
 - Aprobación de accesos (decidido 16/10): cuando TODO el equipo ya se haya registrado, activar que cada cuenta nueva quede "pendiente" hasta que Felipe la apruebe (solo Felipe aprueba, bloquea y revoca). Diseño: tabla crm_access (email, estado), is_poliplast_crm_user() = admins fijos O (dominio @grupopoliplast.com.ar Y aprobado); pre-aprobar a todos los ya registrados; pantalla "Tu cuenta espera aprobación"; panel Más → Datos → Accesos. Probar en localhost antes de publicar (riesgo de dejar gente afuera). Antes: activar protección de contraseñas filtradas en Supabase.

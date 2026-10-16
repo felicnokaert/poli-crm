@@ -25,7 +25,7 @@ export function SharedDirectory({ supabase, session, clients, setClients }) {
         const { error } = await supabase.from("shared_companies").upsert(rows.slice(index, index + CHUNK));
         if (error) throw error;
       }
-      setMessage(`Publicaste ${rows.length} empresas para el equipo (solo nombre, rubro, ubicación y contactos).`);
+      setMessage(`Publicaste ${rows.length} empresas para el equipo (nombre, rubro, ubicación, contactos y tu clasificación).`);
       await loadCount();
     } catch {
       setMessage("No se pudo publicar. Probá de nuevo en un momento.");
@@ -44,8 +44,11 @@ export function SharedDirectory({ supabase, session, clients, setClients }) {
         if (!data || data.length < 1000) break;
       }
       const result = mergeDirectory(clients, records);
-      if (result.added) setClients(result.clients);
-      setMessage(result.added ? `Se sumaron ${result.added} empresas del equipo a tu lista.` : "Ya tenés todas las empresas del equipo.");
+      if (result.added || result.updated) setClients(result.clients);
+      const parts = [];
+      if (result.added) parts.push(`Se sumaron ${result.added} empresas del equipo a tu lista.`);
+      if (result.updated) parts.push(`${result.updated} ya las tenías y se les sumó la clasificación (cliente, prospecto, aplicador…).`);
+      setMessage(parts.length ? parts.join(" ") : "Ya tenés todas las empresas del equipo, con su clasificación.");
     } catch {
       setMessage("No se pudieron traer las empresas del equipo.");
     }
@@ -59,7 +62,7 @@ export function SharedDirectory({ supabase, session, clients, setClients }) {
         <div>
           <span className="eyebrow">Beta · compartido</span>
           <h2><Users size={18} /> Directorio de empresas del equipo</h2>
-          <p>Las empresas, el mapa y los contactos sirven para todos: cualquiera puede sumar las suyas, y solo Felipe puede borrar del directorio. Lo que es de cada persona (ventas, comisiones, notas, números, etapas) no se comparte nunca.</p>
+          <p>Las empresas, el mapa y los contactos sirven para todos: cualquiera puede sumar las suyas, y solo Felipe puede borrar del directorio. Viaja también la clasificación de cada empresa (cliente, prospecto, no corresponde, aplicador…). Lo que es de cada persona (ventas, comisiones, notas, números, etapas) no se comparte nunca.</p>
         </div>
       </div>
       <p className="muted">{available === null ? "Consultando…" : `Hay ${available} empresas en el directorio del equipo.`}</p>

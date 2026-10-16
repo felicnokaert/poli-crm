@@ -40,3 +40,9 @@ test('tareas del día y grilla del mes', () => {
   assert.equal(grid.length % 7, 0);
   assert.equal(grid.indexOf('2026-10-01'), 3, 'el 1/10/2026 es jueves');
 });
+
+test('los feriados del calendario de todos coinciden con los del plan', async () => {
+  const calendar = await import('../src/plan-calendar.mjs');
+  assert.deepEqual(calendar.PLAN_HOLIDAYS, PLAN_HOLIDAYS);
+  assert.deepEqual(calendar.PLAN_LIGHT_DAYS, PLAN_LIGHT_DAYS);
+});

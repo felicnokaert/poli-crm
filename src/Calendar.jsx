@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { CalendarPlus, ChevronLeft, ChevronRight, Download, ExternalLink } from "lucide-react";
 import { monthGrid, tasksForDay } from "./trello-plan-import.mjs";
 import { routineForDate, specialsForDate } from "./routine.mjs";
-import { PLAN_HOLIDAYS, PLAN_LIGHT_DAYS } from "./trello-plan.mjs";
+import { PLAN_HOLIDAYS, PLAN_LIGHT_DAYS } from "./plan-calendar.mjs";
 import { buildIcs } from "./ics.mjs";
 
 const MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];

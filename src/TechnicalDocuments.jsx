@@ -3,6 +3,8 @@ import { FileCheck2 } from "lucide-react";
 import { useConfirm } from "./ConfirmDialog";
 import { Empty, Loading } from "./ui-primitives";
 import { TechnicalUpload } from "./TechnicalUpload.jsx";
+import { ProductSheets } from "./ProductSheets.jsx";
+import { supabase } from "./online.js";
 import { UPLOAD_ACCEPT, extensionOf } from "./document-text.mjs";
 
 const TECHNICAL_DOCUMENT_STATUS_LABELS = {
@@ -371,6 +373,7 @@ function TechnicalDocumentsAdminBase({ session }) {
     <div className="content-stack">
       <ProductRecommendationQuery documents={documents} />
       <TechnicalUpload documents={documents} onDone={load} />
+      <ProductSheets supabase={supabase} documents={documents} isAdmin={isAdmin} onChanged={load} />
       <section className="panel">
         <div className="panel-head">
           <div>

@@ -20,6 +20,13 @@ Mails `nombre@grupopoliplast.com.ar`. Felipe (admin/marketing), Yuliani (jefa de
 ## Hecho el 16/10 (noche)
 Búsqueda global Ctrl+K; tarjeta Mi día en Inicio; menú en 5 grupos; Prospección en pestañas; Bandeja del equipo con vista Para seguimiento, urgencia por espera y tablero de números; Rutina con Cierre del día (salió bien / sin hacer / postergado / mañana); Academia con pestañas Buscar (conocimiento unificado) y Equipo (fichas de vendedores, borrador).
 
+## Beta para el equipo (16/10)
+- Guía para pasarle al equipo: docs/GUIA_BETA_EQUIPO.pdf (fuente: scripts/build-guia-beta.py + capturas; regenerar si cambia la interfaz).
+- Rutina, plan Trello y tablero Trello son solo de Felipe (src/personal-tools.mjs); el resto ve Cierre del día. Bandeja del equipo apagada (TEAM_INBOX_ENABLED=false).
+- Directorio de empresas compartido: tabla shared_companies (Felipe publica, cada uno trae desde Más → Datos). Solo viajan nombre, rubro, ubicación y contactos.
+- PENDIENTE confirmación de Felipe: migración que restringe conversation_assignments por canal (supabase/migrations/20261016200000_beta_equipo.sql, sección final). La herramienta pidió confirmación para reemplazar políticas.
+- Pendiente: cotizador integrado al CRM (hoy es una aplicación separada, ver docs/ADR-001).
+
 ## Pendiente / próximos pasos
 - Bandeja del equipo: hoy muestra contactos que Felipe ya clasificó en su bandeja (no comerciales, cliente, etc.). Felipe quiere revisarlo: filtrar o ocultar los ya clasificados, y que lo clasificado se comparta con el equipo.
 - Cotizaciones/presupuestos: conectar con la API de Contabilium (credenciales en variables de entorno seguras de Vercel, nunca en el repo). Ya existen los radares de cotizaciones frías/vencidas en Inicio; la API reemplazaría la carga manual.

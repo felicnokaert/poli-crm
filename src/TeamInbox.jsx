@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Copy, Plus, Search, Trash2 } from "lucide-react";
-import { buildBoard, groupConversations, loadByMember, suggestedReply, waitingLabel } from "./team-inbox.mjs";
+import { buildBoard, groupConversations, loadByMember, needsFollowUp, suggestedReply, urgencyOf, waitingLabel } from "./team-inbox.mjs";
 
 const STATUSES = [["pendiente", "Pendiente"], ["derivada", "Derivada"], ["respondida", "Respondida"], ["cerrada", "Cerrada"]];
 const CHANNEL_LABEL = { general: "WhatsApp General", juan: "WhatsApp Juan", penosil: "WhatsApp Penosil", rapyp: "WhatsApp RAPYP" };
@@ -29,7 +29,7 @@ export function TeamInbox({ api, userEmail, isAdmin }) {
   const channels = [...new Set(board.map((item) => item.channel))];
   const q = filters.query.trim().toLowerCase();
   const shown = board.filter((item) =>
-    (filters.view === "todas" || item.open)
+    (filters.view === "todas" || (filters.view === "seguimiento" ? needsFollowUp(item) : item.open))
     && (!filters.member || (filters.member === "sin" ? !item.memberId : item.memberId === filters.member))
     && (!filters.channel || item.channel === filters.channel)
     && (!q || `${item.customerName} ${item.customerWaId} ${item.lastText}`.toLowerCase().includes(q)));
@@ -76,7 +76,7 @@ export function TeamInbox({ api, userEmail, isAdmin }) {
           </div>
           <div className="panel-head-actions team-filters">
             <label className="search"><Search size={16} /><input value={filters.query} onChange={(event) => setFilters({ ...filters, query: event.target.value })} placeholder="Buscar cliente o mensaje…" /></label>
-            <select aria-label="Ver" value={filters.view} onChange={(event) => setFilters({ ...filters, view: event.target.value })}><option value="abiertas">Abiertas</option><option value="todas">Todas</option></select>
+            <select aria-label="Ver" value={filters.view} onChange={(event) => setFilters({ ...filters, view: event.target.value })}><option value="abiertas">Abiertas</option><option value="seguimiento">Para seguimiento</option><option value="todas">Todas</option></select>
             <select aria-label="Canal" value={filters.channel} onChange={(event) => setFilters({ ...filters, channel: event.target.value })}><option value="">Todos los canales</option>{channels.map((key) => <option key={key} value={key}>{CHANNEL_LABEL[key] || key}</option>)}</select>
             {board.some((item) => item.open && !item.memberId && item.suggestedId) && <button type="button" className="secondary" onClick={applySuggestions}>Asignar según reglas</button>}
           </div>
@@ -86,10 +86,10 @@ export function TeamInbox({ api, userEmail, isAdmin }) {
             {shown.slice(0, 100).map((item) => {
               const reply = openReply === item.key ? suggestedReply(item, me?.name || "") : null;
               return (
-                <article key={item.key} className={`team-row${item.open ? "" : " done"}`}>
+                <article key={item.key} className={`team-row${item.open ? "" : " done"}${urgencyOf(item) ? ` wait-${urgencyOf(item)}` : ""}`}>
                   <div className="team-main">
                     <strong>{item.customerName || item.customerWaId}</strong>
-                    <span className="muted small">{CHANNEL_LABEL[item.channel] || item.channel} · {item.customerWaId} · hace {waitingLabel(item.lastAt)} · {item.messages} {item.messages === 1 ? "mensaje" : "mensajes"}</span>
+                    <span className="muted small">{CHANNEL_LABEL[item.channel] || item.channel} · {item.customerWaId} · hace {waitingLabel(item.lastAt)}{urgencyOf(item) === "late" ? " (riesgo de venta perdida)" : ""} · {item.messages} {item.messages === 1 ? "mensaje" : "mensajes"}</span>
                     <p>{item.lastText || "(sin texto)"}</p>
                     {item.note && <span className="muted small">Nota: {item.note}</span>}
                     {reply && (

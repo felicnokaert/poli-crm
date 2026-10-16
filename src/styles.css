@@ -702,3 +702,6 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .team-member-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .team-member-row > strong { min-width: 90px; }
 @media (max-width: 700px) { .team-row { grid-template-columns: 1fr; } }
+
+.team-row.wait-warn{border-left:4px solid #d9a400}
+.team-row.wait-late{border-left:4px solid #c0392b}

@@ -55,6 +55,7 @@ export function buildBoard(convs = [], assignments = [], rules = [], members = [
       memberId: saved?.member_id || null,
       status,
       note: saved?.note || '',
+      statusAt: saved?.updated_at || null,
       suggestedId: saved?.member_id ? null : suggestOwner(conv, rules, members),
       open: status === 'pendiente' || status === 'derivada',
     };
@@ -70,6 +71,21 @@ export function loadByMember(board = [], members = []) {
     else unassigned += 1;
   }
   return { counts, unassigned };
+}
+
+// Cuánto lleva esperando una consulta abierta: más de 24 h es riesgo de venta perdida.
+export function urgencyOf(item, now = Date.now()) {
+  if (!item.open) return '';
+  const hours = (now - new Date(item.lastAt).getTime()) / 3600000;
+  return hours >= 24 ? 'late' : hours >= 4 ? 'warn' : '';
+}
+
+// Respondidas sin novedades del cliente entre 3 y 14 días: toca hacer seguimiento.
+export function needsFollowUp(item, now = Date.now()) {
+  if (item.status !== 'respondida' || !item.statusAt) return false;
+  const days = (now - new Date(item.statusAt).getTime()) / 86400000;
+  const quiet = (now - new Date(item.lastAt).getTime()) / 86400000;
+  return days >= 3 && days <= 14 && quiet >= 3;
 }
 
 export function waitingLabel(isoDate, now = Date.now()) {

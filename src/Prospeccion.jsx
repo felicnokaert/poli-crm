@@ -1039,18 +1039,20 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         </form>
       )}
 
-      <details>
+      <details className="import-box">
         <summary><FileUp size={14} /> Importar o pegar una lista de prospectos</summary>
-        <p className="muted">Subí un CSV o pegá las filas copiadas de la planilla, con los encabezados en la primera fila (Nombre empresa, Familia, Subfamilia, provincia, ciudad, Maquina, Proveedor, telefono, email, Estado, Comercial, Contacto, observaciones, Fecha de seguimiento, Tipo entidad, Producto / propuesta, Estado comercial, Valor potencial, Próxima acción, Fecha próxima acción). Antes de guardar vas a ver cuántas son nuevas, cuántas ya están en el CRM y cuántas son posibles duplicadas.</p>
-        <label className="secondary upload-button"><FileUp size={14} /> Elegir un CSV
-          <input type="file" accept=".csv,.txt,text/csv" hidden aria-label="Archivo de prospectos" onChange={importFile} />
-        </label>
-        <textarea rows={5} value={importText} onChange={(event) => setImportText(event.target.value)} aria-label="Lista de prospectos" />
-        <button type="button" className="secondary" disabled={!importText.trim()} onClick={() => analyzeImport(importText)}>Revisar lista</button>
+        <p className="muted small">Subí un CSV o pegá las filas copiadas de la planilla, con los encabezados en la primera fila (Nombre empresa, Familia, Subfamilia, provincia, ciudad, Maquina, Proveedor, telefono, email, Estado, Comercial, Contacto, observaciones, Fecha de seguimiento, Tipo entidad, Producto / propuesta, Estado comercial, Valor potencial, Próxima acción, Fecha próxima acción). Antes de guardar vas a ver cuántas son nuevas, cuántas ya están en el CRM y cuántas son posibles duplicadas.</p>
+        <textarea rows={6} value={importText} onChange={(event) => setImportText(event.target.value)} aria-label="Lista de prospectos" placeholder="Pegá acá las filas copiadas de la planilla (con la fila de encabezados)" />
+        <div className="import-box-actions">
+          <button type="button" className="primary" disabled={!importText.trim()} onClick={() => analyzeImport(importText)}>Revisar lista pegada</button>
+          <label className="secondary upload-button"><FileUp size={14} /> Elegir un CSV
+            <input type="file" accept=".csv,.txt,text/csv" hidden aria-label="Archivo de prospectos" onChange={importFile} />
+          </label>
+        </div>
         {importPlan && !importJobId && importPreview}
       </details>
 
-      <div className="panel-head-actions">
+      <div className="panel-head-actions prospect-toolbar">
         <select aria-label="Familia" value={familyFilter} onChange={(event) => { setFamilyFilter(event.target.value); setDailyList(null); }}>
           <option>Todas</option>
           {PROSPECT_FAMILIES.map((item) => <option key={item.key}>{item.key}</option>)}
@@ -1064,7 +1066,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       </div>
       {dailyList && <p className="form-notice">Lista del día: {dailyList.length} prospectos nuevos, sin duplicados, de familias activas y con más datos de contacto primero.</p>}
 
-      <div className="panel-head-actions">
+      <div className="panel-head-actions prospect-toolbar">
         <div className="segmented" role="tablist" aria-label="Vista de la lista">
           <button type="button" role="tab" aria-selected={listView === 'cola'} className={listView === 'cola' ? 'selected' : ''} onClick={() => setListView('cola')}>Cola de trabajo</button>
           <button type="button" role="tab" aria-selected={listView === 'planilla'} className={listView === 'planilla' ? 'selected' : ''} onClick={() => setListView('planilla')}>Planilla</button>

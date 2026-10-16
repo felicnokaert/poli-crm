@@ -809,3 +809,19 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .admin-user-row .pill { flex: none; border-radius: var(--radius-pill); padding: 4px 10px; font-size: 11px; font-weight: 700; }
 .admin-user-row .pill.ok { color: var(--color-success); background: var(--color-success-bg); }
 .admin-user-row .pill.warn { color: var(--color-amber-text); background: var(--color-amber-bg); }
+
+/* Cajas de importar y barras de herramientas (16/10): aire entre botones y campos. */
+.import-box { margin: 12px 0 16px; padding: 12px 14px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-panel-bg); }
+.import-box > summary { cursor: pointer; font-weight: 700; }
+.import-box > summary svg { vertical-align: -2px; margin-right: 4px; }
+.import-box[open] > summary { margin-bottom: 10px; }
+.import-box > p { margin: 0 0 10px; line-height: 1.5; }
+.import-box > textarea { display: block; width: 100%; box-sizing: border-box; min-height: 120px; resize: vertical; }
+.import-box-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
+.prospect-toolbar { justify-content: flex-start; gap: 10px; margin: 12px 0; }
+.data-cards article { display: flex; flex-direction: column; align-items: flex-start; }
+.data-cards article > p { align-self: stretch; }
+.data-cards article > :is(button, label, select) { margin-top: 8px; white-space: nowrap; }
+.data-cards article > select + button { margin-left: 0; }
+.data-cards article .modal-actions { flex-wrap: wrap; justify-content: flex-start; gap: 8px; margin-top: auto; padding-top: 8px; }
+.data-cards article .modal-actions > * { white-space: nowrap; }

@@ -541,6 +541,7 @@ function DashboardBase({
   onNavigate,
   weeklyTargets,
   planChecks,
+  showRoutine = true,
   showWelcome,
   welcomeName,
   onDismissWelcome,
@@ -622,7 +623,7 @@ function DashboardBase({
           onToggle={onToggle}
         />
       )}
-      {!showWelcome && <MyDay planChecks={planChecks || {}} tasks={tasks} onNavigate={onNavigate} />}
+      {!showWelcome && showRoutine && <MyDay planChecks={planChecks || {}} tasks={tasks} onNavigate={onNavigate} />}
       <DayMode
         overdueTasks={overdueTasks}
         dueTodayTasks={dueTodayTasks}

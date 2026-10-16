@@ -64,3 +64,28 @@ test('Inicio: "Mi día" muestra el avance y lleva a la rutina', async () => {
   const open = screen.queryByRole('button', { name: /Abrir rutina y cierre/ });
   if (open) { fireEvent.click(open); assert.equal(navs[0], 'tasks'); }
 });
+
+test('para el resto del equipo no aparece la rutina de Felipe ni el plan Trello, pero sí el cierre del día', async () => {
+  const { ownsFelipeTools } = await import('../src/personal-tools.mjs');
+  assert.equal(ownsFelipeTools('felipe@grupopoliplast.com.ar'), true);
+  assert.equal(ownsFelipeTools('brenda@grupopoliplast.com.ar'), false);
+  assert.equal(ownsFelipeTools('', false), true);
+  const { Tasks } = await loadJsxModule('src/Tasks.jsx');
+  render(React.createElement(Tasks, { items: [], onToggle() {}, onOpen() {}, onNew() {}, planChecks: {}, personal: false }));
+  assert.equal(screen.queryByRole('tab', { name: 'Rutina' }), null);
+  fireEvent.click(screen.getByRole('tab', { name: 'Cierre del día' }));
+  assert.equal(screen.queryByText(/Plan Trello/), null);
+  assert.ok(screen.getAllByText(/Cierre del día/).length >= 1);
+});
+
+test('Directorio del equipo: trae las empresas que faltan sin pisar las propias', async () => {
+  const { SharedDirectory } = await loadJsxModule('src/SharedDirectory.jsx');
+  const saved = [];
+  const supabase = { from: () => ({ select: (_cols, opts) => opts?.head ? Promise.resolve({ count: 2, error: null }) : { range: () => Promise.resolve({ data: [{ data: { id: 'a', company: 'Nueva SA', city: 'Salta' } }, { data: { id: 'b', company: 'Mía SA', city: 'Rosario' } }], error: null }) } }) };
+  render(React.createElement(SharedDirectory, { supabase, session: { user: { email: 'brenda@grupopoliplast.com.ar' } }, clients: [{ id: 'z', company: 'Mía SA', city: 'Rosario' }], setClients: (c) => saved.push(c) }));
+  assert.equal(screen.queryByRole('button', { name: /Publicar mis empresas/ }), null);
+  await screen.findByText(/Hay 2 empresas/);
+  fireEvent.click(screen.getByRole('button', { name: /Traer empresas del equipo/ }));
+  await screen.findByText(/Se sumaron 1 empresas/);
+  assert.equal(saved[0].length, 2);
+});

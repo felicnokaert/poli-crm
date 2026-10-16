@@ -4,6 +4,7 @@ import { formatDate } from "./utils.mjs";
 import { Empty, Fact } from "./ui-primitives";
 import { Routine } from "./Routine.jsx";
 import { Calendar } from "./Calendar.jsx";
+import { DayReview } from "./DayReview.jsx";
 import { TRELLO_PLAN } from "./trello-plan.mjs";
 import { addDaysToToday, googleCalendarUrl, today, TRELLO_BOARD_URL, useModalEscape } from "./app-shared";
 
@@ -83,7 +84,7 @@ function taskListEmptyText({ items, filtered, filter, query }) {
   return "No hay tareas que coincidan con este filtro.";
 }
 
-function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, onNavigate, onImportPlan, onAddEvent, onPostpone }) {
+function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, onNavigate, onImportPlan, onAddEvent, onPostpone, personal = true }) {
   const [tab, setTab] = useState("tareas");
   const [filter, setFilter] = useState("pending");
   const [query, setQuery] = useState("");
@@ -102,7 +103,7 @@ function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, o
   const tabs = (
     <div className="segmented routine-tabs" role="tablist" aria-label="Tareas y rutina">
       <button type="button" role="tab" aria-selected={tab === "tareas"} className={tab === "tareas" ? "selected" : ""} onClick={() => setTab("tareas")}>Tareas</button>
-      <button type="button" role="tab" aria-selected={tab === "rutina"} className={tab === "rutina" ? "selected" : ""} onClick={() => setTab("rutina")}>Rutina</button>
+      <button type="button" role="tab" aria-selected={tab === "rutina"} className={tab === "rutina" ? "selected" : ""} onClick={() => setTab("rutina")}>{personal ? "Rutina" : "Cierre del día"}</button>
       <button type="button" role="tab" aria-selected={tab === "calendario"} className={tab === "calendario" ? "selected" : ""} onClick={() => setTab("calendario")}>Calendario</button>
     </div>
   );
@@ -110,7 +111,8 @@ function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, o
     return (
       <div className="content-stack">
         {tabs}
-        <Routine date={today()} planChecks={planChecks || {}} onToggle={onTogglePlan} onNavigate={onNavigate} tasks={items} onToggleTask={onToggle} plan={TRELLO_PLAN} onImportPlan={onImportPlan} onPostpone={onPostpone} />
+        {!personal && <section className="panel"><DayReview date={today()} planChecks={planChecks || {}} tasks={items} onPostpone={onPostpone} onToggleTask={onToggle} /></section>}
+        {personal && <Routine date={today()} planChecks={planChecks || {}} onToggle={onTogglePlan} onNavigate={onNavigate} tasks={items} onToggleTask={onToggle} plan={TRELLO_PLAN} onImportPlan={onImportPlan} onPostpone={onPostpone} />}
       </div>
     );
   }

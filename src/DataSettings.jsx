@@ -9,6 +9,7 @@ import {
   Upload,
 } from "lucide-react";
 import { onlineConfigured, supabase } from "./online";
+import { SharedDirectory } from "./SharedDirectory.jsx";
 import { connectWhatsApp } from "./meta-onboarding";
 import {
   buildCommercialCohort,
@@ -486,6 +487,7 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
           </div>
         </section>
       )}
+      {onlineConfigured && <SharedDirectory supabase={supabase} session={session} clients={data.clients || []} setClients={(clients) => setData((current) => ({ ...current, clients }))} />}
       <section className="panel">
         <div className="panel-head">
           <div>

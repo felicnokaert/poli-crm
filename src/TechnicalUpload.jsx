@@ -1,11 +1,10 @@
 import { useMemo, useState } from "react";
 import { FolderPlus, Upload } from "lucide-react";
-import { FAMILIES } from "./families.mjs";
+import { guessFamilyFromPath } from "./technical-documents-mapping.mjs";
 import { CHOICES, folderOptions, planUpload, resolveUpload } from "./technical-upload-plan.mjs";
 import { canExtractText, UPLOAD_ACCEPT } from "./document-text.mjs";
 
 const NEW_FOLDER = "__nueva__";
-const familyChoices = FAMILIES.filter((item) => item !== "Sin definir");
 
 // Subir a Base técnica: archivos sueltos o una carpeta entera (PDF, Word, Excel, PowerPoint, texto o
 // el .md que arma MarkItDown). Se elige familia y carpeta de destino (existente o nueva), y antes de
@@ -14,10 +13,8 @@ export function TechnicalUpload({ documents = [], onDone }) {
   const [files, setFiles] = useState([]);
   const [items, setItems] = useState(null);
   const [choices, setChoices] = useState({});
-  const [family, setFamily] = useState(familyChoices[0]);
   const [folder, setFolder] = useState("");
   const [newFolder, setNewFolder] = useState("");
-  const [keepStructure, setKeepStructure] = useState(true);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
   const [message, setMessage] = useState("");
@@ -47,7 +44,8 @@ export function TechnicalUpload({ documents = [], onDone }) {
 
   function review() {
     if (folder === NEW_FOLDER && !newFolder.trim()) { setMessage("Escribí el nombre de la carpeta nueva."); return; }
-    setItems(planUpload(files, documents, { destination, keepStructure }));
+    // Una carpeta (o varias) se guarda tal cual se subió, con sus subcarpetas, dentro del destino.
+    setItems(planUpload(files, documents, { destination, keepStructure: true }));
     setMessage("");
   }
 
@@ -68,7 +66,9 @@ export function TechnicalUpload({ documents = [], onDone }) {
         return {
           file: entry.file,
           document: {
-            title: item.fileName.replace(/\.[^.]+$/, ""), family, product: "", docType: "sin_clasificar", source: "other",
+            // Son fichas técnicas, no se elige familia: la base la necesita, así que se deduce de la
+            // ruta (como al importar de Drive) y si no se reconoce queda "Otra".
+            title: item.fileName.replace(/\.[^.]+$/, ""), family: guessFamilyFromPath(item.target), product: "", docType: "sin_clasificar", source: "other",
             sourceFile: item.target, sizeBytes: entry.size, sha256: entry.sha256,
           },
         };
@@ -101,7 +101,7 @@ export function TechnicalUpload({ documents = [], onDone }) {
         <div>
           <span className="eyebrow">Subir a Base técnica</span>
           <h2><Upload size={18} /> Subir fichas y documentos</h2>
-          <p>PDF, Word, Excel, PowerPoint, texto o el .md de MarkItDown: el copiloto aprende de su texto. Elegís familia y carpeta, y antes de guardar ves si algo ya existe.</p>
+          <p>PDF, Word, Excel, PowerPoint, texto o el .md de MarkItDown: el copiloto aprende de su texto. Las carpetas se guardan como las subís; un archivo suelto va a la carpeta que elijas. Antes de guardar ves si algo ya existe.</p>
         </div>
       </div>
       <div className="import-box-actions">
@@ -117,14 +117,9 @@ export function TechnicalUpload({ documents = [], onDone }) {
       {files.length > 0 && !items && (
         <div className="technical-upload-form">
           <p className="muted small">{files.length} {files.length === 1 ? "archivo elegido" : "archivos elegidos"}.</p>
-          <label>Familia
-            <select value={family} onChange={(event) => setFamily(event.target.value)}>
-              {familyChoices.map((item) => <option key={item}>{item}</option>)}
-            </select>
-          </label>
-          <label>Carpeta de destino
+          <label>{fromFolder ? "Guardar dentro de" : "Carpeta"}
             <select value={folder} onChange={(event) => setFolder(event.target.value)}>
-              <option value="">Sin carpeta (raíz)</option>
+              <option value="">{fromFolder ? "La raíz (como están)" : "Sin carpeta (raíz)"}</option>
               {folders.map((item) => <option key={item} value={item}>{item}</option>)}
               <option value={NEW_FOLDER}>+ Nueva carpeta…</option>
             </select>
@@ -134,9 +129,7 @@ export function TechnicalUpload({ documents = [], onDone }) {
               <input value={newFolder} onChange={(event) => setNewFolder(event.target.value)} placeholder="Ej: PRODUCTOS / POLIUREA / Fichas 2026" />
             </label>
           )}
-          {fromFolder && (
-            <label className="check"><input type="checkbox" checked={keepStructure} onChange={(event) => setKeepStructure(event.target.checked)} /> Mantener las subcarpetas de la carpeta elegida</label>
-          )}
+          {fromFolder && <p className="muted small">Las carpetas se guardan tal cual las subís, con sus subcarpetas{destination ? ` adentro de «${destination}»` : ""}.</p>}
           <div className="import-box-actions">
             <button type="button" className="primary" onClick={review} disabled={busy}>Revisar antes de subir</button>
             <button type="button" className="secondary" onClick={() => setFiles([])}>Cancelar</button>
@@ -146,7 +139,7 @@ export function TechnicalUpload({ documents = [], onDone }) {
 
       {items && (
         <div className="technical-upload-review">
-          <p><strong>{items.length - conflicts.length}</strong> nuevos sin problemas{conflicts.length ? <> · <strong>{conflicts.length}</strong> para decidir</> : null}. Familia: {family}.</p>
+          <p><strong>{items.length - conflicts.length}</strong> nuevos sin problemas{conflicts.length ? <> · <strong>{conflicts.length}</strong> para decidir</> : null}.</p>
           {conflicts.length > 0 && (
             <>
               <div className="import-box-actions">

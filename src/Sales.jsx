@@ -3,6 +3,7 @@ import { AlertTriangle, CalendarCheck, CheckCircle2, Download, FileUp, Pencil, P
 import { blankSale, computeGoalProgress, duplicateSale, GOAL_METRICS, netAmountInArs, normalizedSale, pointOfSaleMapFrom, quarterKey, saleCommission, salesToCsv, unitsMapFrom } from './sales-model.mjs';
 import { FAMILIES } from './families.mjs';
 import { useConfirm } from './ConfirmDialog';
+import { SalesHistory } from './SalesHistory.jsx';
 
 const money = (value) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(value || 0);
 const monthKey = (date) => String(date || '').slice(0, 7);
@@ -335,8 +336,14 @@ function SalesBase({ items, goals, businessUnits, clients, onSaveGoal, onDeleteG
       <article className="metric-card"><CalendarCheck size={20}/><span>Período</span><strong>{month || 'Todos'}</strong></article>
     </section>
     <GoalsPanel goals={Array.isArray(goals) ? goals : []} sales={items} businessUnits={businessUnits} currentMonth={currentMonth} currentQuarter={currentQuarter} onSaveGoal={onSaveGoal} onDeleteGoal={onDeleteGoal}/>
+    <SalesHistory sales={items} goals={Array.isArray(goals) ? goals : []} units={units} unitNames={unitNames} onPickPeriod={(mode, key) => {
+      if (mode === 'month') { setPeriodMode('month'); setMonth(key); }
+      else if (mode === 'quarter') { setPeriodMode('quarter'); setQuarter(key); }
+      else { setPeriodMode('all'); }
+      document.getElementById('ventas-realizadas')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    }}/>
     <BusinessUnitsPanel businessUnits={businessUnits} onSave={onSaveBusinessUnit} onDelete={onDeleteBusinessUnit}/>
-    <section className="panel">
+    <section className="panel" id="ventas-realizadas">
       <div className="panel-head">
         <div><span className="eyebrow">Resultado comercial</span><h2>Ventas realizadas</h2><p>Registro manual de Facturas y COT, o subí uno o varios PDF: los vas a poder revisar y editar todos juntos en una tabla antes de guardar. La comisión se calcula sobre el importe neto sin IVA (sin impuesto interno) convertido a pesos si la factura vino en dólares.</p></div>
         <div className="panel-head-actions">

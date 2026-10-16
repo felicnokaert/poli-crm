@@ -18,7 +18,7 @@ React + Vite (SPA), funciones en `api/*` (Vercel), Supabase proyecto `nghwmtccpo
 Mails `nombre@grupopoliplast.com.ar`. Felipe (admin/marketing), Yuliani (jefa de ventas, apoya a Brenda), Brenda (Poliplast/e-commerce, consultas generales de tiendas online; falta seguimiento), Ezequiel (Resinplast e Imperpur; falta seguimiento), Juan (gerente general y de operaciones; máquinas, sistemas de poliuretano, repuestos), David (dueño; la idea es que delegue). Las reglas de reparto son editables en la app.
 
 ## Hecho el 16/10 (noche)
-Búsqueda global Ctrl+K; tarjeta Mi día en Inicio; menú en 5 grupos; Prospección en pestañas; Bandeja del equipo con vista Para seguimiento, urgencia por espera y tablero de números; Rutina con Cierre del día (salió bien / sin hacer / postergado / mañana); Academia con pestañas Buscar (conocimiento unificado) y Equipo (fichas de vendedores, borrador).
+Búsqueda global Ctrl+K; tarjeta Mi día en Inicio; menú en 5 grupos; Prospección en pestañas; Bandeja del equipo con vista Para seguimiento, urgencia por espera y tablero de números; Rutina con Cierre del día (salió bien / sin hacer / postergado / mañana); Ventas con historial en gráficos (mensual/trimestral/semestral por año, objetivos vs vendido); Academia con pestañas Buscar (conocimiento unificado) y Equipo (fichas de vendedores, borrador).
 
 ## Beta para el equipo (16/10)
 - Guía para pasarle al equipo: docs/GUIA_BETA_EQUIPO.pdf (18 páginas con diseño). Se regenera con scripts/capture-guia-beta.mjs (capturas en vista de miembro, localhost) + scripts/build-guia-beta.py + imprimir a PDF con Chromium; regenerar si cambia la interfaz.
@@ -30,6 +30,7 @@ Búsqueda global Ctrl+K; tarjeta Mi día en Inicio; menú en 5 grupos; Prospecci
 - Pendiente: cotizador integrado al CRM (hoy es una aplicación separada, ver docs/ADR-001).
 
 ## Pendiente / próximos pasos
+- Aprobación de accesos (decidido 16/10): cuando TODO el equipo ya se haya registrado, activar que cada cuenta nueva quede "pendiente" hasta que Felipe la apruebe (solo Felipe aprueba, bloquea y revoca). Diseño: tabla crm_access (email, estado), is_poliplast_crm_user() = admins fijos O (dominio @grupopoliplast.com.ar Y aprobado); pre-aprobar a todos los ya registrados; pantalla "Tu cuenta espera aprobación"; panel Más → Datos → Accesos. Probar en localhost antes de publicar (riesgo de dejar gente afuera). Antes: activar protección de contraseñas filtradas en Supabase.
 - Bandeja del equipo: hoy muestra contactos que Felipe ya clasificó en su bandeja (no comerciales, cliente, etc.). Felipe quiere revisarlo: filtrar o ocultar los ya clasificados, y que lo clasificado se comparta con el equipo.
 - Cotizaciones/presupuestos: conectar con la API de Contabilium (credenciales en variables de entorno seguras de Vercel, nunca en el repo). Ya existen los radares de cotizaciones frías/vencidas en Inicio; la API reemplazaría la carga manual.
 - Respuestas sugeridas por marca (Resinplast, Imperpur, máquinas): requieren datos reales de producto; no inventar claims.

@@ -778,3 +778,19 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 @keyframes splash-dot { 0%,80%,100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
 @keyframes splash-bar { 0% { transform: translateX(-110%); } 100% { transform: translateX(290%); } }
 @media (prefers-reduced-motion: reduce) { .splash-glow, .splash-ring, .splash-mark, .splash-shine, .splash-dots b, .splash-bar i { animation: none !important; } .splash-ring-slow { display: none; } }
+
+/* Historial de ventas */
+.sales-history-controls { flex-wrap: wrap; gap: 8px; margin: 6px 0 12px; }
+.sales-history-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 8px; }
+.sales-history-summary > div { border: 1px solid var(--color-border); border-radius: 12px; padding: 9px 12px; display: grid; gap: 2px; }
+.sales-history-summary span { font-size: .78rem; color: var(--brand-gray); }
+.sales-history-summary strong { font-size: 1.15rem; }
+.sales-chart { width: 100%; height: auto; display: block; color: var(--color-forest); }
+.sales-bar { cursor: pointer; outline: none; }
+.sales-bar:hover rect:nth-of-type(2), .sales-bar:focus-visible rect:nth-of-type(2) { filter: brightness(1.12); }
+.sales-bar:focus-visible rect:first-of-type { stroke: var(--brand-red); stroke-width: 2; fill: rgba(237,28,36,.06); }
+.sales-legend-bar, .sales-legend-target { display: inline-block; vertical-align: middle; margin-right: 4px; }
+.sales-legend-bar { width: 10px; height: 10px; border-radius: 3px; background: #ed1c24; }
+.sales-legend-target { width: 16px; border-top: 2px dashed currentColor; }
+.sales-history-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: .88rem; }
+.sales-history-table th, .sales-history-table td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--color-border-light); }

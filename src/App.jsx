@@ -1749,7 +1749,7 @@ export default function App() {
             )}
           </div>
         </header>
-        <ErrorBoundary key={view}>
+        <ErrorBoundary key={view} view={view}>
 
         {view === "dashboard" && (
           <Dashboard

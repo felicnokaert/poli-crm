@@ -6,6 +6,7 @@ import { Routine } from "./Routine.jsx";
 import { Calendar } from "./Calendar.jsx";
 import { DayReview } from "./DayReview.jsx";
 import { trelloJsonToTasks } from "./trello-json-import.mjs";
+import { closedBySystem } from "./day-review.mjs";
 import { addDaysToToday, googleCalendarUrl, today, TRELLO_BOARD_URL, useModalEscape } from "./app-shared";
 
 // Mismo patrón que clientsToCsv/salesToCsv (client-csv.mjs, sales-model.mjs):
@@ -120,6 +121,9 @@ function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, o
   );
   const filtered = ordered.filter(
     (task) =>
+      // Lo que el sistema cerró solo por vencido no figura como "hecho" (a Juan le aparecían
+      // tareas completadas que nunca hizo, 16/10).
+      !closedBySystem(task) &&
       (filter === "all" || (filter === "pending" ? !task.done : task.done)) &&
       `${task.title || ""} ${task.company || ""} ${task.trigger || ""}`
         .toLowerCase()

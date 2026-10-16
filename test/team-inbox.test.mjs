@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildBoard, conversationKey, groupConversations, loadByMember, suggestOwner, suggestedReply, waitingLabel } from '../src/team-inbox.mjs';
+import { buildBoard, conversationKey, groupConversations, loadByMember, suggestOwner, suggestedReply, waitingLabel, urgencyOf, needsFollowUp } from '../src/team-inbox.mjs';
 
 const members = [{ id: 'm1', name: 'Juan', active: true }, { id: 'm2', name: 'Ezequiel', active: true }, { id: 'm3', name: 'David', active: false }];
 const rules = [{ id: 'r1', kind: 'canal', value: 'juan', member_id: 'm1' }, { id: 'r2', kind: 'palabra', value: 'náutica', member_id: 'm2' }, { id: 'r3', kind: 'palabra', value: 'fibra', member_id: 'm3' }];
@@ -58,4 +58,17 @@ test('tiempo de espera legible', () => {
   assert.equal(waitingLabel('2026-10-16T11:30:00Z', now), '30 min');
   assert.equal(waitingLabel('2026-10-16T08:00:00Z', now), '4 h');
   assert.equal(waitingLabel('2026-10-12T12:00:00Z', now), '4 días');
+});
+
+test('urgencia y seguimiento por tiempo de espera', () => {
+  const now = new Date('2026-10-16T12:00:00Z').getTime();
+  assert.equal(urgencyOf({ open: true, lastAt: '2026-10-16T10:00:00Z' }, now), '');
+  assert.equal(urgencyOf({ open: true, lastAt: '2026-10-16T06:00:00Z' }, now), 'warn');
+  assert.equal(urgencyOf({ open: true, lastAt: '2026-10-14T06:00:00Z' }, now), 'late');
+  assert.equal(urgencyOf({ open: false, lastAt: '2026-10-01T06:00:00Z' }, now), '');
+  const base = { status: 'respondida', statusAt: '2026-10-10T12:00:00Z', lastAt: '2026-10-09T12:00:00Z' };
+  assert.equal(needsFollowUp(base, now), true);
+  assert.equal(needsFollowUp({ ...base, statusAt: '2026-10-15T12:00:00Z' }, now), false);
+  assert.equal(needsFollowUp({ ...base, statusAt: '2026-09-20T12:00:00Z' }, now), false);
+  assert.equal(needsFollowUp({ ...base, status: 'cerrada' }, now), false);
 });

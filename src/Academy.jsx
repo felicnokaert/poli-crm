@@ -15,6 +15,9 @@ import {
   findObjections,
 } from "./commercial-knowledge.mjs";
 import { SELLER_PROFILES, SELLER_PROFILES_META } from "./seller-profiles.mjs";
+import { KNOWLEDGE_TYPES, buildKnowledgePrompt, searchKnowledge } from "./knowledge-search.mjs";
+import { PRODUCT_CATALOG } from "./product-catalog.mjs";
+import { OBJECTIONS } from "./commercial-knowledge.mjs";
 import PriceMemory from "./PriceMemory";
 import { buildBattlecard } from "./competitor-battlecard.mjs";
 import { Empty, Goal } from "./ui-primitives";
@@ -155,6 +158,7 @@ function AcademyBase({ myChannels, interactions, data, setData, supabase }) {
           <p>Prepará conversaciones, practicá situaciones reales y convertí cada resultado en aprendizaje para el equipo.</p>
         </div>
         <div className="segmented">
+          <button className={section === "search" ? "selected" : ""} onClick={() => setSection("search")}>Buscar</button>
           <button className={section === "method" ? "selected" : ""} onClick={() => setSection("method")}>Método</button>
           <button className={section === "objections" ? "selected" : ""} onClick={() => setSection("objections")}>Objeciones</button>
           <button className={section === "profiles" ? "selected" : ""} onClick={() => setSection("profiles")}>Perfiles</button>
@@ -167,6 +171,7 @@ function AcademyBase({ myChannels, interactions, data, setData, supabase }) {
       {["method", "objections", "profiles"].includes(section) && <CommercialKnowledge section={section} />}
       {section === "competition" && <CompetitorTalk supabase={supabase} />}
       {section === "team" && <SellerProfiles />}
+      {section === "search" && <KnowledgeSearch supabase={supabase} clients={data.clients || []} />}
       {section === "library" && <QuickReplies myChannels={myChannels} />}
       {section === "coach" && (
         <>
@@ -175,6 +180,53 @@ function AcademyBase({ myChannels, interactions, data, setData, supabase }) {
         </>
       )}
     </div>
+  );
+}
+
+export function KnowledgeSearch({ supabase, clients = [] }) {
+  const [query, setQuery] = useState("");
+  const [docs, setDocs] = useState([]);
+  const [competitors, setCompetitors] = useState([]);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.from("technical_documents").select("id,title,family,product,sku,doc_type,status,notes").eq("status", "vigente").limit(500)
+      .then(({ data }) => setDocs(data || []));
+    supabase.from("competitors").select("id,name,kind,families,summary,caveats").then(({ data }) => setCompetitors(data || []));
+  }, [supabase]);
+  const sources = { products: PRODUCT_CATALOG, docs, clients, sellers: SELLER_PROFILES, objections: OBJECTIONS, competitors };
+  const result = searchKnowledge(query, sources);
+  async function copy() {
+    try { await navigator.clipboard.writeText(buildKnowledgePrompt(query, result)); setCopied(true); } catch { setCopied(false); }
+  }
+  return (
+    <section className="panel commercial-knowledge">
+      <div className="panel-head">
+        <div>
+          <span className="eyebrow">Todo lo que sabe el CRM</span>
+          <h2>Buscar en productos, fichas, clientes, equipo y competencia</h2>
+        </div>
+        <label className="search"><Search size={17} /><input value={query} onChange={(event) => { setQuery(event.target.value); setCopied(false); }} placeholder="Ej.: adhesivo para espuma, impermeabilizante, Satch…" /></label>
+      </div>
+      {!query.trim() && <Empty text="Escribí una palabra de un producto, un uso, un cliente o un competidor." />}
+      {query.trim() && result.total === 0 && <Empty text="No encontramos nada con eso. Probá con otra palabra." />}
+      {result.total > 0 && (
+        <>
+          <div className="knowledge-grid profiles">
+            {KNOWLEDGE_TYPES.filter(([key]) => result.groups[key].length).map(([key, label]) => (
+              <article key={key}>
+                <span>{label}</span>
+                <ul>{result.groups[key].map((item) => <li key={`${key}-${item.id}`}><strong>{item.title}</strong>{item.subtitle ? <span className="muted small"> · {item.subtitle}</span> : null}</li>)}</ul>
+              </article>
+            ))}
+          </div>
+          <div className="panel-head-actions">
+            <button type="button" className="secondary" onClick={copy}>{copied ? "Copiado" : "Copiar consulta para tu IA"}</button>
+          </div>
+        </>
+      )}
+      <div className="quality-note"><CircleAlert size={19} /><p>Busca por palabras en lo que ya está cargado. Las fichas técnicas se buscan por título y notas; el texto completo está en Base técnica. Lo que no figura acá, no lo sabe el CRM.</p></div>
+    </section>
   );
 }
 

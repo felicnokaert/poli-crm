@@ -144,7 +144,12 @@ export async function attachTechnicalDocumentFile(id, file, extra = {}) {
     .maybeSingle();
   if (error) throw error;
   // El texto quedó guardado igual (el copiloto aprende); se avisa que el PDF en sí no se pudo subir.
-  if (uploadError && isPdf) throw new Error(`el PDF no se pudo guardar (${uploadError.message || uploadError.error || 'error de Storage'})`);
+  if (uploadError) {
+    const reason = uploadError.message || uploadError.error || 'error de Storage';
+    throw new Error(/mime|type/i.test(reason) && !isPdf
+      ? 'el texto quedó guardado, pero el archivo no: el espacio de archivos todavía acepta solo PDF (Felipe lo habilita con «Permitir Word, Excel y fotos»)'
+      : `el archivo no se pudo guardar (${reason}); el texto quedó guardado`);
+  }
   return data ? fromRow(data) : null;
 }
 

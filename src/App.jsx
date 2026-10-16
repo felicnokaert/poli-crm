@@ -72,6 +72,8 @@ import { makeRequestsApi } from "./prospect-requests.mjs";
 import { planTasks } from "./trello-plan-import.mjs";
 import { makeTeamApi } from "./team-api.mjs";
 import { isChannelAdmin } from "./user-channels.mjs";
+import { applyTheme, nextTheme, readTheme } from "./theme.mjs";
+import { LocalInfo } from "./LocalInfo.jsx";
 import { ownsFelipeTools, TEAM_INBOX_ENABLED } from "./personal-tools.mjs";
 import { TRELLO_PLAN } from "./trello-plan.mjs";
 const Sales = lazy(() => import("./Sales"));
@@ -252,6 +254,7 @@ export default function App() {
   const [showForm, setShowForm] = useState(false);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
+  const [theme, setTheme] = useState(readTheme);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [taskForm, setTaskForm] = useState(blankTask);
   const [editingInteractionId, setEditingInteractionId] = useState(null);
@@ -1630,6 +1633,7 @@ export default function App() {
         <header className="topbar">
           <div>
             <span className="eyebrow">{longToday()}</span>
+            <LocalInfo />
             <h1>{nav.find(([id]) => id === view)?.[1]}</h1>
           </div>
           <div className="top-actions">
@@ -1665,6 +1669,15 @@ export default function App() {
                 </button>
               )}
             </span>
+            <button
+              type="button"
+              className="icon-button theme-toggle"
+              aria-label={`Tema: ${theme}. Tocá para cambiar`}
+              title={`Tema: ${theme} (automático, claro u oscuro)`}
+              onClick={() => { const next = nextTheme(theme); applyTheme(next); setTheme(next); }}
+            >
+              {theme === "oscuro" ? "🌙" : theme === "claro" ? "☀️" : "🌓"}
+            </button>
             <button
               type="button"
               className="icon-button"

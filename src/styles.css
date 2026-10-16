@@ -743,3 +743,10 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
   .academy-hero .segmented { width: 100%; box-sizing: border-box; }
   .academy-hero .segmented button { flex: 0 0 auto; white-space: nowrap; }
 }
+
+.local-info{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;margin-left:10px;vertical-align:middle}
+.local-chip{display:inline-flex;gap:4px;align-items:center;font-size:.75rem;padding:2px 8px;border-radius:99px;background:var(--color-bg-soft);color:var(--color-text-dark);border:0}
+.local-chip small{color:var(--brand-gray)}
+.local-add{cursor:pointer}
+.local-form{display:inline-flex;gap:6px;align-items:center}
+.local-form input{padding:2px 8px;font-size:.78rem;width:130px}

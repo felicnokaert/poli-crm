@@ -1,4 +1,4 @@
-// Puente entre la vista previa de importación (technical-inventory-import.mjs)
+// Puente entre Base técnica (TechnicalUpload.jsx, TechnicalDocuments.jsx)
 // y la tabla compartida de Supabase (docs/MIGRACION_BASE_TECNICA.sql). Usa el
 // mismo cliente autenticado que el resto del CRM - la seguridad la hace RLS,
 // no este archivo: cualquier intento de guardar algo "vigente" sin validar,

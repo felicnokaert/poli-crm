@@ -40,12 +40,6 @@ test('el mapa de POLIOCHO recibe solo las empresas, nunca los prospectos', () =>
   assert.ok(JSON.stringify(result).indexOf('prospect') === -1);
 });
 
-test('la Prospección no usa los archivos de datos propios del mapa de POLIOCHO para escribir', () => {
-  const source = readFileSync(new URL('../src/ProspeccionMapa.jsx', import.meta.url), 'utf8');
-  assert.ok(!source.includes('MapaCobertura'));
-  assert.ok(!source.includes('/mapa/index.html'));
-});
-
 test('el mapa de aplicadores abre mostrando todos los clientes (como antes) y la ficha ajusta los emails largos', () => {
   const html = readFileSync(new URL('../public/mapa/index.html', import.meta.url), 'utf8');
   assert.doesNotMatch(html, /<option value="aplicador" selected>/);

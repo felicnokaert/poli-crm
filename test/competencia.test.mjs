@@ -55,22 +55,47 @@ test('filtra por familia y oculta las familias sin competidores', async () => {
   assert.equal(screen.queryByRole('button', { name: 'Poliurea' }), null);
 });
 
-test('cargar un competidor nuevo deja un pedido en la cola con los links', async () => {
-  const { Competencia, buildNewCompetitorPrompt, newCompetitorLabel, hostOf } = await loadJsxModule('src/Competencia.jsx');
+test('cargar un competidor nuevo lo investiga en el momento y crea la ficha; si falla, abre la carga a mano', async () => {
+  const { Competencia, newCompetitorLabel, hostOf } = await loadJsxModule('src/Competencia.jsx');
   assert.equal(hostOf('https://www.ejemplo.com.ar/x'), 'ejemplo.com.ar');
   assert.equal(newCompetitorLabel({ website: 'www.ejemplo.com.ar' }), 'ejemplo.com.ar');
-  assert.match(buildNewCompetitorPrompt({ name: 'Foam SA', instagram: '@foamsa' }), /Instagram: @foamsa/);
   const inserts = [];
-  render(React.createElement(Competencia, { supabase: fakeSupabase(inserts), userEmail: 'V@x.com', families: ['Planchas'] }));
-  await screen.findByText('Argenpur S.A.');
-  fireEvent.click(screen.getByRole('button', { name: /Cargar un competidor nuevo/ }));
-  fireEvent.click(screen.getByRole('button', { name: /Cargar y que la IA investigue/ }));
-  assert.equal(inserts.length, 0, 'sin ningún dato no se envía');
-  fireEvent.change(screen.getByLabelText('Instagram'), { target: { value: '@foamsa' } });
-  fireEvent.click(screen.getByRole('button', { name: /Cargar y que la IA investigue/ }));
-  await waitFor(() => assert.equal(inserts.length, 1));
-  assert.match(inserts[0].row.family, /^COMPETENCIA NUEVA: /);
-  assert.equal(inserts[0].row.user_email, 'v@x.com');
+  const supa = fakeSupabase(inserts);
+  supa.auth = { getSession: async () => ({ data: { session: { access_token: 'tok' } } }) };
+  const calls = [];
+  const realFetch = globalThis.fetch;
+  let answer = { ok: true, competitor: { name: 'Foam SA', kind: 'fabricante', families: ['Poliuretano'], summary: 'Según su sitio: "Espumas"', products: ['Poliuretano'], location: 'Rosario', website: 'https://foam.com.ar', channels: 'Tel. 341', sources: [{ t: 'Sitio oficial', u: 'https://foam.com.ar/' }], caveats: 'Ficha armada automáticamente.' } };
+  globalThis.fetch = async (url, init) => { calls.push({ url, body: JSON.parse(init.body), auth: init.headers.Authorization }); return { json: async () => answer }; };
+  try {
+    render(React.createElement(Competencia, { supabase: supa, userEmail: 'V@x.com', families: ['Planchas', 'Poliuretano'] }));
+    await screen.findByText('Argenpur S.A.');
+    fireEvent.click(screen.getByRole('button', { name: /Cargar un competidor nuevo/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Investigar y crear la ficha/ }));
+    assert.equal(calls.length, 0, 'sin ningún dato no se investiga');
+    fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: 'Foam SA' } });
+    fireEvent.change(screen.getByLabelText('Sitio web'), { target: { value: 'foam.com.ar' } });
+    fireEvent.click(screen.getByRole('button', { name: /Investigar y crear la ficha/ }));
+    await screen.findByText(/Listo: Foam SA/);
+    assert.equal(calls[0].url, '/api/prospeccion');
+    assert.deepEqual([calls[0].body.action, calls[0].body.name, calls[0].body.website], ['competitor', 'Foam SA', 'foam.com.ar']);
+    assert.equal(calls[0].auth, 'Bearer tok');
+    const saved = inserts.find((item) => item.table === 'competitors').row;
+    assert.equal(saved.id, 'foam-sa');
+    assert.equal(saved.reviewed, false);
+    assert.equal(saved.location, 'Rosario');
+    assert.equal(inserts.some((item) => item.table === 'prospect_requests'), false, 'ya no deja pedidos "en proceso"');
+    // Si el sitio no se puede leer: aviso y carga a mano con lo que ya se sabe.
+    answer = { ok: false, error: 'El sitio respondió 503.' };
+    fireEvent.click(screen.getByRole('button', { name: /Cargar un competidor nuevo/ }));
+    fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: 'Otra SRL' } });
+    fireEvent.change(screen.getByLabelText('Sitio web'), { target: { value: 'otra.com' } });
+    fireEvent.click(screen.getByRole('button', { name: /Investigar y crear la ficha/ }));
+    await screen.findByText(/El sitio respondió 503\. Te abrimos la carga a mano/);
+    assert.equal(screen.getByLabelText('Nombre').value, 'Otra SRL');
+    assert.equal(screen.getByLabelText('Sitio web').value, 'otra.com');
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });
 
 // Base que registra todo y puede negar el update (como si la tabla no tuviera permiso de edición).

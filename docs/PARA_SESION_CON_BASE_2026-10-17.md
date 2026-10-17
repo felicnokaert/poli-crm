@@ -29,10 +29,10 @@ En `prospect_requests` hay pedidos `COMPETENCIA NUEVA: …` sin procesar (Felipe
 proceso desde el 16/10). Procesarlos como dice `docs/PROSPECCION_CLAUDE_WORKER.md`.
 
 - Listar: `select id, family, status, scope, notes, created_at from prospect_requests where family like 'COMPETENCIA%' and status <> 'lista' order by created_at;`
-- **Tecno Ref:** en una búsqueda web del 17/10 no apareció nada confiable con ese nombre (ni en
-  registros de empresas). Usar la web o las redes del `scope` si las hay. Si no se encuentra, marcar
-  `status = 'error'` con `progress` = el motivo, y avisarle a Felipe que lo cargue a mano (botón
-  "Cargar a mano" en Academia → Competencia). No inventar datos.
+- **Desde el 17/10 la app investiga sola:** Academia → Competencia lee el sitio en el momento
+  (`lib/competitor-research.mjs`, acción `competitor` de `api/prospeccion.js`) y los pedidos viejos
+  tienen "Investigar ahora". Tecno Ref se resuelve así (tecno-ref.com.ar, equipos de frío para el
+  transporte). Acá solo queda marcar como `lista` los pedidos que ya tienen ficha en `competitors`.
 
 ## 2. Competidores: reclasificación y permiso de edición
 

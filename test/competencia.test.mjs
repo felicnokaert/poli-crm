@@ -72,3 +72,58 @@ test('cargar un competidor nuevo deja un pedido en la cola con los links', async
   assert.match(inserts[0].row.family, /^COMPETENCIA NUEVA: /);
   assert.equal(inserts[0].row.user_email, 'v@x.com');
 });
+
+// Base que registra todo y puede negar el update (como si la tabla no tuviera permiso de edición).
+function recordingSupabase(log, { updateAllowed }) {
+  return {
+    from(table) {
+      const chain = {
+        select: () => chain, order: () => chain, like: () => chain, eq: () => chain,
+        then: (resolve) => resolve({ data: table === 'competitors' ? ROWS : [], error: null }),
+        insert: async (row) => { log.push(['insert', row]); return { error: null }; },
+        update: (patch) => { log.push(['update', patch]); return { eq: () => ({ select: async () => ({ data: updateAllowed ? [{ id: 'x' }] : [], error: null }) }) }; },
+        delete: () => ({ eq: async (_col, id) => { log.push(['delete', id]); return { error: null }; } }),
+      };
+      return chain;
+    },
+  };
+}
+
+test('Felipe cambia las familias de un competidor; si la base no deja editar, reemplaza la ficha', async () => {
+  const { Competencia } = await loadJsxModule('src/Competencia.jsx');
+  for (const updateAllowed of [true, false]) {
+    const log = [];
+    render(React.createElement(Competencia, { supabase: recordingSupabase(log, { updateAllowed }), userEmail: 'felipe@grupopoliplast.com.ar', families: ['Planchas', 'Poliuretano'] }));
+    await screen.findByText('Argenpur S.A.');
+    fireEvent.click(screen.getByRole('button', { name: 'Cambiar familias' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Planchas' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Poliuretano' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar familias' }));
+    await screen.findByText(/Argenpur S\.A\.: Poliuretano\./);
+    assert.deepEqual(log[0], ['update', { families: ['Poliuretano'] }]);
+    if (updateAllowed) assert.equal(log.length, 1);
+    else {
+      assert.deepEqual(log[1], ['delete', 'argenpur']);
+      assert.equal(log[2][0], 'insert');
+      assert.deepEqual(log[2][1].families, ['Poliuretano']);
+      assert.equal(log[2][1].summary, ROWS[0].summary);
+    }
+    cleanup();
+  }
+});
+
+test('el resto del equipo no ve "Cambiar familias"; pegar varios carga solo los nuevos', async () => {
+  const { Competencia } = await loadJsxModule('src/Competencia.jsx');
+  const log = [];
+  render(React.createElement(Competencia, { supabase: recordingSupabase(log, { updateAllowed: true }), userEmail: 'brenda@grupopoliplast.com.ar', families: ['Poliuretano'] }));
+  await screen.findByText('Argenpur S.A.');
+  assert.equal(screen.queryByRole('button', { name: 'Cambiar familias' }), null);
+  fireEvent.click(screen.getByRole('button', { name: '+ Pegar varios' }));
+  fireEvent.change(screen.getByLabelText('Nombres'), { target: { value: 'Alkanos\nFana/ Kilcom\nArgenpur S.A.\nalkanos' } });
+  fireEvent.change(screen.getByLabelText('Familia con la que compiten'), { target: { value: 'Poliuretano' } });
+  fireEvent.click(screen.getByRole('button', { name: /^Guardar/ }));
+  await screen.findByText(/Cargados 2 competidores/);
+  const rows = log[0][1];
+  assert.deepEqual(rows.map((r) => r.name), ['Alkanos', 'Fana / Kilcom']);
+  assert.ok(rows.every((r) => r.families[0] === 'Poliuretano' && r.reviewed === false));
+});

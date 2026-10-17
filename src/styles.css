@@ -569,6 +569,7 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .queue-actions select { max-width: 220px; }
 .prospect-coverage { margin-top: 16px; }
 .prospect-coverage summary { cursor: pointer; padding: 6px 0; }
+.prospect-coverage .table-scroll { max-width: 100%; overflow-x: auto; }
 .queue-count { color: #ed1c24; font-size: 13px; }
 .queue-notes { margin: 0; padding: 10px 12px; border-radius: 10px; background: #f3f3f4; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
 .drawer-quick { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -935,3 +936,9 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
   main a.secondary, main a.primary, main button:not(.link-button):not(.icon-button):not(.day-mode-candidate-label):not(.task-check) { min-height: 40px; }
   main .task-check { flex: 0 0 40px; width: 40px; height: 40px; }
 }
+
+/* Competencia: reclasificar familias (16/10) */
+.competitor-families { display: flex; flex-wrap: wrap; gap: 6px 16px; border: 1px solid var(--color-border); border-radius: 12px; padding: 10px 14px; margin: 6px 0; }
+.competitor-families legend { font-weight: 700; padding: 0 4px; }
+.competitor-families .check-line { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; }
+.competitor-families .panel-head-actions { flex-basis: 100%; }

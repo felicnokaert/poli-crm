@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, Search } from 'lucide-react';
 import { AI_TOOLS } from './prospect-playbook.mjs';
-import { buildCompetitorRow } from './competitor-battlecard.mjs';
+import { buildCompetitorRow, parseCompetitorList, slugifyCompetitor } from './competitor-battlecard.mjs';
 import { isChannelAdmin } from './user-channels.mjs';
 
 // Fichas de competidores (tabla compartida `competitors`, solo lectura) y pedidos de
@@ -50,6 +50,8 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
   const [error, setError] = useState('');
   const [form, setForm] = useState(null);
   const [manual, setManual] = useState(null);
+  const [bulk, setBulk] = useState(null);
+  const [editing, setEditing] = useState(null);
   const canDelete = isChannelAdmin(userEmail);
 
   useEffect(() => { setFamily(initialFamily || 'Todas'); }, [initialFamily]);
@@ -114,6 +116,44 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
     await load();
   }
 
+  // Varios de una vez (pedido de Felipe 16/10: "los competidores de poliuretano que tenemos son…").
+  async function addBulk(event) {
+    event.preventDefault();
+    const existing = new Set((rows || []).flatMap((item) => [item.id, slugifyCompetitor(item.name)]));
+    const list = parseCompetitorList(bulk.text).map((name) => buildCompetitorRow({ name, kind: bulk.kind, family: bulk.family }));
+    const fresh = list.filter((row) => row && !existing.has(row.id));
+    const repeated = list.length - fresh.length;
+    if (!fresh.length) { setError(repeated ? 'Todos los de la lista ya estaban cargados.' : 'Pegá al menos un nombre.'); return; }
+    setError(''); setMessage('');
+    const { error: insertError } = await supabase.from('competitors').insert(fresh);
+    if (insertError) { setError('No se pudieron guardar. Probá de nuevo o cargalos de a uno.'); return; }
+    setBulk(null);
+    setMessage(`Cargados ${fresh.length} competidores para todo el equipo (sin revisar)${repeated ? `; ${repeated} ya estaban` : ''}.`);
+    await load();
+  }
+
+  // Reclasificar (solo Felipe): cambia las familias con las que compite. Si la base no deja editar
+  // la ficha, la reemplaza por la misma con las familias nuevas (y si eso falla, la deja como estaba).
+  async function saveFamilies(item, nextFamilies) {
+    if (!canDelete) return;
+    setError(''); setMessage('');
+    const { data: updated, error: updateError } = await supabase.from('competitors').update({ families: nextFamilies }).eq('id', item.id).select('id');
+    if (updateError || !updated?.length) {
+      const { error: deleteError } = await supabase.from('competitors').delete().eq('id', item.id);
+      if (deleteError) { setError('No se pudo cambiar la familia.'); return; }
+      const { error: insertError } = await supabase.from('competitors').insert({ ...item, families: nextFamilies });
+      if (insertError) {
+        await supabase.from('competitors').insert(item);
+        setError('No se pudo cambiar la familia; la ficha quedó como estaba.');
+        await load();
+        return;
+      }
+    }
+    setEditing(null);
+    setMessage(`${item.name}: ${nextFamilies.length ? nextFamilies.join(' · ') : 'sin familia'}.`);
+    await load();
+  }
+
   async function remove(item) {
     if (!canDelete || !window.confirm(`¿Borrar a ${item.name} para todo el equipo?`)) return;
     const { error: deleteError } = await supabase.from('competitors').delete().eq('id', item.id);
@@ -152,7 +192,31 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
       {supabase && (
         <div className="panel-head-actions">
           <button type="button" className="secondary" onClick={() => setManual(manual ? null : { name: '', kind: 'fabricante', family: '', summary: '', website: '', location: '' })}>+ Agregar a mano</button>
+          <button type="button" className="secondary" onClick={() => setBulk(bulk ? null : { text: '', kind: 'fabricante', family: '' })}>+ Pegar varios</button>
         </div>
+      )}
+      {bulk && (
+        <form className="form-grid" onSubmit={addBulk}>
+          <p className="muted small span-2">Un competidor por renglón. Quedan visibles para todos y marcados "sin revisar"; los que ya están cargados se saltean.</p>
+          <label className="span-2">Nombres
+            <textarea rows={6} value={bulk.text} onChange={(event) => setBulk({ ...bulk, text: event.target.value })} placeholder={"Alkanos\nPolytal\nPoliresinas"} />
+          </label>
+          <label>Tipo
+            <select value={bulk.kind} onChange={(event) => setBulk({ ...bulk, kind: event.target.value })}>
+              <option value="fabricante">Fabricante</option><option value="equipos">Vende máquinas / equipos</option><option value="distribuidor">Distribuidor</option>
+            </select>
+          </label>
+          <label>Familia con la que compiten
+            <select value={bulk.family} onChange={(event) => setBulk({ ...bulk, family: event.target.value })}>
+              <option value="">No sé</option>
+              {families.map((name) => <option key={name}>{name}</option>)}
+            </select>
+          </label>
+          <div className="panel-head-actions span-2">
+            <button type="submit" className="primary">Guardar {parseCompetitorList(bulk.text).length || ''}</button>
+            <button type="button" className="secondary" onClick={() => setBulk(null)}>Cancelar</button>
+          </div>
+        </form>
       )}
       {manual && (
         <form className="form-grid" onSubmit={addManual}>
@@ -236,7 +300,26 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
                     {req.result_markdown ? <pre className="competitor-result">{req.result_markdown}</pre> : <p className="muted small">Todavía sin resultado.</p>}
                   </details>
                 ))}
-                {canDelete && <button type="button" className="link-button" onClick={() => remove(item)}>Borrar (solo Felipe)</button>}
+                {canDelete && editing?.id === item.id && (
+                  <fieldset className="competitor-families">
+                    <legend>Familias con las que compite</legend>
+                    {families.map((name) => (
+                      <label key={name} className="check-line">
+                        <input type="checkbox" checked={editing.families.includes(name)} onChange={(event) => setEditing({ ...editing, families: event.target.checked ? [...editing.families, name] : editing.families.filter((f) => f !== name) })} /> {name}
+                      </label>
+                    ))}
+                    <div className="panel-head-actions">
+                      <button type="button" className="primary" onClick={() => saveFamilies(item, editing.families)}>Guardar familias</button>
+                      <button type="button" className="secondary" onClick={() => setEditing(null)}>Cancelar</button>
+                    </div>
+                  </fieldset>
+                )}
+                {canDelete && (
+                  <span className="panel-head-actions">
+                    {editing?.id !== item.id && <button type="button" className="link-button" onClick={() => setEditing({ id: item.id, families: item.families || [] })}>Cambiar familias</button>}
+                    <button type="button" className="link-button" onClick={() => remove(item)}>Borrar (solo Felipe)</button>
+                  </span>
+                )}
                 <details>
                   <summary>Profundizar sobre {item.name}</summary>
                   <p className="muted small">Sin Claude: copiá el pedido y pegalo en tu IA. Con el equipo: lo pedís acá y lo procesa Claude de Poliplast.</p>

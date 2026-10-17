@@ -768,14 +768,14 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       {coverage.length > 0 && (
         <details className="prospect-coverage">
           <summary><strong>Cobertura por familia y localidad</strong> <span className="muted small">({coverage.length} zonas)</span></summary>
-          <table className="sales-history-table">
+          <div className="table-scroll"><table className="sales-history-table">
             <thead><tr><th>Familia</th><th>Localidad</th><th>Cargados</th><th>Contactados</th><th>Con interés</th></tr></thead>
             <tbody>
               {coverage.map((row) => (
                 <tr key={`${row.family}|${row.city}`}><td>{row.family}</td><td>{row.city}</td><td>{row.total}</td><td>{row.contacted}</td><td>{row.interested}</td></tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </details>
       )}
       </>)}

@@ -212,12 +212,27 @@ export function KnowledgeSearch({ supabase, clients = [], sellers = [] }) {
   const [docs, setDocs] = useState([]);
   const [competitors, setCompetitors] = useState([]);
   const [copied, setCopied] = useState(false);
+  const [pendingDocs, setPendingDocs] = useState(0);
+  const [textsLoaded, setTextsLoaded] = useState(false);
   useEffect(() => {
     if (!supabase) return;
     supabase.from("technical_documents").select("id,title,family,product,sku,doc_type,status,notes").eq("status", "vigente").limit(500)
       .then(({ data }) => setDocs(data || []));
+    supabase.from("technical_documents").select("id", { count: "exact", head: true }).neq("status", "vigente")
+      .then(({ count }) => setPendingDocs(count || 0), () => {});
     supabase.from("competitors").select("id,name,kind,families,summary,caveats").then(({ data }) => setCompetitors(data || []));
   }, [supabase]);
+  // El texto completo de las fichas pesa: se trae una sola vez, recién cuando alguien busca (17/10).
+  const searching = query.trim().length > 2;
+  useEffect(() => {
+    if (!supabase || !searching || textsLoaded) return;
+    setTextsLoaded(true);
+    supabase.from("technical_documents").select("id,extracted_text").eq("status", "vigente").limit(500)
+      .then(({ data }) => {
+        const byId = new Map((data || []).map((row) => [row.id, row.extracted_text || ""]));
+        setDocs((current) => current.map((doc) => ({ ...doc, extractedText: byId.get(doc.id) || "" })));
+      }, () => {});
+  }, [supabase, searching, textsLoaded]);
   const sources = { products: PRODUCT_CATALOG, docs, clients, sellers, objections: OBJECTIONS, competitors };
   const result = searchKnowledge(query, sources);
   async function copy() {
@@ -240,7 +255,7 @@ export function KnowledgeSearch({ supabase, clients = [], sellers = [] }) {
             {KNOWLEDGE_TYPES.filter(([key]) => result.groups[key].length).map(([key, label]) => (
               <article key={key}>
                 <span>{label}</span>
-                <ul>{result.groups[key].map((item) => <li key={`${key}-${item.id}`}><strong>{item.title}</strong>{item.subtitle ? <span className="muted small"> · {item.subtitle}</span> : null}</li>)}</ul>
+                <ul>{result.groups[key].map((item) => <li key={`${key}-${item.id}`}><strong>{item.title}</strong>{item.subtitle ? <span className="muted small"> · {item.subtitle}</span> : null}{item.snippet ? <q className="knowledge-snippet">{item.snippet}</q> : null}</li>)}</ul>
               </article>
             ))}
           </div>
@@ -249,7 +264,7 @@ export function KnowledgeSearch({ supabase, clients = [], sellers = [] }) {
           </div>
         </>
       )}
-      <div className="quality-note"><CircleAlert size={19} /><p>Busca por palabras en lo que ya está cargado. Las fichas técnicas se buscan por título y notas; el texto completo está en Base técnica. Lo que no figura acá, no lo sabe el CRM.</p></div>
+      <div className="quality-note"><CircleAlert size={19} /><p>Busca por palabras en lo que ya está cargado, también dentro del texto de las fichas técnicas vigentes (con el pedacito donde aparece).{pendingDocs > 0 ? ` ${pendingDocs} fichas todavía sin validar no entran: se validan en Base técnica.` : ""} Lo que no figura acá, no lo sabe el CRM.</p></div>
     </section>
   );
 }

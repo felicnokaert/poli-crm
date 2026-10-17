@@ -3,6 +3,7 @@ import { Database, UserCog } from "lucide-react";
 import { onlineConfigured, saveOnlineState, supabase } from "./online";
 import { removeExplicitTestData, testDataCandidates } from "./data-hygiene.mjs";
 import { DEFAULT_WEEKLY_TARGETS, WEEKLY_TARGET_FIELDS, normalizeTarget, resolveWeeklyTargets } from "./weekly-targets.mjs";
+import { MIN_PASSWORD, authErrorEs, passwordProblem } from "./password-policy.mjs";
 
 export function TestCleanupPanel({ data, setData, session }) {
   const [message, setMessage] = useState("");
@@ -100,12 +101,9 @@ export function Profile({ data, setData, session }) {
 
   async function changePassword(event) {
     event.preventDefault();
-    if (password.length < 6) {
-      setMessage("La contraseña debe tener al menos 6 caracteres.");
-      return;
-    }
-    if (password !== passwordConfirm) {
-      setMessage("Las contraseñas no coinciden.");
+    const problem = passwordProblem(password, passwordConfirm);
+    if (problem) {
+      setMessage(problem);
       return;
     }
     setSaving(true);
@@ -113,7 +111,7 @@ export function Profile({ data, setData, session }) {
     const { error } = await supabase.auth.updateUser({ password });
     setSaving(false);
     if (error) {
-      setMessage(error.message || "No se pudo actualizar la contraseña.");
+      setMessage(authErrorEs(error));
       return;
     }
     setPassword("");
@@ -191,7 +189,7 @@ export function Profile({ data, setData, session }) {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="••••••••"
-              minLength={6}
+              minLength={MIN_PASSWORD}
             />
           </label>
           <label>
@@ -201,7 +199,7 @@ export function Profile({ data, setData, session }) {
               value={passwordConfirm}
               onChange={(event) => setPasswordConfirm(event.target.value)}
               placeholder="••••••••"
-              minLength={6}
+              minLength={MIN_PASSWORD}
             />
           </label>
           <div className="modal-actions span-2">

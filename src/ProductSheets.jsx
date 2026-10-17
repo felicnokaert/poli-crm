@@ -67,14 +67,14 @@ export function ProductSheets({ supabase, documents = [], isAdmin, onChanged, on
     setBusy("");
   }
 
-  if (!supabase) return null;
+  if (!supabase) return <section className="panel product-sheets"><p className="muted">Qué productos tienen ficha se ve en la versión en línea (lee el catálogo del cotizador).</p></section>;
   return (
     <section className="panel product-sheets">
       <div className="panel-head">
         <div>
-          <span className="eyebrow">Catálogo completo del cotizador</span>
-          <h2><ClipboardCheck size={18} /> Fichas por producto</h2>
-          <p>Qué productos ya tienen ficha técnica y cuáles faltan. Almohadas, colchones, baldes y pisos no llevan ficha y quedan aparte.</p>
+          <span className="eyebrow">Los productos del cotizador, uno por uno</span>
+          <h2><ClipboardCheck size={18} /> Qué productos tienen ficha</h2>
+          <p>Cada producto del catálogo del cotizador y si ya tiene su ficha en Documentos. Sirve para ver qué falta conseguir. Almohadas, colchones, baldes y pisos no llevan ficha y quedan aparte.</p>
         </div>
       </div>
       {error && <div className="system-message error">{error}</div>}

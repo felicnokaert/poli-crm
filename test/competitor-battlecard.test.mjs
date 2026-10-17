@@ -49,3 +49,9 @@ test('alta directa de competidor: id, sin revisar y tipo válido', () => {
   assert.equal(row.reviewed, false);
   assert.equal(buildCompetitorRow({ name: '  ' }), null);
 });
+
+import { parseCompetitorList as parseList } from '../src/competitor-battlecard.mjs';
+test('parseCompetitorList: un nombre por renglón, sin repetidos y "Fana/ Kilcom" como uno solo', () => {
+  const names = parseList('Alkanos\nFana/ Kilcom\n\nQuimica del Caucho\n- Polytal\nalkanos\nPoliresinas; MAS-TIN / NOSOTROS');
+  assert.deepEqual(names, ['Alkanos', 'Fana / Kilcom', 'Quimica del Caucho', 'Polytal', 'Poliresinas', 'MAS-TIN / NOSOTROS']);
+});

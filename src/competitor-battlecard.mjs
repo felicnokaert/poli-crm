@@ -66,3 +66,18 @@ export function buildCompetitorRow(input = {}, now = new Date().toISOString()) {
     updated_at: now,
   };
 }
+
+// Lista pegada (un competidor por renglón, también separados por ";" o viñetas): nombres limpios y sin
+// repetidos. "Fana/ Kilcom" queda como un solo nombre ("Fana / Kilcom").
+export function parseCompetitorList(text = '') {
+  const seen = new Set();
+  const names = [];
+  for (const raw of String(text).split(/[\n;]+/)) {
+    const name = raw.replace(/^[\s\-*•·]+/, '').replace(/\s*\/\s*/g, ' / ').replace(/\s+/g, ' ').trim();
+    const slug = slugifyCompetitor(name);
+    if (!slug || seen.has(slug)) continue;
+    seen.add(slug);
+    names.push(name);
+  }
+  return names;
+}

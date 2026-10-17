@@ -48,6 +48,9 @@ function TechnicalDocumentsAdminBase({ session }) {
     setMessageIsError(true);
   }
   const [statusFilter, setStatusFilter] = useState("all");
+  // Dos miradas de lo mismo (Felipe 16/10: "¿no está duplicado?"): por documento (los archivos) y por
+  // producto (qué productos del cotizador tienen ficha). Ahora en pestañas en vez de una debajo de la otra.
+  const [tab, setTab] = useState("documentos");
   const [familyFilter, setFamilyFilter] = useState("all");
   const [drafts, setDrafts] = useState({});
   const [isAdmin, setIsAdmin] = useState(false);
@@ -332,13 +335,22 @@ function TechnicalDocumentsAdminBase({ session }) {
   return (
     <div className="content-stack">
       <ProductQuestion supabase={supabase} eyebrow="Base técnica" title="Preguntale al catálogo" />
+      <div className="segmented routine-tabs" role="tablist" aria-label="Base técnica" style={{ width: "fit-content", maxWidth: "100%", overflowX: "auto" }}>
+        {[["documentos", `Documentos (${documents.length})`], ["productos", "Qué productos tienen ficha"]].map(([key, label]) => (
+          <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? "selected" : ""} onClick={() => setTab(key)}>{label}</button>
+        ))}
+      </div>
+      {/* Siempre montada (oculta en la otra pestaña): carga el catálogo que usa la lista de documentos. */}
+      <div hidden={tab !== "productos"}>
+        <ProductSheets supabase={supabase} documents={documents} isAdmin={isAdmin} onChanged={load} onCatalog={setCatalog} />
+      </div>
+      {tab === "documentos" && (<>
       <TechnicalUpload documents={documents} onDone={load} />
-      <ProductSheets supabase={supabase} documents={documents} isAdmin={isAdmin} onChanged={load} onCatalog={setCatalog} />
       <section className="panel">
         <div className="panel-head">
           <div>
-            <span className="eyebrow">Catálogo compartido con el PDF adjunto</span>
-            <h2>Base técnica</h2>
+            <span className="eyebrow">Los archivos, uno por uno</span>
+            <h2>Documentos</h2>
             <p>
               Fichas y documentos (de Drive o subidos acá arriba), con el
               archivo real guardado acá adentro. Solo Felipe puede marcar un documento "vigente" - hasta
@@ -433,6 +445,7 @@ function TechnicalDocumentsAdminBase({ session }) {
           <Empty text="No hay documentos importados todavía. Subilas con «Subir fichas y documentos», acá arriba." />
         )}
       </section>
+      </>)}
       {sheetDoc && <TechnicalDocumentSheet doc={sheetDoc} products={productsByDoc.get(sheetDoc.id) || []} viewFile={viewFile} onClose={() => setSheetDocId("")} />}
     </div>
   );
@@ -733,7 +746,7 @@ export function TechnicalDocumentSheet({ doc, products = [], viewFile, onClose }
             {products.map((product) => <li key={product.id}>{product.name}{product.family ? <span className="muted small"> · {product.family}</span> : null}</li>)}
           </ul>
         ) : (
-          <p className="muted">Ninguno todavía. Se vincula desde «Fichas por producto»: en el producto, «o vincular una existente…».</p>
+          <p className="muted">Ninguno todavía. Se vincula desde la pestaña «Qué productos tienen ficha»: en el producto, «o vincular una existente…».</p>
         )}
         {showText && <pre className="technical-sheet-text">{doc.extractedText}</pre>}
       </div>

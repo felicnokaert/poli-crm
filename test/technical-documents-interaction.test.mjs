@@ -110,7 +110,7 @@ describe("TechnicalDocuments.jsx - interacción real", () => {
       }),
     );
 
-    assert.ok(screen.getByText("Base técnica"));
+    assert.ok(screen.getByRole("heading", { name: "Documentos" }));
     // Sin credenciales de Supabase en el entorno de test, el fetch inicial
     // falla y documents queda vacío - se ve el Empty state, no un crash.
     await waitFor(() => screen.getByText(/No hay documentos importados todavía/));

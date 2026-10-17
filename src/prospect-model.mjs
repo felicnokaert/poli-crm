@@ -44,6 +44,8 @@ export const COMPETITORS = [
   'Argenpur', 'Sulfibra', 'Bonano', 'Orlandi', 'Tecnimet', 'Fischer', 'Barovo', 'Suprabond',
   'Kuwait', 'Adhematic', 'Crossmaster', 'ECG Poliuretano', 'Satch Poliuretanos', 'Bertok',
   'Servifibras', 'Advance Coat',
+  // Poliuretano, según Felipe (16/10). "Nosotros" (de MAS-TIN / NOSOTROS) no se suma: es una palabra común.
+  'Alkanos', 'Kilcom', 'Quimica del Caucho', 'Mas-Tin', 'Polytal', 'Poliresinas',
 ];
 
 function plain(value = '') {

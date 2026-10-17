@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "./online";
+import { MIN_PASSWORD, authErrorEs, passwordProblem } from "./password-policy.mjs";
 
 const SIGNUP_DOMAIN = "@grupopoliplast.com.ar";
 
@@ -16,6 +17,10 @@ export function LoginScreen() {
       setMessage(`Las cuentas nuevas se crean con un correo ${SIGNUP_DOMAIN}.`);
       return;
     }
+    if (mode === "signup" && passwordProblem(password)) {
+      setMessage(passwordProblem(password));
+      return;
+    }
     setMessage(mode === "signup" ? "Creando tu cuenta…" : "Ingresando…");
     const { error, data } =
       mode === "signup"
@@ -29,11 +34,7 @@ export function LoginScreen() {
             password,
           });
     if (error) {
-      setMessage(
-        error.message === "Invalid login credentials"
-          ? "Correo o contraseña incorrectos."
-          : error.message,
-      );
+      setMessage(authErrorEs(error));
       return;
     }
     setMessage(
@@ -144,7 +145,7 @@ export function LoginScreen() {
               <input
                 type="password"
                 required
-                minLength={6}
+                minLength={mode === "signup" ? MIN_PASSWORD : undefined}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="••••••••"

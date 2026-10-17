@@ -34,3 +34,17 @@ test('la consulta para IA lista lo hallado y avisa cuando no hay respaldo', () =
   const none = buildKnowledgePrompt('zzzz', searchKnowledge('zzzz', sources));
   assert.match(none, /no encontró datos propios/);
 });
+
+import { searchKnowledge as search2, snippetFor, buildKnowledgePrompt as prompt2 } from '../src/knowledge-search.mjs';
+test('las fichas se buscan por su texto completo y muestran el pedacito donde aparece', () => {
+  const docs = [{ id: 'd1', title: 'Ficha PU-618', product: 'Espuma PU-618', family: 'Penosil', status: 'vigente', extracted_text: 'Introducción. '.repeat(30) + 'Resiste temperaturas de servicio de -40 a +80 °C, apta para cámaras frigoríficas. ' + 'Final. '.repeat(30) }];
+  const result = search2('camaras frigorificas', { docs });
+  assert.equal(result.groups.fichas.length, 1);
+  const item = result.groups.fichas[0];
+  assert.match(item.snippet, /cámaras frigoríficas/);
+  assert.ok(item.snippet.startsWith('…') && item.snippet.endsWith('…'));
+  assert.ok(item.snippet.length < 220);
+  assert.match(prompt2('camaras frigorificas', result), /La ficha dice: "…/);
+  assert.equal(snippetFor('', ['hola']), '');
+  assert.equal(snippetFor('texto sin coincidencia', ['zzz']), '');
+});

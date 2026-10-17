@@ -942,3 +942,9 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .competitor-families legend { font-weight: 700; padding: 0 4px; }
 .competitor-families .check-line { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; }
 .competitor-families .panel-head-actions { flex-basis: 100%; }
+.competitor-admin { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin: 10px 0 4px; }
+.competitor-admin .secondary, .competitor-admin .danger-link { min-height: 40px; padding: 9px 14px; font-size: 12.5px; }
+.history-card .competitor-admin { margin: 0; }
+.competitor-tools { justify-content: flex-start; margin: 4px 0 8px; }
+.competitor-panel .badge { display: inline-block; font-style: normal; font-size: 11px; font-weight: 700; padding: 2px 8px; margin-right: 6px; border-radius: 999px; background: #ededee; color: #444; }
+.competitor-panel .badge.warn { background: #fff1d6; color: #7a5200; }

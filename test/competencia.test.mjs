@@ -127,3 +127,33 @@ test('el resto del equipo no ve "Cambiar familias"; pegar varios carga solo los 
   assert.deepEqual(rows.map((r) => r.name), ['Alkanos', 'Fana / Kilcom']);
   assert.ok(rows.every((r) => r.families[0] === 'Poliuretano' && r.reviewed === false));
 });
+
+test('un pedido sin procesar se puede cargar a mano y deja de figurar cuando existe la ficha', async () => {
+  const { Competencia } = await loadJsxModule('src/Competencia.jsx');
+  const reqs = [
+    { id: 'r1', family: 'COMPETENCIA NUEVA: Tecno Ref', status: 'pendiente', scope: 'tecnoref.com.ar · instagram.com/tecnoref', notes: 'Poliuretano', created_at: '2026-10-16T12:00:00Z' },
+    { id: 'r2', family: 'COMPETENCIA NUEVA: Argenpur S.A.', status: 'pendiente', scope: 'solo nombre', notes: '', created_at: '2026-10-16T12:00:00Z' },
+  ];
+  const log = [];
+  const supa = {
+    from(table) {
+      const chain = {
+        select: () => chain, order: () => chain, like: () => chain, eq: () => chain,
+        then: (resolve) => resolve({ data: table === 'competitors' ? ROWS : reqs, error: null }),
+        insert: async (row) => { log.push(row); return { error: null }; },
+      };
+      return chain;
+    },
+  };
+  render(React.createElement(Competencia, { supabase: supa, userEmail: 'brenda@grupopoliplast.com.ar', families: ['Planchas', 'Poliuretano'] }));
+  await screen.findByText('Tecno Ref');
+  assert.equal(screen.queryByText('Argenpur S.A.', { selector: '.history-card strong' }), null);
+  fireEvent.click(screen.getByRole('button', { name: 'Cargar a mano' }));
+  assert.equal(screen.getByLabelText('Nombre').value, 'Tecno Ref');
+  assert.equal(screen.getByLabelText('Sitio web').value, 'tecnoref.com.ar');
+  assert.equal(screen.getByLabelText('Familia con la que compite').value, 'Poliuretano');
+  fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+  await waitFor(() => assert.equal(log.length, 1));
+  assert.equal(log[0].name, 'Tecno Ref');
+  assert.deepEqual(log[0].families, ['Poliuretano']);
+});

@@ -60,7 +60,7 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
     if (!supabase) { setRows([]); return; }
     const [comp, reqs] = await Promise.all([
       supabase.from('competitors').select('*').order('name'),
-      supabase.from('prospect_requests').select('id,family,status,progress,result_markdown,created_at').like('family', 'COMPETENCIA%').order('created_at', { ascending: false }),
+      supabase.from('prospect_requests').select('id,family,status,progress,result_markdown,created_at,scope,notes').like('family', 'COMPETENCIA%').order('created_at', { ascending: false }),
     ]);
     if (comp.error) { setError('No se pudieron cargar las fichas.'); setRows([]); return; }
     setRows((comp.data || []).filter((item) => item.kind !== 'cliente'));
@@ -94,7 +94,7 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
       });
       if (insertError) throw insertError;
       setForm(null);
-      setMessage(`Cargado: ${label}. La IA arma la ficha en la próxima hora y aparece acá marcada "sin revisar".`);
+      setMessage(`Pedido cargado: ${label}. La IA lo investiga cuando se procesan los pedidos (no es al instante). Si lo necesitás ya, usá «Cargar a mano» en el pedido.`);
       load();
     } catch {
       setMessage('No se pudo cargar el competidor. Probá de nuevo.');
@@ -173,7 +173,19 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
 
   const available = (families || []).filter((name) => (rows || []).some((item) => (item.families || []).includes(name)));
   const shown = filterCompetitors(rows || [], family);
-  const waiting = useMemo(() => requests.filter((req) => req.family.startsWith('COMPETENCIA NUEVA:') && req.status !== 'lista'), [requests]);
+  // Pedidos de competidor nuevo todavía sin ficha. Felipe 17/10: "Tecno Ref sigue en proceso, no cargó nunca su info"
+  // (los procesa una sesión de Claude con la base, que no siempre está corriendo): se pueden cargar a mano desde acá
+  // y el pedido deja de figurar apenas existe la ficha.
+  const waiting = useMemo(() => {
+    const loaded = new Set((rows || []).map((item) => slugifyCompetitor(item.name)));
+    return requests.filter((req) => req.family.startsWith('COMPETENCIA NUEVA:') && req.status !== 'lista' && !loaded.has(slugifyCompetitor(req.family.replace('COMPETENCIA NUEVA: ', ''))));
+  }, [requests, rows]);
+  function manualFromRequest(req) {
+    const links = String(req.scope || '').split(' · ').filter((item) => item && item !== 'solo nombre');
+    const website = links.find((item) => !/facebook|instagram/i.test(item)) || '';
+    setForm(null);
+    setManual({ name: req.family.replace('COMPETENCIA NUEVA: ', ''), kind: 'fabricante', family: families.includes(req.notes) ? req.notes : '', summary: '', website, location: '' });
+  }
 
   return (
     <details className="panel competitor-panel" open>
@@ -185,12 +197,8 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
         ))}
       </div>
       {supabase && (
-        <div className="panel-head-actions">
+        <div className="panel-head-actions competitor-tools">
           <button type="button" className="secondary" onClick={() => setForm(form ? null : { name: '', website: '', facebook: '', instagram: '', family: '' })}>+ Cargar un competidor nuevo</button>
-        </div>
-      )}
-      {supabase && (
-        <div className="panel-head-actions">
           <button type="button" className="secondary" onClick={() => setManual(manual ? null : { name: '', kind: 'fabricante', family: '', summary: '', website: '', location: '' })}>+ Agregar a mano</button>
           <button type="button" className="secondary" onClick={() => setBulk(bulk ? null : { text: '', kind: 'fabricante', family: '' })}>+ Pegar varios</button>
         </div>
@@ -269,6 +277,10 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
                 <strong>{req.family.replace('COMPETENCIA NUEVA: ', '')}</strong>
                 <span className="muted small">{String(req.created_at).slice(0, 10)} · <em className="badge">{req.status === 'lista' ? 'ficha creada' : req.status === 'error' ? 'falló' : 'en proceso'}</em></span>
                 {req.status === 'error' && req.progress && <span className="muted small">{req.progress}</span>}
+                {req.scope && req.scope !== 'solo nombre' && <span className="muted small">{req.scope}</span>}
+              </div>
+              <div className="competitor-admin">
+                <button type="button" className="secondary" onClick={() => manualFromRequest(req)}>Cargar a mano</button>
               </div>
             </article>
           ))}
@@ -285,7 +297,7 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
             <article key={item.id} className="unit-card competitor-card">
               <div>
                 <strong>{item.name}</strong>
-                <span><em className="badge">{item.kind}</em>{item.reviewed === false && <em className="badge warn">Cargada por IA, sin revisar</em>} {(item.families || []).join(' · ')}</span>
+                <span><em className="badge">{item.kind}</em>{item.reviewed === false && <em className="badge warn">Sin revisar</em>} {(item.families || []).join(' · ')}</span>
                 <span>{item.summary}</span>
                 <span><b>Productos:</b> {(item.products || []).join(' · ')}</span>
                 <span><b>Dónde:</b> {item.location}</span>
@@ -315,10 +327,10 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
                   </fieldset>
                 )}
                 {canDelete && (
-                  <span className="panel-head-actions">
-                    {editing?.id !== item.id && <button type="button" className="link-button" onClick={() => setEditing({ id: item.id, families: item.families || [] })}>Cambiar familias</button>}
-                    <button type="button" className="link-button" onClick={() => remove(item)}>Borrar (solo Felipe)</button>
-                  </span>
+                  <div className="competitor-admin">
+                    {editing?.id !== item.id && <button type="button" className="secondary" onClick={() => setEditing({ id: item.id, families: item.families || [] })}>Cambiar familias</button>}
+                    <button type="button" className="danger-link" onClick={() => remove(item)}>Borrar (solo Felipe)</button>
+                  </div>
                 )}
                 <details>
                   <summary>Profundizar sobre {item.name}</summary>

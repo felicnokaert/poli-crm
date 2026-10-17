@@ -38,6 +38,7 @@ Búsqueda global Ctrl+K; tarjeta Mi día en Inicio; menú en 5 grupos; Prospecci
 
 ## Noche 16/10
 - Vercel (plan gratis) frena publicaciones por proyecto: "Deployment rate limited — retry in 24 hours" (se ve en el estado del commit en GitHub). Pasó con el cotizador; se destrabó publicando a mano con la herramienta de Vercel (create_deployment desde master). Si un cambio "no aparece", mirar eso primero.
+- Para no gastar publicaciones: cada rama subida a GitHub también publica (vista previa). Mergear las ramas en local y subir solo `main`, una vez por tanda.
 - Competencia: Felipe reclasifica familias desde cada ficha ("Cambiar familias", solo él) y carga varios con "+ Pegar varios". Pedido de Felipe: Integral, Satch, Spinna y Tecniform NO son de poliuretano; BASF sí. Competidores de poliuretano: Alkanos, Fana/Kilcom, Química del Caucho, MAS-TIN/NOSOTROS, Polytal, Poliresinas (y hay más).
 - Base técnica en dos pestañas: Documentos (los archivos) y "Qué productos tienen ficha" (catálogo del cotizador contra los documentos). No es duplicado: son dos miradas.
 

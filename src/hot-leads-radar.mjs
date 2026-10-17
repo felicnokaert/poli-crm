@@ -4,11 +4,11 @@ function daysBetween(a, b) {
   return Math.round((new Date(b) - new Date(a)) / 86400000);
 }
 
-// Mismo heurístico que draftFromWhatsApp en App.jsx (urgente + comercial =
+// Mismo heurístico que draftFromWhatsApp (src/whatsapp-draft.mjs) (urgente + comercial =
 // Caliente) pero aplicado ANTES de que alguien clasifique el mensaje - así
 // detectamos leads calientes que están sentados sin respuesta en "Por
 // revisar", no solo los que ya se convirtieron en cliente. Duplicado a
-// propósito en vez de importado: draftFromWhatsApp vive en App.jsx (no es un
+// propósito en vez de importado: draftFromWhatsApp vivía en App.jsx (no era un
 // módulo aislado) y esta detección tiene que poder correr sin React.
 function looksHot(text = '') {
   const lower = text.toLowerCase();

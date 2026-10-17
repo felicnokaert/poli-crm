@@ -1,6 +1,7 @@
 import { authenticatedCorporateUser } from '../lib/corporate-auth.mjs';
 import { enrichWebsite } from '../lib/prospect-enrich.mjs';
 import { discoverCandidates, researchWebsite } from '../lib/prospect-research.mjs';
+import { researchCompetitor } from '../lib/competitor-research.mjs';
 import { googleConfig, normalizeGoogle, searchGoogle, takeQuota } from '../lib/prospect-google.mjs';
 import { OVERPASS_ENDPOINTS, STAGE_TIMEOUTS_MS, buildOverpassStages, normalizeOverpass, radiusForPopulation, safeWord, searchOverpass, summarizeResults } from '../lib/prospect-osm.mjs';
 
@@ -26,6 +27,11 @@ export default async function handler(request, response) {
       city: String(body.city || '').slice(0, 80), province: String(body.province || '').slice(0, 80), family: String(body.family || '').slice(0, 40),
     });
     return response.status(200).json({ ok: true, ...found });
+  }
+  if (body.action === 'competitor') {
+    // Competidor nuevo: lee su sitio (o lo busca por el nombre) y devuelve la ficha armada. No guarda nada.
+    const result = await researchCompetitor({ name: String(body.name || '').slice(0, 120), website: String(body.website || '').slice(0, 300), family: String(body.family || '').slice(0, 40), kind: String(body.kind || '').slice(0, 20) });
+    return response.status(result.ok ? 200 : 422).json(result);
   }
   if (body.action === 'research') {
     const result = await researchWebsite({ website: String(body.website || ''), family: String(body.family || ''), rubros: Array.isArray(body.rubros) ? body.rubros.map(String).slice(0, 8) : [] });

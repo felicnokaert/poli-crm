@@ -52,6 +52,7 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
   const [manual, setManual] = useState(null);
   const [bulk, setBulk] = useState(null);
   const [editing, setEditing] = useState(null);
+  const [busy, setBusy] = useState('');
   const canDelete = isChannelAdmin(userEmail);
 
   useEffect(() => { setFamily(initialFamily || 'Todas'); }, [initialFamily]);
@@ -82,23 +83,55 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
     }
   }
 
+  // Felipe 17/10: al cargar nombre y link, investigar en el momento y dejar la ficha hecha (no "en proceso").
+  // El servidor lee el sitio (o lo busca por el nombre) sin IA paga; si no puede, se abre la carga a mano
+  // con lo que ya se sabe.
+  async function researchNow({ name, website, family: chosenFamily, kind }) {
+    const label = String(name || '').trim() || hostOf(website);
+    setError('');
+    setBusy(label);
+    setMessage(`Investigando ${label}: leyendo su sitio web…`);
+    try {
+      const { data: auth } = await supabase.auth.getSession();
+      const response = await fetch('/api/prospeccion', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${auth?.session?.access_token || ''}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'competitor', name, website, family: chosenFamily, kind }),
+      });
+      const result = await response.json().catch(() => ({ ok: false, error: 'El servidor no respondió.' }));
+      if (!result.ok) throw new Error(result.error || 'No se pudo leer el sitio.');
+      const found = result.competitor;
+      const row = { ...found, id: slugifyCompetitor(found.name), reviewed: false, updated_at: new Date().toISOString() };
+      if ((rows || []).some((item) => item.id === row.id || slugifyCompetitor(item.name) === row.id)) {
+        setMessage(`${found.name} ya estaba cargado. Lo encontrás en la lista.`);
+        return true;
+      }
+      const { error: insertError } = await supabase.from('competitors').insert(row);
+      if (insertError) throw new Error(insertError.code === '23505' ? 'Ya existe un competidor con ese nombre.' : 'No se pudo guardar la ficha.');
+      const got = [found.products?.length && 'productos', found.location && 'dirección', found.channels && 'contacto', found.families?.length && 'familias'].filter(Boolean);
+      setForm(null);
+      setFamily('Todas');
+      const pagesRead = found.sources.filter((src) => !/instagram|facebook/i.test(src.u)).length;
+      const doubt = /^El sitio \(|Ojo:/.test(found.caveats || '') ? ` ${found.caveats.split(' Ficha armada')[0]}` : '';
+      setMessage(`Listo: ${found.name} (${hostOf(found.website)}). Se leyeron ${pagesRead} página${pagesRead === 1 ? '' : 's'} de su sitio${got.length ? ` y se anotó: ${got.join(', ')}` : ''}. Quedó "sin revisar" hasta que alguien la confirme.${doubt}`);
+      await load();
+      return true;
+    } catch (failure) {
+      setMessage('');
+      setError(`${failure.message} Te abrimos la carga a mano con lo que ya sabemos.`);
+      setForm(null);
+      setManual({ name: label, kind: kind || 'fabricante', family: chosenFamily || '', summary: '', website: website || '', location: '' });
+      return false;
+    } finally {
+      setBusy('');
+    }
+  }
+
   async function submitNew(event) {
     event.preventDefault();
     const label = newCompetitorLabel(form);
-    if (!label) { setMessage('Cargá al menos el nombre, la web, el Facebook o el Instagram.'); return; }
-    try {
-      const { error: insertError } = await supabase.from('prospect_requests').insert({
-        id: crypto.randomUUID(), user_email: String(userEmail || '').trim().toLowerCase(),
-        family: `COMPETENCIA NUEVA: ${label}`, scope: [form.website, form.facebook, form.instagram].filter(Boolean).join(' · ') || 'solo nombre',
-        wanted: 1, notes: form.family || '', prompt: buildNewCompetitorPrompt(form),
-      });
-      if (insertError) throw insertError;
-      setForm(null);
-      setMessage(`Pedido cargado: ${label}. La IA lo investiga cuando se procesan los pedidos (no es al instante). Si lo necesitás ya, usá «Cargar a mano» en el pedido.`);
-      load();
-    } catch {
-      setMessage('No se pudo cargar el competidor. Probá de nuevo.');
-    }
+    if (!label) { setMessage('Cargá al menos el nombre o el link de su sitio.'); return; }
+    await researchNow({ name: form.name.trim(), website: form.website.trim() || '', family: form.family });
   }
 
   async function addManual(event) {
@@ -252,11 +285,9 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
       )}
       {form && (
         <form className="form-grid" onSubmit={submitNew}>
-          <p className="muted small span-2">Alcanza con uno de los datos. La IA busca el resto y arma la ficha con fuentes.</p>
+          <p className="muted small span-2">Alcanza con el nombre o el link. El CRM lee su sitio en el momento y arma la ficha con la fuente de cada dato (sin IA paga, sin inventar). Facebook e Instagram no se pueden leer: si es lo único que tenés, cargalo a mano.</p>
           <label>Nombre<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
           <label>Sitio web<input value={form.website} onChange={(event) => setForm({ ...form, website: event.target.value })} placeholder="ejemplo.com.ar" /></label>
-          <label>Facebook<input value={form.facebook} onChange={(event) => setForm({ ...form, facebook: event.target.value })} /></label>
-          <label>Instagram<input value={form.instagram} onChange={(event) => setForm({ ...form, instagram: event.target.value })} /></label>
           <label>Familia con la que compite (opcional)
             <select value={form.family} onChange={(event) => setForm({ ...form, family: event.target.value })}>
               <option value="">No sé</option>
@@ -264,7 +295,7 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
             </select>
           </label>
           <div className="panel-head-actions span-2">
-            <button type="submit" className="primary">Cargar y que la IA investigue</button>
+            <button type="submit" className="primary" disabled={Boolean(busy)}>{busy ? 'Investigando…' : 'Investigar y crear la ficha'}</button>
             <button type="button" className="secondary" onClick={() => setForm(null)}>Cancelar</button>
           </div>
         </form>
@@ -275,11 +306,12 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
             <article key={req.id} className="history-card">
               <div>
                 <strong>{req.family.replace('COMPETENCIA NUEVA: ', '')}</strong>
-                <span className="muted small">{String(req.created_at).slice(0, 10)} · <em className="badge">{req.status === 'lista' ? 'ficha creada' : req.status === 'error' ? 'falló' : 'en proceso'}</em></span>
+                <span className="muted small">{String(req.created_at).slice(0, 10)} · <em className="badge">{req.status === 'error' ? 'falló' : 'sin ficha todavía'}</em></span>
                 {req.status === 'error' && req.progress && <span className="muted small">{req.progress}</span>}
                 {req.scope && req.scope !== 'solo nombre' && <span className="muted small">{req.scope}</span>}
               </div>
               <div className="competitor-admin">
+                <button type="button" className="primary" disabled={Boolean(busy)} onClick={() => { const links = String(req.scope || '').split(' · ').filter((item) => item && item !== 'solo nombre'); researchNow({ name: req.family.replace('COMPETENCIA NUEVA: ', ''), website: links.find((item) => !/facebook|instagram/i.test(item)) || '', family: families.includes(req.notes) ? req.notes : '' }); }}>{busy === req.family.replace('COMPETENCIA NUEVA: ', '') ? 'Investigando…' : 'Investigar ahora'}</button>
                 <button type="button" className="secondary" onClick={() => manualFromRequest(req)}>Cargar a mano</button>
               </div>
             </article>

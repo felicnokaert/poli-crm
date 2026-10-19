@@ -948,3 +948,15 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .competitor-panel .badge { display: inline-block; font-style: normal; font-size: 11px; font-weight: 700; padding: 2px 8px; margin-right: 6px; border-radius: 999px; background: #ededee; color: #444; }
 .competitor-panel .badge.warn { background: #fff1d6; color: #7a5200; }
 .knowledge-snippet { display: block; margin: 4px 0 2px; padding-left: 10px; border-left: 3px solid var(--color-border); color: var(--color-text-muted); font-size: 12.5px; font-style: italic; quotes: none; }
+/* Academia → Productos: guías por producto (19/10) */
+.product-guides .segmented { flex-wrap: wrap; margin: 4px 0 10px; }
+.guide-list { display: grid; gap: 10px; }
+.guide-card { border: 1px solid var(--color-border); border-radius: 12px; overflow: hidden; }
+.guide-head { display: grid; gap: 4px; width: 100%; text-align: left; padding: 12px 14px; background: transparent; border: 0; border-radius: 0; cursor: pointer; min-height: 44px; }
+.guide-head:hover { background: var(--color-success-bg); }
+.guide-body { padding: 4px 14px 14px; display: grid; gap: 8px; }
+.guide-body h3 { font-size: 13.5px; margin: 6px 0 2px; }
+.guide-body ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: 13px; }
+.product-guides .badge { display: inline-block; font-style: normal; font-size: 11px; font-weight: 700; padding: 2px 8px; margin-left: 8px; border-radius: 999px; background: #ededee; color: #444; }
+.product-guides .badge.warn { background: #fff1d6; color: #7a5200; }
+.product-guides .badge.ok { background: var(--color-success-bg); color: var(--color-success); }

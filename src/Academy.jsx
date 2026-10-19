@@ -22,6 +22,7 @@ import { OBJECTIONS } from "./commercial-knowledge.mjs";
 import { Competencia } from "./Competencia.jsx";
 import { PROSPECT_FAMILIES } from "./prospect-model.mjs";
 import { ProductQuestion } from "./ProductQuestion.jsx";
+import { ProductGuides } from "./ProductGuides.jsx";
 import { buildBattlecard } from "./competitor-battlecard.mjs";
 import { Empty, Goal } from "./ui-primitives";
 
@@ -151,8 +152,8 @@ export function CompetitorTalk({ supabase }) {
 }
 
 function AcademyBase({ myChannels, interactions, data, setData, supabase, userEmail }) {
-  // 5 pestañas (16/10, antes 8): Preguntar, Cómo vender (método, objeciones y perfiles), Competencia
-  // (cómo hablar de cada uno + la lista que antes estaba en Prospección), Equipo y Práctica.
+  // 6 pestañas: Preguntar, Productos (guías por producto armadas con las fichas, 19/10), Cómo vender (método,
+  // objeciones y perfiles), Competencia (cómo hablar de cada uno + la lista), Equipo y Práctica.
   const [section, setSection] = useState("search");
   const [sellTopic, setSellTopic] = useState("method");
   const admin = isChannelAdmin(userEmail);
@@ -167,6 +168,7 @@ function AcademyBase({ myChannels, interactions, data, setData, supabase, userEm
         </div>
         <div className="segmented">
           <button className={section === "search" ? "selected" : ""} onClick={() => setSection("search")}>Preguntar</button>
+          <button className={section === "products" ? "selected" : ""} onClick={() => setSection("products")}>Productos</button>
           <button className={section === "sell" ? "selected" : ""} onClick={() => setSection("sell")}>Cómo vender</button>
           <button className={section === "competition" ? "selected" : ""} onClick={() => setSection("competition")}>Competencia</button>
           <button className={section === "team" ? "selected" : ""} onClick={() => setSection("team")}>Equipo</button>
@@ -195,6 +197,7 @@ function AcademyBase({ myChannels, interactions, data, setData, supabase, userEm
           {admin && <SellerProfiles profiles={felipeNotes} />}
         </>
       )}
+      {section === "products" && <ProductGuides supabase={supabase} isAdmin={admin} userEmail={userEmail} />}
       {section === "search" && <ProductQuestion supabase={supabase} />}
       {section === "search" && <KnowledgeSearch supabase={supabase} clients={data.clients || []} sellers={felipeNotes} />}
       {section === "practice" && (
@@ -211,6 +214,7 @@ export function KnowledgeSearch({ supabase, clients = [], sellers = [] }) {
   const [query, setQuery] = useState("");
   const [docs, setDocs] = useState([]);
   const [competitors, setCompetitors] = useState([]);
+  const [guides, setGuides] = useState([]);
   const [copied, setCopied] = useState(false);
   const [pendingDocs, setPendingDocs] = useState(0);
   const [textsLoaded, setTextsLoaded] = useState(false);
@@ -221,6 +225,7 @@ export function KnowledgeSearch({ supabase, clients = [], sellers = [] }) {
     supabase.from("technical_documents").select("id", { count: "exact", head: true }).neq("status", "vigente")
       .then(({ count }) => setPendingDocs(count || 0), () => {});
     supabase.from("competitors").select("id,name,kind,families,summary,caveats").then(({ data }) => setCompetitors(data || []));
+    supabase.from("product_guides").select("id,family,product,summary,sections,status").then(({ data }) => setGuides(data || []), () => {});
   }, [supabase]);
   // El texto completo de las fichas pesa: se trae una sola vez, recién cuando alguien busca (17/10).
   const searching = query.trim().length > 2;
@@ -233,7 +238,7 @@ export function KnowledgeSearch({ supabase, clients = [], sellers = [] }) {
         setDocs((current) => current.map((doc) => ({ ...doc, extractedText: byId.get(doc.id) || "" })));
       }, () => {});
   }, [supabase, searching, textsLoaded]);
-  const sources = { products: PRODUCT_CATALOG, docs, clients, sellers, objections: OBJECTIONS, competitors };
+  const sources = { products: PRODUCT_CATALOG, guides, docs, clients, sellers, objections: OBJECTIONS, competitors };
   const result = searchKnowledge(query, sources);
   async function copy() {
     try { await navigator.clipboard.writeText(buildKnowledgePrompt(query, result)); setCopied(true); } catch { setCopied(false); }

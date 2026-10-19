@@ -5,6 +5,7 @@ const STOP = new Set(['que', 'para', 'con', 'los', 'las', 'una', 'uno', 'por', '
 
 export const KNOWLEDGE_TYPES = [
   ['productos', 'Productos'],
+  ['guias', 'Guías de producto'],
   ['fichas', 'Fichas técnicas'],
   ['clientes', 'Clientes'],
   ['vendedores', 'Vendedores'],
@@ -32,8 +33,12 @@ function scoreItem(item, tokens) {
 }
 
 // Normaliza cada fuente a { type, id, title, subtitle, text }.
-export function toItems({ products = [], docs = [], clients = [], sellers = [], objections = [], competitors = [] } = {}) {
+export function toItems({ products = [], guides = [], docs = [], clients = [], sellers = [], objections = [], competitors = [] } = {}) {
   return [
+    ...guides.map((g) => {
+      const body = [g.summary, ...(g.sections || []).flatMap((section) => section.items || [])].join(' ');
+      return { type: 'guias', id: g.id, title: g.product, subtitle: [g.family, g.status === 'validada' ? 'validada' : 'borrador sin validar'].join(' · '), text: body, fullText: body };
+    }),
     ...products.map((p) => ({ type: 'productos', id: p.sku || p.name, title: p.name, subtitle: [p.family, p.subfamily, p.sku].filter(Boolean).join(' · '), text: [p.family, p.subfamily, p.base, p.variant].join(' ') })),
     ...docs.filter((d) => d.status === 'vigente' || d.status === undefined).map((d) => ({ type: 'fichas', id: d.id || d.title, title: d.product || d.title, subtitle: [d.family, d.doc_type, d.sku].filter(Boolean).join(' · '), text: [d.title, d.notes, d.extractedText ?? d.extracted_text].join(' '), fullText: d.extractedText ?? d.extracted_text ?? '' })),
     ...clients.map((c) => ({ type: 'clientes', id: c.id || c.company, title: c.company, subtitle: [c.type, c.city, c.province].filter(Boolean).join(' · '), text: [c.rubro, c.notes, c.family, c.products].join(' ') })),
@@ -82,7 +87,7 @@ export function buildKnowledgePrompt(query, result) {
     const list = result.groups[key] || [];
     if (!list.length) continue;
     lines.push('', `${label}:`);
-    for (const item of list) lines.push(`- ${item.title}${item.subtitle ? ` (${item.subtitle})` : ''}${item.snippet ? `. La ficha dice: "${item.snippet}"` : ''}`);
+    for (const item of list) lines.push(`- ${item.title}${item.subtitle ? ` (${item.subtitle})` : ''}${item.snippet ? `. ${item.type === 'guias' ? 'La guía dice' : 'La ficha dice'}: "${item.snippet}"` : ''}`);
   }
   if (!result.total) lines.push('', 'El CRM no encontró datos propios sobre esto: respondé con conocimiento general y avisá que no hay respaldo de Poliplast.');
   lines.push('', 'Respondé solo con lo listado. No inventes precio, stock, rendimiento, dosificación ni compatibilidad; si falta un dato, decilo.');

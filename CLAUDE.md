@@ -43,6 +43,7 @@ Búsqueda global Ctrl+K; tarjeta Mi día en Inicio; menú en 5 grupos; Prospecci
 - Base técnica en dos pestañas: Documentos (los archivos) y "Qué productos tienen ficha" (catálogo del cotizador contra los documentos). No es duplicado: son dos miradas.
 
 - Tareas que necesitan la base, en orden y con instrucciones: docs/PARA_SESION_CON_BASE_2026-10-17.md.
+- Hooks de Claude Code (19/10, `.claude/settings.json`): antes de cada `git push` corren tests y build y frenan la subida si fallan (`.claude/hooks/pre-push.mjs`, ~40 s); `guard.mjs` bloquea borrar el proyecto/la compu y pide el OK de Felipe para forzar subidas, `reset --hard`, `clean -f` y DELETE/DROP/TRUNCATE en la base.
 
 ## Pendiente / próximos pasos
 - **Agendado para el 24/10 (Felipe, 17/10: "que prueben y vean el sistema" una semana antes):** seguridad. (1) Supabase: Authentication → Sign In / Providers → Email → largo mínimo 8. (2) Cada persona cambia la contraseña compartida en Más → Perfil → Cambiar contraseña. (3) Borrar `WHATSAPP_BRIDGE_TOKEN` en Vercel (puente apagado). Recordárselo a Felipe si la sesión es de esa fecha o posterior.

@@ -7,7 +7,7 @@ import {
   familyConfig,
   isCompetitor,
 } from './prospect-model.mjs';
-import { matchProspect } from './prospect-dedupe.mjs';
+import { matchProspect, matchSignature } from './prospect-dedupe.mjs';
 import { recordDeletions } from './workspace.mjs';
 import { buildQueue } from './prospect-queue.mjs';
 import { applyResearch, companyFromTitle } from './prospect-research-apply.mjs';
@@ -92,9 +92,13 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const provinceCities = useMemo(() => (provSel ? cities.filter((item) => item.prov === provSel).sort((a, b) => b.pob - a.pob) : []), [provSel, cities]);
   const loadedToday = prospects.filter((item) => String(item.createdAt || '').slice(0, 10) === today && item.family === planFamily).length;
 
+  // Comparar contra toda la cartera es pesado (cientos de prospectos x miles de empresas): solo se
+  // rehace cuando cambia un dato que se compara, no al clasificar (19/10: tardaba al tocar un botón).
+  const matchKey = useMemo(() => matchSignature(prospects, clients), [prospects, clients]);
   const checks = useMemo(
     () => new Map(prospects.map((item) => [item.id, matchProspect(item, clients, prospects)])),
-    [prospects, clients],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [matchKey],
   );
 
   const visible = prospects.filter((item) => (familyFilter === 'Todas' || item.family === familyFilter) && (stateFilter === 'Todos' || item.state === stateFilter));

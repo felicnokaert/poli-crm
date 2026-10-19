@@ -44,8 +44,8 @@ export const COMPETITORS = [
   'Argenpur', 'Sulfibra', 'Bonano', 'Orlandi', 'Tecnimet', 'Fischer', 'Barovo', 'Suprabond',
   'Kuwait', 'Adhematic', 'Crossmaster', 'ECG Poliuretano', 'Satch Poliuretanos', 'Bertok',
   'Servifibras', 'Advance Coat',
-  // Poliuretano, según Felipe (16/10). "Nosotros" (de MAS-TIN / NOSOTROS) no se suma: es una palabra común.
-  'Alkanos', 'Kilcom', 'Quimica del Caucho', 'Mas-Tin', 'Polytal', 'Poliresinas',
+  // Poliuretano, según Felipe (16/10). MAS-TIN y Penosil NO: Poliplast los distribuye, son socios (19/10).
+  'Alkanos', 'Kilcom', 'Fana Quimica', 'Quimica del Caucho', 'Polytal', 'Poliresinas',
 ];
 
 function plain(value = '') {

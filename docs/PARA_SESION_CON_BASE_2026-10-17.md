@@ -42,7 +42,7 @@ Pedido de Felipe (16/10). Primero mirar si él ya lo hizo desde la app ("Cambiar
 - Integral, Satch, Spinna y Tecniform **no** son de poliuretano: sacarles `Poliuretano` de `families`.
 - BASF **sí** es de poliuretano.
 - Competidores de poliuretano que faltan (`kind` fabricante, `reviewed = false`): Alkanos,
-  Fana / Kilcom, Química del Caucho, MAS-TIN / NOSOTROS, Polytal, Poliresinas. Hay más; Felipe los
+  Fana Química, Kilcom, Química del Caucho, Polytal, Poliresinas (MAS-TIN no: es socio, 19/10). Hay más; Felipe los
   suma con "+ Pegar varios".
 - **Permiso de edición:** hoy no hay política `update` en `competitors` (solo lectura e inserción,
   más el borrado de Felipe). Por eso "Cambiar familias" reemplaza la ficha con borrar + insertar

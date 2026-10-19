@@ -55,6 +55,8 @@ test('competidores conocidos se reconocen; Pisos y Almohadas están pausadas por
   assert.equal(isCompetitor('Argenpur S.A.'), true);
   assert.equal(isCompetitor('Ferretería Sulfibra Hnos'), true);
   assert.equal(isCompetitor('Corralón Norte'), false);
+  assert.equal(isCompetitor('MAS-TIN S.A.'), false); // socio: Poliplast lo distribuye
+  assert.equal(isCompetitor('Fana Química'), true);
   assert.equal(familyIsActive('Pisos'), false);
   assert.equal(familyIsActive('Almohadas'), false);
   assert.equal(familyIsActive('Penosil'), true);

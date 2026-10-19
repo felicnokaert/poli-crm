@@ -103,3 +103,8 @@ test('aplicar completa solo campos vacíos y deja el WhatsApp como posible en no
   assert.ok(added.includes('Instagram') && !added.includes('email'));
   assert.equal(applyEnrichment(prospect, { ok: true, blockedByRobots: true }).added.length, 0);
 });
+
+test('extractContacts descarta los mails de ejemplo de los formularios', () => {
+  const out = extractContacts('<p>contacto@kilcom.com.ar</p><input placeholder="nombre@empresa.com"><span>tu@email.com</span><span>tulio@gmail.com</span>', 'https://kilcom.com.ar/');
+  assert.deepEqual(out.emails, ['contacto@kilcom.com.ar', 'tulio@gmail.com']);
+});

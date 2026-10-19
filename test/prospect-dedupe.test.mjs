@@ -68,3 +68,13 @@ test('WhatsApp solo se ofrece para celulares argentinos', () => {
   assert.equal(possibleWhatsAppLink('0343 4231234'), '');
   assert.equal(possibleWhatsAppLink(''), '');
 });
+
+test('matchSignature no cambia al clasificar (solo estado) y sí al cambiar un dato que se compara', async () => {
+  const { matchSignature } = await import('../src/prospect-dedupe.mjs');
+  const clients = [{ id: 'c1', company: 'Aislaciones Norte', contacts: [{ phone: '1144445555' }] }];
+  const before = [{ id: 'p1', company: 'Espumas Sur', phone: '3514445555', state: 'No contactado' }];
+  const sig = matchSignature(before, clients);
+  assert.equal(matchSignature([{ ...before[0], state: 'Contactado', notes: 'llamé' }], clients), sig);
+  assert.notEqual(matchSignature([{ ...before[0], phone: '1144445555' }], clients), sig);
+  assert.notEqual(matchSignature(before, [...clients, { id: 'c2', company: 'Nueva' }]), sig);
+});

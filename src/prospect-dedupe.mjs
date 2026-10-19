@@ -47,27 +47,32 @@ function usableDomain(value) {
   return domain && !SOCIAL_HOSTS.has(domain) ? domain : '';
 }
 
-function dice(left, right) {
-  const a = new Set(left);
-  const b = new Set(right);
+function dice(a, b) {
   if (!a.size || !b.size) return 0;
   let shared = 0;
   a.forEach((item) => { if (b.has(item)) shared += 1; });
   return (2 * shared) / (a.size + b.size);
 }
 
-function editRatio(left, right) {
+// Parecido por distancia de edición. Con `atLeast`, corta apenas sabe que no llega (rápido con miles de pares).
+function editRatio(left, right, atLeast = 0) {
   if (left === right) return 1;
   if (!left || !right) return 0;
+  const longest = Math.max(left.length, right.length);
+  const maxDistance = Math.floor((1 - atLeast) * longest);
+  if (Math.abs(left.length - right.length) > maxDistance) return 0;
   const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
   for (let i = 1; i <= left.length; i += 1) {
     let diagonal = previous[0];
+    let rowMin = i;
     previous[0] = i;
     for (let j = 1; j <= right.length; j += 1) {
       const saved = previous[j];
       previous[j] = Math.min(previous[j] + 1, previous[j - 1] + 1, diagonal + (left[i - 1] === right[j - 1] ? 0 : 1));
       diagonal = saved;
+      if (previous[j] < rowMin) rowMin = previous[j];
     }
+    if (rowMin > maxDistance) return 0;
   }
   return 1 - previous[right.length] / Math.max(left.length, right.length);
 }
@@ -82,13 +87,24 @@ function cityUnknown(left, right) {
   return !plainText(left) || !plainText(right);
 }
 
+// El perfil de cada registro se calcula una sola vez (los registros que no cambian conservan su objeto).
+const profiles = new WeakMap();
 function profileOf(record) {
+  if (record && typeof record === 'object' && profiles.has(record)) return profiles.get(record);
+  const profile = buildProfile(record);
+  if (record && typeof record === 'object') profiles.set(record, profile);
+  return profile;
+}
+
+function buildProfile(record) {
   const isClient = Array.isArray(record.contacts) || record.legalName !== undefined || record.whatsappId !== undefined;
   const phones = isClient
     ? [record.phone, ...clientContacts(record).map((item) => item.phone || item.whatsappId)].map(phoneKey).filter(Boolean)
     : [phoneKey(record.phone)].filter(Boolean);
+  const names = [record.company, record.legalName].map(nameKey).filter(Boolean);
   return {
-    names: [record.company, record.legalName].map(nameKey).filter(Boolean),
+    names,
+    nameParts: names.map((key) => ({ key, tokens: key.split(' '), set: new Set(key.split(' ')) })),
     cuit: cuitKey(record.cuit),
     phones: [...new Set(phones)],
     domain: usableDomain(record.website),
@@ -112,13 +128,16 @@ export function compareRecords(prospect, other) {
   } else {
     // Parecidos pero no iguales: se necesitan al menos 2 palabras en común para
     // no confundir "Imperio Motorhome" con "IMPERIO S.R.L.".
-    const best = left.names.flatMap((a) => right.names.map((b) => {
-      const tokensA = a.split(' ');
-      const tokensB = b.split(' ');
-      const shared = tokensA.filter((token) => tokensB.includes(token)).length;
-      const similar = Math.max(dice(tokensA, tokensB), editRatio(a, b));
-      return { shared, similar, smaller: Math.min(tokensA.length, tokensB.length) };
-    })).sort((x, y) => y.similar - x.similar)[0];
+    let best = null;
+    for (const a of left.nameParts) {
+      for (const b of right.nameParts) {
+        let shared = 0;
+        for (const token of a.tokens) if (b.set.has(token)) shared += 1;
+        const byTokens = dice(a.set, b.set);
+        const similar = Math.max(byTokens, editRatio(a.key, b.key, 0.85));
+        if (!best || similar > best.similar) best = { shared, similar, smaller: Math.min(a.tokens.length, b.tokens.length) };
+      }
+    }
     if (best && best.similar >= 0.85 && (best.shared >= 2 || best.smaller === 1 || best.similar >= 0.9)) {
       signals.push({ type: 'nombre_parecido', strong: false, label: 'Nombre parecido' });
     }
@@ -150,4 +169,14 @@ export function matchProspect(prospect, clients = [], prospects = []) {
   const status = matches.length ? matches[0].status : 'Nuevo';
   const bestClient = matches.find((item) => item.kind === 'cliente');
   return { status, matches, bestClient: bestClient || null };
+}
+
+// Huella de lo que usa la comparación (nombres, CUIT, teléfonos, sitio, localidad). Si no cambia —por
+// ejemplo, al clasificar un prospecto solo cambia su estado—, no hace falta volver a comparar todo.
+export function matchSignature(prospects = [], clients = []) {
+  const part = (record) => {
+    const profile = profileOf(record);
+    return [record.id, record.company, record.legalName, profile.cuit, profile.phones.join(','), profile.domain, profile.city].join('\u0001');
+  };
+  return `${prospects.map(part).join('\u0002')}\u0003${clients.map(part).join('\u0002')}`;
 }

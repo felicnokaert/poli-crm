@@ -7,7 +7,7 @@ import {
   familyConfig,
   isCompetitor,
 } from './prospect-model.mjs';
-import { matchProspect, matchSignature } from './prospect-dedupe.mjs';
+import { createMatcher, matchProspect, matchSignature } from './prospect-dedupe.mjs';
 import { recordDeletions } from './workspace.mjs';
 import { buildQueue } from './prospect-queue.mjs';
 import { applyResearch, companyFromTitle } from './prospect-research-apply.mjs';
@@ -24,6 +24,10 @@ export { searchSummary } from './ProspectParts.jsx';
 
 const DAILY_LIST_SIZE = 40;
 const EMPTY = [];
+
+// Comparador incremental compartido: sobrevive a salir y volver a Prospección, y al marcar "Contactado"
+// (se suma una empresa) solo compara esa en vez de toda la cartera (19/10).
+const sharedMatcher = createMatcher();
 
 function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, cities: citiesProp, provinces: provincesProp, requests, supabase }) {
   const prospects = Array.isArray(data.prospects) ? data.prospects : EMPTY;
@@ -96,7 +100,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   // rehace cuando cambia un dato que se compara, no al clasificar (19/10: tardaba al tocar un botón).
   const matchKey = useMemo(() => matchSignature(prospects, clients), [prospects, clients]);
   const checks = useMemo(
-    () => new Map(prospects.map((item) => [item.id, matchProspect(item, clients, prospects)])),
+    () => sharedMatcher(prospects, clients),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [matchKey],
   );

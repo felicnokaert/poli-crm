@@ -180,3 +180,74 @@ export function matchSignature(prospects = [], clients = []) {
   };
   return `${prospects.map(part).join('\u0002')}\u0003${clients.map(part).join('\u0002')}`;
 }
+
+function recordKey(record) {
+  const profile = profileOf(record);
+  return [record.company, record.legalName, profile.cuit, profile.phones.join(','), profile.domain, profile.city].join('\u0001');
+}
+
+// Versión incremental de matchProspect para toda la lista: recuerda las comparaciones anteriores y solo
+// compara de nuevo lo que cambió (al marcar "Contactado" se suma UNA empresa: 513 comparaciones, no 900 mil).
+// Da exactamente lo mismo que llamar a matchProspect(prospecto, clients, prospects) para cada uno.
+export function createMatcher() {
+  let prevProspects = new Map();
+  let prevClients = new Map();
+  let found = new Map(); // prospectId -> { clients: Map(id -> signals), prospects: Map(id -> signals) }
+
+  return function matchAll(prospects = [], clients = []) {
+    const nextProspects = new Map();
+    const nextClients = new Map();
+    for (const item of prospects) if (item) nextProspects.set(item.id, recordKey(item));
+    for (const item of clients) if (item) nextClients.set(item.id, recordKey(item));
+    const changedClients = clients.filter((item) => item && prevClients.get(item.id) !== nextClients.get(item.id));
+    const changedProspects = prospects.filter((item) => item && prevProspects.get(item.id) !== nextProspects.get(item.id));
+    const changedClientIds = new Set(changedClients.map((item) => item.id));
+    const changedProspectIds = new Set(changedProspects.map((item) => item.id));
+    const nextFound = new Map();
+
+    for (const prospect of prospects) {
+      if (!prospect) continue;
+      const fresh = changedProspectIds.has(prospect.id) || !found.has(prospect.id);
+      const old = fresh ? null : found.get(prospect.id);
+      const entry = { clients: new Map(), prospects: new Map() };
+      const clientPool = fresh ? clients : changedClients;
+      if (old) for (const [id, signals] of old.clients) if (nextClients.has(id) && !changedClientIds.has(id)) entry.clients.set(id, signals);
+      for (const client of clientPool) {
+        if (!client) continue;
+        const signals = compareRecords(prospect, client);
+        if (signals.length) entry.clients.set(client.id, signals);
+      }
+      const prospectPool = fresh ? prospects : changedProspects;
+      if (old) for (const [id, signals] of old.prospects) if (nextProspects.has(id) && !changedProspectIds.has(id)) entry.prospects.set(id, signals);
+      for (const other of prospectPool) {
+        if (!other || other.id === prospect.id) continue;
+        const signals = compareRecords(prospect, other);
+        if (signals.length) entry.prospects.set(other.id, signals);
+      }
+      nextFound.set(prospect.id, entry);
+    }
+    prevProspects = nextProspects;
+    prevClients = nextClients;
+    found = nextFound;
+
+    const result = new Map();
+    for (const prospect of prospects) {
+      if (!prospect) continue;
+      const entry = nextFound.get(prospect.id);
+      const matches = [];
+      for (const client of clients) {
+        const signals = client && entry.clients.size ? entry.clients.get(client.id) : null;
+        if (signals) matches.push({ kind: 'cliente', id: client.id, name: client.company, signals, status: statusFor(signals, 'cliente') });
+      }
+      for (const other of prospects) {
+        const signals = other && entry.prospects.size ? entry.prospects.get(other.id) : null;
+        if (signals) matches.push({ kind: 'prospecto', id: other.id, name: other.company, signals, status: statusFor(signals, 'prospecto') });
+      }
+      const rank = { 'Ya en el CRM': 0, 'Ya cargado': 1, 'Posible duplicado': 2 };
+      matches.sort((a, b) => (rank[a.status] - rank[b.status]) || (a.kind === 'cliente' ? -1 : 1));
+      const bestClient = matches.find((item) => item.kind === 'cliente');
+      result.set(prospect.id, { status: matches.length ? matches[0].status : 'Nuevo', matches, bestClient: bestClient || null });
+    }
+    return result;
+  };
+}

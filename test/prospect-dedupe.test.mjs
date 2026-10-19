@@ -78,3 +78,28 @@ test('matchSignature no cambia al clasificar (solo estado) y sí al cambiar un d
   assert.notEqual(matchSignature([{ ...before[0], phone: '1144445555' }], clients), sig);
   assert.notEqual(matchSignature(before, [...clients, { id: 'c2', company: 'Nueva' }]), sig);
 });
+
+test('createMatcher da lo mismo que matchProspect, también después de cambios (convertir, editar, borrar)', async () => {
+  const { createMatcher, matchProspect } = await import('../src/prospect-dedupe.mjs');
+  const words = ['poli', 'poly', 'espuma', 'espumas', 'norte', 'sur', 'aislaciones', 'techos', 'sa', 'frio', 'rosario'];
+  let seed = 7;
+  const r = (n) => { seed = (seed * 9301 + 49297) % 233280; return Math.floor((seed / 233280) * n); };
+  const name = () => Array.from({ length: 1 + r(3) }, () => words[r(words.length)]).join(' ');
+  let clients = Array.from({ length: 60 }, (_, i) => ({ id: `c${i}`, company: name(), legalName: r(2) ? name() : '', contacts: [{ phone: `11${4000000 + r(80)}` }], website: r(3) ? `www.e${r(20)}.com` : '', city: ['Rosario', ''][r(2)] }));
+  let prospects = Array.from({ length: 40 }, (_, i) => ({ id: `p${i}`, company: name(), phone: `11${4000000 + r(80)}`, website: r(3) ? `e${r(20)}.com` : '', city: ['Rosario', 'Cordoba', ''][r(3)], state: 'No contactado' }));
+  const matcher = createMatcher();
+  const same = () => {
+    const got = matcher(prospects, clients);
+    for (const p of prospects) assert.deepEqual(got.get(p.id), matchProspect(p, clients, prospects), p.id);
+  };
+  same();
+  clients = [...clients, { id: 'nuevo', company: prospects[3].company, phone: prospects[3].phone, contacts: [], city: '' }];
+  prospects = prospects.map((p, i) => (i === 3 ? { ...p, state: 'Contactado', linkedClientId: 'nuevo' } : p));
+  same();
+  prospects = prospects.map((p, i) => (i === 5 ? { ...p, company: clients[0].company } : p));
+  clients = clients.map((c, i) => (i === 2 ? { ...c, website: 'www.e1.com' } : c));
+  same();
+  clients = clients.filter((c, i) => i !== 0);
+  prospects = [...prospects.filter((p, i) => i !== 1), { id: 'pn', company: name(), phone: `11${4000000 + r(80)}` }];
+  same();
+});

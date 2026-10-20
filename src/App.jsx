@@ -35,6 +35,7 @@ import {
 import { makeRequestsApi } from "./prospect-requests.mjs";
 import { planTasks } from "./trello-plan-import.mjs";
 import { applyTrelloUpdates } from "./trello-json-import.mjs";
+import { mlCallbackParams } from "./ml-callback.mjs";
 import { isChannelAdmin } from "./user-channels.mjs";
 import { readTheme } from "./theme.mjs";
 import { canSeeRapypMap, ownsFelipeTools } from "./personal-tools.mjs";
@@ -123,7 +124,8 @@ export default function App() {
   } = useWorkspaceSync(data, setData);
   const cronStatus = useCronStatus(session);
   const whatsappHealth = useWhatsAppHealth(session);
-  const [view, setView] = useState("dashboard");
+  // Al volver de autorizar Mercado Libre se abre Más → Datos → Mercado Libre para terminar la conexión.
+  const [view, setView] = useState(() => (mlCallbackParams() ? "settings" : "dashboard"));
   const [mapTab, setMapTab] = useState("aplicadores");
   // Empresa con la que se abre el cotizador (desde "Cotizar" en la ficha); null = cotización libre.
   const [quoterClient, setQuoterClient] = useState(null);

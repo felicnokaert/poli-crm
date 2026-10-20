@@ -11,6 +11,7 @@ export const KNOWLEDGE_TYPES = [
   ['vendedores', 'Vendedores'],
   ['objeciones', 'Objeciones'],
   ['competencia', 'Competencia'],
+  ['mercadolibre', 'Mercado Libre (publicaciones y preguntas respondidas)'],
 ];
 
 export function plain(value) {
@@ -87,9 +88,28 @@ export function buildKnowledgePrompt(query, result) {
     const list = result.groups[key] || [];
     if (!list.length) continue;
     lines.push('', `${label}:`);
-    for (const item of list) lines.push(`- ${item.title}${item.subtitle ? ` (${item.subtitle})` : ''}${item.snippet ? `. ${item.type === 'guias' ? 'La guía dice' : 'La ficha dice'}: "${item.snippet}"` : ''}`);
+    const says = { guias: 'La guía dice', mercadolibre: 'En Mercado Libre' };
+    for (const item of list) lines.push(`- ${item.title}${item.subtitle ? ` (${item.subtitle})` : ''}${item.snippet ? `. ${says[item.type] || 'La ficha dice'}: "${item.snippet}"` : ''}`);
   }
   if (!result.total) lines.push('', 'El CRM no encontró datos propios sobre esto: respondé con conocimiento general y avisá que no hay respaldo de Poliplast.');
   lines.push('', 'Respondé solo con lo listado. No inventes precio, stock, rendimiento, dosificación ni compatibilidad; si falta un dato, decilo.');
   return lines.join('\n');
+}
+
+// Resultados de Mercado Libre (búsqueda en la base, search_ml_knowledge) sumados al resultado local.
+export function mlItems(rows = []) {
+  return (rows || []).map((row) => ({
+    type: 'mercadolibre',
+    id: `${row.kind}-${row.id}`,
+    title: row.title || (row.kind === 'pregunta' ? 'Pregunta respondida' : 'Publicación'),
+    subtitle: row.kind === 'pregunta' ? 'pregunta ya respondida' : 'publicación',
+    snippet: String(row.body || '').replace(/\s+/g, ' ').slice(0, 320),
+    url: row.permalink || '',
+  }));
+}
+
+export function withMercadoLibre(result, rows = [], { perType = 5 } = {}) {
+  const items = mlItems(rows).slice(0, perType);
+  if (!items.length) return result;
+  return { ...result, groups: { ...result.groups, mercadolibre: items }, total: result.total + items.length };
 }

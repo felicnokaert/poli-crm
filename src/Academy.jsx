@@ -16,7 +16,7 @@ import {
 } from "./commercial-knowledge.mjs";
 import { TeamSelf } from "./TeamSelf.jsx";
 import { isChannelAdmin } from "./user-channels.mjs";
-import { KNOWLEDGE_TYPES, buildKnowledgePrompt, searchKnowledge } from "./knowledge-search.mjs";
+import { KNOWLEDGE_TYPES, buildKnowledgePrompt, searchKnowledge, withMercadoLibre } from "./knowledge-search.mjs";
 import { PRODUCT_CATALOG } from "./product-catalog.mjs";
 import { OBJECTIONS } from "./commercial-knowledge.mjs";
 import { Competencia } from "./Competencia.jsx";
@@ -238,8 +238,19 @@ export function KnowledgeSearch({ supabase, clients = [], sellers = [] }) {
         setDocs((current) => current.map((doc) => ({ ...doc, extractedText: byId.get(doc.id) || "" })));
       }, () => {});
   }, [supabase, searching, textsLoaded]);
+  // Mercado Libre se busca en la base (pueden ser miles de preguntas), con una pausa mientras se escribe.
+  const [mlRows, setMlRows] = useState([]);
+  useEffect(() => {
+    if (!supabase || !searching) { setMlRows([]); return undefined; }
+    let active = true;
+    const timer = setTimeout(() => {
+      supabase.rpc("search_ml_knowledge", { q: query.trim(), max_rows: 8 })
+        .then(({ data, error }) => { if (active) setMlRows(error ? [] : data || []); }, () => {});
+    }, 400);
+    return () => { active = false; clearTimeout(timer); };
+  }, [supabase, searching, query]);
   const sources = { products: PRODUCT_CATALOG, guides, docs, clients, sellers, objections: OBJECTIONS, competitors };
-  const result = searchKnowledge(query, sources);
+  const result = withMercadoLibre(searchKnowledge(query, sources), mlRows);
   async function copy() {
     try { await navigator.clipboard.writeText(buildKnowledgePrompt(query, result)); setCopied(true); } catch { setCopied(false); }
   }
@@ -260,7 +271,7 @@ export function KnowledgeSearch({ supabase, clients = [], sellers = [] }) {
             {KNOWLEDGE_TYPES.filter(([key]) => result.groups[key].length).map(([key, label]) => (
               <article key={key}>
                 <span>{label}</span>
-                <ul>{result.groups[key].map((item) => <li key={`${key}-${item.id}`}><strong>{item.title}</strong>{item.subtitle ? <span className="muted small"> · {item.subtitle}</span> : null}{item.snippet ? <q className="knowledge-snippet">{item.snippet}</q> : null}</li>)}</ul>
+                <ul>{result.groups[key].map((item) => <li key={`${key}-${item.id}`}><strong>{item.url ? <a href={item.url} target="_blank" rel="noreferrer">{item.title}</a> : item.title}</strong>{item.subtitle ? <span className="muted small"> · {item.subtitle}</span> : null}{item.snippet ? <q className="knowledge-snippet">{item.snippet}</q> : null}</li>)}</ul>
               </article>
             ))}
           </div>

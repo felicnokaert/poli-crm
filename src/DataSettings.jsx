@@ -13,6 +13,8 @@ import { SharedDirectory } from "./SharedDirectory.jsx";
 import { AdminUsers } from "./AdminUsers.jsx";
 import { WorkspaceCleanup } from "./WorkspaceCleanup.jsx";
 import { ErrorLog } from "./ErrorLog.jsx";
+import { MercadoLibreSync } from "./MercadoLibreSync.jsx";
+import { mlCallbackParams } from "./ml-callback.mjs";
 import { connectWhatsApp } from "./meta-onboarding";
 import {
   buildCommercialCohort,
@@ -40,10 +42,10 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
     ["respaldos", "Respaldos"],
     ...(onlineConfigured ? [["directorio", "Directorio"]] : []),
     ...(myChannels.length > 0 || (onlineConfigured && isAdmin) ? [["whatsapp", "WhatsApp"]] : []),
-    ...(onlineConfigured && isAdmin ? [["equipo", "Equipo y cuentas"]] : []),
+    ...(onlineConfigured && isAdmin ? [["equipo", "Equipo y cuentas"], ["mercadolibre", "Mercado Libre"]] : []),
     ...((onlineConfigured && isAdmin) || devPanel ? [["errores", "Errores y pruebas"]] : []),
   ];
-  const [section, setSection] = useState("respaldos");
+  const [section, setSection] = useState(() => (mlCallbackParams() ? "mercadolibre" : "respaldos"));
   const shown = sections.some(([key]) => key === section) ? section : "respaldos";
   const [message, setMessage] = useState("");
   const [messageIsError, setMessageIsError] = useState(false);
@@ -436,6 +438,7 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
         <AdminUsers supabase={supabase} session={session} adminEmails={CHANNEL_ADMINS} />
         <WorkspaceCleanup session={session} />
       </>)}
+      {shown === "mercadolibre" && onlineConfigured && isAdmin && <MercadoLibreSync supabase={supabase} session={session} />}
       {shown === "errores" && (<>
         {onlineConfigured && isAdmin && <ErrorLog session={session} />}
         {devPanel}

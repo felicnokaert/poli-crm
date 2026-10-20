@@ -429,3 +429,49 @@ describe("Prospeccion.jsx - control de contacto", () => {
     assert.ok(screen.getByText("WhatsApp (posible)"));
   });
 });
+
+describe("Prospección - deshacer y páginas", () => {
+  async function mountWith(initial) {
+    const mod = await loadJsxModule("src/Prospeccion.jsx");
+    const snapshots = [];
+    function Wrapper() {
+      const [state, setState] = React.useState(initial);
+      const setData = (next) => setState((previous) => { const value = typeof next === "function" ? next(previous) : next; snapshots.push(value); return value; });
+      return React.createElement(mod.Prospeccion, { provinces: {}, cities: [], data: state, setData, userEmail: "f@x", onOpenClient: () => {} });
+    }
+    render(React.createElement(Wrapper));
+    return snapshots;
+  }
+
+  test("Deshacer después de Contactado vuelve el prospecto a la cola y saca la empresa creada", async () => {
+    const snapshots = await mountWith({ clients: [], prospects: [{ id: "p1", company: "Ferretería Sur", family: "Penosil", state: "No contactado", source: "Carga manual" }] });
+    fireEvent.click(screen.getAllByText("Contactado").find((node) => node.tagName === "BUTTON"));
+    await waitFor(() => screen.getByText(/Ferretería Sur: Contactado\. Pasó a Empresas\./));
+    assert.equal(snapshots.at(-1).clients.length, 1);
+    fireEvent.click(screen.getByText("Deshacer"));
+    await waitFor(() => assert.equal(snapshots.at(-1).clients.length, 0));
+    const last = snapshots.at(-1);
+    assert.equal(last.prospects[0].state, "No contactado");
+    assert.ok(last.deletedRecordIds.clients.length === 1);
+    assert.ok(screen.getByText("Ferretería Sur"));
+  });
+
+  test("Deshacer después de eliminar lo trae de vuelta", async () => {
+    const snapshots = await mountWith({ clients: [], prospects: [{ id: "p1", company: "Ferretería Sur", state: "No contactado", source: "x" }] });
+    fireEvent.click(screen.getByText("Tarjetas"));
+    fireEvent.click(screen.getByLabelText("Eliminar prospecto"));
+    await waitFor(() => screen.getByText("Se eliminó Ferretería Sur."));
+    fireEvent.click(screen.getByText("Deshacer"));
+    await waitFor(() => assert.equal(snapshots.at(-1).prospects.length, 1));
+    assert.deepEqual(snapshots.at(-1).deletedRecordIds.prospects, []);
+  });
+
+  test("la planilla muestra de a 100", async () => {
+    const prospects = Array.from({ length: 130 }, (_, i) => ({ id: `p${i}`, company: `Empresa ${i}`, state: "No contactado", source: "x" }));
+    await mountWith({ clients: [], prospects });
+    fireEvent.click(screen.getByText("Planilla"));
+    assert.ok(screen.getByText("Se muestran 100 de 130."));
+    fireEvent.click(screen.getByText("Ver 30 más"));
+    assert.equal(screen.queryByText(/Se muestran/), null);
+  });
+});

@@ -8,7 +8,7 @@ import {
   isCompetitor,
 } from './prospect-model.mjs';
 import { createMatcher, matchProspect, matchSignature } from './prospect-dedupe.mjs';
-import { recordDeletions } from './workspace.mjs';
+import { recordDeletions, restoreRecordId } from './workspace.mjs';
 import { buildQueue } from './prospect-queue.mjs';
 import { applyResearch, companyFromTitle } from './prospect-research-apply.mjs';
 import { markProspect } from './prospect-convert.mjs';
@@ -24,6 +24,8 @@ export { searchSummary } from './ProspectParts.jsx';
 
 const DAILY_LIST_SIZE = 40;
 const EMPTY = [];
+
+const LIST_PAGE = 100;
 
 // Comparador incremental compartido: sobrevive a salir y volver a Prospección, y al marcar "Contactado"
 // (se suma una empresa) solo compara esa en vez de toda la cartera (19/10).
@@ -46,6 +48,9 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const [jobText, setJobText] = useState({});
   const researchJobs = Array.isArray(data.researchJobs) ? data.researchJobs : EMPTY;
   const [message, setMessage] = useState('');
+  // Último clic deshacible (marcar o eliminar): un error de dedo no saca a nadie de la cola para siempre.
+  const [undo, setUndo] = useState(null);
+  const [pageSize, setPageSize] = useState(LIST_PAGE);
   const [importText, setImportText] = useState('');
   const [importPlan, setImportPlan] = useState(null);
   const [includePossible, setIncludePossible] = useState([]);
@@ -178,16 +183,43 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   }
 
   function mark(prospectId, nextState, outcome) {
+    const before = prospects.find((item) => item.id === prospectId);
+    if (!before) return;
+    const beforeClients = clients;
+    const newClientId = crypto.randomUUID();
     let summary = '';
     setData((current) => {
-      const { state, result } = markProspect(current, prospectId, nextState, { outcome, user: userEmail, newClientId: crypto.randomUUID() });
+      const { state, result } = markProspect(current, prospectId, nextState, { outcome, user: userEmail, newClientId });
       summary = result;
       return state;
     });
     queueMicrotask(() => {
-      if (summary === 'convertido') setMessage('Pasó a Empresas: ya podés seguirlo con las etapas del CRM.');
-      else if (summary === 'vinculado') setMessage('Ya existía la empresa: se vinculó y se completaron solo los datos vacíos.');
+      const extra = summary === 'convertido' ? ' Pasó a Empresas.' : summary === 'vinculado' ? ' Ya existía en Empresas: se vinculó.' : '';
+      setUndo({
+        id: crypto.randomUUID(),
+        text: `${before.company}: ${nextState}.${extra}`,
+        apply: (current) => {
+          const now = (current.prospects || []).find((item) => item.id === prospectId);
+          let next = { ...current, prospects: (current.prospects || []).map((item) => (item.id === prospectId ? before : item)) };
+          const linked = now?.linkedClientId || '';
+          if (linked && linked !== (before.linkedClientId || '')) {
+            if (linked === newClientId) next = recordDeletions({ ...next, clients: (next.clients || []).filter((item) => item.id !== newClientId) }, { clients: [newClientId] });
+            else {
+              const original = beforeClients.find((item) => item.id === linked);
+              if (original) next = { ...next, clients: (next.clients || []).map((item) => (item.id === linked ? original : item)) };
+            }
+          }
+          return next;
+        },
+      });
     });
+  }
+
+  function runUndo() {
+    if (!undo) return;
+    setData((current) => undo.apply(current));
+    setUndo(null);
+    setMessage('Listo, se deshizo.');
   }
 
   async function runSearch() {
@@ -391,6 +423,8 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   }
 
   function remove(prospectId) {
+    const removed = prospects.find((item) => item.id === prospectId);
+    if (removed) setUndo({ id: crypto.randomUUID(), text: `Se eliminó ${removed.company}.`, apply: (current) => restoreRecordId({ ...current, prospects: [...(current.prospects || []).filter((item) => item.id !== prospectId), removed] }, 'prospects', prospectId) });
     setData((current) => recordDeletions({ ...current, prospects: (current.prospects || []).filter((item) => item.id !== prospectId) }, { prospects: [prospectId] }));
   }
 
@@ -451,6 +485,8 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const bySearch = searchFilter ? visible.filter((item) => item.searchId === searchFilter) : visible;
   const prospectsById = useMemo(() => new Map(prospects.map((item) => [item.id, item])), [prospects]);
   const shown = dailyList ? bySearch.filter((item) => dailyList.includes(item.id)) : bySearch;
+  // Planilla y Tarjetas muestran de a 100: dibujar 500 filas juntas hacía lento cambiar de vista.
+  const page = shown.slice(0, pageSize);
 
   const togglePossible = (id) => setIncludePossible((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   const phoneErrors = importPlan ? (importPlan.cellErrors || []).filter((item) => item.field === 'phone').length : 0;
@@ -739,11 +775,11 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       </details>
 
       <div className="panel-head-actions prospect-toolbar">
-        <select aria-label="Familia" value={familyFilter} onChange={(event) => { setFamilyFilter(event.target.value); setDailyList(null); }}>
+        <select aria-label="Familia" value={familyFilter} onChange={(event) => { setFamilyFilter(event.target.value); setDailyList(null); setPageSize(LIST_PAGE); }}>
           <option value="Todas">Todas las familias</option>
           {PROSPECT_FAMILIES.map((item) => <option key={item.key}>{item.key}</option>)}
         </select>
-        <select aria-label="Estado" value={stateFilter} onChange={(event) => { setStateFilter(event.target.value); setDailyList(null); }}>
+        <select aria-label="Estado" value={stateFilter} onChange={(event) => { setStateFilter(event.target.value); setDailyList(null); setPageSize(LIST_PAGE); }}>
           <option value="Todos">Todos los estados</option>
           {PROSPECT_STATES.map((item) => <option key={item}>{item}</option>)}
         </select>
@@ -762,12 +798,23 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       </div>
       {listView === 'cola' && <ProspectQueue queue={queue} byId={prospectsById} checks={checks} onMark={mark} onSkip={(id) => setSkipped((list) => [...list, id])} onOpen={setDetailId} onEnrich={async (prospect) => setMessage(await enrich(prospect))} onResearch={async (prospect) => setMessage(await researchProspect(prospect))} />}
       {listView !== 'cola' && shown.length === 0 && <p className="muted">{prospects.length ? 'No hay prospectos con ese filtro.' : 'Todavía no cargaste prospectos.'}</p>}
-      {listView === 'planilla' && shown.length > 0 && <ProspectSheet rows={shown} checks={checks} onMark={mark} onOpenClient={onOpenClient} onDelete={remove} onOpen={setDetailId} />}
+      {listView === 'planilla' && shown.length > 0 && <ProspectSheet rows={page} checks={checks} onMark={mark} onOpenClient={onOpenClient} onDelete={remove} onOpen={setDetailId} />}
       {listView === 'tarjetas' && (
         <div className="units-list">
-          {shown.map((item) => (
+          {page.map((item) => (
             <ProspectRow key={item.id} prospect={item} check={checks.get(item.id) || { status: 'Nuevo', matches: [] }} onMark={mark} onOpenClient={onOpenClient} onDelete={remove} onEnrich={enrich} />
           ))}
+        </div>
+      )}
+
+      {listView !== 'cola' && shown.length > page.length && (
+        <div className="panel-head-actions"><span className="muted small">Se muestran {page.length} de {shown.length}.</span><button type="button" className="secondary" onClick={() => setPageSize((size) => size + LIST_PAGE)}>Ver {Math.min(LIST_PAGE, shown.length - page.length)} más</button></div>
+      )}
+      {undo && (
+        <div className="undo-toast" role="status" aria-live="polite">
+          <span>{undo.text}</span>
+          <button type="button" className="secondary" onClick={runUndo}>Deshacer</button>
+          <button type="button" className="icon-button" aria-label="Cerrar aviso" onClick={() => setUndo(null)}>×</button>
         </div>
       )}
 

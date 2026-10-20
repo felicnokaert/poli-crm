@@ -659,7 +659,7 @@ export default function App() {
             onTogglePlan={togglePlanCheck}
             onNavigate={setView}
             onImportPlan={isFelipeTools ? importTrelloPlan : undefined}
-            onImportTasks={isFelipeTools ? undefined : importTrelloTasks}
+            onImportTasks={importTrelloTasks}
             plan={trelloPlan}
             onPostpone={postponeTaskTo}
             personal={isFelipeTools}

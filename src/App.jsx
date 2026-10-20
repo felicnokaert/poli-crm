@@ -34,6 +34,7 @@ import {
 } from "./online";
 import { makeRequestsApi } from "./prospect-requests.mjs";
 import { planTasks } from "./trello-plan-import.mjs";
+import { applyTrelloUpdates } from "./trello-json-import.mjs";
 import { isChannelAdmin } from "./user-channels.mjs";
 import { readTheme } from "./theme.mjs";
 import { canSeeRapypMap, ownsFelipeTools } from "./personal-tools.mjs";
@@ -380,8 +381,8 @@ export default function App() {
       return added.length ? { ...current, tasks: [...(current.tasks || []), ...added] } : current;
     });
   }, [trelloPlan]);
-  const importTrelloTasks = useCallback((added) => {
-    setData((current) => ({ ...current, tasks: [...(current.tasks || []), ...added] }));
+  const importTrelloTasks = useCallback((added, updates = []) => {
+    setData((current) => ({ ...current, tasks: [...applyTrelloUpdates(current.tasks || [], updates), ...added] }));
   }, []);
 
   const postponeTaskTo = useCallback((id, toDate) => {

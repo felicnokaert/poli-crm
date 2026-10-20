@@ -5,7 +5,7 @@ import { Empty, Fact } from "./ui-primitives";
 import { Routine } from "./Routine.jsx";
 import { Calendar } from "./Calendar.jsx";
 import { DayReview } from "./DayReview.jsx";
-import { trelloJsonToTasks } from "./trello-json-import.mjs";
+import { trelloJsonSync } from "./trello-json-import.mjs";
 import { batchStamps, closedBySystem } from "./day-review.mjs";
 import { addDaysToToday, googleCalendarUrl, today, TRELLO_BOARD_URL, useModalEscape } from "./app-shared";
 
@@ -92,9 +92,10 @@ function TrelloImport({ items, onImportTasks }) {
     event.target.value = "";
     if (!file) return;
     try {
-      const added = trelloJsonToTasks(await file.text(), items);
-      if (added.length) onImportTasks(added);
-      setMessage(added.length ? `Se sumaron ${added.length} tareas de Trello.` : "Esas tarjetas ya estaban cargadas.");
+      const { added, updates, changed } = trelloJsonSync(await file.text(), items);
+      if (added.length || updates.length) onImportTasks(added, updates);
+      const parts = [added.length && `se sumaron ${added.length} tareas nuevas`, changed && `se actualizaron ${changed} que cambiaron en Trello`].filter(Boolean);
+      setMessage(parts.length ? `Listo: ${parts.join(" y ")}.` : "No había tarjetas nuevas ni cambios.");
     } catch {
       setMessage("No pude leer ese archivo. Tiene que ser el JSON que exporta Trello.");
     }

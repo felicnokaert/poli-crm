@@ -193,3 +193,26 @@ test('limpieza: también se van las automáticas que cerró el sistema solo (Jua
   const { state } = cleanCopiedWorkspace(juan, [{ clients: [] }], { allowedChannels: ['juan'] });
   assert.deepEqual(state.tasks.map((t) => t.id), ['c']);
 });
+
+test('Importar de Trello actualiza lo que ya estaba sin pisar fechas del CRM', async () => {
+  const { trelloJsonSync, applyTrelloUpdates } = await import('../src/trello-json-import.mjs');
+  const board = (cards) => JSON.stringify({ lists: [{ id: 'l1', name: 'Hacer' }], cards: cards.map((c) => ({ idList: 'l1', ...c })) });
+  // Tarea del plan (fecha repartida, sin trelloDue): la primera vez solo anota la fecha de Trello.
+  let tasks = [{ id: 'trello-p', title: 'Viejo', dueDate: '2026-10-22', done: false }, { id: 'trello-h', title: 'Hecha', dueDate: '2026-10-21', done: true }];
+  let r = trelloJsonSync(board([{ id: 'p', name: 'Nuevo nombre', due: '2026-11-05T12:00:00Z' }, { id: 'h', name: 'Hecha' }, { id: 'n', name: 'Nueva' }]), tasks, 'S');
+  assert.equal(r.added.length, 1);
+  assert.equal(r.changed, 1);
+  tasks = applyTrelloUpdates(tasks, r.updates);
+  assert.equal(tasks[0].title, 'Nuevo nombre');
+  assert.equal(tasks[0].dueDate, '2026-10-22');
+  assert.equal(tasks[0].trelloDue, '2026-11-05');
+  assert.equal(tasks[1].done, true);
+  // Después cambia la fecha en Trello y la completan: se toma.
+  r = trelloJsonSync(board([{ id: 'p', name: 'Nuevo nombre', due: '2026-11-10T12:00:00Z', dueComplete: true }]), tasks, 'S2');
+  tasks = applyTrelloUpdates(tasks, r.updates);
+  assert.equal(tasks[0].dueDate, '2026-11-10');
+  assert.equal(tasks[0].done, true);
+  assert.deepEqual(r.updates[0].changes, ['hecha', 'fecha']);
+  // Sin cambios: nada.
+  assert.equal(trelloJsonSync(board([{ id: 'p', name: 'Nuevo nombre', due: '2026-11-10T12:00:00Z', dueComplete: true }]), tasks).updates.length, 0);
+});

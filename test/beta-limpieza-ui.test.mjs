@@ -4,7 +4,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { loadJsxModule } from "./helpers/load-jsx.mjs";
 
-test("el resto del equipo ve 'Importar tareas de Trello'; Felipe no (tiene su plan)", async () => {
+test("'Importar tareas de Trello' aparece cuando App pasa onImportTasks (desde el 19/10 también a Felipe)", async () => {
   const { Tasks } = await loadJsxModule("src/Tasks.jsx");
   const base = { items: [], onToggle: () => {}, onOpen: () => {}, onNew: () => {} };
   assert.match(renderToStaticMarkup(React.createElement(Tasks, { ...base, personal: false, onImportTasks: () => {} })), /Importar tareas de Trello/);

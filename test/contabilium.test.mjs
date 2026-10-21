@@ -9,7 +9,7 @@ const env = {
 const json = (body, status = 200) => ({ ok: status < 300, status, json: async () => body, headers: { get: () => null } });
 const NOW = Date.parse('2026-10-21T15:00:00Z');
 
-// Contabilium falso: 120 comprobantes el 2020-05-10 (3 páginas) y 1 el día de hoy.
+// Contabilium falso: 120 comprobantes el 2024-05-10 (3 páginas) y 1 el día de hoy.
 function fakeWorld({ email = 'felipe@grupopoliplast.com.ar', state = null, crowded = false } = {}) {
   const sync = state ? [state] : [];
   const rows = new Map();
@@ -24,7 +24,7 @@ function fakeWorld({ email = 'felipe@grupopoliplast.com.ar', state = null, crowd
       const page = Number(query.get('page'));
       searches.push({ from, to, page });
       const all = [];
-      if (from <= '2020-05-10' && to >= '2020-05-10') for (let i = 0; i < 120; i += 1) all.push({ Id: 5000 + i, TipoFc: 'FCB', FechaEmision: '2020-05-10T00:00:00', Total: 100, RazonSocial: ' Cliente ' });
+      if (from <= '2024-05-10' && to >= '2024-05-10') for (let i = 0; i < 120; i += 1) all.push({ Id: 5000 + i, TipoFc: 'FCB', FechaEmision: '2024-05-10T00:00:00', Total: 100, RazonSocial: ' Cliente ' });
       if (to >= '2026-10-21') all.push({ Id: 9999, TipoFc: 'NCB', FechaEmision: '2026-10-21T10:00:00', Total: -50, Saldo: 0 });
       const totalPages = crowded && to > from ? 40 : Math.max(1, Math.ceil(all.length / 50));
       return json({ Items: all.slice((page - 1) * 50, page * 50), TotalItems: all.length, TotalPage: totalPages });
@@ -44,6 +44,23 @@ test('comprobanteRow guarda el encabezado y descarta lo que no tiene id', () => 
   const row = comprobanteRow({ Id: 7, TipoFc: 'FCA', Numero: '0001-00000007', FechaEmision: '2025-03-04T00:00:00', IdCliente: 3, RazonSocial: ' ACME ', Total: '1210.5', Saldo: 0 }, 'POLIPLAST');
   assert.deepEqual({ ...row, raw: undefined, synced_at: undefined }, { company: 'POLIPLAST', id: '7', tipo: 'FCA', numero: '0001-00000007', fecha: '2025-03-04', cliente_id: '3', cliente: 'ACME', total: 1210.5, saldo: 0, raw: undefined, synced_at: undefined });
   assert.equal(comprobanteRow({ TipoFc: 'FCA' }, 'POLIPLAST'), null);
+  assert.equal(comprobanteRow({ Id: 8, TipoFc: 'FCB', Origen: 'MercadoLibre' }, 'COMARG'), null, 'lo de Mercado Libre ya está en su panel');
+  assert.equal(comprobanteRow({ Id: 9, TipoFc: 'FCB', Origen: 'MercadoPago' }, 'COMARG'), null);
+});
+
+test('una memoria vieja de antes de 2024 salta al 1/1/2024', async () => {
+  const world = fakeWorld({ state: { company: 'POLIPLAST', cursor_date: '2020-06-09', window_days: 4, page: 1, history_done: false, total_saved: 209 } });
+  await contabiliumAdmin(req({ op: 'sync', company: 'POLIPLAST' }), env, world.http, options);
+  assert.equal(world.searches[0].from, '2024-01-01');
+});
+
+test('si Contabilium no contesta a tiempo, corta y la próxima pasada reintenta el mismo tramo', async () => {
+  const world = fakeWorld({ state: { company: 'POLIPLAST', cursor_date: '2024-04-01', window_days: 92, page: 2, history_done: false, total_saved: 0 } });
+  const http = async (url, options) => (url.includes('/comprobantes/search') ? Promise.reject(new Error('timeout')) : world.http(url, options));
+  const result = await contabiliumAdmin(req({ op: 'sync', company: 'POLIPLAST' }), env, http, options);
+  assert.equal(result.status, 200);
+  assert.equal(world.sync[0].cursor_date, '2024-04-01');
+  assert.equal(world.sync[0].page, 2);
 });
 
 test('solo Felipe usa Contabilium', async () => {
@@ -58,7 +75,7 @@ test('trae el historial completo desde el principio, con todas las páginas, y d
   assert.equal(world.rows.size, 121);
   assert.equal(world.searches[0].from, HISTORY_START);
   assert.ok(world.searches.every((search) => addDays(search.from, 91) >= search.to), 'tramos de 92 días como máximo');
-  assert.deepEqual(world.searches.filter((search) => search.from <= '2020-05-10' && search.to >= '2020-05-10').map((search) => search.page), [1, 2, 3]);
+  assert.deepEqual(world.searches.filter((search) => search.from <= '2024-05-10' && search.to >= '2024-05-10').map((search) => search.page), [1, 2, 3]);
   assert.equal(world.sync[0].history_done, true);
   assert.equal(world.sync[0].cursor_date, '2026-10-21');
   assert.equal(world.sync[0].total_saved, 121);
@@ -72,10 +89,10 @@ test('sigue donde quedó: con el historial completo solo relee la última semana
 
 test('si el tiempo se acaba, guarda tramo y página para la próxima', async () => {
   let calls = 0;
-  const world = fakeWorld({ state: { company: 'POLIPLAST', cursor_date: '2020-04-01', window_days: 92, page: 1, history_done: false, total_saved: 0 } });
+  const world = fakeWorld({ state: { company: 'POLIPLAST', cursor_date: '2024-04-01', window_days: 92, page: 1, history_done: false, total_saved: 0 } });
   const now = () => { calls += 1; return calls > 4 ? NOW + 60000 : NOW; };
   await contabiliumAdmin(req({ op: 'sync', company: 'POLIPLAST' }), env, world.http, { now, pause: 0 });
-  assert.equal(world.sync[0].cursor_date, '2020-04-01');
+  assert.equal(world.sync[0].cursor_date, '2024-04-01');
   assert.equal(world.sync[0].page, 2);
   assert.equal(world.sync[0].history_done, false);
 });

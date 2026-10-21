@@ -35,6 +35,10 @@ test('sin clave o sin crédito avisa y no rompe', async () => {
   assert.deepEqual((await assistantAi(req({ question: 'hola' }), { ...env, ANTHROPIC_API_KEY: '' }, world().http)).body, { ok: false, reason: 'sin-clave' });
   const noCredit = world({ reply: json({ error: { type: 'invalid_request_error', message: 'Your credit balance is too low' } }, 400) });
   assert.equal((await assistantAi(req({ question: 'hola' }), env, noCredit.http)).body.reason, 'sin-credito');
+  const badKey = world({ reply: json({ error: { type: 'authentication_error', message: 'invalid x-api-key' } }, 401) });
+  const rejected = (await assistantAi(req({ question: 'hola' }), env, badKey.http)).body;
+  assert.equal(rejected.reason, 'clave');
+  assert.equal(rejected.detail, 'invalid x-api-key');
   assert.equal((await assistantAi(req({ question: 'hola' }, ''), env, world().http)).status, 401);
   assert.equal((await assistantAi(req({ question: 'hola' }), env, world({ email: 'alguien@gmail.com' }).http)).status, 401);
 });

@@ -701,3 +701,6 @@
   :root:not([data-theme="light"]) main { color: #e7e7e9; }
   :root:not([data-theme="light"]) a { color: #f0a0a4; }
 }
+
+:root[data-theme="dark"] .training-row { border-color: #333338; }
+:root[data-theme="dark"] .training-compare > div { background: rgba(255,255,255,.05); }

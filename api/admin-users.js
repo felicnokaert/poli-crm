@@ -3,16 +3,21 @@ import { cleanupWorkspaces } from '../lib/workspace-cleanup-admin.mjs';
 import { technicalAdmin } from '../lib/technical-admin.mjs';
 import { listClientErrors, logClientError } from '../lib/error-log.mjs';
 import { mercadoLibreAdmin, mercadoLibreCron } from '../lib/mercadolibre.mjs';
-import { contabiliumAdmin } from '../lib/contabilium.mjs';
+import { contabiliumAdmin, contabiliumCron } from '../lib/contabilium.mjs';
 
 // Una sola función para las tareas de administrador (el plan de Vercel limita la cantidad de funciones):
 // borrar un usuario, revisar/limpiar espacios con datos de Felipe copiados (action: 'cleanup') o
 // Base técnica: borrar en tanda y permitir más tipos de archivo (action: 'technical'); Mercado Libre
 // (action: 'mercadolibre', solo lectura de publicaciones y preguntas respondidas); Contabilium
-// (action: 'contabilium', prueba de conexión). El GET ?cron=mercadolibre es la actualización diaria.
+// (action: 'contabilium', prueba de conexión y copia de comprobantes). Los GET ?cron=mercadolibre y
+// ?cron=contabilium son las actualizaciones diarias.
 export default async function handler(request, response) {
   if (request.method === 'GET' && request.query?.cron === 'mercadolibre') {
     const result = await mercadoLibreCron(request);
+    return response.status(result.status).json(result.body);
+  }
+  if (request.method === 'GET' && request.query?.cron === 'contabilium') {
+    const result = await contabiliumCron(request);
     return response.status(result.status).json(result.body);
   }
   if (request.method !== 'POST') return response.status(405).json({ error: 'Método no permitido.' });

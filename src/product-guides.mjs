@@ -52,3 +52,11 @@ export function guideToText(guide = {}) {
   if (guide.status !== 'validada') lines.push('(Borrador sin validar: confirmar antes de pasar datos a un cliente.)');
   return lines.join('\n').trim();
 }
+
+// Búsqueda de lo que ya se respondió en Mercado Libre sobre una guía (21/10): palabras del nombre del
+// producto unidas con "or" (la base ordena por relevancia), sin las marcas de línea que no dicen nada.
+const LINE_WORDS = new Set(['isobunker', 'purmac', 'poli', 'plus', 'resinplast', 'imperpur', 'para', 'con', 'los', 'las', 'del']);
+export function guideMlQuery(guide = {}) {
+  const words = plain(guide.product).replace(/[^a-z0-9 -]/g, ' ').split(/[\s-]+/).filter((word) => word.length > 2 && !LINE_WORDS.has(word));
+  return [...new Set(words)].slice(0, 5).join(' or ');
+}

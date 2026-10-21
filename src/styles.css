@@ -1030,3 +1030,4 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 @media (max-width: 560px) { .assistant-window { right: 0; bottom: 0; width: 100vw; height: 100%; border-radius: 0; border: 0; padding-top: env(safe-area-inset-top, 0px); } }
 @media (prefers-reduced-motion: reduce) { .assistant-window { animation: none; } }
 @media print { .assistant-fab, .assistant-window { display: none; } }
+.guide-ml ul { list-style: none; padding-left: 0; display: grid; gap: 8px; } .guide-ml li { font-size: 13px; padding: 8px 10px; border-left: 3px solid var(--brand-red, #ed1c24); background: rgba(237, 28, 36, .04); border-radius: 0 8px 8px 0; }

@@ -5,6 +5,7 @@ import { AssistantLogo } from "./AssistantLogo.jsx";
 import { KNOWLEDGE_TYPES } from "./knowledge-search.mjs";
 import { buildAiContext, detectIntent, guideFacts, matchTaught, mlQuery, productWords, teamAnswer } from "./assistant-answer.mjs";
 import { useKnowledge } from "./useKnowledge.js";
+import { workspaceAnswer, workspaceContext } from "./assistant-workspace.mjs";
 import { extraContext, purchaseLine, purchaseNameWords, purchaseSummary, rivalsFor } from "./assistant-extra.mjs";
 
 // Ventana del asistente (21/10): flotante, abajo a la derecha (en el celular ocupa la pantalla). Por ahora
@@ -13,7 +14,7 @@ import { extraContext, purchaseLine, purchaseNameWords, purchaseSummary, rivalsF
 // 21/10: arriba va la respuesta concreta (src/assistant-answer.mjs); el resto queda en "Ver todo".
 // "Enseñarle" (solo Felipe): la respuesta correcta queda en assistant_knowledge y va primero para todos.
 // 👍/👎 de cualquiera quedan en assistant_feedback para que Felipe corrija.
-const SUGGESTIONS = ["rendimiento epoxi", "secado poxiplast", "mezcla epoxi", "competidores de poliuretano", "competencia en máquinas", "espuma aislante"];
+const SUGGESTIONS = ["qué tengo pendiente hoy", "rendimiento epoxi", "a cuánto vendimos easyspray", "competidores de poliuretano", "secado poxiplast", "de qué me sirve prospección"];
 const PER_GROUP = 3;
 
 // Las respuestas de Mercado Libre del tema y producto, con una pausa mientras se escribe.
@@ -198,7 +199,7 @@ function Answer({ intent, facts, team, product, taught = [], isAdmin, onEdit }) 
   );
 }
 
-export function AssistantWindow({ supabase, clients = [], firstName = "", isAdmin = false, onClose }) {
+export function AssistantWindow({ supabase, clients = [], workspace = {}, firstName = "", isAdmin = false, onClose }) {
   const [query, setQuery] = useState("");
   const inputRef = useRef(null);
   const [showAll, setShowAll] = useState(false);
@@ -219,7 +220,8 @@ export function AssistantWindow({ supabase, clients = [], firstName = "", isAdmi
   const rivals = typed ? rivalsFor(competitors || [], typed) : null;
   const purchaseRows = usePurchases(supabase, typed);
   const purchases = purchaseRows.length ? purchaseSummary(purchaseRows) : [];
-  const hasExtra = Boolean(rivals || purchases.length);
+  const mine = typed ? workspaceAnswer(typed, workspace) : [];
+  const hasExtra = Boolean(rivals || purchases.length || mine.length);
   const hasAnswer = Boolean(taught.length || (intent && (facts.length || team)));
   useEffect(() => { setShowAll(false); }, [typed]);
   const [chat, setChat] = useState([]);
@@ -240,7 +242,7 @@ export function AssistantWindow({ supabase, clients = [], firstName = "", isAdmi
     event.preventDefault();
     if (!typed || thinking || ai === "off" || !supabase?.auth) return;
     setThinking(true); setAiError("");
-    const context = [extraContext({ rivals, purchases }), buildAiContext({ intent, facts, team, result, mlRows: teamRows, taught })].filter(Boolean).join("\n");
+    const context = [workspaceContext(mine), extraContext({ rivals, purchases }), buildAiContext({ intent, facts, team, result, mlRows: teamRows, taught })].filter(Boolean).join("\n");
     const reply = await askAi(supabase, { question: typed, context, history: chat }).catch(() => ({ ok: false, reason: "red" }));
     setThinking(false);
     if (reply.ok) {
@@ -293,6 +295,12 @@ export function AssistantWindow({ supabase, clients = [], firstName = "", isAdmi
             {SUGGESTIONS.map((text) => <button key={text} type="button" onClick={() => setQuery(text)}>{text}</button>)}
           </div>
         )}
+        {mine.map((block) => (
+          <section key={block.key} className="assistant-answer" aria-label={block.label}>
+            <span className="assistant-group-label">{block.label}</span>
+            <ul className="assistant-rivals">{block.lines.map((line) => <li key={line}>{line}</li>)}</ul>
+          </section>
+        ))}
         {hasExtra && <ExtraAnswer rivals={rivals} purchases={purchases} />}
         {typed && result.total === 0 && !hasAnswer && !hasExtra && (
           <div className="assistant-bubble muted">

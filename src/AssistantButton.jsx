@@ -5,7 +5,7 @@ import { AssistantLogo } from "./AssistantLogo.jsx";
 // asistente (src/AssistantWindow.jsx), que se baja recién la primera vez que alguien la abre.
 const AssistantWindow = lazy(() => import("./AssistantWindow.jsx").then((m) => ({ default: m.AssistantWindow })));
 
-export function AssistantButton({ supabase, clients = [], firstName = "", isAdmin = false }) {
+export function AssistantButton({ supabase, clients = [], workspace, firstName = "", isAdmin = false }) {
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
   return (
@@ -17,7 +17,7 @@ export function AssistantButton({ supabase, clients = [], firstName = "", isAdmi
       )}
       {open && (
         <Suspense fallback={<div className="assistant-window assistant-loading" role="status"><AssistantLogo size={40} /></div>}>
-          <AssistantWindow supabase={supabase} clients={clients} firstName={firstName} isAdmin={isAdmin} onClose={close} />
+          <AssistantWindow supabase={supabase} clients={clients} workspace={workspace} firstName={firstName} isAdmin={isAdmin} onClose={close} />
         </Suspense>
       )}
     </>

@@ -207,6 +207,14 @@ export default function App() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }, [data]);
 
+  // Lo que el asistente puede leer de tu espacio de trabajo (21/10): tareas, ventas, historial y prospectos.
+  const assistantWorkspace = useMemo(() => ({
+    tasks: data.tasks || EMPTY_ARRAY,
+    sales: data.sales || EMPTY_ARRAY,
+    interactions: data.interactions || EMPTY_ARRAY,
+    prospects: data.prospects || EMPTY_ARRAY,
+  }), [data.tasks, data.sales, data.interactions, data.prospects]);
+
   const metrics = useMemo(() => {
     const now = today();
     const weekAgo = new Date();
@@ -898,7 +906,7 @@ export default function App() {
           }}
         />
       )}
-      {onlineConfigured && session && <AssistantButton supabase={supabase} isAdmin={isChannelAdmin(session?.user?.email)} clients={data.clients || EMPTY_ARRAY} firstName={String(session.user?.user_metadata?.full_name || "").trim().split(/\s+/)[0]} />}
+      {onlineConfigured && session && <AssistantButton supabase={supabase} isAdmin={isChannelAdmin(session?.user?.email)} clients={data.clients || EMPTY_ARRAY} workspace={assistantWorkspace} firstName={String(session.user?.user_metadata?.full_name || "").trim().split(/\s+/)[0]} />}
       {showPalette && (
         <CommandPalette
           clients={data.clients || []}

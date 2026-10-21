@@ -30,3 +30,24 @@ test('muestra la respuesta del equipo arriba y se puede copiar', async () => {
     assert.ok(screen.getAllByText('Copiar').length >= 1);
   } finally { cleanup(); }
 });
+
+test('Felipe le enseña una respuesta y queda primera; el equipo vota', async () => {
+  try {
+    const inserted = [];
+    const supabase = fakeSupabase({ assistant_knowledge: [{ id: 'k1', question: '¿Cuánto rinde?', product: 'Easy Spray', answer: 'Cada envase rinde 2 m² en 2 cm de espesor.' }] });
+    const from = supabase.from;
+    supabase.from = (table) => {
+      const query = from(table);
+      query.insert = (row) => { inserted.push({ table, row }); return query; };
+      return query;
+    };
+    render(React.createElement(AssistantWindow, { supabase, isAdmin: true, onClose: () => {} }));
+    fireEvent.change(screen.getByLabelText('Preguntale al asistente'), { target: { value: 'cuanto rinde el easy spray' } });
+    await waitFor(() => screen.getByText('Cada envase rinde 2 m² en 2 cm de espesor.'), { timeout: 3000 });
+    assert.ok(screen.getByText(/Validada por Felipe/));
+    fireEvent.click(screen.getByLabelText('No me sirvió'));
+    await waitFor(() => screen.getByLabelText('Enseñarle al asistente'));
+    assert.equal(inserted[0].table, 'assistant_feedback');
+    assert.equal(inserted[0].row.vote, -1);
+  } finally { cleanup(); }
+});

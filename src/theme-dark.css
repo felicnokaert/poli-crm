@@ -38,6 +38,7 @@
   --color-terracotta: #d99a90;
   --color-blue-mid: #7fb0dd;
   --color-blue-cold: #1d2a35;}
+:root[data-theme="dark"] :root { background: #1c1c1f; }
 :root[data-theme="dark"] input { background: #26262a; }
 :root[data-theme="dark"] select { background: #26262a; }
 :root[data-theme="dark"] textarea { background: #26262a; }
@@ -174,6 +175,7 @@
 :root[data-theme="dark"] .board-list-controls .icon-button:hover:not(:disabled) { background: #26262a; }
 :root[data-theme="dark"] .board-card-move { background: #26262a; }
 :root[data-theme="dark"] .price-memory-result { background: #1c1c1f; }
+:root[data-theme="dark"] .price-memory-history li { background: #1c1c1f; }
 :root[data-theme="dark"] .day-mode-item { background: #1c1c1f; }
 :root[data-theme="dark"] .copilot-suggestion { background: #1c1c1f; }
 :root[data-theme="dark"] .copilot-suggestion-cited { background: #1c1c1f; }
@@ -235,6 +237,36 @@
 :root[data-theme="dark"] .palette-list button.active { background: #26262a; }
 :root[data-theme="dark"] .my-day-bar { background: #26262a; }
 :root[data-theme="dark"] .local-chip { background: #26262a; }
+:root[data-theme="dark"] .local-suggestions { background: #1c1c1f; }
+:root[data-theme="dark"] .local-suggestions button:hover { background: #26262a; }
+:root[data-theme="dark"] .local-suggestions button:focus-visible { background: #26262a; }
+:root[data-theme="dark"] .import-box { background: #26262a; }
+:root[data-theme="dark"] .technical-upload-form { background: #26262a; }
+:root[data-theme="dark"] .product-question-answer article { background: #26262a; }
+:root[data-theme="dark"] .technical-text-modal pre { background: #26262a; }
+:root[data-theme="dark"] .technical-sheet-facts > div { background: #26262a; }
+:root[data-theme="dark"] .technical-sheet-text { background: #26262a; }
+:root[data-theme="dark"] .import-preview-73 .import-counts span { background: #26262a; }
+:root[data-theme="dark"] .cotizador-frame { background: #1c1c1f; }
+:root[data-theme="dark"] .product-sheets .import-counts span { background: #26262a; }
+:root[data-theme="dark"] .product-sheets-families li { background: #26262a; }
+:root[data-theme="dark"] .competitor-panel .badge { background: #26262a; }
+:root[data-theme="dark"] .competitor-panel .badge.warn { background: #26262a; }
+:root[data-theme="dark"] .product-guides .badge { background: #26262a; }
+:root[data-theme="dark"] .product-guides .badge.warn { background: #26262a; }
+:root[data-theme="dark"] .ml-board .badge { background: #26262a; }
+:root[data-theme="dark"] .contabilium-test .badge { background: #26262a; }
+:root[data-theme="dark"] .ml-board .badge.warn { background: #26262a; }
+:root[data-theme="dark"] .contabilium-test .badge.warn { background: #26262a; }
+:root[data-theme="dark"] .ml-board-title img { background: #1c1c1f; }
+:root[data-theme="dark"] .assistant-fab { background: #1c1c1f; }
+:root[data-theme="dark"] .assistant-window-logo { background: #1c1c1f; }
+:root[data-theme="dark"] .assistant-bubble { background: #26262a; }
+:root[data-theme="dark"] .assistant-chips button { background: #1c1c1f; }
+:root[data-theme="dark"] .assistant-chips button:hover { background: #26262a; }
+:root[data-theme="dark"] .assistant-answer { background: #1c1c1f; }
+:root[data-theme="dark"] .assistant-copy { background: #1c1c1f; }
+:root[data-theme="dark"] :root { color: #e7e7e9; }
 :root[data-theme="dark"] .link-button { color: #b4b5b9; }
 :root[data-theme="dark"] .link-button:hover { color: #b4b5b9; }
 :root[data-theme="dark"] .channel-pill.waiting { color: #b4b5b9; }
@@ -298,6 +330,16 @@
 :root[data-theme="dark"] .routine-streak { color: #b4b5b9; }
 :root[data-theme="dark"] .calendar-cell em { color: #b4b5b9; }
 :root[data-theme="dark"] .calendar-time { color: #b4b5b9; }
+:root[data-theme="dark"] .competitor-panel .badge { color: #b4b5b9; }
+:root[data-theme="dark"] .competitor-panel .badge.warn { color: #b4b5b9; }
+:root[data-theme="dark"] .product-guides .badge { color: #b4b5b9; }
+:root[data-theme="dark"] .product-guides .badge.warn { color: #b4b5b9; }
+:root[data-theme="dark"] .ml-board .badge { color: #b4b5b9; }
+:root[data-theme="dark"] .contabilium-test .badge { color: #b4b5b9; }
+:root[data-theme="dark"] .ml-board .badge.warn { color: #b4b5b9; }
+:root[data-theme="dark"] .contabilium-test .badge.warn { color: #b4b5b9; }
+:root[data-theme="dark"] .assistant-chips button { color: #e7e7e9; }
+:root[data-theme="dark"] .assistant-copy { color: #e7e7e9; }
 :root[data-theme="dark"] body, :root[data-theme="dark"] .login-shell { background: #121214; }
 :root[data-theme="dark"] .commercial-guidance, :root[data-theme="dark"] .prospect-glass::before { background: #1c1c1f; }
 :root[data-theme="dark"] .segmented { background: #2a2a2e; }
@@ -346,6 +388,7 @@
     --color-terracotta: #d99a90;
     --color-blue-mid: #7fb0dd;
     --color-blue-cold: #1d2a35;}
+  :root:not([data-theme="light"]) :root { background: #1c1c1f; }
   :root:not([data-theme="light"]) input { background: #26262a; }
   :root:not([data-theme="light"]) select { background: #26262a; }
   :root:not([data-theme="light"]) textarea { background: #26262a; }
@@ -482,6 +525,7 @@
   :root:not([data-theme="light"]) .board-list-controls .icon-button:hover:not(:disabled) { background: #26262a; }
   :root:not([data-theme="light"]) .board-card-move { background: #26262a; }
   :root:not([data-theme="light"]) .price-memory-result { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .price-memory-history li { background: #1c1c1f; }
   :root:not([data-theme="light"]) .day-mode-item { background: #1c1c1f; }
   :root:not([data-theme="light"]) .copilot-suggestion { background: #1c1c1f; }
   :root:not([data-theme="light"]) .copilot-suggestion-cited { background: #1c1c1f; }
@@ -543,6 +587,36 @@
   :root:not([data-theme="light"]) .palette-list button.active { background: #26262a; }
   :root:not([data-theme="light"]) .my-day-bar { background: #26262a; }
   :root:not([data-theme="light"]) .local-chip { background: #26262a; }
+  :root:not([data-theme="light"]) .local-suggestions { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .local-suggestions button:hover { background: #26262a; }
+  :root:not([data-theme="light"]) .local-suggestions button:focus-visible { background: #26262a; }
+  :root:not([data-theme="light"]) .import-box { background: #26262a; }
+  :root:not([data-theme="light"]) .technical-upload-form { background: #26262a; }
+  :root:not([data-theme="light"]) .product-question-answer article { background: #26262a; }
+  :root:not([data-theme="light"]) .technical-text-modal pre { background: #26262a; }
+  :root:not([data-theme="light"]) .technical-sheet-facts > div { background: #26262a; }
+  :root:not([data-theme="light"]) .technical-sheet-text { background: #26262a; }
+  :root:not([data-theme="light"]) .import-preview-73 .import-counts span { background: #26262a; }
+  :root:not([data-theme="light"]) .cotizador-frame { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .product-sheets .import-counts span { background: #26262a; }
+  :root:not([data-theme="light"]) .product-sheets-families li { background: #26262a; }
+  :root:not([data-theme="light"]) .competitor-panel .badge { background: #26262a; }
+  :root:not([data-theme="light"]) .competitor-panel .badge.warn { background: #26262a; }
+  :root:not([data-theme="light"]) .product-guides .badge { background: #26262a; }
+  :root:not([data-theme="light"]) .product-guides .badge.warn { background: #26262a; }
+  :root:not([data-theme="light"]) .ml-board .badge { background: #26262a; }
+  :root:not([data-theme="light"]) .contabilium-test .badge { background: #26262a; }
+  :root:not([data-theme="light"]) .ml-board .badge.warn { background: #26262a; }
+  :root:not([data-theme="light"]) .contabilium-test .badge.warn { background: #26262a; }
+  :root:not([data-theme="light"]) .ml-board-title img { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .assistant-fab { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .assistant-window-logo { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .assistant-bubble { background: #26262a; }
+  :root:not([data-theme="light"]) .assistant-chips button { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .assistant-chips button:hover { background: #26262a; }
+  :root:not([data-theme="light"]) .assistant-answer { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .assistant-copy { background: #1c1c1f; }
+  :root:not([data-theme="light"]) :root { color: #e7e7e9; }
   :root:not([data-theme="light"]) .link-button { color: #b4b5b9; }
   :root:not([data-theme="light"]) .link-button:hover { color: #b4b5b9; }
   :root:not([data-theme="light"]) .channel-pill.waiting { color: #b4b5b9; }
@@ -606,6 +680,16 @@
   :root:not([data-theme="light"]) .routine-streak { color: #b4b5b9; }
   :root:not([data-theme="light"]) .calendar-cell em { color: #b4b5b9; }
   :root:not([data-theme="light"]) .calendar-time { color: #b4b5b9; }
+  :root:not([data-theme="light"]) .competitor-panel .badge { color: #b4b5b9; }
+  :root:not([data-theme="light"]) .competitor-panel .badge.warn { color: #b4b5b9; }
+  :root:not([data-theme="light"]) .product-guides .badge { color: #b4b5b9; }
+  :root:not([data-theme="light"]) .product-guides .badge.warn { color: #b4b5b9; }
+  :root:not([data-theme="light"]) .ml-board .badge { color: #b4b5b9; }
+  :root:not([data-theme="light"]) .contabilium-test .badge { color: #b4b5b9; }
+  :root:not([data-theme="light"]) .ml-board .badge.warn { color: #b4b5b9; }
+  :root:not([data-theme="light"]) .contabilium-test .badge.warn { color: #b4b5b9; }
+  :root:not([data-theme="light"]) .assistant-chips button { color: #e7e7e9; }
+  :root:not([data-theme="light"]) .assistant-copy { color: #e7e7e9; }
   :root:not([data-theme="light"]) body, :root:not([data-theme="light"]) .login-shell { background: #121214; }
   :root:not([data-theme="light"]) .commercial-guidance, :root:not([data-theme="light"]) .prospect-glass::before { background: #1c1c1f; }
   :root:not([data-theme="light"]) .segmented { background: #2a2a2e; }
@@ -614,27 +698,4 @@
   :root:not([data-theme="light"]) .modal-backdrop { background: rgba(0,0,0,.6); }
   :root:not([data-theme="light"]) main { color: #e7e7e9; }
   :root:not([data-theme="light"]) a { color: #f0a0a4; }
-}
-/* Asistente (21/10): panel oscuro; el botón queda blanco para que el logo se vea igual que en claro. */
-:root[data-theme="dark"] .assistant-fab { border-color: #333; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .assistant-fab { border-color: #333; }
-}
-:root[data-theme="dark"] .assistant-window { background: #1c1c1f; color: #e7e7e9; border-color: #333; }
-:root[data-theme="dark"] .assistant-window-head, :root[data-theme="dark"] .assistant-window-foot, :root[data-theme="dark"] .assistant-card { border-color: #333; }
-:root[data-theme="dark"] .assistant-bubble { background: #26262a; }
-:root[data-theme="dark"] .assistant-input { border-color: #3a3a3f; }
-:root[data-theme="dark"] .assistant-chips button { background: #2a1d1e; border-color: #5a2a2d; color: #f3a5a8; }
-:root[data-theme="dark"] .assistant-answer { background: #2a1d1e; border-color: #5a2a2d; }
-:root[data-theme="dark"] .assistant-copy { background: #1f1f23; border-color: #5a2a2d; color: #f3a5a8; }
-:root[data-theme="dark"] .assistant-close:hover { background: rgba(255,255,255,.08); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .assistant-window { background: #1c1c1f; color: #e7e7e9; border-color: #333; }
-  :root:not([data-theme="light"]) .assistant-window-head, :root:not([data-theme="light"]) .assistant-window-foot, :root:not([data-theme="light"]) .assistant-card { border-color: #333; }
-  :root:not([data-theme="light"]) .assistant-bubble { background: #26262a; }
-  :root:not([data-theme="light"]) .assistant-input { border-color: #3a3a3f; }
-  :root:not([data-theme="light"]) .assistant-chips button { background: #2a1d1e; border-color: #5a2a2d; color: #f3a5a8; }
-  :root:not([data-theme="light"]) .assistant-answer { background: #2a1d1e; border-color: #5a2a2d; }
-  :root:not([data-theme="light"]) .assistant-copy { background: #1f1f23; border-color: #5a2a2d; color: #f3a5a8; }
-  :root:not([data-theme="light"]) .assistant-close:hover { background: rgba(255,255,255,.08); }
 }

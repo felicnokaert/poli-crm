@@ -4,6 +4,7 @@
 // y NO se duplica; solo se completan los campos vacíos.
 import { familyConfig, CONVERTING_STATES, setProspectState } from './prospect-model.mjs';
 import { matchProspect } from './prospect-dedupe.mjs';
+import { addDays, routineForDate } from './routine.mjs';
 
 const FILLABLE = ['phone', 'email', 'website', 'province', 'city', 'address', 'instagram', 'facebook', 'contact', 'machine', 'currentSupplier', 'notes'];
 
@@ -61,9 +62,40 @@ export function clientFromProspect(prospect, { id, businessUnit = '', now = new 
   };
 }
 
+// Recordatorio de seguimiento: a los 2 días hábiles del primer contacto (si cae en fin de semana, pasa al lunes).
+// Solo crea una tarea para que se acuerden: nada se envía solo.
+export const FOLLOW_UP_DAYS = 2;
+export const PROSPECT_FOLLOW_UP_SOURCE = 'prospect-followup';
+
+export function followUpDate(now = new Date().toISOString(), days = FOLLOW_UP_DAYS) {
+  const today = new Date(Date.parse(now) - 3 * 3600 * 1000).toISOString().slice(0, 10); // hora de Argentina
+  let due = addDays(today, days);
+  while (routineForDate(due).weekend) due = addDays(due, 1);
+  return due;
+}
+
+export function followUpTask(prospect, { taskId, clientId = '', now = new Date().toISOString() } = {}) {
+  return {
+    id: taskId,
+    clientId: clientId || undefined,
+    company: prospect.company,
+    title: `Seguimiento a ${prospect.company}: ¿respondió? Si no, mandar el mensaje de seguimiento (Prospección → ficha → Seguimiento)`,
+    dueDate: followUpDate(now),
+    cadence: 'Única',
+    priority: 'Media',
+    trigger: `Primer contacto (versión ${prospect.history?.[prospect.history.length - 1]?.variant || 'A'} del mensaje)`,
+    done: false,
+    createdAt: now,
+    updatedAt: now,
+    createdBy: 'sistema',
+    source: PROSPECT_FOLLOW_UP_SOURCE,
+    autoKey: `${PROSPECT_FOLLOW_UP_SOURCE}:${prospect.id}`,
+  };
+}
+
 // Marca el estado del prospecto y, si corresponde (Contactado o Con interés),
 // lo convierte en Empresa. Devuelve el workspace nuevo y qué pasó.
-export function markProspect(state, prospectId, nextState, { outcome = '', user = '', newClientId, businessUnit = '', now = new Date().toISOString() } = {}) {
+export function markProspect(state, prospectId, nextState, { outcome = '', user = '', newClientId, taskId = globalThis.crypto?.randomUUID?.(), businessUnit = '', now = new Date().toISOString() } = {}) {
   const prospects = Array.isArray(state.prospects) ? state.prospects : [];
   const prospect = prospects.find((item) => item.id === prospectId);
   if (!prospect) return { state, result: 'no_encontrado' };
@@ -86,9 +118,15 @@ export function markProspect(state, prospectId, nextState, { outcome = '', user 
     }
   }
   const finalProspect = { ...marked, linkedClientId };
+  // Primer "Contactado": queda una tarea para retomar a los 2 días hábiles (una sola por prospecto).
+  const tasks = Array.isArray(state.tasks) ? state.tasks : [];
+  const followUp = nextState === 'Contactado' && prospect.state !== 'Contactado' && !tasks.some((task) => task.autoKey === `${PROSPECT_FOLLOW_UP_SOURCE}:${prospect.id}`)
+    ? followUpTask(finalProspect, { taskId, clientId: linkedClientId, now })
+    : null;
   return {
-    state: { ...state, clients: nextClients, prospects: prospects.map((item) => (item.id === prospectId ? finalProspect : item)) },
+    state: { ...state, clients: nextClients, prospects: prospects.map((item) => (item.id === prospectId ? finalProspect : item)), ...(followUp ? { tasks: [...tasks, followUp] } : {}) },
     result,
     linkedClientId,
+    followUpTaskId: followUp?.id || '',
   };
 }

@@ -859,6 +859,8 @@ export default function App() {
           onToggleTask={toggleTask}
           onSave={updateClient}
           onDelete={deleteClient}
+          supabase={supabase}
+          allClients={data.clients}
         />
       )}
       {selectedTaskId && (

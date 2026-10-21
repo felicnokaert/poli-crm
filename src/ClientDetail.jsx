@@ -1,3 +1,4 @@
+import { CustomerBasePanel } from "./CustomerBasePanel.jsx";
 import { useEffect, useState } from "react";
 import { ExternalLink, X } from "lucide-react";
 import { formatDate } from "./utils.mjs";
@@ -31,6 +32,8 @@ export function ClientDetail({
   onToggleTask,
   onSave,
   onDelete,
+  supabase,
+  allClients,
 }) {
   useModalEscape(onClose);
   const [editing, setEditing] = useState(false);
@@ -123,6 +126,7 @@ export function ClientDetail({
             </button>
           </div>
         </div>
+        <CustomerBasePanel supabase={supabase} client={client} allClients={allClients} />
         <div className="review-controls">
           <span>
             Última cotización:{" "}

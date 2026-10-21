@@ -10,6 +10,7 @@ import {
 import { createMatcher, matchProspect, matchSignature } from './prospect-dedupe.mjs';
 import { recordDeletions, restoreRecordId } from './workspace.mjs';
 import { buildQueue } from './prospect-queue.mjs';
+import { DailyQueues } from './DailyQueues.jsx';
 import { applyResearch, companyFromTitle } from './prospect-research-apply.mjs';
 import { markProspect } from './prospect-convert.mjs';
 import { remoteLabel } from './prospect-requests.mjs';
@@ -35,7 +36,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const prospects = Array.isArray(data.prospects) ? data.prospects : EMPTY;
   const clients = Array.isArray(data.clients) ? data.clients : EMPTY;
   const switches = data.prospectSwitches || {};
-  const [tab, setTab] = useState('prospectos');
+  const [tab, setTab] = useState(supabase ? 'hoy' : 'prospectos'); // sin cuenta en línea no hay facturación: entra directo a la lista
   const [familyFilter, setFamilyFilter] = useState('Todas');
   const [stateFilter, setStateFilter] = useState('Todos');
   const [dailyList, setDailyList] = useState(null);
@@ -188,19 +189,23 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     const beforeClients = clients;
     const newClientId = crypto.randomUUID();
     let summary = '';
+    let followUpTaskId = '';
+    const taskId = crypto.randomUUID();
     setData((current) => {
-      const { state, result } = markProspect(current, prospectId, nextState, { outcome, user: userEmail, newClientId });
+      const { state, result, followUpTaskId: createdTask } = markProspect(current, prospectId, nextState, { outcome, user: userEmail, newClientId, taskId });
       summary = result;
+      followUpTaskId = createdTask || '';
       return state;
     });
     queueMicrotask(() => {
-      const extra = summary === 'convertido' ? ' Pasó a Empresas.' : summary === 'vinculado' ? ' Ya existía en Empresas: se vinculó.' : '';
+      const extra = (summary === 'convertido' ? ' Pasó a Empresas.' : summary === 'vinculado' ? ' Ya existía en Empresas: se vinculó.' : '') + (followUpTaskId ? ' Te dejé una tarea para retomarlo en 2 días hábiles.' : '');
       setUndo({
         id: crypto.randomUUID(),
         text: `${before.company}: ${nextState}.${extra}`,
         apply: (current) => {
           const now = (current.prospects || []).find((item) => item.id === prospectId);
           let next = { ...current, prospects: (current.prospects || []).map((item) => (item.id === prospectId ? before : item)) };
+          if (followUpTaskId) next = recordDeletions({ ...next, tasks: (next.tasks || []).filter((task) => task.id !== followUpTaskId) }, { tasks: [followUpTaskId] });
           const linked = now?.linkedClientId || '';
           if (linked && linked !== (before.linkedClientId || '')) {
             if (linked === newClientId) next = recordDeletions({ ...next, clients: (next.clients || []).filter((item) => item.id !== newClientId) }, { clients: [newClientId] });
@@ -551,10 +556,19 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       </div>
 
       <div className="segmented prospect-tabs" role="tablist" aria-label="Secciones de Prospección">
-        {[['prospectos', 'Prospectos'], ['buscar', 'Buscar con IA']].map(([key, label]) => (
+        {[['hoy', 'Cola del día'], ['prospectos', 'Prospectos'], ['buscar', 'Buscar con IA']].map(([key, label]) => (
           <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? 'selected' : ''} onClick={() => setTab(key)}>{label}</button>
         ))}
       </div>
+
+      {tab === 'hoy' && (
+        <DailyQueues
+          supabase={supabase} clients={clients} prospects={prospects} checks={checks} userEmail={userEmail} setData={setData}
+          defaultSender={String(userEmail || '').split('@')[0].split(/[._-]/)[0].replace(/^./, (c) => c.toLocaleUpperCase('es-AR'))}
+          onOpenClient={onOpenClient} onMarkProspect={mark} onOpenProspect={(id) => { setTab('prospectos'); setDetailId(id); }}
+          skipped={skipped} onSkip={(id) => setSkipped((list) => [...list, id])}
+        />
+      )}
 
       {tab === 'buscar' && (<>
       <details className="panel research-panel" open>

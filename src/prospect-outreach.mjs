@@ -2,6 +2,7 @@
 // Academia (qué le importa a ese tipo de cliente) y los datos reales de la ficha.
 // Es solo un texto para copiar y editar: el CRM nunca envía mensajes.
 import { PLAYBOOKS } from './commercial-knowledge.mjs';
+import { outreachVariant } from './prospect-model.mjs';
 
 const ASK = {
   aplicadores: 'qué material y qué máquina usan hoy y qué les gustaría mejorar',
@@ -23,7 +24,8 @@ const LINES = {
   frigorificas: 'poliuretano para paneles y cámaras',
   carrozados: 'poliuretano, resinas y fibra de vidrio para carrocerías',
   prfv: 'resinas, gel coat y fibra de vidrio',
-  penosil: 'selladores, espumas y adhesivos Penosil',
+  // EasySpray es la línea de espuma en kit que se ofrece primero a Penosil (confirmar con Felipe el texto exacto).
+  penosil: 'selladores, espumas y adhesivos Penosil, y en espuma la línea EasySpray',
 };
 
 function plain(value = '') {
@@ -53,7 +55,9 @@ function lower(text = '') {
   return text ? text.charAt(0).toLocaleLowerCase('es-AR') + text.slice(1) : '';
 }
 
-export function buildOutreachDraft(prospect = {}, { sender = '' } = {}) {
+// Versión A: presentación completa (motivo, líneas, valor y pregunta). Versión B: directa, una sola pregunta.
+// Se alternan por empresa para medir cuál responde más (ver `history` de cada prospecto).
+export function buildOutreachDraft(prospect = {}, { sender = '', variant = outreachVariant(prospect) } = {}) {
   const book = playbookFor(prospect);
   const company = String(prospect.company || '').trim() || 'su empresa';
   const where = String(prospect.city || '').trim();
@@ -66,7 +70,9 @@ export function buildOutreachDraft(prospect = {}, { sender = '' } = {}) {
   const value = book ? `Lo que más valoran empresas del rubro: ${lower(book.motivation).replace(/\.$/, '')}.` : '';
   const lines = book ? `Trabajamos con ${LINES[book.id]}.` : '';
   const ask = `¿Me podrían contar ${book ? ASK[book.id] : 'qué usan hoy y qué volumen manejan'}? Con eso les cuento si podemos ayudarlos, sin compromiso.`;
-  const whatsapp = [opening, reason, lines, value, ask].filter(Boolean).join(' ');
+  const quickAsk = book ? ASK[book.id] : 'qué usan hoy y qué volumen manejan';
+  const quick = `Una pregunta rápida: ¿${quickAsk.charAt(0).toLocaleUpperCase('es-AR')}${quickAsk.slice(1)}? Si les interesa, les paso opciones.`;
+  const whatsapp = variant === 'B' ? [opening, reason, lines, quick].filter(Boolean).join(' ') : [opening, reason, lines, value, ask].filter(Boolean).join(' ');
   const email = {
     subject: `Grupo Poliplast · ${rubro || 'consulta'} para ${company}`.slice(0, 90),
     body: [`Hola, buenos días.`, '', [`Soy ${who} de Grupo Poliplast.`, reason].filter(Boolean).join(' '), lines, value, '', ask, '', 'Quedo atento.', who].filter((line, index, all) => line !== '' || (index > 0 && all[index - 1] !== '')).join('\n'),
@@ -82,5 +88,5 @@ export function buildOutreachDraft(prospect = {}, { sender = '' } = {}) {
     book ? `Te dejo algo concreto: ${lower(book.nextStep).replace(/\.$/, '')}. ¿Lo vemos?` : '¿Te sirve que lo veamos?',
     'Si ahora no es momento, decime cuándo te conviene que retome y listo.',
   ].join(' ');
-  return { followUp, playbook: book, whatsapp, email, call, usesResearch: Boolean(fit), missing: [!rubro && 'rubro', !where && 'ciudad'].filter(Boolean) };
+  return { variant, followUp, playbook: book, whatsapp, email, call, usesResearch: Boolean(fit), missing: [!rubro && 'rubro', !where && 'ciudad'].filter(Boolean) };
 }

@@ -1,18 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import { CircleAlert, Eye, MessageCircleQuestion, PauseCircle, Percent, PlayCircle, RefreshCw, Search, ShoppingBag, Store, Video, Wallet } from "lucide-react";
-import { ML_ISSUES, ML_STATUS, countQuestions, filterBoard, issuesOf, statusLabel, summarizeBoard } from "./ml-board.mjs";
-import { MEDAL, REPUTATION, buildAlerts, combineMetrics, latestBySeller } from "./ml-summary.mjs";
+import { ArrowDownRight, ArrowUpRight, CircleAlert, Clapperboard, Eye, MessageCircleQuestion, PauseCircle, Percent, PlayCircle, RefreshCw, Search, ShoppingBag, Store, Wallet } from "lucide-react";
+import { ML_ISSUES, ML_SORTS, ML_STATUS, countQuestions, filterBoard, issuesOf, statusLabel, summarizeBoard } from "./ml-board.mjs";
+import { MEDAL, PERIODS, REPUTATION, buildAlerts, change, combineMetrics, latestBySeller, periodStats } from "./ml-summary.mjs";
 import { Empty } from "./ui-primitives";
 
 // Ventas → Mercado Libre (21/10): Resumen (como el de Mercado Libre: ventas, visitas, conversión, preguntas,
-// reputación y qué atender) y Publicaciones de las 3 cuentas. Solo muestra lo que se trajo de Mercado Libre
-// (actualización diaria y Más → Datos → Mercado Libre); no cambia nada allá.
+// reputación y qué atender, en 7/14/30 días contra el período anterior) y Publicaciones de las 3 cuentas.
+// Solo muestra lo que se trajo de Mercado Libre (actualización diaria y Más → Datos); no cambia nada allá.
 const PAGE = 100;
-const COLUMNS = "id,seller_id,title,permalink,status,price,currency,sold_quantity,available_quantity,video_id,pictures_count,health,thumbnail,description_length,item_updated_at";
+const COLUMNS = "id,seller_id,title,permalink,status,price,currency,sold_quantity,available_quantity,pictures_count,health,thumbnail,description_length,item_updated_at,visits_7d,visits_30d,clips_count";
 const money = (value, currency) => (typeof value === "number" ? value.toLocaleString("es-AR", { style: "currency", currency: currency || "ARS", maximumFractionDigits: 0 }) : "—");
 const number = (value) => (typeof value === "number" ? value.toLocaleString("es-AR") : "—");
 const percent = (value) => (typeof value === "number" ? `${(value * 100).toLocaleString("es-AR", { maximumFractionDigits: 2 })} %` : "—");
 const fmt = (iso) => (iso ? new Date(iso).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "nunca");
+const dayLabel = (day) => `${day.slice(8, 10)}/${day.slice(5, 7)}`;
 
 async function loadAll(query) {
   const rows = [];
@@ -24,21 +25,42 @@ async function loadAll(query) {
   }
 }
 
-function SalesChart({ days = [], currency }) {
-  if (!days.length) return null;
-  const W = 600;
-  const H = 140;
-  const max = Math.max(1, ...days.map((day) => day.amount));
-  const width = W / days.length;
+function Trend({ value }) {
+  if (typeof value !== "number") return <small className="muted">sin comparación</small>;
+  const up = value >= 0;
   return (
-    <svg className="sales-chart ml-chart" viewBox={`0 0 ${W} ${H + 18}`} role="img" aria-label="Ventas por día, últimos 30 días">
+    <small className={`ml-trend ${up ? "up" : "down"}`}>
+      {up ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
+      {`${up ? "+" : ""}${(value * 100).toLocaleString("es-AR", { maximumFractionDigits: 0 })} % vs. período anterior`}
+    </small>
+  );
+}
+
+const CHART_METRICS = [["amount", "Facturado"], ["orders", "Ventas"], ["visits", "Visitas"]];
+
+function DailyChart({ days = [], metric, currency }) {
+  const values = days.map((day) => (typeof day[metric] === "number" ? day[metric] : 0));
+  if (!days.length || values.every((value) => value === 0)) return <p className="muted">Sin datos para graficar en este período.</p>;
+  const W = 640;
+  const H = 150;
+  const top = 12;
+  const max = Math.max(...values);
+  const width = W / days.length;
+  const step = Math.max(1, Math.ceil(days.length / 8));
+  const format = (value) => (metric === "amount" ? money(value, currency) : number(value));
+  return (
+    <svg className="sales-chart ml-chart" viewBox={`0 0 ${W} ${H + top + 20}`} role="img" aria-label={`${CHART_METRICS.find(([key]) => key === metric)?.[1]} por día`}>
+      <line x1="0" x2={W} y1={H + top} y2={H + top} className="ml-chart-axis" />
+      <line x1="0" x2={W} y1={top} y2={top} className="ml-chart-grid" />
+      <text x="4" y={top - 2} className="ml-chart-label">{format(max)}</text>
       {days.map((day, index) => {
-        const height = Math.round((day.amount / max) * H);
+        const height = Math.round((values[index] / max) * H);
+        const last = index === days.length - 1;
         return (
-          <g key={day.day}>
-            <title>{`${day.day.slice(8, 10)}/${day.day.slice(5, 7)}: ${money(day.amount, currency)} · ${day.orders} venta${day.orders === 1 ? "" : "s"}${typeof day.visits === "number" ? ` · ${day.visits} visitas` : ""}`}</title>
-            <rect x={index * width + 2} y={H - height} width={Math.max(2, width - 4)} height={Math.max(height, day.amount ? 2 : 0)} rx="2" className="ml-chart-bar" />
-            {index % 5 === 0 && <text x={index * width + width / 2} y={H + 14} textAnchor="middle" className="ml-chart-label">{`${day.day.slice(8, 10)}/${day.day.slice(5, 7)}`}</text>}
+          <g key={day.day} className="ml-chart-col">
+            <title>{`${dayLabel(day.day)}: ${money(day.amount, currency)} · ${day.orders} venta${day.orders === 1 ? "" : "s"}${typeof day.visits === "number" ? ` · ${number(day.visits)} visitas` : ""}`}</title>
+            <rect x={index * width + 1.5} y={top + H - height} width={Math.max(2, width - 3)} height={Math.max(height, values[index] ? 2 : 0)} rx="2" className={`ml-chart-bar ${last ? "is-last" : ""}`} />
+            {index % step === 0 && <text x={index * width + width / 2} y={H + top + 15} textAnchor="middle" className="ml-chart-label">{dayLabel(day.day)}</text>}
           </g>
         );
       })}
@@ -49,10 +71,15 @@ function SalesChart({ days = [], currency }) {
 function Summary({ accounts, metricsBySeller, seller, items, nickname, permalinks, onIssue, isAdmin, session, onReload }) {
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  const [period, setPeriod] = useState(7);
+  const [metric, setMetric] = useState("amount");
   const chosen = seller ? { [seller]: metricsBySeller[seller] } : metricsBySeller;
   const data = combineMetrics(Object.values(chosen).filter(Boolean));
+  const stats = useMemo(() => periodStats(data?.days || [], period), [data, period]);
   const alerts = buildAlerts({ metricsBySeller: chosen, items: items.filter((item) => !seller || item.seller_id === seller), nickname });
   const currency = data?.sales?.currency || "ARS";
+  const salesKnown = Boolean(data?.sales);
+  const takenAt = Object.values(chosen).map((value) => value?.to).filter(Boolean).sort().at(0);
 
   async function refresh() {
     setError("");
@@ -72,32 +99,49 @@ function Summary({ accounts, metricsBySeller, seller, items, nickname, permalink
     onReload();
   }
 
+  const { current, previous } = stats;
   return (
     <>
-      {isAdmin && (
-        <div className="panel-head-actions">
-          <button type="button" className="secondary" disabled={Boolean(busy)} onClick={refresh}><RefreshCw size={14} /> {busy ? `Actualizando ${busy}…` : "Actualizar resumen"}</button>
+      <div className="ml-toolbar">
+        <div className="segmented" role="tablist" aria-label="Período">
+          {PERIODS.map(([key, label]) => (
+            <button key={key} type="button" role="tab" aria-selected={period === key} className={period === key ? "selected" : ""} onClick={() => setPeriod(key)}>{label}</button>
+          ))}
         </div>
-      )}
+        <span className="muted small">Datos del {fmt(takenAt)} · se actualiza solo cada mañana</span>
+        {isAdmin && <button type="button" className="secondary" disabled={Boolean(busy)} onClick={refresh}><RefreshCw size={14} /> {busy ? `Actualizando ${busy}…` : "Actualizar resumen"}</button>}
+      </div>
       {error && <div className="system-message error">{error}</div>}
       {!data && <Empty text="Todavía no hay resumen. Se arma solo todos los días a la mañana (o Felipe toca “Actualizar resumen”)." />}
       {data && (<>
+        {data.ordersBlocked && (
+          <div className="system-message error ml-permission">
+            <strong>Mercado Libre no deja leer las ventas.</strong> Por eso no aparecen facturado, ventas ni conversión. Hay que darle a la aplicación el permiso de ventas en Mercado Libre Developers y después volver a conectar cada cuenta (las instrucciones te las pasó Claude).
+          </div>
+        )}
         <section className="metric-grid ml-metric-grid">
-          <article className="metric-card"><Wallet size={20} /><span>Facturado (30 días)</span><strong>{money(data.sales?.amount, currency)}</strong></article>
-          <article className="metric-card"><ShoppingBag size={20} /><span>Ventas</span><strong>{number(data.sales?.orders)}</strong><small>{number(data.sales?.units)} unidades{data.sales?.cancelled ? ` · ${data.sales.cancelled} canceladas` : ""}</small></article>
-          <article className="metric-card"><Eye size={20} /><span>Visitas</span><strong>{number(data.visits)}</strong></article>
-          <article className="metric-card"><Percent size={20} /><span>Conversión</span><strong>{percent(data.conversion)}</strong><small>ventas / visitas</small></article>
-          <article className={`metric-card ${data.questionsPending ? "is-urgent" : ""}`}><MessageCircleQuestion size={20} /><span>Preguntas sin responder</span><strong>{number(data.questionsPending)}</strong></article>
+          <article className="metric-card"><Wallet size={20} /><span>Facturado</span><strong>{salesKnown ? money(current.amount, currency) : "—"}</strong>{salesKnown && <Trend value={change(current.amount, previous?.amount)} />}</article>
+          <article className="metric-card"><ShoppingBag size={20} /><span>Ventas</span><strong>{salesKnown ? number(current.orders) : "—"}</strong>{salesKnown ? <small>{number(current.units)} unidades</small> : <small className="muted">falta permiso</small>}</article>
+          <article className="metric-card"><Eye size={20} /><span>Visitas</span><strong>{number(current.visits)}</strong><Trend value={change(current.visits, previous?.visits)} /></article>
+          <article className="metric-card"><Percent size={20} /><span>Conversión</span><strong>{salesKnown ? percent(current.conversion) : "—"}</strong><small className="muted">ventas / visitas</small></article>
+          <article className={`metric-card ${data.questionsPending ? "is-urgent" : ""}`}><MessageCircleQuestion size={20} /><span>Preguntas sin responder</span><strong>{number(data.questionsPending)}</strong><small className="muted">ahora</small></article>
         </section>
 
         <section className="panel">
-          <div className="panel-head"><div><span className="eyebrow">Últimos 30 días</span><h2>Ventas por día</h2></div></div>
-          <SalesChart days={data.days} currency={currency} />
+          <div className="panel-head">
+            <div><span className="eyebrow">Últimos {period} días</span><h2>Día por día</h2></div>
+            <div className="segmented" role="tablist" aria-label="Qué graficar">
+              {CHART_METRICS.map(([key, label]) => (
+                <button key={key} type="button" role="tab" aria-selected={metric === key} className={metric === key ? "selected" : ""} onClick={() => setMetric(key)}>{label}</button>
+              ))}
+            </div>
+          </div>
+          <DailyChart days={stats.series} metric={metric} currency={currency} />
           {data.partial && <p className="muted small">A alguna cuenta le falta un dato: el total puede quedar corto.</p>}
         </section>
 
         <section className="panel">
-          <div className="panel-head"><div><span className="eyebrow">Recomendaciones · nada se cambia solo</span><h2>Para atender</h2></div></div>
+          <div className="panel-head"><div><span className="eyebrow">Recomendaciones · nada se cambia solo</span><h2>Qué atender hoy</h2></div></div>
           {alerts.length === 0 && <p className="muted">Nada urgente con los datos de hoy.</p>}
           <ul className="ml-alerts">
             {alerts.map((alert) => (
@@ -114,11 +158,10 @@ function Summary({ accounts, metricsBySeller, seller, items, nickname, permalink
         <section className="panel">
           <div className="panel-head"><div><span className="eyebrow">Reputación</span><h2>Cómo está cada cuenta</h2></div></div>
           <div className="table-scroll"><table className="sales-history-table">
-            <thead><tr><th>Cuenta</th><th>Color</th><th>Medalla</th><th>Reclamos</th><th>Demoras</th><th>Cancelaciones</th><th>Resumen del</th></tr></thead>
+            <thead><tr><th>Cuenta</th><th>Color</th><th>Medalla</th><th>Reclamos</th><th>Demoras</th><th>Cancelaciones</th></tr></thead>
             <tbody>
               {accounts.filter((account) => !seller || account.seller_id === seller).map((account) => {
-                const own = metricsBySeller[account.seller_id];
-                const reputation = own?.reputation;
+                const reputation = metricsBySeller[account.seller_id]?.reputation;
                 const [label, tone] = REPUTATION[reputation?.level] || ["—", ""];
                 return (
                   <tr key={account.seller_id}>
@@ -128,7 +171,6 @@ function Summary({ accounts, metricsBySeller, seller, items, nickname, permalink
                     <td>{percent(reputation?.claims)}</td>
                     <td>{percent(reputation?.delayed)}</td>
                     <td>{percent(reputation?.cancellations)}</td>
-                    <td>{fmt(own?.to)}</td>
                   </tr>
                 );
               })}
@@ -136,10 +178,9 @@ function Summary({ accounts, metricsBySeller, seller, items, nickname, permalink
           </table></div>
         </section>
 
-        <section className="panel">
-          <div className="panel-head"><div><span className="eyebrow">Últimos 30 días</span><h2>Lo más vendido</h2></div></div>
-          {!data.topItems?.length && <p className="muted">Sin ventas en el período (o no se pudieron leer).</p>}
-          {data.topItems?.length > 0 && (
+        {data.topItems?.length > 0 && (
+          <section className="panel">
+            <div className="panel-head"><div><span className="eyebrow">Últimos 30 días</span><h2>Lo más vendido</h2></div></div>
             <div className="table-scroll"><table className="sales-history-table">
               <thead><tr><th>Publicación</th><th>Unidades</th><th>Facturado</th></tr></thead>
               <tbody>
@@ -152,9 +193,9 @@ function Summary({ accounts, metricsBySeller, seller, items, nickname, permalink
                 ))}
               </tbody>
             </table></div>
-          )}
-        </section>
-        {data.errors?.length > 0 && <p className="muted small">No se pudo leer: {data.errors.join(" · ")}</p>}
+          </section>
+        )}
+        {data.errors?.length > 0 && !data.ordersBlocked && <p className="muted small">No se pudo leer: {data.errors.join(" · ")}</p>}
       </>)}
     </>
   );
@@ -163,11 +204,12 @@ function Summary({ accounts, metricsBySeller, seller, items, nickname, permalink
 function Listings({ items, accounts, nickname, questionCounts, seller, issue, setIssue }) {
   const [status, setStatus] = useState("active");
   const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("vendidas");
   const [pageSize, setPageSize] = useState(PAGE);
-  useEffect(() => setPageSize(PAGE), [seller, status, issue, query]);
+  useEffect(() => setPageSize(PAGE), [seller, status, issue, query, sort]);
   const ofSeller = useMemo(() => items.filter((item) => !seller || item.seller_id === seller), [items, seller]);
   const summary = useMemo(() => summarizeBoard(ofSeller), [ofSeller]);
-  const shown = useMemo(() => filterBoard(items, { seller, status, issue, query }, questionCounts), [items, seller, status, issue, query, questionCounts]);
+  const shown = useMemo(() => filterBoard(items, { seller, status, issue, query, sort }, questionCounts), [items, seller, status, issue, query, sort, questionCounts]);
   const page = shown.slice(0, pageSize);
   const lastUpdate = accounts.map((account) => account.last_refresh_at || account.last_sync_at).filter(Boolean).sort().at(-1);
 
@@ -176,8 +218,8 @@ function Listings({ items, accounts, nickname, questionCounts, seller, issue, se
       <article className="metric-card"><Store size={20} /><span>Publicaciones</span><strong>{summary.total}</strong></article>
       <article className="metric-card"><PlayCircle size={20} /><span>Activas</span><strong>{summary.byStatus.active || 0}</strong></article>
       <article className="metric-card"><PauseCircle size={20} /><span>Pausadas</span><strong>{summary.byStatus.paused || 0}</strong></article>
-      <article className="metric-card"><CircleAlert size={20} /><span>Cerradas</span><strong>{summary.byStatus.closed || 0}</strong></article>
-      <article className="metric-card"><Video size={20} /><span>Activas sin video</span><strong>{summary.issues["sin-video"]}</strong></article>
+      <article className="metric-card"><Eye size={20} /><span>Visitas a activas (7 días)</span><strong>{number(summary.visits7)}</strong></article>
+      <article className="metric-card"><Clapperboard size={20} /><span>Activas sin clip</span><strong>{summary.issues["sin-clip"]}</strong>{summary.clipsUnknown > 0 && <small className="muted">{summary.clipsUnknown} sin revisar</small>}</article>
     </section>
 
     <section className="panel">
@@ -185,7 +227,7 @@ function Listings({ items, accounts, nickname, questionCounts, seller, issue, se
         <div>
           <span className="eyebrow">Actualizado {fmt(lastUpdate)}</span>
           <h2>Publicaciones</h2>
-          <p>Estado de cada publicación y lo que le falta. Solo mira: no cambia nada en Mercado Libre.</p>
+          <p>Estado, visitas, clips y lo que le falta a cada una. Solo mira: no cambia nada en Mercado Libre.</p>
         </div>
         <label className="search"><Search size={17} /><input aria-label="Buscar publicación" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ej.: espuma, MLA123…" /></label>
       </div>
@@ -199,12 +241,17 @@ function Listings({ items, accounts, nickname, questionCounts, seller, issue, se
           <button key={key || "ninguno"} type="button" role="tab" aria-selected={issue === key} className={issue === key ? "selected" : ""} onClick={() => setIssue(key)}>{label}</button>
         ))}
       </div>
-      <p className="muted small">Los números de "qué les falta" cuentan solo las activas.{summary.missingDetail ? ` ${summary.missingDetail} publicaciones todavía no tienen video, fotos ni calidad: se completan con la próxima actualización.` : ""}</p>
+      <label className="ml-sort muted small">Ordenar por{" "}
+        <select value={sort} onChange={(event) => setSort(event.target.value)}>
+          {ML_SORTS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+        </select>
+      </label>
+      <p className="muted small">Los números de "qué les falta" cuentan solo las activas. "Sin clip" = sin video corto de Mercado Libre.{summary.clipsUnknown ? ` ${summary.clipsUnknown} activas todavía no tienen clips ni visitas revisados: se completan cada mañana o con "Solo visitas y clips" en Más → Datos.` : ""}</p>
 
       {items.length > 0 && shown.length === 0 && <Empty text="No hay publicaciones con ese filtro." />}
       {page.length > 0 && (
         <div className="table-scroll"><table className="sales-history-table ml-board-table">
-          <thead><tr><th>Publicación</th><th>Cuenta</th><th>Estado</th><th>Precio</th><th>Vendidas</th><th>Stock</th><th>Preguntas</th><th>Le falta</th></tr></thead>
+          <thead><tr><th>Publicación</th><th>Cuenta</th><th>Estado</th><th>Precio</th><th>Vendidas</th><th>Stock</th><th>Visitas 7 d</th><th>Visitas 30 d</th><th>Clips</th><th>Preguntas</th><th>Le falta</th></tr></thead>
           <tbody>
             {page.map((item) => (
               <tr key={item.id}>
@@ -219,6 +266,9 @@ function Listings({ items, accounts, nickname, questionCounts, seller, issue, se
                 <td>{money(item.price, item.currency)}</td>
                 <td>{item.sold_quantity ?? "—"}</td>
                 <td>{item.available_quantity ?? "—"}</td>
+                <td>{number(item.visits_7d)}</td>
+                <td>{number(item.visits_30d)}</td>
+                <td>{number(item.clips_count)}</td>
                 <td>{questionCounts[item.id] || 0}</td>
                 <td>{issuesOf(item).map((found) => <span key={found.key} className="badge warn">{found.label}</span>)}</td>
               </tr>

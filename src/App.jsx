@@ -884,7 +884,7 @@ export default function App() {
           }}
         />
       )}
-      {onlineConfigured && session && <AssistantButton supabase={supabase} clients={data.clients || EMPTY_ARRAY} />}
+      {onlineConfigured && session && <AssistantButton supabase={supabase} clients={data.clients || EMPTY_ARRAY} firstName={String(session.user?.user_metadata?.full_name || "").trim().split(/\s+/)[0]} />}
       {showPalette && (
         <CommandPalette
           clients={data.clients || []}

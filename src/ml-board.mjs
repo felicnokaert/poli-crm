@@ -11,17 +11,18 @@ export const ML_STATUS = [
 ];
 export const statusLabel = (status) => ({ active: 'Activa', paused: 'Pausada', closed: 'Cerrada', under_review: 'En revisión', inactive: 'Inactiva' }[status] || status || 'Sin estado');
 
-// Video, fotos y calidad se traen desde el 21/10: una publicación sin ese dato todavía (item_updated_at
-// vacío) no cuenta como "sin video" hasta la próxima actualización.
+// Fotos y calidad se traen desde el 21/10 (item_updated_at vacío = todavía sin ese dato). Los clips se
+// cuentan aparte (clips_count): vacío = no se pudo leer o falta revisar, nunca cuenta como "sin clip".
 const detailed = (item) => Boolean(item.item_updated_at);
 
 export const ML_ISSUES = [
-  ['sin-video', 'Sin video', (item) => detailed(item) && !item.video_id],
+  ['sin-clip', 'Sin clip', (item) => item.clips_count === 0],
   ['pocas-fotos', 'Menos de 3 fotos', (item) => typeof item.pictures_count === 'number' && item.pictures_count < 3],
   ['sin-descripcion', 'Sin descripción', (item) => (Number(item.description_length) || 0) < 30],
   ['calidad-baja', 'Calidad baja', (item) => typeof item.health === 'number' && item.health < 0.7],
   ['sin-stock', 'Activa sin stock', (item) => item.status === 'active' && item.available_quantity === 0],
   ['sin-ventas', 'Activa sin ventas', (item) => item.status === 'active' && item.sold_quantity === 0],
+  ['visitas-sin-ventas', 'Muchas visitas, nunca vendió', (item) => item.sold_quantity === 0 && (Number(item.visits_30d) || 0) >= 100],
 ];
 
 export const issuesOf = (item) => ML_ISSUES.filter(([, , test]) => test(item)).map(([key, label]) => ({ key, label }));
@@ -31,10 +32,24 @@ export function summarizeBoard(items = []) {
   for (const item of items) byStatus[item.status] = (byStatus[item.status] || 0) + 1;
   const active = items.filter((item) => item.status === 'active');
   const issues = Object.fromEntries(ML_ISSUES.map(([key, , test]) => [key, active.filter(test).length]));
-  return { total: items.length, byStatus, issues, missingDetail: items.filter((item) => !detailed(item)).length };
+  return {
+    total: items.length, byStatus, issues,
+    missingDetail: items.filter((item) => !detailed(item)).length,
+    clipsUnknown: active.filter((item) => typeof item.clips_count !== 'number').length,
+    visits7: active.reduce((sum, item) => sum + (Number(item.visits_7d) || 0), 0),
+    visits30: active.reduce((sum, item) => sum + (Number(item.visits_30d) || 0), 0),
+  };
 }
 
-export function filterBoard(items = [], { seller = '', status = '', issue = '', query = '' } = {}, questionCounts = {}) {
+export const ML_SORTS = [
+  ['vendidas', 'Más vendidas'],
+  ['visitas7', 'Más visitas (7 días)'],
+  ['visitas30', 'Más visitas (30 días)'],
+  ['preguntas', 'Más preguntas'],
+  ['precio', 'Mayor precio'],
+];
+
+export function filterBoard(items = [], { seller = '', status = '', issue = '', query = '', sort = 'vendidas' } = {}, questionCounts = {}) {
   const tokens = tokensOf(query);
   const test = ML_ISSUES.find(([key]) => key === issue)?.[2];
   return items
@@ -46,9 +61,16 @@ export function filterBoard(items = [], { seller = '', status = '', issue = '', 
       const text = plain(`${item.title} ${item.id}`);
       return tokens.every((token) => text.includes(token));
     })
-    .sort((a, b) => (Number(b.sold_quantity) || 0) - (Number(a.sold_quantity) || 0)
-      || (questionCounts[b.id] || 0) - (questionCounts[a.id] || 0)
-      || String(a.title).localeCompare(String(b.title), 'es'));
+    .sort((a, b) => {
+      const value = (item) => ({
+        vendidas: Number(item.sold_quantity) || 0,
+        visitas7: Number(item.visits_7d) || 0,
+        visitas30: Number(item.visits_30d) || 0,
+        preguntas: questionCounts[item.id] || 0,
+        precio: Number(item.price) || 0,
+      }[sort] ?? (Number(item.sold_quantity) || 0));
+      return value(b) - value(a) || (Number(b.sold_quantity) || 0) - (Number(a.sold_quantity) || 0) || String(a.title).localeCompare(String(b.title), 'es');
+    });
 }
 
 export function countQuestions(rows = []) {

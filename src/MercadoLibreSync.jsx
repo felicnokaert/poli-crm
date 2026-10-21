@@ -71,19 +71,23 @@ export function MercadoLibreSync({ supabase, session }) {
     } catch (connectError) { setError(connectError.message); setBusy(""); }
   }
 
-  async function sync(account) {
+  async function sync(account, stages = ["items", "questions", "extras"]) {
     setError(""); setMessage(""); setBusy(account.seller_id);
     let items = 0;
     let questions = 0;
+    let extras = 0;
+    const problems = new Set();
     try {
-      for (const stage of ["items", "questions"]) {
+      for (const stage of stages) {
         let offset = 0;
         let scrollId = "";
         let byItem = false;
         for (let guard = 0; guard < 1000; guard += 1) {
           const result = await callApi(session, { op: "sync", sellerId: account.seller_id, stage, offset, scrollId, byItem });
-          if (stage === "items") items += result.saved; else questions += result.saved;
+          if (stage === "items") items += result.saved; else if (stage === "questions") questions += result.saved; else extras += result.saved;
+          (result.errors || []).forEach((problem) => problems.add(problem));
           setProgress(stage === "items" ? `Publicaciones: ${result.next} de ${result.total}…`
+            : stage === "extras" ? `Visitas y clips de las activas: ${result.next} de ${result.total}…`
             : result.byItem && byItem ? `Preguntas, revisando publicación ${result.next} de ${result.total}…`
               : result.byItem ? "Son más de 1000 preguntas: sigo de a una publicación…" : `Preguntas respondidas: ${result.next} de ${result.total}…`);
           offset = result.next;
@@ -93,7 +97,7 @@ export function MercadoLibreSync({ supabase, session }) {
           if (result.done) break;
         }
       }
-      setMessage(`${account.nickname || "Cuenta"}: se guardaron ${items} publicaciones y ${questions} preguntas respondidas.`);
+      setMessage(`${account.nickname || "Cuenta"}: se guardaron ${items} publicaciones, ${questions} preguntas respondidas y visitas/clips de ${extras} activas.${problems.size ? ` No se pudo leer: ${[...problems].join(" · ")}` : ""}`);
     } catch (syncError) {
       setError(`${syncError.message} (quedó guardado lo que se llegó a traer: ${items} publicaciones, ${questions} preguntas).`);
     }
@@ -128,7 +132,10 @@ export function MercadoLibreSync({ supabase, session }) {
               <tr key={account.seller_id}>
                 <td><strong>{account.nickname || account.seller_id}</strong></td>
                 <td>{fmt(account.last_sync_at)}</td>
-                <td><button type="button" className="secondary" disabled={Boolean(busy)} onClick={() => sync(account)}><RefreshCw size={14} /> {busy === account.seller_id ? "Actualizando…" : "Actualizar"}</button></td>
+                <td className="ml-sync-actions">
+                  <button type="button" className="secondary" disabled={Boolean(busy)} onClick={() => sync(account)}><RefreshCw size={14} /> {busy === account.seller_id ? "Actualizando…" : "Actualizar todo"}</button>
+                  <button type="button" className="secondary" disabled={Boolean(busy)} onClick={() => sync(account, ["extras"])}>Solo visitas y clips</button>
+                </td>
               </tr>
             ))}
           </tbody>

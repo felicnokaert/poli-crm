@@ -616,11 +616,21 @@
   :root:not([data-theme="light"]) a { color: #f0a0a4; }
 }
 /* Asistente (21/10): panel oscuro; el botón queda blanco para que el logo se vea igual que en claro. */
-:root[data-theme="dark"] .assistant-drawer { background: #1c1c1f; color: #e7e7e9; border-left-color: #333; }
-:root[data-theme="dark"] .assistant-drawer-head { border-bottom-color: #333; }
 :root[data-theme="dark"] .assistant-fab { border-color: #333; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .assistant-drawer { background: #1c1c1f; color: #e7e7e9; border-left-color: #333; }
-  :root:not([data-theme="light"]) .assistant-drawer-head { border-bottom-color: #333; }
   :root:not([data-theme="light"]) .assistant-fab { border-color: #333; }
+}
+:root[data-theme="dark"] .assistant-window { background: #1c1c1f; color: #e7e7e9; border-color: #333; }
+:root[data-theme="dark"] .assistant-window-head, :root[data-theme="dark"] .assistant-window-foot, :root[data-theme="dark"] .assistant-card { border-color: #333; }
+:root[data-theme="dark"] .assistant-bubble { background: #26262a; }
+:root[data-theme="dark"] .assistant-input { border-color: #3a3a3f; }
+:root[data-theme="dark"] .assistant-chips button { background: #2a1d1e; border-color: #5a2a2d; color: #f3a5a8; }
+:root[data-theme="dark"] .assistant-close:hover { background: rgba(255,255,255,.08); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .assistant-window { background: #1c1c1f; color: #e7e7e9; border-color: #333; }
+  :root:not([data-theme="light"]) .assistant-window-head, :root:not([data-theme="light"]) .assistant-window-foot, :root:not([data-theme="light"]) .assistant-card { border-color: #333; }
+  :root:not([data-theme="light"]) .assistant-bubble { background: #26262a; }
+  :root:not([data-theme="light"]) .assistant-input { border-color: #3a3a3f; }
+  :root:not([data-theme="light"]) .assistant-chips button { background: #2a1d1e; border-color: #5a2a2d; color: #f3a5a8; }
+  :root:not([data-theme="light"]) .assistant-close:hover { background: rgba(255,255,255,.08); }
 }

@@ -48,6 +48,12 @@ test('comprobanteRow guarda el encabezado y descarta lo que no tiene id', () => 
   assert.equal(comprobanteRow({ Id: 9, TipoFc: 'FCB', Origen: 'MercadoPago' }, 'COMARG'), null);
 });
 
+test('comprobanteRow entiende los importes en formato argentino ("39.025,52")', () => {
+  const row = comprobanteRow({ Id: 10, TipoFc: 'FCB', FechaEmision: '2026-10-20', RazonSocial: 'ACME', ImporteTotalNeto: '39.025,52', Saldo: '1.000,50' }, 'COMARG');
+  assert.equal(row.total, 39025.52);
+  assert.equal(row.saldo, 1000.5);
+});
+
 test('una memoria vieja de antes de 2024 salta al 1/1/2024', async () => {
   const world = fakeWorld({ state: { company: 'POLIPLAST', cursor_date: '2020-06-09', window_days: 4, page: 1, history_done: false, total_saved: 209 } });
   await contabiliumAdmin(req({ op: 'sync', company: 'POLIPLAST' }), env, world.http, options);

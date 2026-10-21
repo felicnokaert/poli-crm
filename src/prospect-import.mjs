@@ -14,6 +14,10 @@ const HEADERS = new Map([
   ['familia', 'family'], ['rubro', 'rubro'], ['subfamilia', 'subfamily'],
   ['domicilio', 'address'], ['direccion', 'address'], ['fuente', 'source'],
   ['instagram', 'instagram'], ['facebook', 'facebook'],
+  // Planilla "Prospección Octubre": puntaje, nivel de encaje y zona A/B/C.
+  ['puntaje', 'sheetScore'], ['score', 'sheetScore'], ['puntaje encaje', 'sheetScore'],
+  ['encaje', 'fitLevel'], ['nivel de encaje', 'fitLevel'], ['nivel encaje', 'fitLevel'],
+  ['zona', 'zone'], ['zona a b c', 'zone'], ['zona abc', 'zone'],
   // Hoja RELEVAMIENTO
   ['maquina', 'machine'], ['proveedor', 'currentSupplier'], ['contacto', 'contact'], ['observaciones', 'notes'],
   ['estado', 'sheetState'], ['comercial', 'owner'], ['fecha de seguimiento', 'followUpDate'], ['tipo entidad', 'entityType'],
@@ -89,10 +93,44 @@ export function parseProspectsText(text = '') {
 // Campos que solo existen en la planilla: se guardan juntos en `imported`.
 const SHEET_ONLY = ['subfamily', 'owner', 'sheetState', 'commercialState', 'entityType', 'proposal', 'potentialValue', 'nextAction', 'nextDate', 'followUpDate'];
 
+// "82", "82,5", "82.5" o "8,2 / 10" → número; si no se entiende devuelve null (el texto queda en `imported`).
+export function parseScore(value) {
+  const match = String(value ?? '').replace(',', '.').match(/-?\d+(\.\d+)?/);
+  if (!match) return null;
+  const number = Number(match[0]);
+  return Number.isFinite(number) ? number : null;
+}
+
+// "Zona A", "a", "A - cerca" → 'A'. Cualquier otra cosa no se adivina.
+export function normalizeZone(value) {
+  const match = plain(value).match(/^(?:zona )?([abc])(?: |$)/);
+  return match ? match[1].toUpperCase() : '';
+}
+
+// "alto", "Alta", "A" → Alto; "media" → Medio; "baja" → Bajo. Lo demás se guarda como vino.
+export function normalizeFit(value) {
+  const text = plain(value);
+  if (/^(alto|alta)$/.test(text)) return 'Alto';
+  if (/^(medio|media)$/.test(text)) return 'Medio';
+  if (/^(bajo|baja)$/.test(text)) return 'Bajo';
+  return String(value ?? '').trim();
+}
+
 // Convierte una fila de la planilla en los campos de un prospecto.
 export function prospectFieldsFromRow(row) {
   const fields = { ...row };
   const imported = {};
+  if ('sheetScore' in fields) {
+    const score = parseScore(fields.sheetScore);
+    if (score === null) imported.scoreRaw = fields.sheetScore;
+    fields.sheetScore = score;
+  }
+  if ('zone' in fields) {
+    const zone = normalizeZone(fields.zone);
+    if (!zone) imported.zoneRaw = fields.zone;
+    fields.zone = zone;
+  }
+  if ('fitLevel' in fields) fields.fitLevel = normalizeFit(fields.fitLevel);
   for (const key of SHEET_ONLY) { if (fields[key]) imported[key] = fields[key]; delete fields[key]; }
   const family = prospectFamilyKey(row.family);
   fields.family = family;
@@ -133,7 +171,7 @@ export function importFingerprint(text = '') {
 // Campos que un CSV puede completar en un prospecto que ya existe, solo si están vacíos. Nunca se tocan
 // el estado, la etapa, las notas ni las marcas del equipo (Contactado, Con interés, Sin interés): esos
 // siempre ganan sobre el CSV.
-export const FILLABLE_FIELDS = ['family', 'rubro', 'address', 'city', 'province', 'phone', 'website', 'email', 'instagram', 'facebook', 'contact', 'machine', 'currentSupplier', 'cuit'];
+export const FILLABLE_FIELDS = ['sheetScore', 'fitLevel', 'zone', 'family', 'rubro', 'address', 'city', 'province', 'phone', 'website', 'email', 'instagram', 'facebook', 'contact', 'machine', 'currentSupplier', 'cuit'];
 const empty = (value) => value === undefined || value === null || String(value).trim() === '';
 
 export function emptyFieldsToFill(existing = {}, incoming = {}) {
@@ -155,7 +193,8 @@ export function buildImportPlan(rows = [], clients = [], prospects = [], { now =
   const fills = new Map();
   const counts = { total: rows.length, nuevas: 0, existentes: 0, posibles: 0, enCrm: 0, aCompletar: 0 };
   for (const row of rows) {
-    const candidate = blankProspect({ ...prospectFieldsFromRow(row), source: 'importado', competitor: isCompetitor(row.company) }, { id: makeId(), now });
+    const fromRow = prospectFieldsFromRow(row);
+    const candidate = blankProspect({ ...fromRow, source: fromRow.source || 'importado', competitor: isCompetitor(row.company) }, { id: makeId(), now });
     const check = matchProspect(candidate, clients, pool);
     const match = check.matches[0] || null;
     const status = check.status === 'Nuevo' ? 'Nuevo' : check.status === 'Posible duplicado' ? 'Posible duplicado' : 'Ya existe';

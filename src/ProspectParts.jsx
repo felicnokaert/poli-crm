@@ -4,11 +4,13 @@ import {
   PROSPECT_FAMILIES,
   PROSPECT_OUTCOMES,
   PROSPECT_STATES,
+  REJECTION_REASONS,
   possibleWhatsAppLink,
 } from './prospect-model.mjs';
 import { missingContact } from './prospect-queue.mjs';
 import { contactQuality } from './prospect-contact.mjs';
 import { buildOutreachDraft } from './prospect-outreach.mjs';
+import { outreachVariant } from './prospect-model.mjs';
 
 // Partes de Prospección: la cola de trabajo, la planilla, las tarjetas, la ficha del prospecto y el
 // historial de búsquedas. Salieron de Prospeccion.jsx (QA 16/10: tenía 1.148 líneas), sin cambios.
@@ -80,8 +82,8 @@ export function ProspectRow({ prospect, check, onMark, onOpenClient, onDelete, o
 const csvCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
 
 function prospectsCsv(rows) {
-  const head = ['Empresa', 'Familia', 'Rubro', 'Direccion', 'Localidad', 'Provincia', 'Telefono', 'Sitio web', 'Email', 'Instagram', 'Facebook', 'Estado', 'Fuente'];
-  const lines = rows.map((item) => [item.company, item.family, item.rubro, item.address, item.city, item.province, item.phone, item.website, item.email, item.instagram, item.facebook, item.state, item.source].map(csvCell).join(';'));
+  const head = ['Empresa', 'Familia', 'Rubro', 'Direccion', 'Localidad', 'Provincia', 'Telefono', 'Sitio web', 'Email', 'Instagram', 'Facebook', 'Estado', 'Motivo', 'Puntaje', 'Encaje', 'Zona', 'Fuente'];
+  const lines = rows.map((item) => [item.company, item.family, item.rubro, item.address, item.city, item.province, item.phone, item.website, item.email, item.instagram, item.facebook, item.state, item.outcome, item.sheetScore ?? '', item.fitLevel, item.zone, item.source].map(csvCell).join(';'));
   return `\ufeff${[head.map(csvCell).join(';'), ...lines].join('\r\n')}`;
 }
 
@@ -177,7 +179,7 @@ export function ProspectDetail({ defaultSender, prospect, check, onClose, onSave
         </div>
         {quality.notes.length > 0 && <p className="muted small contact-quality">{quality.notes.join(' · ')}.</p>}
         <ResearchBox research={prospect.research} />
-        <OutreachDraft prospect={form} defaultSender={defaultSender} />
+        <OutreachDraft prospect={form} defaultSender={defaultSender} onVariant={(variant) => { setForm({ ...form, variant }); onSave(prospect.id, { variant }); }} />
         {missingContact(form).length > 0 && <p className="muted small">Falta: {missingContact(form).join(', ')}.</p>}
         <div className="form-grid">
           <label>Familia
@@ -217,12 +219,13 @@ export function ProspectDetail({ defaultSender, prospect, check, onClose, onSave
 }
 
 // Cola de trabajo: de a uno, el más prometedor primero; marcar o saltar y pasa al siguiente.
-function OutreachDraft({ prospect, defaultSender }) {
+function OutreachDraft({ prospect, defaultSender, onVariant }) {
   const [sender, setSender] = useState(() => { try { return localStorage.getItem('poliplast-sender-name') || defaultSender; } catch { return defaultSender; } });
   const [channel, setChannel] = useState('whatsapp');
   const [edited, setEdited] = useState({});
   const [copied, setCopied] = useState('');
   const draft = useMemo(() => buildOutreachDraft(prospect, { sender }), [prospect, sender]);
+  const variant = outreachVariant(prospect);
   const generated = { whatsapp: draft.whatsapp, email: `Asunto: ${draft.email.subject}\n\n${draft.email.body}`, call: draft.call, followUp: draft.followUp };
   const text = edited[channel] ?? generated[channel];
   function changeSender(value) {
@@ -245,6 +248,12 @@ function OutreachDraft({ prospect, defaultSender }) {
             <button key={key} type="button" role="tab" aria-selected={channel === key} className={channel === key ? 'selected' : ''} onClick={() => setChannel(key)}>{label}</button>
           ))}
         </div>
+        {channel === 'whatsapp' && (
+          <p className="muted small">
+            Versión {variant} ({variant === 'A' ? 'presentación completa' : 'directa, una sola pregunta'}). Se alternan entre empresas para ver cuál responde más.
+            {onVariant && <> <button type="button" className="link-button" onClick={() => onVariant(variant === 'A' ? 'B' : 'A')}>Usar la versión {variant === 'A' ? 'B' : 'A'}</button></>}
+          </p>
+        )}
         <textarea rows={['whatsapp', 'followUp'].includes(channel) ? 6 : 9} aria-label={`Borrador de ${channel}`} value={text} onChange={(event) => setEdited({ ...edited, [channel]: event.target.value })} />
         <div className="panel-head-actions">
           <button type="button" className="primary" onClick={copy}>{copied === channel ? 'Copiado ✓' : 'Copiar texto'}</button>
@@ -258,6 +267,17 @@ function OutreachDraft({ prospect, defaultSender }) {
       </div>
     </details>
   );
+}
+
+// Puntaje, encaje y zona que vinieron de la planilla de prospección.
+export function SheetBadges({ prospect }) {
+  const items = [
+    prospect.zone && `Zona ${prospect.zone}`,
+    prospect.fitLevel && `Encaje ${prospect.fitLevel}`,
+    Number.isFinite(Number(prospect.sheetScore)) && prospect.sheetScore !== null && prospect.sheetScore !== '' && `Puntaje ${prospect.sheetScore}`,
+  ].filter(Boolean);
+  if (!items.length) return null;
+  return <p className="sheet-badges">{items.map((item) => <em key={item} className="badge">{item}</em>)}</p>;
 }
 
 function ResearchBox({ research }) {
@@ -288,6 +308,7 @@ export function ProspectQueue({ queue, byId, checks, onMark, onSkip, onOpen, onE
       <h3>{current.company}</h3>
       <p className="muted">{[current.family, current.rubro, [current.city, current.province].filter(Boolean).join(', ')].filter(Boolean).join(' · ') || 'Sin datos de rubro o zona'}</p>
       <p><em className={statusClass(check.status)}>{check.status}</em>{check.matches[0] && <> con <strong>{check.matches[0].name}</strong></>} <span className="muted small">· Fuente: {current.source}</span></p>
+      <SheetBadges prospect={current} />
       {current.notes && <p className="queue-notes">{current.notes}</p>}
       <div className="drawer-quick">
         {current.phone && <a className="secondary link-pill" href={`tel:${String(current.phone).replace(/[^\d+]/g, '')}`}>Llamar {current.phone}</a>}
@@ -309,6 +330,12 @@ export function ProspectQueue({ queue, byId, checks, onMark, onSkip, onOpen, onE
           {PROSPECT_OUTCOMES.map((item) => <option key={item}>{item}</option>)}
         </select>
         <button type="button" className="secondary" onClick={() => { onMark(current.id, 'Sin interés', outcome); setOutcome(''); }}>Sin interés</button>
+        <div className="reason-chips" role="group" aria-label="Rechazo en un toque">
+          <span className="muted small">No avanzó por:</span>
+          {REJECTION_REASONS.map((reason) => (
+            <button key={reason} type="button" className="secondary chip" onClick={() => { onMark(current.id, 'Sin interés', reason); setOutcome(''); }}>{reason}</button>
+          ))}
+        </div>
         <button type="button" className="secondary" onClick={() => onSkip(current.id)}>Saltar por hoy</button>
         <button type="button" className="secondary" onClick={() => onOpen(current.id)}>Abrir ficha</button>
         {current.website && !/(facebook|instagram|wa\.me)/i.test(current.website) && <button type="button" className="secondary" onClick={() => onEnrich(current)}>Buscar redes y contacto</button>}

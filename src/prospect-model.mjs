@@ -11,8 +11,17 @@ export const PROSPECT_OUTCOMES = [
   'Empresa inexistente o número inválido',
   'No respondió',
   'Ya tiene proveedor',
+  'Precio',
+  'No llega al mínimo de USD 1.800',
+  'Dólar',
+  'No vende ni usa espuma',
   'Pidió cotización',
   'No le interesa',
+];
+
+// Motivos de rechazo que se marcan en un toque en la cola (los que explican por qué falla un mensaje).
+export const REJECTION_REASONS = [
+  'Precio', 'No llega al mínimo de USD 1.800', 'Ya tiene proveedor', 'Dólar', 'No vende ni usa espuma', 'No respondió',
 ];
 
 // Estados que convierten el prospecto en una Empresa del CRM.
@@ -90,8 +99,13 @@ export function blankProspect(fields = {}, { id, now = new Date().toISOString() 
     lat: null,
     lon: null,
     source: 'Carga manual',
+    // De la planilla de prospección: puntaje (tal cual viene), nivel de encaje (Alto/Medio/Bajo) y zona (A/B/C).
+    sheetScore: null,
+    fitLevel: '',
+    zone: '',
     state: 'No contactado',
     outcome: '',
+    history: [],
     competitor: false,
     linkedClientId: '',
     createdAt: now,
@@ -108,9 +122,24 @@ export function possibleWhatsAppLink(phone = '') {
   return `https://wa.me/${digits}`;
 }
 
+// Versión del mensaje (A o B) que le toca a un prospecto: alterna por id para comparar cuál responde más.
+// Se puede fijar a mano con `prospect.variant`.
+export function outreachVariant(prospect = {}) {
+  if (prospect.variant === 'A' || prospect.variant === 'B') return prospect.variant;
+  let sum = 0;
+  for (const char of String(prospect.id || prospect.company || '')) sum += char.charCodeAt(0);
+  return sum % 2 === 0 ? 'A' : 'B';
+}
+
+const HISTORY_LIMIT = 20;
+
+// Cada marca queda en el historial (fecha, estado, motivo, quién y versión del mensaje): es lo que después
+// permite ver por qué falla un mensaje. El estado actual sigue siendo el último.
 export function setProspectState(prospect, state, outcome = '', now = new Date().toISOString(), user = '') {
   if (!PROSPECT_STATES.includes(state)) return prospect;
-  return { ...prospect, state, outcome, markedBy: user || prospect.markedBy || '', markedAt: now, updatedAt: now };
+  const entry = { at: now, state, outcome, user: user || '', variant: outreachVariant(prospect), family: prospect.family || '', zone: prospect.zone || '' };
+  const history = [...(Array.isArray(prospect.history) ? prospect.history : []), entry].slice(-HISTORY_LIMIT);
+  return { ...prospect, state, outcome, history, markedBy: user || prospect.markedBy || '', markedAt: now, updatedAt: now };
 }
 
 // Familia de prospección a partir de lo que dice una planilla ("PRFV",

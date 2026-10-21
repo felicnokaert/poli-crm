@@ -1038,3 +1038,10 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 @media (prefers-reduced-motion: reduce) { .assistant-window { animation: none; } }
 @media print { .assistant-fab, .assistant-window { display: none; } }
 .guide-ml ul { list-style: none; padding-left: 0; display: grid; gap: 8px; } .guide-ml li { font-size: 13px; padding: 8px 10px; border-left: 3px solid var(--brand-red, #ed1c24); background: rgba(237, 28, 36, .04); border-radius: 0 8px 8px 0; }
+
+/* Cola del día (21/10): tres listas con mensaje listo, resultado en un toque y datos de la planilla de prospección */
+.daily-queues { display: grid; gap: 12px; }
+.daily-item textarea { width: 100%; resize: vertical; }
+.reason-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex-basis: 100%; margin-top: 4px; }
+.reason-chips .chip { padding: 4px 10px; font-size: 0.82rem; border-radius: 999px; }
+.sheet-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }

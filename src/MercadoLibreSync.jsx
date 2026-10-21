@@ -78,11 +78,14 @@ export function MercadoLibreSync({ supabase, session }) {
     try {
       for (const stage of ["items", "questions"]) {
         let offset = 0;
-        for (let guard = 0; guard < 400; guard += 1) {
-          const result = await callApi(session, { op: "sync", sellerId: account.seller_id, stage, offset });
+        let scrollId = "";
+        for (let guard = 0; guard < 1000; guard += 1) {
+          const result = await callApi(session, { op: "sync", sellerId: account.seller_id, stage, offset, scrollId });
           if (stage === "items") items += result.saved; else questions += result.saved;
           setProgress(stage === "items" ? `Publicaciones: ${result.next} de ${result.total}…` : `Preguntas respondidas: ${result.next} de ${result.total}…`);
           offset = result.next;
+          scrollId = result.scrollId || "";
+          if (guard % 4 === 3) loadCounts().catch(() => {});
           if (result.done) break;
         }
       }

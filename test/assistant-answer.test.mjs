@@ -70,3 +70,13 @@ test('lo que enseñó Felipe aparece si la pregunta coincide y nombra el product
   assert.deepEqual(matchTaught(entries, 'horario de atencion').map((e) => e.id), [3]);
   assert.deepEqual(matchTaught(entries, 'rinde la espuma'), []);
 });
+
+import { understand } from '../src/assistant-answer.mjs';
+
+test('entiende cómo lo dicen los clientes', () => {
+  assert.equal(detectIntent('¿Cuántos pomos necesito para 20 m2?').key, 'rendimiento');
+  assert.equal(detectIntent('en cuanto tiempo puedo pisar').key, 'tiempos');
+  assert.equal(detectIntent('es tóxico para el mate?').key, 'alimentos');
+  assert.match(understand('Vidrio líquido 750'), /resina epoxi/);
+  assert.deepEqual(productWords('cuanto rinde cada lata de easy spray', detectIntent('cuanto rinde')), ['easyspray']);
+});

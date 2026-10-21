@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { adminFetch } from "./admin-api.mjs";
-import { ArrowDownRight, ArrowUpRight, CircleAlert, Eye, MessageCircleQuestion, PauseCircle, Percent, PlayCircle, RefreshCw, Search, ShoppingBag, Store, Wallet } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, CircleAlert, Clapperboard, Eye, MessageCircleQuestion, PauseCircle, Percent, PlayCircle, RefreshCw, Search, ShoppingBag, Store, Wallet } from "lucide-react";
 import { ML_ISSUES, ML_SORTS, ML_STATUS, countQuestions, filterBoard, issuesOf, statusLabel, summarizeBoard } from "./ml-board.mjs";
 import { MEDAL, PERIODS, REPUTATION, buildAlerts, change, combineMetrics, latestBySeller, periodStats } from "./ml-summary.mjs";
 import { Empty } from "./ui-primitives";
@@ -238,6 +238,7 @@ function Listings({ items, accounts, nickname, questionCounts, seller, issue, se
       <article className="metric-card"><PlayCircle size={20} /><span>Activas</span><strong>{summary.byStatus.active || 0}</strong></article>
       <article className="metric-card"><PauseCircle size={20} /><span>Pausadas</span><strong>{summary.byStatus.paused || 0}</strong></article>
       <article className="metric-card"><Eye size={20} /><span>Visitas a activas (7 días)</span><strong>{number(summary.visits7)}</strong></article>
+      {summary.clipsUnknown < (summary.byStatus.active || 0) && <article className="metric-card"><Clapperboard size={20} /><span>Activas sin clip</span><strong>{summary.issues["sin-clip"]}</strong></article>}
     </section>
 
     <section className="panel">
@@ -264,7 +265,7 @@ function Listings({ items, accounts, nickname, questionCounts, seller, issue, se
           {ML_SORTS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
         </select>
       </label>
-      <p className="muted small">Los números de "qué les falta" cuentan solo las activas. Las visitas de cada publicación se completan de a poco cada mañana (o con "Solo visitas" en Más → Datos). Los clips no se muestran: Mercado Libre no deja leerlos desde el CRM.</p>
+      <p className="muted small">Los números de "qué les falta" cuentan solo las activas. Las visitas de cada publicación se completan de a poco cada mañana (o con "Solo visitas" en Más → Datos). Los clips se cargan a mano en Más → Datos → Mercado Libre ("Cargar qué publicaciones tienen clip"), porque Mercado Libre no deja leerlos.</p>
 
       {items.length > 0 && shown.length === 0 && <Empty text="No hay publicaciones con ese filtro." />}
       {page.length > 0 && (

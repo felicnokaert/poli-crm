@@ -1085,3 +1085,6 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .ml-competition { display: grid; gap: 12px; margin-top: 16px; }
 .ml-competition ol { margin: 6px 0 0; padding-left: 20px; font-size: 13.5px; }
 .assistant-rivals { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 3px; font-size: 13px; }
+.ml-clips { margin: 8px 0; }
+.ml-clips-form { display: grid; gap: 8px; margin-top: 8px; max-width: 720px; }
+.ml-clips-form textarea { font: inherit; padding: 8px 10px; border-radius: 10px; border: 1px solid #e2dcda; resize: vertical; }

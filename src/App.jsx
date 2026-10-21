@@ -72,6 +72,7 @@ import { useRapypClients } from "./hooks/useRapypClients";
 import { useClientActions } from "./hooks/useClientActions";
 import { AppSidebar, NAV_ITEMS } from "./AppSidebar.jsx";
 import { AppTopbar } from "./AppTopbar.jsx";
+import { AssistantButton } from "./AssistantButton.jsx";
 
 // "Registrar conversación" solo tiene sentido donde se sigue a un cliente
 // puntual, no en todos los módulos.
@@ -883,6 +884,7 @@ export default function App() {
           }}
         />
       )}
+      {onlineConfigured && session && <AssistantButton supabase={supabase} clients={data.clients || EMPTY_ARRAY} />}
       {showPalette && (
         <CommandPalette
           clients={data.clients || []}

@@ -965,3 +965,22 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .undo-toast span { overflow: hidden; text-overflow: ellipsis; }
 .undo-toast .secondary { min-height: 34px; white-space: nowrap; }
 .undo-toast .icon-button { color: #fff; background: transparent; border: 0; font-size: 18px; }
+/* Mercado Libre: tablero de publicaciones y prueba de Contabilium (21/10) */
+.ml-board .badge, .contabilium-test .badge { display: inline-block; font-style: normal; font-size: 11px; font-weight: 700; padding: 2px 8px; margin: 0 4px 2px 0; border-radius: 999px; background: #ededee; color: #444; white-space: nowrap; }
+.ml-board .badge.warn, .contabilium-test .badge.warn { background: #fff1d6; color: #7a5200; white-space: normal; }
+.contabilium-test .badge.ok { background: var(--color-success-bg); color: var(--color-success); }
+.ml-board .segmented { flex-wrap: wrap; margin-bottom: 8px; }
+.ml-board-title { display: flex; align-items: center; gap: 10px; min-width: 260px; color: inherit; }
+.ml-board-title img { flex: 0 0 40px; border-radius: 6px; object-fit: cover; background: #fff; }
+.ml-board-table td { vertical-align: middle; }
+.ml-board-head { display: grid; gap: 8px; padding: 12px 14px; }
+.ml-board-head .segmented { margin-bottom: 0; }
+.ml-metric-grid .metric-card strong { font-size: 24px; }
+.ml-chart-bar { fill: var(--brand-red, #c8102e); opacity: .85; }
+.ml-chart-label { font-size: 11px; fill: var(--color-text-gray, #6b7280); }
+.ml-alerts { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ml-alerts li { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid #dfe5e1; border-radius: 12px; }
+.ml-alerts li > span { flex: 1 1 240px; }
+.ml-alerts li.is-urgent svg { color: var(--brand-red, #c8102e); }
+.ml-alerts a.secondary { text-decoration: none; padding: 6px 10px; border-radius: 10px; }
+.ml-board .badge.ok { background: var(--color-success-bg); color: var(--color-success); }

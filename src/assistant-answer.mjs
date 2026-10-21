@@ -104,3 +104,21 @@ export function teamAnswer(rows = [], intent) {
   const uses = answers.filter((answer) => sentences(answer).some((sentence) => keep.has(key(sentence)))).length;
   return { text, uses, total: answers.length };
 }
+
+// Lo que se le pasa a la IA (src/AssistantWindow.jsx → lib/assistant-ai.mjs): primero la respuesta del
+// equipo y las líneas de la guía, después lo demás que encontró el buscador, todo con su origen.
+export function buildAiContext({ intent = null, facts = [], team = null, result = null, mlRows = [] } = {}) {
+  const lines = [];
+  if (intent) lines.push(`Tema detectado: ${intent.label}`);
+  if (team && !team.varied) lines.push(`Respuesta del equipo en Mercado Libre (la que más repetimos, ${team.uses} de ${team.total} respuestas; es la válida): ${team.text}`);
+  if (team?.varied) lines.push('En Mercado Libre respondimos distinto según el producto:', ...team.examples.map((text) => `- ${text}`));
+  if (facts.length) lines.push('Según las guías de producto:', ...facts.map((fact) => `- ${fact.text} (${fact.guide}${fact.validated ? ', validada' : ', borrador'})`));
+  for (const [key, items] of Object.entries(result?.groups || {})) {
+    if (!items?.length) continue;
+    lines.push(`[${key}]`, ...items.slice(0, 4).map((item) => `- ${item.title}${item.subtitle ? ` (${item.subtitle})` : ''}: ${String(item.snippet || item.text || '').replace(/\s+/g, ' ').slice(0, 400)}`));
+  }
+  const answers = (mlRows || []).filter((row) => row.kind === 'pregunta').slice(0, 6)
+    .map((row) => { const [question, answer] = String(row.body || '').replace(/^Pregunta: /, '').split('\nRespuesta: '); return `- P: ${question.slice(0, 200)} | R: ${cleanAnswer(answer || '').slice(0, 300)}`; });
+  if (answers.length) lines.push('Preguntas parecidas respondidas en Mercado Libre:', ...answers);
+  return lines.join('\n');
+}

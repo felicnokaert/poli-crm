@@ -13,6 +13,8 @@ function fakeWorld({ email = 'felipe@grupopoliplast.com.ar', account = null } = 
     calls.push({ url, options });
     if (url.endsWith('/auth/v1/user')) return json({ id: 'u1', email });
     if (url.startsWith('https://db/rest/v1/ml_accounts?select=*')) return json(account ? [account] : []);
+    if (url.startsWith('https://db/rest/v1/ml_items?select=id') && options.method === 'HEAD') return { ok: true, status: 200, headers: { get: () => '0-0/1' } };
+    if (url.startsWith('https://db/rest/v1/ml_items?select=id')) return json([{ id: 'MLA7' }]);
     if (url.startsWith('https://db/rest/v1/ml_accounts?select=seller_id')) return json([{ seller_id: '9', nickname: 'POLIPLAST' }]);
     if (url.startsWith('https://db/rest/v1/') && options.method === 'POST') { const table = url.split('/rest/v1/')[1]; saved[table].push(...JSON.parse(options.body)); return json(null, 201); }
     if (url.startsWith('https://db/rest/v1/') && options.method === 'PATCH') { saved.patches.push(JSON.parse(options.body)); return json(null, 204); }
@@ -22,6 +24,8 @@ function fakeWorld({ email = 'felipe@grupopoliplast.com.ar', account = null } = 
     if (url.includes('/users/9/items/search')) return json({ results: ['MLA1', 'MLA2'], scroll_id: 'S1', paging: { total: 1500 } });
     if (url.includes('/items?ids=')) return json([{ code: 200, body: { id: 'MLA1', title: 'Espuma poliuretano', price: 100, attributes: [{ name: 'Marca', value_name: 'Poliplast' }, { name: 'Vacío' }] } }, { code: 404 }]);
     if (url.includes('/description')) return json({ plain_text: 'Para techos' });
+    if (url.includes('/questions/search?item=MLA7')) return json({ total: 1, questions: [{ id: 7, item_id: 'MLA7', text: '¿Viejo?', answer: { text: 'Sí' } }] });
+    if (url.includes('/questions/search') && url.includes('offset=950')) return json({ total: 3000, questions: Array.from({ length: 50 }, (_, i) => ({ id: 1000 + i, text: 'q', answer: { text: 'a' } })) });
     if (url.includes('/questions/search')) return json({ total: 2, questions: [{ id: 1, item_id: 'MLA1', text: '¿Sirve para techo?', from: { id: 555 }, answer: { text: 'Sí, hola.', date_created: 'x' } }, { id: 2, text: 'sin respuesta' }] });
     return json({ error: 'no' }, 404);
   };
@@ -65,6 +69,19 @@ test('sincroniza publicaciones y solo preguntas respondidas, sin quién pregunt�
   assert.ok(world.saved.patches.some((patch) => patch.last_sync_at));
   assert.ok(world.calls.every((call) => !/\/answers|method":"POST".*api\.mercadolibre\.com\/(items|questions)/.test(call.url)), 'nunca escribe en Mercado Libre');
   assert.ok(world.calls.filter((call) => call.url.startsWith('https://api.mercadolibre.com') && call.options.method === 'POST').every((call) => call.url.endsWith('/oauth/token')));
+});
+
+test('más de 1000 preguntas: sigue de a una publicación sin pasarse del tope de Mercado Libre', async () => {
+  const world = fakeWorld({ account: { seller_id: '9', access_token: 'AT', expires_at: '2999-01-01' } });
+  const last = await mercadoLibreAdmin(req({ op: 'sync', sellerId: '9', stage: 'questions', offset: 950 }), env, world.http);
+  assert.equal(last.body.byItem, true);
+  assert.equal(last.body.done, false);
+  assert.ok(world.calls.every((call) => !/offset=(\d{4,})/.test(call.url) || Number(call.url.match(/offset=(\d+)/)[1]) < 1000));
+  const byItem = await mercadoLibreAdmin(req({ op: 'sync', sellerId: '9', stage: 'questions', offset: 0, byItem: true }), env, world.http);
+  assert.equal(byItem.body.saved, 1);
+  assert.equal(byItem.body.total, 1);
+  assert.equal(byItem.body.done, true);
+  assert.ok(world.saved.patches.some((patch) => patch.last_sync_at));
 });
 
 test('filas y resultados para Academia', () => {

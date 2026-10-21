@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { searchKnowledge, withMercadoLibre } from "./knowledge-search.mjs";
 import { PRODUCT_CATALOG } from "./product-catalog.mjs";
 import { OBJECTIONS } from "./commercial-knowledge.mjs";
+import { guideItems } from "./crm-guide.mjs";
+
+const HELP = guideItems();
 
 // Todo lo que sabe el CRM para buscar (Academia → Buscar y la ventana del asistente, 21/10): fichas
 // vigentes (con su texto, que se trae recién al buscar), guías, competencia, productos, clientes y las
@@ -42,6 +45,6 @@ export function useKnowledge(supabase, query, { clients = [], sellers = [] } = {
     }, 400);
     return () => { active = false; clearTimeout(timer); };
   }, [supabase, searching, query]);
-  const sources = { products: PRODUCT_CATALOG, guides, docs, clients, sellers, objections: OBJECTIONS, competitors };
+  const sources = { products: PRODUCT_CATALOG, guides, docs, clients, sellers, objections: OBJECTIONS, competitors, help: HELP };
   return { result: withMercadoLibre(searchKnowledge(query, sources), mlRows), pendingDocs, guides, competitors };
 }

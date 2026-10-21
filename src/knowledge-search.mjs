@@ -12,6 +12,7 @@ export const KNOWLEDGE_TYPES = [
   ['objeciones', 'Objeciones'],
   ['competencia', 'Competencia'],
   ['mercadolibre', 'Mercado Libre (publicaciones y preguntas respondidas)'],
+  ['ayuda', 'Cómo usar el CRM'],
 ];
 
 export function plain(value) {
@@ -34,15 +35,21 @@ function scoreItem(item, tokens) {
 }
 
 // Normaliza cada fuente a { type, id, title, subtitle, text }.
-export function toItems({ products = [], guides = [], docs = [], clients = [], sellers = [], objections = [], competitors = [] } = {}) {
+export function toItems({ products = [], guides = [], docs = [], clients = [], sellers = [], objections = [], competitors = [], help = [] } = {}) {
   return [
+    ...help,
     ...guides.map((g) => {
       const body = [g.summary, ...(g.sections || []).flatMap((section) => section.items || [])].join(' ');
       return { type: 'guias', id: g.id, title: g.product, subtitle: [g.family, g.status === 'validada' ? 'validada' : 'borrador sin validar'].join(' · '), text: body, fullText: body };
     }),
     ...products.map((p) => ({ type: 'productos', id: p.sku || p.name, title: p.name, subtitle: [p.family, p.subfamily, p.sku].filter(Boolean).join(' · '), text: [p.family, p.subfamily, p.base, p.variant].join(' ') })),
     ...docs.filter((d) => d.status === 'vigente' || d.status === undefined).map((d) => ({ type: 'fichas', id: d.id || d.title, title: d.product || d.title, subtitle: [d.family, d.doc_type, d.sku].filter(Boolean).join(' · '), text: [d.title, d.notes, d.extractedText ?? d.extracted_text].join(' '), fullText: d.extractedText ?? d.extracted_text ?? '' })),
-    ...clients.map((c) => ({ type: 'clientes', id: c.id || c.company, title: c.company, subtitle: [c.type, c.city, c.province].filter(Boolean).join(' · '), text: [c.rubro, c.notes, c.family, c.products].join(' ') })),
+    // 21/10: el asistente tiene que saber el contacto, teléfono y mail de cada cliente.
+    ...clients.map((c) => {
+      const contact = [c.contact && `Contacto: ${c.contact}`, c.phone && `Tel: ${c.phone}`, c.email && `Mail: ${c.email}`, c.cuit && `CUIT: ${c.cuit}`].filter(Boolean).join(' · ');
+      const facts = [c.stage && `Etapa: ${c.stage}`, c.mainProduct && `Producto principal: ${c.mainProduct}`, c.lastPurchase && `Última compra: ${c.lastPurchase}`, c.nextAction && `Próxima acción: ${c.nextAction}${c.nextDate ? ` (${c.nextDate})` : ''}`].filter(Boolean).join(' · ');
+      return { type: 'clientes', id: c.id || c.company, title: c.company, subtitle: [c.type, c.city, c.province].filter(Boolean).join(' · '), text: [contact, facts, c.rubro, c.notes, c.family, c.products].filter(Boolean).join(' · '), snippet: [contact, facts].filter(Boolean).join(' · ') || undefined };
+    }),
     ...sellers.map((s) => ({ type: 'vendedores', id: s.id, title: `${s.name} · ${s.role}`, subtitle: s.area, text: [s.area, s.receives, s.risk, s.habit, ...(s.assist || [])].join(' ') })),
     ...objections.map((o) => ({ type: 'objeciones', id: o.id, title: o.label, subtitle: 'Objeción', text: [o.meaning, o.explore, o.response].join(' ') })),
     ...competitors.filter((c) => c.kind !== 'cliente').map((c) => ({ type: 'competencia', id: c.id || c.name, title: c.name, subtitle: (c.families || []).join(' · '), text: [c.summary, c.caveats, ...(c.families || [])].join(' ') })),

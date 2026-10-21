@@ -103,6 +103,14 @@ export function MercadoLibreSync({ supabase, session }) {
     await loadCounts();
   }
 
+  // Prueba de competencia (21/10): los más vendidos de Mercado Libre en nuestras 3 categorías principales.
+  const [competition, setCompetition] = useState(null);
+  async function probeCompetition(account) {
+    setError(""); setBusy(`comp-${account.seller_id}`);
+    try { setCompetition({ nickname: account.nickname, ...(await callApi(session, { op: "competition", sellerId: account.seller_id })) }); } catch (probeError) { setError(probeError.message); }
+    setBusy("");
+  }
+
   return (
     <section className="panel">
       <div className="panel-head">
@@ -132,11 +140,26 @@ export function MercadoLibreSync({ supabase, session }) {
                 <td className="ml-sync-actions">
                   <button type="button" className="secondary" disabled={Boolean(busy)} onClick={() => sync(account)}><RefreshCw size={14} /> {busy === account.seller_id ? "Actualizando…" : "Actualizar todo"}</button>
                   <button type="button" className="secondary" disabled={Boolean(busy)} onClick={() => sync(account, ["extras"])}>Solo visitas y clips</button>
+                  <button type="button" className="secondary" disabled={Boolean(busy)} onClick={() => probeCompetition(account)}>{busy === `comp-${account.seller_id}` ? "Mirando…" : "Probar competencia"}</button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table></div>
+      )}
+      {competition && (
+        <div className="ml-competition">
+          <h3>Más vendidos en nuestras categorías ({competition.nickname})</h3>
+          {competition.errors?.length > 0 && <p className="muted small">No se pudo leer: {competition.errors.join(" · ")}</p>}
+          {competition.categories?.map((category) => (
+            <div key={category.category}>
+              <strong>{category.name}</strong> <span className="muted small">{category.highlights} destacados{category.products ? ` (${category.products} son productos de catálogo)` : ""}</span>
+              {category.items.length > 0 ? (
+                <ol>{category.items.map((item) => <li key={item.id}><a href={item.permalink} target="_blank" rel="noreferrer">{item.title}</a> · ${Number(item.price || 0).toLocaleString("es-AR")}{item.sold != null ? ` · ${item.sold} vendidos` : ""}{item.ours ? " · nuestra" : ""}</li>)}</ol>
+              ) : <p className="muted small">Mercado Libre no devolvió publicaciones sueltas para esta categoría.</p>}
+            </div>
+          ))}
+        </div>
       )}
       {(counts.items !== null || counts.questions !== null) && <p className="muted small">Guardado en el CRM: {counts.items ?? 0} publicaciones y {counts.questions ?? 0} preguntas respondidas.</p>}
     </section>

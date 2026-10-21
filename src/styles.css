@@ -1075,3 +1075,5 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .reason-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex-basis: 100%; margin-top: 4px; }
 .reason-chips .chip { padding: 4px 10px; font-size: 0.82rem; border-radius: 999px; }
 .sheet-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+.ml-competition { display: grid; gap: 12px; margin-top: 16px; }
+.ml-competition ol { margin: 6px 0 0; padding-left: 20px; font-size: 13.5px; }

@@ -92,3 +92,10 @@ test('filas y resultados para Academia', () => {
   assert.equal(merged.total, 1);
   assert.equal(merged.groups.mercadolibre[0].url, 'https://ml/1');
 });
+
+test('visitas de a una publicación: total de 30 días y suma de los últimos 7', async () => {
+  const { windowVisits } = await import('../lib/mercadolibre.mjs');
+  const results = Array.from({ length: 30 }, (_, index) => ({ date: `d${index}`, total: index < 23 ? 1 : 10 }));
+  assert.deepEqual(windowVisits({ total_visits: 93, results }), [70, 93]);
+  assert.deepEqual(windowVisits({ total_visits: 5 }), [undefined, 5]);
+});

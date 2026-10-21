@@ -625,6 +625,8 @@
 :root[data-theme="dark"] .assistant-bubble { background: #26262a; }
 :root[data-theme="dark"] .assistant-input { border-color: #3a3a3f; }
 :root[data-theme="dark"] .assistant-chips button { background: #2a1d1e; border-color: #5a2a2d; color: #f3a5a8; }
+:root[data-theme="dark"] .assistant-answer { background: #2a1d1e; border-color: #5a2a2d; }
+:root[data-theme="dark"] .assistant-copy { background: #1f1f23; border-color: #5a2a2d; color: #f3a5a8; }
 :root[data-theme="dark"] .assistant-close:hover { background: rgba(255,255,255,.08); }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .assistant-window { background: #1c1c1f; color: #e7e7e9; border-color: #333; }
@@ -632,5 +634,7 @@
   :root:not([data-theme="light"]) .assistant-bubble { background: #26262a; }
   :root:not([data-theme="light"]) .assistant-input { border-color: #3a3a3f; }
   :root:not([data-theme="light"]) .assistant-chips button { background: #2a1d1e; border-color: #5a2a2d; color: #f3a5a8; }
+  :root:not([data-theme="light"]) .assistant-answer { background: #2a1d1e; border-color: #5a2a2d; }
+  :root:not([data-theme="light"]) .assistant-copy { background: #1f1f23; border-color: #5a2a2d; color: #f3a5a8; }
   :root:not([data-theme="light"]) .assistant-close:hover { background: rgba(255,255,255,.08); }
 }

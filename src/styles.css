@@ -1023,6 +1023,13 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .assistant-group-label { font: 700 11px 'Manrope', system-ui, sans-serif; letter-spacing: .07em; text-transform: uppercase; color: var(--brand-red, #ed1c24); }
 .assistant-card { display: grid; gap: 3px; padding: 10px 12px; border: 1px solid #efebe9; border-radius: 12px; font-size: 13.5px; }
 .assistant-card q { font-size: 12.5px; opacity: .8; }
+.assistant-answer { display: grid; gap: 8px; padding: 12px 14px; border-radius: 14px; background: #fff6f6; border: 1px solid #f3d3d5; }
+.assistant-answer-team p { margin: 0; font-size: 14.5px; line-height: 1.5; font-weight: 600; }
+.assistant-answer-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.assistant-copy { display: inline-flex; align-items: center; gap: 4px; border: 1px solid #f0c9cb; background: #fff; color: #b5121a; border-radius: 999px; padding: 4px 10px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.assistant-answer-facts ul { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13.5px; line-height: 1.45; }
+.assistant-more { display: inline-flex; align-items: center; gap: 6px; justify-self: start; border: 0; background: transparent; color: inherit; opacity: .75; font-size: 13px; font-weight: 600; cursor: pointer; padding: 4px 2px; }
+.assistant-more[aria-expanded="true"] svg { transform: rotate(180deg); }
 .assistant-window-foot { border-top: 1px solid #efebe9; padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 6px; }
 .assistant-input { display: flex; align-items: center; gap: 8px; border: 1.5px solid #e2dcda; border-radius: 14px; padding: 10px 12px; }
 .assistant-input:focus-within { border-color: var(--brand-red, #ed1c24); }

@@ -43,9 +43,16 @@ export function ContabiliumTest({ session }) {
     setBusy("sync"); setError(""); stop.current = false;
     const problems = [];
     for (const company of sync || []) {
+      let fails = 0;
       for (let round = 0; round < MAX_ROUNDS && !stop.current; round += 1) {
         let result;
-        try { result = await callApi(session, { op: "sync", company: company.key }); } catch (syncError) { problems.push(`${company.name}: ${syncError.message}`); break; }
+        try { result = await callApi(session, { op: "sync", company: company.key }); } catch (syncError) {
+          // Un corte suelto (el servidor tardó): reintenta hasta 3 veces seguidas antes de pasar a la siguiente.
+          fails += 1;
+          if (fails < 3) continue;
+          problems.push(`${company.name}: ${syncError.message}`); break;
+        }
+        fails = 0;
         const state = result.company;
         setSync((current) => current.map((row) => (row.key === state.key ? { ...row, ...state } : row)));
         setProgress(`${company.name}: llegó al ${shortDate(state.cursor_date)} · ${state.total_saved} comprobantes`);
@@ -91,7 +98,7 @@ export function ContabiliumTest({ session }) {
       <div className="panel-head">
         <div>
           <h3>Comprobantes</h3>
-          <p className="muted small">Facturas, notas de crédito y cotizaciones de cada empresa, desde el principio. Se traen de a tramos y se acuerda hasta dónde llegó: si cerrás la página, la próxima vez sigue desde ahí. Todos los días a las 7 se suma solo lo nuevo.</p>
+          <p className="muted small">Facturas, notas de crédito y cotizaciones de cada empresa desde el 1/1/2024, sin las ventas de Mercado Libre (esas están en su panel). Se traen de a tramos y se acuerda hasta dónde llegó: si cerrás la página, la próxima vez sigue desde ahí. Todos los días a las 7 se suma solo lo nuevo.</p>
         </div>
         <div className="panel-head-actions">
           {busy === "sync"

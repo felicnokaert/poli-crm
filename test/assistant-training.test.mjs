@@ -29,3 +29,15 @@ test('a la IA no le llega la respuesta real, sí las demás de la publicación',
   assert.equal(team.uses, 2);
   assert.match(context, /Respuesta del equipo en Mercado Libre/);
 });
+
+import { shortProduct, suggestTeachings } from '../src/assistant-training.mjs';
+
+test('sugeridas: la respuesta repetida por publicación y tema, con el producto corto', () => {
+  assert.equal(shortProduct('Resina Epoxi Cristal Easy Spray 2 Kg'), 'Easy Spray');
+  const list = suggestTeachings(questions, { A: 'Resina Easy Spray 2 Kg' });
+  assert.equal(list.length, 1);
+  assert.equal(list[0].product, 'Easy Spray');
+  assert.match(list[0].question, /^Rendimiento \(rinde/);
+  assert.equal(list[0].uses, 3);
+  assert.equal(suggestTeachings(questions, { A: 'Resina Easy Spray 2 Kg' }, { taught: [{ product: 'Easy Spray', question: list[0].question }] }).length, 0);
+});

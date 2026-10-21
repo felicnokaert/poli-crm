@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { GraduationCap, Play } from "lucide-react";
 import { askAi, TeachForm } from "./AssistantWindow.jsx";
 import { matchTaught } from "./assistant-answer.mjs";
-import { pickQuestions, realAnswer, trainingContext, trainingQuestion } from "./assistant-training.mjs";
+import { pickQuestions, realAnswer, suggestTeachings, trainingContext, trainingQuestion } from "./assistant-training.mjs";
 
 // Más → Datos → Asistente (solo Felipe, 21/10). Toma preguntas reales ya respondidas en Mercado Libre, se
 // las hace a la IA sin mostrarle la respuesta real y pone las dos lado a lado. Si la IA le erra, "Enseñarle"
@@ -16,6 +16,8 @@ export function AssistantTraining({ supabase }) {
   const [status, setStatus] = useState("");
   const [teach, setTeach] = useState(null);
   const [usage, setUsage] = useState({ input: 0, output: 0 });
+  const [suggested, setSuggested] = useState(null);
+  const [teachingId, setTeachingId] = useState("");
   const stop = useRef(false);
   const pool = useRef(null);
 
@@ -57,6 +59,20 @@ export function AssistantTraining({ supabase }) {
     setRunning(false);
   }
 
+  // Sugeridas: lo que el equipo repitió 3+ veces por producto y tema. No usa IA: no gasta nada.
+  async function suggest() {
+    setStatus("Buscando lo que más repetimos…");
+    const { questions, titles, taught } = await load();
+    setSuggested(suggestTeachings(questions, titles, { taught }));
+    setStatus("");
+  }
+  function saved() {
+    setTeach(null); pool.current = null;
+    if (teachingId) setSuggested((current) => (current || []).filter((entry) => entry.id !== teachingId));
+    setTeachingId("");
+    setStatus("Guardado: desde ahora va primero para todo el equipo.");
+  }
+
   useEffect(() => () => { stop.current = true; }, []);
 
   return (
@@ -69,10 +85,26 @@ export function AssistantTraining({ supabase }) {
       <div className="assistant-teach-actions">
         <button type="button" className="primary" disabled={running} onClick={run}><Play size={15} /> {rows.length ? "Probar otras 10" : "Probar 10 preguntas"}</button>
         {running && <button type="button" className="secondary" onClick={() => { stop.current = true; }}>Pausar</button>}
+        <button type="button" className="secondary" disabled={running} onClick={suggest}><GraduationCap size={15} /> Ver respuestas sugeridas</button>
         {status && <span className="muted small" role="status">{status}</span>}
       </div>
       {usage.input > 0 && <p className="muted small">Usado en esta prueba: {usage.input.toLocaleString("es-AR")} tokens de entrada y {usage.output.toLocaleString("es-AR")} de salida (el gasto exacto se ve en la consola de Anthropic → Usage).</p>}
-      {teach && <TeachForm key={teach.question} supabase={supabase} initial={teach} onSaved={() => { setTeach(null); pool.current = null; setStatus("Guardado: desde ahora va primero para todo el equipo."); }} onCancel={() => setTeach(null)} />}
+      {teach && <TeachForm key={teach.question} supabase={supabase} initial={teach} onSaved={saved} onCancel={() => setTeach(null)} />}
+      {suggested && (
+        <div className="training-list">
+          <strong>Respuestas sugeridas ({suggested.length}) · lo que más repetimos en Mercado Libre, sin costo</strong>
+          {suggested.length === 0 && <p className="muted small">No hay más sugeridas por ahora.</p>}
+          {suggested.map((entry) => (
+            <article key={entry.id} className="training-row">
+              <span className="muted small">{entry.title}</span>
+              <strong>{entry.product} · {entry.question}</strong>
+              <p>{entry.answer}</p>
+              <span className="muted small">Lo respondimos así en {entry.uses} de {entry.total} preguntas</span>
+              <button type="button" className="link-button" onClick={() => { setTeachingId(entry.id); setTeach({ question: entry.question, product: entry.product, answer: entry.answer }); }}><GraduationCap size={14} /> Revisar y aprobar</button>
+            </article>
+          ))}
+        </div>
+      )}
       <div className="training-list">
         {rows.map((row) => (
           <article key={row.id} className="training-row">

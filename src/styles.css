@@ -988,7 +988,18 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .assistant-fab { position: fixed; right: calc(20px + env(safe-area-inset-right, 0px)); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); z-index: 55; width: 58px; height: 58px; padding: 0; border-radius: 50%; border: 1px solid #ecebea; background: #fff; box-shadow: 0 8px 22px rgba(0,0,0,.18); display: grid; place-items: center; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; }
 .assistant-fab:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(0,0,0,.22); }
 .assistant-fab:focus-visible { outline: 3px solid var(--brand-red); outline-offset: 3px; }
-@media (prefers-reduced-motion: reduce) { .assistant-fab { transition: none; } .assistant-fab:hover { transform: none; } }
+/* Animación del botón (pedido de Felipe, 21/10, "como el de Mercado Libre"): un halo que late cada
+   tanto, la chispa grande que respira y la chica que titila; al pasar el mouse la chispa gira. */
+.assistant-fab::after { content: ""; position: absolute; inset: -1px; border-radius: 50%; border: 2px solid var(--brand-red, #ed1c24); opacity: 0; animation: assistant-halo 4.5s ease-out 1.2s infinite; pointer-events: none; }
+.assistant-fab .assistant-spark, .assistant-fab .assistant-spark-mini { transform-box: fill-box; transform-origin: center; }
+.assistant-fab .assistant-spark { animation: assistant-breathe 4.5s ease-in-out 1.2s infinite; }
+.assistant-fab .assistant-spark-mini { animation: assistant-twinkle 4.5s ease-in-out 1.6s infinite; }
+.assistant-fab:hover .assistant-spark { animation: assistant-spin .7s cubic-bezier(.2,.8,.2,1); }
+@keyframes assistant-halo { 0% { opacity: .55; transform: scale(1); } 45%, 100% { opacity: 0; transform: scale(1.45); } }
+@keyframes assistant-breathe { 0%, 40%, 100% { transform: scale(1); } 15% { transform: scale(1.18); } 28% { transform: scale(.94); } }
+@keyframes assistant-twinkle { 0%, 50%, 100% { transform: scale(1) rotate(0); opacity: 1; } 20% { transform: scale(1.6) rotate(45deg); opacity: .6; } 35% { transform: scale(.8) rotate(90deg); opacity: 1; } }
+@keyframes assistant-spin { from { transform: rotate(0) scale(1); } 60% { transform: rotate(200deg) scale(1.15); } to { transform: rotate(180deg) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .assistant-fab { transition: none; } .assistant-fab:hover { transform: none; } .assistant-fab::after, .assistant-fab .assistant-spark, .assistant-fab .assistant-spark-mini { animation: none !important; } }
 .ml-sync-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .ml-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .ml-toolbar .segmented { margin: 0; }
@@ -1030,6 +1041,11 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .assistant-answer-facts ul { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13.5px; line-height: 1.45; }
 .assistant-more { display: inline-flex; align-items: center; gap: 6px; justify-self: start; border: 0; background: transparent; color: inherit; opacity: .75; font-size: 13px; font-weight: 600; cursor: pointer; padding: 4px 2px; }
 .assistant-more[aria-expanded="true"] svg { transform: rotate(180deg); }
+.assistant-msg-user { justify-self: end; max-width: 85%; background: var(--brand-red, #ed1c24); color: #fff; border-radius: 16px 4px 16px 16px; padding: 10px 14px; font-size: 14px; line-height: 1.45; }
+.assistant-msg-user p, .assistant-msg-ai p { margin: 0; white-space: pre-wrap; }
+.assistant-msg-ai { display: grid; gap: 8px; justify-items: start; }
+.assistant-send { display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--brand-red, #ed1c24); color: #fff; cursor: pointer; flex: none; }
+.assistant-send:disabled { opacity: .4; cursor: default; }
 .assistant-window-foot { border-top: 1px solid #efebe9; padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 6px; }
 .assistant-input { display: flex; align-items: center; gap: 8px; border: 1.5px solid #e2dcda; border-radius: 14px; padding: 10px 12px; }
 .assistant-input:focus-within { border-color: var(--brand-red, #ed1c24); }

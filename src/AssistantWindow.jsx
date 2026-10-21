@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Copy, Search, X } from "lucide-react";
+import { ChevronDown, Copy, Search, Send, X } from "lucide-react";
 import { AssistantLogo } from "./AssistantLogo.jsx";
 import { KNOWLEDGE_TYPES } from "./knowledge-search.mjs";
-import { detectIntent, guideFacts, mlQuery, productWords, teamAnswer } from "./assistant-answer.mjs";
+import { buildAiContext, detectIntent, guideFacts, mlQuery, productWords, teamAnswer } from "./assistant-answer.mjs";
 import { useKnowledge } from "./useKnowledge.js";
 
 // Ventana del asistente (21/10): flotante, abajo a la derecha (en el celular ocupa la pantalla). Por ahora
@@ -28,11 +28,27 @@ function useTeamAnswer(supabase, query, intent) {
   return rows;
 }
 
-function Answer({ intent, facts, team, product }) {
+// Pregunta a la IA (lib/assistant-ai.mjs vía /api/admin-users). Sin clave o sin crédito devuelve
+// { ok: false, reason } y la ventana sigue como buscador.
+async function askAi(supabase, payload) {
+  const { data } = await supabase.auth.getSession();
+  const response = await fetch("/api/admin-users", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${data?.session?.access_token || ""}` },
+    body: JSON.stringify({ action: "assistant", ...payload }),
+  });
+  return response.json().catch(() => ({ ok: false, reason: "red" }));
+}
+
+function CopyButton({ text }) {
   const [copied, setCopied] = useState(false);
   async function copy() {
-    try { await navigator.clipboard.writeText(team.text); setCopied(true); setTimeout(() => setCopied(false), 1600); } catch { /* sin portapapeles */ }
+    try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1600); } catch { /* sin portapapeles */ }
   }
+  return <CopyButton text={team.text} />;
+}
+
+function Answer({ intent, facts, team, product }) {
   return (
     <section className="assistant-answer" aria-label="Respuesta">
       <span className="assistant-group-label">{intent.label}{product ? ` · ${product}` : ""}</span>
@@ -47,7 +63,7 @@ function Answer({ intent, facts, team, product }) {
           <p>{team.text}</p>
           <div className="assistant-answer-meta">
             <span className="muted small">Así lo respondemos en Mercado Libre · {team.uses} de {team.total} respuestas</span>
-            <button type="button" className="assistant-copy" onClick={copy}><Copy size={14} /> {copied ? "Copiado" : "Copiar"}</button>
+            <CopyButton text={team.text} />
           </div>
         </div>
       )}
@@ -74,6 +90,29 @@ export function AssistantWindow({ supabase, clients = [], firstName = "", onClos
   const team = intent ? teamAnswer(teamRows, intent) : null;
   const hasAnswer = Boolean(intent && (facts.length || team));
   useEffect(() => { setShowAll(false); }, [typed]);
+  const [chat, setChat] = useState([]);
+  const [ai, setAi] = useState("unknown"); // unknown | on | off
+  const [thinking, setThinking] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const bodyRef = useRef(null);
+  useEffect(() => { const body = bodyRef.current; if (body && typeof body.scrollTo === "function") body.scrollTo({ top: body.scrollHeight, behavior: "smooth" }); }, [chat, thinking]);
+
+  async function submit(event) {
+    event.preventDefault();
+    if (!typed || thinking || ai === "off" || !supabase?.auth) return;
+    setThinking(true); setAiError("");
+    const context = buildAiContext({ intent, facts, team, result, mlRows: teamRows });
+    const reply = await askAi(supabase, { question: typed, context, history: chat }).catch(() => ({ ok: false, reason: "red" }));
+    setThinking(false);
+    if (reply.ok) {
+      setAi("on");
+      setChat((current) => [...current, { role: "user", text: typed }, { role: "assistant", text: reply.text }]);
+      setQuery("");
+      return;
+    }
+    if (reply.reason === "sin-clave" || reply.reason === "sin-credito") { setAi("off"); return; }
+    setAiError(reply.error || "La IA no pudo responder ahora. Probá de nuevo.");
+  }
 
   useEffect(() => {
     const onKey = (event) => { if (event.key === "Escape") onClose(); };
@@ -93,11 +132,19 @@ export function AssistantWindow({ supabase, clients = [], firstName = "", onClos
         <button type="button" className="assistant-close" aria-label="Cerrar el asistente" onClick={onClose}><X size={18} /></button>
       </header>
 
-      <div className="assistant-window-body">
+      <div className="assistant-window-body" ref={bodyRef}>
         <div className="assistant-bubble">
           <strong>¡Hola{firstName ? `, ${firstName}` : ""}!</strong> ¿Qué necesitás saber? Escribí un producto, un uso, un cliente o un competidor y te muestro lo que hay cargado.
         </div>
-        {!typed && (
+        {chat.map((turn, index) => (
+          <div key={index} className={turn.role === "user" ? "assistant-msg-user" : "assistant-bubble assistant-msg-ai"}>
+            <p>{turn.text}</p>
+            {turn.role === "assistant" && <CopyButton text={turn.text} />}
+          </div>
+        ))}
+        {thinking && <div className="assistant-bubble muted" role="status">Pensando…</div>}
+        {aiError && <div className="assistant-bubble muted">{aiError}</div>}
+        {!typed && !chat.length && (
           <div className="assistant-chips" aria-label="Sugerencias">
             {SUGGESTIONS.map((text) => <button key={text} type="button" onClick={() => setQuery(text)}>{text}</button>)}
           </div>
@@ -124,11 +171,12 @@ export function AssistantWindow({ supabase, clients = [], firstName = "", onClos
       </div>
 
       <footer className="assistant-window-foot">
-        <label className="assistant-input">
+        <form className="assistant-input" onSubmit={submit}>
           <Search size={17} />
-          <input ref={inputRef} aria-label="Preguntale al asistente" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ej.: cuánto rinde la epoxi" />
-        </label>
-        <small className="muted">Responde con lo cargado y con lo que ya respondimos en Mercado Libre. Muy pronto también va a conversar.</small>
+          <input ref={inputRef} aria-label="Preguntale al asistente" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={chat.length ? "Seguí preguntando…" : "Ej.: cuánto rinde la epoxi"} />
+          {ai !== "off" && <button type="submit" className="assistant-send" aria-label="Preguntar" disabled={!typed || thinking}><Send size={16} /></button>}
+        </form>
+        <small className="muted">{ai === "off" ? "La IA se activa cuando se carguen los créditos; mientras, te muestro lo que hay cargado." : ai === "on" ? "Responde con lo cargado y con lo que más respondimos en Mercado Libre. Revisá antes de pasarle un dato a un cliente." : "Escribí y apretá Enter para preguntar. Responde con lo cargado y con lo que ya respondimos en Mercado Libre."}</small>
       </footer>
     </aside>
   );

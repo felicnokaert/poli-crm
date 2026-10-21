@@ -72,7 +72,7 @@ export function ContabiliumTest({ session }) {
         <div>
           <span className="eyebrow">Conexión</span>
           <h2><PlugZap size={18} /> Contabilium</h2>
-          <p>Prueba las claves de API de las 3 empresas y trae sus comprobantes al CRM. Solo lee: no crea, cambia ni borra nada en Contabilium.</p>
+          <p>Prueba las claves de API de las empresas y trae sus comprobantes al CRM. Solo lee: no crea, cambia ni borra nada en Contabilium.</p>
         </div>
         <div className="panel-head-actions">
           <button type="button" className="secondary" disabled={Boolean(busy)} onClick={test}>{busy === "test" ? "Probando…" : "Probar conexión"}</button>
@@ -98,7 +98,7 @@ export function ContabiliumTest({ session }) {
       <div className="panel-head">
         <div>
           <h3>Comprobantes</h3>
-          <p className="muted small">Facturas, notas de crédito y cotizaciones de cada empresa desde el 1/1/2024, sin las ventas de Mercado Libre (esas están en su panel). Se traen de a tramos y se acuerda hasta dónde llegó: si cerrás la página, la próxima vez sigue desde ahí. Todos los días a las 7 se suma solo lo nuevo.</p>
+          <p className="muted small">Facturas, notas de crédito y cotizaciones de las ventas directas de cada empresa, desde el principio. Las ventas de Mercado Libre no se guardan: están en su panel. Se traen de a tramos y se acuerda hasta dónde llegó: si cerrás la página, la próxima vez sigue desde ahí. Todos los días a las 7 se suma solo lo nuevo.</p>
         </div>
         <div className="panel-head-actions">
           {busy === "sync"

@@ -5,6 +5,7 @@ import { AssistantLogo } from "./AssistantLogo.jsx";
 import { KNOWLEDGE_TYPES } from "./knowledge-search.mjs";
 import { buildAiContext, detectIntent, guideFacts, matchTaught, mlQuery, productWords, teamAnswer } from "./assistant-answer.mjs";
 import { useKnowledge } from "./useKnowledge.js";
+import { extraContext, purchaseLine, purchaseNameWords, purchaseSummary, rivalsFor } from "./assistant-extra.mjs";
 
 // Ventana del asistente (21/10): flotante, abajo a la derecha (en el celular ocupa la pantalla). Por ahora
 // busca por palabras en todo lo que sabe el CRM, sin IA ni costo. Cuando se apruebe el presupuesto, esta
@@ -12,7 +13,7 @@ import { useKnowledge } from "./useKnowledge.js";
 // 21/10: arriba va la respuesta concreta (src/assistant-answer.mjs); el resto queda en "Ver todo".
 // "Enseñarle" (solo Felipe): la respuesta correcta queda en assistant_knowledge y va primero para todos.
 // 👍/👎 de cualquiera quedan en assistant_feedback para que Felipe corrija.
-const SUGGESTIONS = ["rendimiento epoxi", "secado poxiplast", "mezcla epoxi", "epoxi alimentos", "poliurea", "espuma aislante"];
+const SUGGESTIONS = ["rendimiento epoxi", "secado poxiplast", "mezcla epoxi", "competidores de poliuretano", "competencia en máquinas", "espuma aislante"];
 const PER_GROUP = 3;
 
 // Las respuestas de Mercado Libre del tema y producto, con una pausa mientras se escribe.
@@ -29,6 +30,55 @@ function useTeamAnswer(supabase, query, intent) {
     return () => { active = false; clearTimeout(timer); };
   }, [supabase, q]);
   return rows;
+}
+
+// Comprobantes de Contabilium del cliente nombrado ("cuándo compró X"), con una pausa mientras se escribe.
+function usePurchases(supabase, query) {
+  const [rows, setRows] = useState([]);
+  const words = purchaseNameWords(query);
+  const key = words.join(" ");
+  useEffect(() => {
+    if (!supabase?.from || !key) { setRows([]); return undefined; }
+    let active = true;
+    const timer = setTimeout(() => {
+      let request = supabase.from("contabilium_comprobantes").select("company,tipo,numero,fecha,cliente,total,saldo");
+      for (const word of key.split(" ")) request = request.ilike("cliente", `%${word}%`);
+      Promise.resolve(request.order("fecha", { ascending: false }).limit(300))
+        .then(({ data, error }) => { if (active) setRows(error ? [] : data || []); }, () => {});
+    }, 450);
+    return () => { active = false; clearTimeout(timer); };
+  }, [supabase, key]);
+  return rows;
+}
+
+const dmy = (date) => String(date || "").slice(0, 10).split("-").reverse().join("/");
+
+// Competidores de la familia y compras del cliente: sale de la base, sin IA ni costo.
+function ExtraAnswer({ rivals, purchases }) {
+  return (
+    <>
+      {rivals && (
+        <section className="assistant-answer" aria-label="Competidores">
+          <span className="assistant-group-label">Competencia{rivals.families.length ? ` · ${rivals.families.join(", ")}` : ""} · {rivals.list.length}</span>
+          {rivals.list.length === 0 ? <p className="muted small">No hay competidores cargados de esa familia en Academia.</p> : (
+            <ul className="assistant-rivals">{rivals.list.slice(0, 25).map((rival) => <li key={rival.id || rival.name}><strong>{rival.name}</strong>{rival.summary ? <span className="muted small"> · {String(rival.summary).slice(0, 140)}</span> : null}</li>)}</ul>
+          )}
+        </section>
+      )}
+      {purchases.length > 0 && (
+        <section className="assistant-answer" aria-label="Compras del cliente">
+          <span className="assistant-group-label">Compras (Contabilium)</span>
+          {purchases.slice(0, 3).map((summary) => (
+            <div key={summary.name} className="assistant-answer-team">
+              <p><strong>{summary.name}</strong> <span className="muted small">({summary.companies.join(", ")})</span><br />{purchaseLine(summary)}</p>
+              <ul className="assistant-rivals">{summary.recentRows.map((row) => <li key={`${row.company}-${row.numero}-${row.tipo}`} className="muted small">{dmy(row.fecha)} · {row.tipo} {row.numero} · $ {Math.round(Number(row.total) || 0).toLocaleString("es-AR")}</li>)}</ul>
+            </div>
+          ))}
+          <span className="muted small">El historial de Contabilium todavía se está copiando: puede faltar lo más viejo.</span>
+        </section>
+      )}
+    </>
+  );
 }
 
 // Pregunta a la IA (lib/assistant-ai.mjs vía /api/admin-users). Sin clave o sin crédito devuelve
@@ -152,7 +202,7 @@ export function AssistantWindow({ supabase, clients = [], firstName = "", isAdmi
   const [query, setQuery] = useState("");
   const inputRef = useRef(null);
   const [showAll, setShowAll] = useState(false);
-  const { result, guides } = useKnowledge(supabase, query, { clients });
+  const { result, guides, competitors } = useKnowledge(supabase, query, { clients });
   const groups = KNOWLEDGE_TYPES.filter(([key]) => result.groups[key]?.length);
   const typed = query.trim();
   const intent = typed ? detectIntent(typed) : null;
@@ -166,6 +216,10 @@ export function AssistantWindow({ supabase, clients = [], firstName = "", isAdmi
     Promise.resolve(supabase.from("assistant_knowledge").select("id,question,product,answer,updated_at")).then(({ data }) => setTaughtAll(data || []), () => {});
   }, [supabase]);
   const taught = typed ? matchTaught(taughtAll, typed) : [];
+  const rivals = typed ? rivalsFor(competitors || [], typed) : null;
+  const purchaseRows = usePurchases(supabase, typed);
+  const purchases = purchaseRows.length ? purchaseSummary(purchaseRows) : [];
+  const hasExtra = Boolean(rivals || purchases.length);
   const hasAnswer = Boolean(taught.length || (intent && (facts.length || team)));
   useEffect(() => { setShowAll(false); }, [typed]);
   const [chat, setChat] = useState([]);
@@ -186,7 +240,7 @@ export function AssistantWindow({ supabase, clients = [], firstName = "", isAdmi
     event.preventDefault();
     if (!typed || thinking || ai === "off" || !supabase?.auth) return;
     setThinking(true); setAiError("");
-    const context = buildAiContext({ intent, facts, team, result, mlRows: teamRows, taught });
+    const context = [extraContext({ rivals, purchases }), buildAiContext({ intent, facts, team, result, mlRows: teamRows, taught })].filter(Boolean).join("\n");
     const reply = await askAi(supabase, { question: typed, context, history: chat }).catch(() => ({ ok: false, reason: "red" }));
     setThinking(false);
     if (reply.ok) {
@@ -239,7 +293,8 @@ export function AssistantWindow({ supabase, clients = [], firstName = "", isAdmi
             {SUGGESTIONS.map((text) => <button key={text} type="button" onClick={() => setQuery(text)}>{text}</button>)}
           </div>
         )}
-        {typed && result.total === 0 && !hasAnswer && (
+        {hasExtra && <ExtraAnswer rivals={rivals} purchases={purchases} />}
+        {typed && result.total === 0 && !hasAnswer && !hasExtra && (
           <div className="assistant-bubble muted">
             No encontré nada con “{typed}”. Probá con otra palabra o más corta.
             {isAdmin && !teach && <> <button type="button" className="link-button" onClick={() => teachFrom("")}>Enseñarle esta respuesta</button></>}

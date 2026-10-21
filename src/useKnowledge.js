@@ -43,5 +43,5 @@ export function useKnowledge(supabase, query, { clients = [], sellers = [] } = {
     return () => { active = false; clearTimeout(timer); };
   }, [supabase, searching, query]);
   const sources = { products: PRODUCT_CATALOG, guides, docs, clients, sellers, objections: OBJECTIONS, competitors };
-  return { result: withMercadoLibre(searchKnowledge(query, sources), mlRows), pendingDocs, guides };
+  return { result: withMercadoLibre(searchKnowledge(query, sources), mlRows), pendingDocs, guides, competitors };
 }

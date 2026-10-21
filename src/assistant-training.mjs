@@ -54,3 +54,45 @@ export function trainingContext(row, siblings = [], { guides = [], taught = [] }
 }
 
 export const realAnswer = (row) => cleanAnswer(row.answer || '') || String(row.answer || '');
+
+// Respuestas sugeridas para enseñarle (21/10): por publicación y tema, la respuesta que el equipo repitió
+// en 3 o más preguntas. Felipe las revisa y aprueba; nada se guarda solo.
+const GENERIC = new Set(['resina', 'resinas', 'epoxi', 'epoxy', 'kit', 'kg', 'kgs', 'kilo', 'kilos', 'litro', 'litros', 'gr', 'grs', 'por', 'para', 'con', 'de', 'la', 'el', 'x', 'y', 'cristal', 'transparente', 'poliplast', 'envio', 'gratis', 'pack', 'unidad', 'unidades']);
+
+export function shortProduct(title = '') {
+  const words = String(title).split(/\s+/).filter((word) => word.length > 2 && !/\d/.test(word) && !GENERIC.has(word.toLowerCase()));
+  return words.slice(0, 2).join(' ');
+}
+
+export function suggestTeachings(questions = [], titles = {}, { taught = [], minUses = 3, max = 30 } = {}) {
+  const byItem = new Map();
+  for (const row of questions) {
+    if (!row?.item_id || !String(row.answer || '').trim()) continue;
+    if (!byItem.has(row.item_id)) byItem.set(row.item_id, []);
+    byItem.get(row.item_id).push(row);
+  }
+  const known = new Set(taught.map((entry) => `${String(entry.product || '').toLowerCase()}|${String(entry.question || '').toLowerCase()}`));
+  const seen = new Set();
+  const out = [];
+  for (const [itemId, rows] of byItem) {
+    if (rows.length < minUses) continue;
+    const byIntent = new Map();
+    for (const row of rows) {
+      const intent = detectIntent(row.question);
+      if (!intent) continue;
+      if (!byIntent.has(intent.key)) byIntent.set(intent.key, { intent, rows: [] });
+      byIntent.get(intent.key).rows.push({ kind: 'pregunta', body: `Pregunta: ${row.question}\nRespuesta: ${row.answer}` });
+    }
+    for (const { intent, rows: asked } of byIntent.values()) {
+      const team = teamAnswer(asked, intent);
+      if (!team || team.varied || team.uses < minUses) continue;
+      const product = shortProduct(titles[itemId] || '');
+      const question = `${intent.label} (${intent.search.join(', ')})`;
+      const key = `${product.toLowerCase()}|${question.toLowerCase()}`;
+      if (!product || seen.has(key) || known.has(key)) continue;
+      seen.add(key);
+      out.push({ id: `${itemId}-${intent.key}`, title: titles[itemId] || '', product, question, answer: team.text, uses: team.uses, total: team.total });
+    }
+  }
+  return out.sort((a, b) => b.uses - a.uses).slice(0, max);
+}

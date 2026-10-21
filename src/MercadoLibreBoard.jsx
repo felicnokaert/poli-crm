@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { adminFetch } from "./admin-api.mjs";
-import { ArrowDownRight, ArrowUpRight, CircleAlert, Clapperboard, Eye, MessageCircleQuestion, PauseCircle, Percent, PlayCircle, RefreshCw, Search, ShoppingBag, Store, Wallet } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, CircleAlert, Eye, MessageCircleQuestion, PauseCircle, Percent, PlayCircle, RefreshCw, Search, ShoppingBag, Store, Wallet } from "lucide-react";
 import { ML_ISSUES, ML_SORTS, ML_STATUS, countQuestions, filterBoard, issuesOf, statusLabel, summarizeBoard } from "./ml-board.mjs";
 import { MEDAL, PERIODS, REPUTATION, buildAlerts, change, combineMetrics, latestBySeller, periodStats } from "./ml-summary.mjs";
 import { Empty } from "./ui-primitives";
@@ -39,33 +39,55 @@ function Trend({ value }) {
 
 const CHART_METRICS = [["amount", "Facturado"], ["orders", "Ventas"], ["visits", "Visitas"]];
 
+// Gráfico del Resumen (21/10, Felipe: "mejores gráficos"): barras con degradé, el valor arriba de cada
+// barra (si son pocos días), línea de promedio y el día más alto resaltado.
+const short = (value) => (value >= 1e6 ? `${(value / 1e6).toFixed(1).replace(".", ",")} M` : value >= 1e3 ? `${Math.round(value / 1e3)} mil` : String(Math.round(value)));
+
 function DailyChart({ days = [], metric, currency }) {
   const values = days.map((day) => (typeof day[metric] === "number" ? day[metric] : 0));
   if (!days.length || values.every((value) => value === 0)) return <p className="muted">Sin datos para graficar en este período.</p>;
-  const W = 640;
-  const H = 150;
-  const top = 12;
+  const W = 680;
+  const H = 190;
+  const top = 26;
   const max = Math.max(...values);
+  const best = values.indexOf(max);
+  const average = values.reduce((sum, value) => sum + value, 0) / values.length;
   const width = W / days.length;
-  const step = Math.max(1, Math.ceil(days.length / 8));
+  const step = Math.max(1, Math.ceil(days.length / 10));
+  const labels = days.length <= 14;
   const format = (value) => (metric === "amount" ? money(value, currency) : number(value));
+  const tag = (value) => (metric === "amount" ? `$ ${short(value)}` : number(value));
+  const averageY = top + H - (average / max) * H;
   return (
-    <svg className="sales-chart ml-chart" viewBox={`0 0 ${W} ${H + top + 20}`} role="img" aria-label={`${CHART_METRICS.find(([key]) => key === metric)?.[1]} por día`}>
-      <line x1="0" x2={W} y1={H + top} y2={H + top} className="ml-chart-axis" />
-      <line x1="0" x2={W} y1={top} y2={top} className="ml-chart-grid" />
-      <text x="4" y={top - 2} className="ml-chart-label">{format(max)}</text>
-      {days.map((day, index) => {
-        const height = Math.round((values[index] / max) * H);
-        const last = index === days.length - 1;
-        return (
-          <g key={day.day} className="ml-chart-col">
-            <title>{`${dayLabel(day.day)}: ${money(day.amount, currency)} · ${day.orders} venta${day.orders === 1 ? "" : "s"}${typeof day.visits === "number" ? ` · ${number(day.visits)} visitas` : ""}`}</title>
-            <rect x={index * width + 1.5} y={top + H - height} width={Math.max(2, width - 3)} height={Math.max(height, values[index] ? 2 : 0)} rx="2" className={`ml-chart-bar ${last ? "is-last" : ""}`} />
-            {index % step === 0 && <text x={index * width + width / 2} y={H + top + 15} textAnchor="middle" className="ml-chart-label">{dayLabel(day.day)}</text>}
-          </g>
-        );
-      })}
-    </svg>
+    <figure className="ml-chart-wrap">
+      <svg className="sales-chart ml-chart" viewBox={`0 0 ${W} ${H + top + 24}`} role="img" aria-label={`${CHART_METRICS.find(([key]) => key === metric)?.[1]} por día`}>
+        <defs>
+          <linearGradient id="ml-bar-fill" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="var(--brand-red, #ed1c24)" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="var(--brand-red, #ed1c24)" stopOpacity="0.35" />
+          </linearGradient>
+        </defs>
+        {[0.25, 0.5, 0.75].map((share) => <line key={share} x1="0" x2={W} y1={top + H * share} y2={top + H * share} className="ml-chart-grid" />)}
+        <line x1="0" x2={W} y1={H + top} y2={H + top} className="ml-chart-axis" />
+        {days.map((day, index) => {
+          const height = Math.round((values[index] / max) * H);
+          const x = index * width;
+          const barWidth = Math.max(3, Math.min(48, width * 0.62));
+          return (
+            <g key={day.day} className={`ml-chart-col ${index === best ? "is-best" : ""}`}>
+              <title>{`${dayLabel(day.day)}: ${money(day.amount, currency)} · ${day.orders} venta${day.orders === 1 ? "" : "s"}${typeof day.visits === "number" ? ` · ${number(day.visits)} visitas` : ""}`}</title>
+              <rect x={x} y={top} width={width} height={H} className="ml-chart-hit" />
+              <rect x={x + (width - barWidth) / 2} y={top + H - height} width={barWidth} height={Math.max(height, values[index] ? 3 : 0)} rx={Math.min(8, barWidth / 3)} className="ml-chart-bar" fill="url(#ml-bar-fill)" />
+              {labels && values[index] > 0 && <text x={x + width / 2} y={top + H - height - 7} textAnchor="middle" className="ml-chart-value">{tag(values[index])}</text>}
+              {index % step === 0 && <text x={x + width / 2} y={H + top + 17} textAnchor="middle" className="ml-chart-label">{dayLabel(day.day)}</text>}
+            </g>
+          );
+        })}
+        <line x1="0" x2={W} y1={averageY} y2={averageY} className="ml-chart-average" />
+        <text x={W - 4} y={averageY - 5} textAnchor="end" className="ml-chart-average-label">promedio {tag(average)}</text>
+      </svg>
+      <figcaption className="muted small">Día más alto: <strong>{dayLabel(days[best].day)}</strong> con {format(max)} · promedio por día {format(Math.round(average))}</figcaption>
+    </figure>
   );
 }
 
@@ -216,7 +238,6 @@ function Listings({ items, accounts, nickname, questionCounts, seller, issue, se
       <article className="metric-card"><PlayCircle size={20} /><span>Activas</span><strong>{summary.byStatus.active || 0}</strong></article>
       <article className="metric-card"><PauseCircle size={20} /><span>Pausadas</span><strong>{summary.byStatus.paused || 0}</strong></article>
       <article className="metric-card"><Eye size={20} /><span>Visitas a activas (7 días)</span><strong>{number(summary.visits7)}</strong></article>
-      <article className="metric-card"><Clapperboard size={20} /><span>Activas sin clip</span><strong>{summary.issues["sin-clip"]}</strong>{summary.clipsUnknown > 0 && <small className="muted">{summary.clipsUnknown} sin revisar</small>}</article>
     </section>
 
     <section className="panel">
@@ -224,7 +245,7 @@ function Listings({ items, accounts, nickname, questionCounts, seller, issue, se
         <div>
           <span className="eyebrow">Actualizado {fmt(lastUpdate)}</span>
           <h2>Publicaciones</h2>
-          <p>Estado, visitas, clips y lo que le falta a cada una. Solo mira: no cambia nada en Mercado Libre.</p>
+          <p>Estado, visitas y lo que le falta a cada una. Solo mira: no cambia nada en Mercado Libre.</p>
         </div>
         <label className="search"><Search size={17} /><input aria-label="Buscar publicación" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ej.: espuma, MLA123…" /></label>
       </div>
@@ -243,12 +264,12 @@ function Listings({ items, accounts, nickname, questionCounts, seller, issue, se
           {ML_SORTS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
         </select>
       </label>
-      <p className="muted small">Los números de "qué les falta" cuentan solo las activas. "Sin clip" = sin video corto de Mercado Libre.{summary.clipsUnknown ? ` ${summary.clipsUnknown} activas todavía no tienen clips ni visitas revisados: se completan cada mañana o con "Solo visitas y clips" en Más → Datos.` : ""}</p>
+      <p className="muted small">Los números de "qué les falta" cuentan solo las activas. Las visitas de cada publicación se completan de a poco cada mañana (o con "Solo visitas" en Más → Datos). Los clips no se muestran: Mercado Libre no deja leerlos desde el CRM.</p>
 
       {items.length > 0 && shown.length === 0 && <Empty text="No hay publicaciones con ese filtro." />}
       {page.length > 0 && (
         <div className="table-scroll"><table className="sales-history-table ml-board-table">
-          <thead><tr><th>Publicación</th><th>Cuenta</th><th>Estado</th><th>Precio</th><th>Vendidas</th><th>Stock</th><th>Visitas 7 d</th><th>Visitas 30 d</th><th>Clips</th><th>Preguntas</th><th>Le falta</th></tr></thead>
+          <thead><tr><th>Publicación</th><th>Cuenta</th><th>Estado</th><th>Precio</th><th>Vendidas</th><th>Stock</th><th>Visitas 7 d</th><th>Visitas 30 d</th><th>Preguntas</th><th>Le falta</th></tr></thead>
           <tbody>
             {page.map((item) => (
               <tr key={item.id}>
@@ -265,7 +286,6 @@ function Listings({ items, accounts, nickname, questionCounts, seller, issue, se
                 <td>{item.available_quantity ?? "—"}</td>
                 <td>{number(item.visits_7d)}</td>
                 <td>{number(item.visits_30d)}</td>
-                <td>{number(item.clips_count)}</td>
                 <td>{questionCounts[item.id] || 0}</td>
                 <td>{issuesOf(item).map((found) => <span key={found.key} className="badge warn">{found.label}</span>)}</td>
               </tr>

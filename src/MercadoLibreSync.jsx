@@ -84,7 +84,7 @@ export function MercadoLibreSync({ supabase, session }) {
           if (stage === "items") items += result.saved; else if (stage === "questions") questions += result.saved; else extras += result.saved;
           (result.errors || []).forEach((problem) => problems.add(problem));
           setProgress(stage === "items" ? `Publicaciones: ${result.next} de ${result.total}…`
-            : stage === "extras" ? `Visitas y clips de las activas: ${result.next} de ${result.total}…`
+            : stage === "extras" ? `Visitas de las activas: ${result.next} de ${result.total}…`
             : result.byItem && byItem ? `Preguntas, revisando publicación ${result.next} de ${result.total}…`
               : result.byItem ? "Son más de 1000 preguntas: sigo de a una publicación…" : `Preguntas respondidas: ${result.next} de ${result.total}…`);
           offset = result.next;
@@ -94,21 +94,16 @@ export function MercadoLibreSync({ supabase, session }) {
           if (result.done) break;
         }
       }
-      setMessage(`${account.nickname || "Cuenta"}: se guardaron ${items} publicaciones, ${questions} preguntas respondidas y visitas/clips de ${extras} activas.${problems.size ? ` No se pudo leer: ${[...problems].join(" · ")}` : ""}`);
+      // Corto (21/10, Felipe: "no me gusta que muestre todo este cartel"): hasta 2 problemas y cuántos más.
+      const list = [...problems];
+      const extra = list.length > 2 ? ` y ${list.length - 2} más` : "";
+      setMessage(`${account.nickname || "Cuenta"}: listo. ${items} publicaciones, ${questions} preguntas y visitas de ${extras} activas.${list.length ? ` Faltó: ${list.slice(0, 2).join(" · ")}${extra}.` : ""}`);
     } catch (syncError) {
       setError(`${syncError.message} (quedó guardado lo que se llegó a traer: ${items} publicaciones, ${questions} preguntas).`);
     }
     setProgress(""); setBusy("");
     await loadAccounts();
     await loadCounts();
-  }
-
-  // Prueba de competencia (21/10): los más vendidos de Mercado Libre en nuestras 3 categorías principales.
-  const [competition, setCompetition] = useState(null);
-  async function probeCompetition(account) {
-    setError(""); setBusy(`comp-${account.seller_id}`);
-    try { setCompetition({ nickname: account.nickname, ...(await callApi(session, { op: "competition", sellerId: account.seller_id })) }); } catch (probeError) { setError(probeError.message); }
-    setBusy("");
   }
 
   return (
@@ -139,27 +134,12 @@ export function MercadoLibreSync({ supabase, session }) {
                 <td>{fmt(account.last_sync_at)}</td>
                 <td className="ml-sync-actions">
                   <button type="button" className="secondary" disabled={Boolean(busy)} onClick={() => sync(account)}><RefreshCw size={14} /> {busy === account.seller_id ? "Actualizando…" : "Actualizar todo"}</button>
-                  <button type="button" className="secondary" disabled={Boolean(busy)} onClick={() => sync(account, ["extras"])}>Solo visitas y clips</button>
-                  <button type="button" className="secondary" disabled={Boolean(busy)} onClick={() => probeCompetition(account)}>{busy === `comp-${account.seller_id}` ? "Mirando…" : "Probar competencia"}</button>
+                  <button type="button" className="secondary" disabled={Boolean(busy)} onClick={() => sync(account, ["extras"])}>Solo visitas</button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table></div>
-      )}
-      {competition && (
-        <div className="ml-competition">
-          <h3>Más vendidos en nuestras categorías ({competition.nickname})</h3>
-          {competition.errors?.length > 0 && <p className="muted small">No se pudo leer: {competition.errors.join(" · ")}</p>}
-          {competition.categories?.map((category) => (
-            <div key={category.category}>
-              <strong>{category.name}</strong> <span className="muted small">{category.highlights} destacados{category.products ? ` (${category.products} son productos de catálogo)` : ""}</span>
-              {category.items.length > 0 ? (
-                <ol>{category.items.map((item) => <li key={item.id}><a href={item.permalink} target="_blank" rel="noreferrer">{item.title}</a> · ${Number(item.price || 0).toLocaleString("es-AR")}{item.sold != null ? ` · ${item.sold} vendidos` : ""}{item.ours ? " · nuestra" : ""}</li>)}</ol>
-              ) : <p className="muted small">Mercado Libre no devolvió publicaciones sueltas para esta categoría.</p>}
-            </div>
-          ))}
-        </div>
       )}
       {(counts.items !== null || counts.questions !== null) && <p className="muted small">Guardado en el CRM: {counts.items ?? 0} publicaciones y {counts.questions ?? 0} preguntas respondidas.</p>}
     </section>

@@ -148,21 +148,27 @@ test('períodos: 7 días contra los 7 anteriores', () => {
   assert.equal(periodStats(days, 30).previous, null);
 });
 
-test('visitas y clips: si Mercado Libre no deja leer clips queda vacío, nunca "sin clip"', async () => {
+test('visitas de a una publicación, con reintento si Mercado Libre frena; los clips ya no se piden', async () => {
   assert.equal(clipsCount([{}, {}]), 2);
-  assert.equal(clipsCount({ clips: [] }), 0);
   assert.equal(clipsCount({ foo: 1 }), null);
   const saved = [];
-  const http = async (url, options = {}) => {
-    if (options.method === 'POST') { saved.push(...JSON.parse(options.body)); return json(null, 201); }
-    if (url.includes('/items/visits')) return json([{ item_id: 'MLA1', total_visits: url.includes('2026-10-14') ? 7 : 30 }, { item_id: 'MLA2', total_visits: 0 }]);
-    if (url.includes('/marketplace/items/MLA1/clips')) return json({ clips: [] });
-    if (url.includes('/marketplace/items/MLA2/clips')) return json({ message: 'forbidden' }, 403);
+  const calls = [];
+  let throttled = false;
+  const http = async (url) => {
+    calls.push(url);
+    if (url.includes('/items/MLA1/visits/time_window')) return json({ total_visits: 30, results: Array.from({ length: 30 }, (_, i) => ({ total: i >= 23 ? 1 : 0 })) });
+    if (url.includes('/items/MLA2/visits/time_window')) {
+      if (!throttled) { throttled = true; return json({ message: 'Too many requests' }, 429); }
+      return json({ total_visits: 4, results: [] });
+    }
+    if (url.includes('/items/MLA3/visits/time_window')) return json({ message: 'Too many requests' }, 429);
     return json({}, 404);
   };
-  const result = await itemExtras({ seller_id: '9' }, 'T', ['MLA1', 'MLA2'], http, { upsert: async (table, rows) => saved.push(...rows) }, { now: () => Date.parse('2026-10-21T12:00:00Z') });
-  assert.equal(result.saved, 2);
-  assert.deepEqual([saved[0].visits_7d, saved[0].visits_30d, saved[0].clips_count], [7, 30, 0]);
-  assert.equal(saved[1].clips_count, null);
-  assert.match(result.errors[0], /^clips/);
+  const result = await itemExtras({ seller_id: '9' }, 'T', ['MLA1', 'MLA2', 'MLA3'], http, { upsert: async (table, rows) => saved.push(...rows) }, { now: () => Date.parse('2026-10-21T12:00:00Z'), pause: 0, wait: async () => {} });
+  assert.equal(result.saved, 3);
+  assert.deepEqual([saved[0].visits_7d, saved[0].visits_30d], [7, 30]);
+  assert.equal(saved[1].visits_30d, 4);
+  assert.equal(saved[2].visits_30d, null);
+  assert.equal(calls.some((url) => url.includes('clips')), false);
+  assert.deepEqual(result.errors, ['Mercado Libre frenó por muchos pedidos seguidos (1 publicación)']);
 });

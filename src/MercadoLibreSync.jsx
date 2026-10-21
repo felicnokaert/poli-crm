@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { adminFetch } from "./admin-api.mjs";
 import { RefreshCw, Store } from "lucide-react";
 import { mlCallbackParams } from "./ml-callback.mjs";
 
@@ -9,11 +10,7 @@ const STATE_KEY = "poliplast-ml-state";
 
 
 async function callApi(session, body) {
-  const response = await fetch("/api/admin-users", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
-    body: JSON.stringify({ action: "mercadolibre", ...body }),
-  });
+  const response = await adminFetch({ action: "mercadolibre", ...body }, session?.access_token);
   const result = await response.json().catch(() => ({}));
   if (!response.ok || !result.ok) throw new Error(result.error || "No se pudo hablar con Mercado Libre.");
   return result;

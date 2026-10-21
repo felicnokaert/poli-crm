@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { adminFetch } from "./admin-api.mjs";
 import { PlugZap } from "lucide-react";
 
 // Más → Datos → Contabilium (solo Felipe, 21/10). Prueba que las claves de las 3 empresas funcionan y trae
@@ -7,11 +8,7 @@ import { PlugZap } from "lucide-react";
 const MAX_ROUNDS = 400; // tope de pasadas seguidas por empresa al traer el historial
 
 async function callApi(session, body) {
-  const response = await fetch("/api/admin-users", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
-    body: JSON.stringify({ action: "contabilium", ...body }),
-  });
+  const response = await adminFetch({ action: "contabilium", ...body }, session?.access_token);
   const result = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(result.error || "No se pudo hablar con Contabilium.");
   return result;

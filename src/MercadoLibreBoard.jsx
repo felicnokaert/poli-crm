@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { adminFetch } from "./admin-api.mjs";
 import { ArrowDownRight, ArrowUpRight, CircleAlert, Clapperboard, Eye, MessageCircleQuestion, PauseCircle, Percent, PlayCircle, RefreshCw, Search, ShoppingBag, Store, Wallet } from "lucide-react";
 import { ML_ISSUES, ML_SORTS, ML_STATUS, countQuestions, filterBoard, issuesOf, statusLabel, summarizeBoard } from "./ml-board.mjs";
 import { MEDAL, PERIODS, REPUTATION, buildAlerts, change, combineMetrics, latestBySeller, periodStats } from "./ml-summary.mjs";
@@ -86,11 +87,7 @@ function Summary({ accounts, metricsBySeller, seller, items, nickname, permalink
     for (const account of accounts) {
       setBusy(account.nickname || account.seller_id);
       try {
-        const response = await fetch("/api/admin-users", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
-          body: JSON.stringify({ action: "mercadolibre", op: "metrics", sellerId: account.seller_id }),
-        });
+        const response = await adminFetch({ action: "mercadolibre", op: "metrics", sellerId: account.seller_id }, session?.access_token);
         const result = await response.json().catch(() => ({}));
         if (!response.ok || !result.ok) throw new Error(result.error || "No se pudo actualizar el resumen.");
       } catch (refreshError) { setError(`${account.nickname}: ${refreshError.message}`); }

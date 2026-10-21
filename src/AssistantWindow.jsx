@@ -45,7 +45,7 @@ function CopyButton({ text }) {
   async function copy() {
     try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1600); } catch { /* sin portapapeles */ }
   }
-  return <CopyButton text={team.text} />;
+  return <button type="button" className="assistant-copy" onClick={copy}><Copy size={14} /> {copied ? "Copiado" : "Copiar"}</button>;
 }
 
 function Answer({ intent, facts, team, product }) {

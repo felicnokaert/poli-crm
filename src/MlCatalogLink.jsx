@@ -30,39 +30,43 @@ function Pub({ item, accounts }) {
   );
 }
 
-export function MlCatalogLink({ supabase }) {
-  const [state, setState] = useState({ status: supabase ? "loading" : "offline", data: null });
+export function MlCatalogLink({ supabase, isAdmin = false, userEmail = "" }) {
+  const [state, setState] = useState({ status: supabase ? "loading" : "offline", raw: null, photos: [] });
   const [view, setView] = useState("foto");
   const [search, setSearch] = useState("");
   const [shown, setShown] = useState(SHOW);
   const [accounts, setAccounts] = useState({});
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!supabase) return undefined;
     let alive = true;
     (async () => {
       try {
-        const [products, variants, items] = await Promise.all([
+        const [products, variants, items, photos] = await Promise.all([
           readAll(supabase, "catalog_products", "id,name,brand,family,photo_path,status"),
           readAll(supabase, "catalog_variants", "id,product_id,sku,name,active"),
-          readAll(supabase, "ml_items", "id,seller_id,title,permalink,status,thumbnail,sold_quantity,visits_30d,sku", (query) => query.eq("status", "active")),
+          readAll(supabase, "ml_items", "id,seller_id,title,permalink,status,thumbnail,picture_url,sold_quantity,visits_30d,sku", (query) => query.eq("status", "active")),
+          readAll(supabase, "catalog_product_photos", "product_id,url,item_id,sku,approved_by,approved_at"),
         ]);
         const { data: names } = await supabase.rpc("ml_account_names");
         if (!alive) return;
         setAccounts(Object.fromEntries((names || []).map((row) => [row.seller_id, row.nickname])));
-        setState({ status: "ready", data: linkMlToCatalog({ products: products.filter((item) => item.status !== "excluido"), variants, items }) });
+        setState({ status: "ready", raw: { products: products.filter((item) => item.status !== "excluido"), variants, items }, photos });
       } catch {
-        if (alive) setState({ status: "error", data: null });
+        if (alive) setState({ status: "error", raw: null, photos: [] });
       }
     })();
     return () => { alive = false; };
   }, [supabase]);
 
-  const link = state.data;
+  const link = useMemo(() => (state.raw ? linkMlToCatalog({ ...state.raw, photos: state.photos }) : null), [state.raw, state.photos]);
   const rows = useMemo(() => {
     if (!link) return [];
     const needle = search.trim().toLowerCase();
     const base = view === "foto" ? link.matched.filter((entry) => entry.needsPhoto)
+      : view === "aprobadas" ? link.matched.filter((entry) => entry.approvedPhoto)
       : view === "vinculados" ? link.matched
         : view === "sinCatalogo" ? link.unmatched
           : view === "repetidos" ? link.duplicated
@@ -71,12 +75,36 @@ export function MlCatalogLink({ supabase }) {
     return base.filter((entry) => `${entry.sku} ${entry.product?.name || ""} ${entry.items.map((item) => item.title).join(" ")}`.toLowerCase().includes(needle));
   }, [link, view, search]);
 
+  async function approve(entries) {
+    const list = entries.filter((entry) => entry.needsPhoto && entry.product);
+    if (!list.length || !isAdmin) return;
+    setBusy(true); setMessage("");
+    const now = new Date().toISOString();
+    const rowsToSave = list.map((entry) => ({ product_id: entry.product.id, url: entry.photoUrl, source: "mercadolibre", item_id: entry.photoItemId, sku: entry.sku, approved_by: String(userEmail || ""), approved_at: now }));
+    const { error } = await supabase.from("catalog_product_photos").upsert(rowsToSave, { onConflict: "product_id" });
+    setBusy(false);
+    if (error) { setMessage("No se pudo guardar la foto. Probá de nuevo."); return; }
+    setState((current) => ({ ...current, photos: [...current.photos.filter((photo) => !rowsToSave.some((row) => row.product_id === photo.product_id)), ...rowsToSave] }));
+    setMessage(list.length === 1 ? `Foto aprobada para ${list[0].product.name}.` : `Se aprobaron ${list.length} fotos.`);
+  }
+
+  async function remove(entry) {
+    if (!isAdmin || !entry.product) return;
+    setBusy(true); setMessage("");
+    const { error } = await supabase.from("catalog_product_photos").delete().eq("product_id", entry.product.id);
+    setBusy(false);
+    if (error) { setMessage("No se pudo quitar la foto."); return; }
+    setState((current) => ({ ...current, photos: current.photos.filter((photo) => photo.product_id !== entry.product.id) }));
+    setMessage(`Foto quitada de ${entry.product.name}.`);
+  }
+
   if (state.status === "offline") return <p className="muted">Esta vista usa los datos en línea: entrá con tu cuenta.</p>;
   if (state.status === "loading") return <p className="muted">Cruzando el catálogo con Mercado Libre…</p>;
   if (state.status === "error") return <p className="muted">No se pudo leer el catálogo o las publicaciones de Mercado Libre.</p>;
   const summary = link.summary;
   const tabs = [
     ["foto", `Fotos para sumar (${summary.photoGain})`],
+    ["aprobadas", `Fotos aprobadas (${summary.photosApproved})`],
     ["vinculados", `Vinculados (${summary.matchedSkus})`],
     ["sinCatalogo", `SKU de ML sin producto (${summary.unmatchedSkus})`],
     ["repetidos", `SKU repetidos (${summary.duplicatedSkus})`],
@@ -100,18 +128,33 @@ export function MlCatalogLink({ supabase }) {
         ))}
       </div>
       <input aria-label="Buscar por SKU o título" placeholder="Buscar por SKU o título" value={search} onChange={(event) => { setSearch(event.target.value); setShown(SHOW); }} />
-      {view === "foto" && <p className="muted small">Productos del catálogo sin foto que sí tienen foto en alguna publicación de ML (se mostraría la de la publicación que más vendió).</p>}
+      {view === "foto" && <p className="muted small">Productos del catálogo sin foto que sí tienen foto en alguna publicación de ML (la de la publicación que más vendió). {isAdmin ? "Aprobás una por una o varias juntas; no se toca ninguna foto que el catálogo ya tenga." : "Las aprueba un administrador."} Las aprobadas quedan guardadas aparte: el catálogo y el cotizador no cambian.</p>}
+      {view === "aprobadas" && <p className="muted small">Fotos aprobadas desde Mercado Libre. Se pueden quitar.</p>}
+      {message && <p className="muted small" role="status">{message}</p>}
+      {view === "foto" && isAdmin && rows.length > 0 && (
+        <div className="panel-head-actions">
+          <button type="button" className="primary" disabled={busy} onClick={() => { if (window.confirm(`¿Aprobar las ${Math.min(rows.length, 25)} primeras fotos de esta lista? (Podés quitarlas después.)`)) approve(rows.slice(0, 25)); }}>Aprobar las {Math.min(rows.length, 25)} primeras</button>
+        </div>
+      )}
       {view === "sinCatalogo" && <p className="muted small">SKU que figuran en ML y no están en el catálogo del cotizador: pueden ser productos que faltan cargar, o SKU escritos distinto.</p>}
       {view === "repetidos" && <p className="muted small">El mismo SKU en más de una publicación (ML pide unificarlas).</p>}
       {rows.length === 0 ? <p className="muted">No hay nada en esta lista.</p> : (
         <div className="table-scroll">
           <table className="sales-history-table">
-            <thead><tr><th>SKU</th><th>Producto del catálogo</th><th>Publicaciones en Mercado Libre</th></tr></thead>
+            <thead><tr><th>SKU</th><th>Producto del catálogo</th>{(view === "foto" || view === "aprobadas") && <th>Foto</th>}<th>Publicaciones en Mercado Libre</th></tr></thead>
             <tbody>
               {rows.slice(0, shown).map((entry, index) => (
                 <tr key={`${entry.sku}-${index}`}>
                   <td><strong>{entry.sku || "—"}</strong></td>
                   <td>{entry.product ? <>{entry.product.name}<br /><span className="muted small">{[entry.product.brand, entry.product.family].filter(Boolean).join(" · ")}{entry.product.photo_path ? " · ya tiene foto" : " · sin foto"}</span></> : <span className="muted">no está en el catálogo</span>}</td>
+                  {(view === "foto" || view === "aprobadas") && (
+                    <td>
+                      {(view === "aprobadas" ? entry.approvedPhoto?.url : entry.photoUrl) && <img src={view === "aprobadas" ? entry.approvedPhoto.url : entry.photoUrl} alt={`Foto de ${entry.product?.name || entry.sku}`} width="72" height="72" loading="lazy" style={{ objectFit: "cover", borderRadius: 6, display: "block" }} />}
+                      {view === "foto" && entry.photoIsSmall && <span className="muted small">miniatura: la foto grande llega con la próxima actualización de Mercado Libre</span>}
+                      {isAdmin && view === "foto" && <button type="button" className="secondary" disabled={busy} onClick={() => approve([entry])}>Usar esta foto</button>}
+                      {isAdmin && view === "aprobadas" && <button type="button" className="secondary" disabled={busy} onClick={() => remove(entry)}>Quitar</button>}
+                    </td>
+                  )}
                   <td>{entry.items.slice(0, 4).map((item) => <div key={item.id}><Pub item={item} accounts={accounts} /></div>)}{entry.items.length > 4 && <span className="muted small">y {entry.items.length - 4} más</span>}</td>
                 </tr>
               ))}

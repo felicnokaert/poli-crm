@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { adminFetch } from "./admin-api.mjs";
 import { ChevronDown, Copy, GraduationCap, Search, Send, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import { AssistantLogo } from "./AssistantLogo.jsx";
 import { KNOWLEDGE_TYPES } from "./knowledge-search.mjs";
@@ -34,11 +35,7 @@ function useTeamAnswer(supabase, query, intent) {
 // { ok: false, reason } y la ventana sigue como buscador.
 async function askAi(supabase, payload) {
   const { data } = await supabase.auth.getSession();
-  const response = await fetch("/api/admin-users", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${data?.session?.access_token || ""}` },
-    body: JSON.stringify({ action: "assistant", ...payload }),
-  });
+  const response = await adminFetch({ action: "assistant", ...payload }, data?.session?.access_token || "");
   return response.json().catch(() => ({ ok: false, reason: "red" }));
 }
 

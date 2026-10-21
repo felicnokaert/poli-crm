@@ -80,3 +80,10 @@ test('entiende cómo lo dicen los clientes', () => {
   assert.match(understand('Vidrio líquido 750'), /resina epoxi/);
   assert.deepEqual(productWords('cuanto rinde cada lata de easy spray', detectIntent('cuanto rinde')), ['easyspray']);
 });
+
+test('temas nuevos que más preguntan en Mercado Libre', () => {
+  const cases = { 'sirve para techo de chapa?': 'usos', 'viene con pistola para aplicar?': 'aplicacion', 'que medidas tiene el rollo': 'medidas', 'hacen envios a cordoba?': 'envios', 'tienen color blanco?': 'color', 'que diferencia hay con la otra': 'diferencia', 'es ignifuga?': 'fuego', 'cuantos pomos necesito para 20 m2': 'rendimiento' };
+  for (const [question, key] of Object.entries(cases)) assert.equal(detectIntent(question)?.key, key, question);
+  const rows = ['Le dejamos el link de la pistola https://x/1', 'Hola PEPE22 Le dejamos el link de la pistola https://x/2 Saludos Brenda de Grupo Poliplast', 'No incluye la pistola, acá te dejo el link'].map((answer, index) => ({ kind: 'pregunta', body: `Pregunta: q${index}\nRespuesta: ${answer}` }));
+  assert.match(teamAnswer(rows, detectIntent('viene con pistola')).text, /link de la pistola/);
+});

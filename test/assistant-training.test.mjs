@@ -7,7 +7,7 @@ const questions = [
   q('1', 'A', 'Hola, cuanto rinde?', 'Hola! Rinde 2 m2 en 2 cm de espesor. Saludos'),
   q('2', 'A', 'cuantos metros cubre?', 'Rinde 2 m² en 20 mm de espesor.'),
   q('3', 'A', 'que rendimiento tiene?', 'Rinde 2m2 en 2cm.'),
-  q('4', 'A', 'hacen envios?', 'Sí, por Mercado Envíos.'),
+  q('4', 'A', 'tienen stock?', 'Sí, hay stock.'),
   q('5', 'B', 'cuanto tarda en secar?', 'Seca en 24 horas.'),
   q('6', 'B', 'hola', 'hola'),
   q('7', 'C', 'cuanto rinde?', 'Rinde 1 kg por m2.'),

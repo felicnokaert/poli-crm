@@ -12,6 +12,14 @@ export const INTENTS = [
   { key: 'alimentos', label: 'Contacto con alimentos y toxicidad', ask: ['alimento', 'alimentos', 'comida', 'toxico', 'toxica', 'peces', 'acuario', 'fda', 'mate', 'vaso'], search: ['alimentos', 'toxico', 'peces'], line: ['alimento', 'toxic', 'fda', 'peces', 'inerte'] },
   { key: 'temperatura', label: 'Temperatura', ask: ['temperatura', 'calor', 'frio', 'grados', 'sol', 'resiste'], search: ['temperatura', 'calor'], line: ['°c', 'temperatura', 'calor', 'grados', 'frio'] },
   { key: 'espesor', label: 'Espesor', ask: ['espesor', 'capa', 'capas', 'grosor', 'alto', 'profundidad', 'colada'], search: ['espesor', 'capa'], line: ['espesor', 'capa', ' mm', ' cm'] },
+  // 21/10: los temas que más preguntan en Mercado Libre y faltaban (sirve para, aplicación, medidas, envíos, color, diferencias).
+  { key: 'usos', label: 'Para qué sirve', ask: ['sirve', 'apto', 'apta', 'techo', 'techos', 'chapa', 'madera', 'piso', 'pisos', 'pared', 'paredes', 'mesada', 'mesadas', 'molde', 'moldes', 'exterior', 'interior', 'humedad', 'goteras', 'pileta', 'tanque', 'banera', 'heladera', 'camion', 'aislar'], search: ['sirve', 'apto', 'recomendamos'], line: ['sirve', 'apto', 'apta', 'ideal', 'recomend', 'se puede', 'puede aplicar', 'perfectamente'] },
+  { key: 'aplicacion', label: 'Cómo se aplica', ask: ['aplicar', 'aplica', 'aplico', 'colocar', 'coloca', 'poner', 'pongo', 'pegar', 'rellenar', 'pistola', 'limpiador', 'pico', 'agitar', 'proyectar', 'preparar', 'lijar', 'imprimacion'], search: ['aplicar', 'pistola', 'aplicacion'], line: ['aplic', 'pistola', 'limpiador', 'agit', 'proyect', 'lij', 'capa', 'pico', 'imprim'] },
+  { key: 'medidas', label: 'Medidas y presentación', ask: ['ancho', 'largo', 'alto', 'medida', 'medidas', 'rollo', 'dimensiones', 'tamano', 'presentacion', 'presentaciones', 'viene', 'gramos', 'mililitros'], search: ['medidas', 'ancho', 'largo'], line: ['ancho', 'largo', 'medida', 'mts', ' cm', ' x ', 'rollo', 'presentacion', 'viene en'], evidence: /\d[\d.,]*\s*(?:x|por)\s*\d|\d[\d.,]*\s*(?:mts?|metros|cm|mm|ml|cc|gr|kg)\b/i },
+  { key: 'envios', label: 'Envíos y retiro', ask: ['envio', 'envios', 'envian', 'mandan', 'llegaria', 'llega', 'retiro', 'retirar', 'retira', 'flete', 'correo', 'domicilio', 'local'], search: ['envio', 'retiro'], line: ['envio', 'envios', 'retir', 'llega', 'flex', 'correo', 'local', 'domicilio'] },
+  { key: 'color', label: 'Colores', ask: ['color', 'colores', 'blanco', 'negro', 'gris', 'rojo', 'transparente', 'pigmento', 'pigmentos', 'tenir', 'colorear'], search: ['color', 'colores', 'pigmento'], line: ['color', 'pigment', 'blanco', 'transparente', 'negro', 'gris', 'tonos'] },
+  { key: 'fuego', label: 'Fuego e inflamabilidad', ask: ['ignifuga', 'ignifugo', 'ignifugas', 'fuego', 'llama', 'llamas', 'inflamable', 'incendio', 'quema', 'autoextinguible'], search: ['ignifuga', 'llama', 'fuego'], line: ['llama', 'ignif', 'fuego', 'autoextingu', 'inflamable', 'incendio'] },
+  { key: 'diferencia', label: 'Diferencias entre productos', ask: ['diferencia', 'diferencias', 'versus', 'conviene', 'recomendas', 'recomiendan', 'cual es mejor'], search: ['diferencia', 'conviene'], line: ['diferencia', 'a diferencia', 'mejor', 'conviene', 'recomend', 'en cambio'] },
 ];
 
 const FILLER = new Set(['que', 'para', 'con', 'los', 'las', 'una', 'uno', 'por', 'del', 'como', 'cual', 'cuales', 'sus', 'este', 'esta', 'hay', 'tiene', 'sirve', 'usar', 'uso', 'hola', 'quiero', 'saber', 'puedo', 'tengo', 'mas', 'menos', 'aprox', 'aproximado', 'cada', 'cuanto', 'cuanta', 'cuantos', 'cuantas', 'cuando', 'donde', 'necesito', 'hacer', 'tienen', 'viene', 'resina', 'producto', 'kit', 'envase', 'envases', 'lata', 'latas', 'pomo', 'pomos', 'tubo', 'pote', 'frasco', 'unidad', 'unidades', 'aerosol', 'cada', 'aproximadamente', 'buenas', 'tardes', 'dias', 'noches', 'gracias', 'consulta']);
@@ -98,7 +106,8 @@ export function cleanAnswer(text) {
 function sentences(text) {
   return String(text).split(/(?<=[.!?])\s+/).map((sentence) => sentence.trim()).filter((sentence) => sentence.length > 8);
 }
-const key = (sentence) => plain(sentence).replace(/[^a-z0-9]+/g, ' ').trim();
+// Los links cambian de una respuesta a otra ("te dejo el link <url>"): no cuentan para comparar.
+const key = (sentence) => plain(sentence).replace(/https?:\/\/\S+/g, ' link ').replace(/[^a-z0-9]+/g, ' ').trim();
 
 // Cantidades de una frase, en la misma unidad (cm → mm, kilos → kg, m² → m2…), para comparar respuestas.
 const QUANTITY = /(\d+(?:[.,]\d+)?)\s*(m2|m²|mts2|metros cuadrados|cm|mm|kg|kilos?|gr|gramos|g|litros?|lts?|l|hs|horas|h|minutos|min|d[ií]as)(?![a-záéíóúñ])/gi;

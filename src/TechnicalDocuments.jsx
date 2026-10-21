@@ -4,6 +4,7 @@ import { useConfirm } from "./ConfirmDialog";
 import { Empty, Loading } from "./ui-primitives";
 import { TechnicalUpload } from "./TechnicalUpload.jsx";
 import { ProductSheets } from "./ProductSheets.jsx";
+import { MlCatalogLink } from "./MlCatalogLink.jsx";
 import { ProductQuestion } from "./ProductQuestion.jsx";
 import { supabase } from "./online.js";
 import { QUALITY_FILTERS, docProductMap, matchesSearch } from "./technical-insights.mjs";
@@ -324,7 +325,7 @@ function TechnicalDocumentsAdminBase({ session }) {
     <div className="content-stack">
       <ProductQuestion supabase={supabase} eyebrow="Base técnica" title="Preguntale al catálogo" />
       <div className="segmented routine-tabs" role="tablist" aria-label="Base técnica" style={{ width: "fit-content", maxWidth: "100%", overflowX: "auto" }}>
-        {[["documentos", `Documentos (${documents.length})`], ["productos", "Qué productos tienen ficha"]].map(([key, label]) => (
+        {[["documentos", `Documentos (${documents.length})`], ["productos", "Qué productos tienen ficha"], ["ml", "Catálogo ↔ Mercado Libre"]].map(([key, label]) => (
           <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? "selected" : ""} onClick={() => setTab(key)}>{label}</button>
         ))}
       </div>
@@ -332,6 +333,7 @@ function TechnicalDocumentsAdminBase({ session }) {
       <div hidden={tab !== "productos"}>
         <ProductSheets supabase={supabase} documents={documents} isAdmin={isAdmin} onChanged={load} onCatalog={setCatalog} />
       </div>
+      {tab === "ml" && <MlCatalogLink supabase={supabase} />}
       {tab === "documentos" && (<>
       <TechnicalUpload documents={documents} onDone={load} />
       <section className="panel">

@@ -1053,7 +1053,7 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .assistant-msg-ai { display: grid; gap: 8px; justify-items: start; }
 .assistant-send { display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--brand-red, #ed1c24); color: #fff; cursor: pointer; flex: none; }
 .assistant-send:disabled { opacity: .4; cursor: default; }
-.assistant-votes { display: inline-flex; gap: 4px; }
+.assistant-votes { display: inline-flex; gap: 4px; align-items: center; }
 .assistant-votes button { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; border: 1px solid #e6e2e0; background: transparent; color: inherit; cursor: pointer; opacity: .75; }
 .assistant-votes button:hover { opacity: 1; background: rgba(0,0,0,.05); }
 .assistant-answer-tools { display: inline-flex; align-items: center; gap: 8px; }
@@ -1088,3 +1088,6 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .ml-clips { margin: 8px 0; }
 .ml-clips-form { display: grid; gap: 8px; margin-top: 8px; max-width: 720px; }
 .ml-clips-form textarea { font: inherit; padding: 8px 10px; border-radius: 10px; border: 1px solid #e2dcda; resize: vertical; }
+.ml-faq { display: grid; gap: 12px; padding: 0; margin: 0; list-style: none; }
+.ml-faq > li { padding: 10px 12px; border: 1px solid #e6e2e0; border-radius: 12px; display: grid; gap: 4px; }
+.ml-faq ul { margin: 0; padding-left: 18px; font-size: 13.5px; display: grid; gap: 3px; }

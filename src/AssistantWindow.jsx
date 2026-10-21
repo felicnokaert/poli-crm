@@ -109,6 +109,7 @@ function Votes({ supabase, question, answer, source, onBad }) {
   if (voted) return <span className="muted small">{voted > 0 ? "¡Gracias!" : "Gracias, queda anotado para corregirlo."}</span>;
   return (
     <span className="assistant-votes">
+      <span className="muted small">¿Te sirvió?</span>
       <button type="button" aria-label="Me sirvió" onClick={() => vote(1)}><ThumbsUp size={14} /></button>
       <button type="button" aria-label="No me sirvió" onClick={() => vote(-1)}><ThumbsDown size={14} /></button>
     </span>
@@ -335,6 +336,12 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
             ))}
           </section>
         ))}
+        {typed && !hasAnswer && (hasExtra || result.total > 0) && (
+          <div className="assistant-answer-meta">
+            <Votes key={`v-${typed}`} supabase={supabase} question={typed} answer={[...mine.flatMap((block) => block.lines), ...groups.flatMap(([key]) => result.groups[key].slice(0, 2).map((item) => item.title))].join(" · ").slice(0, 2000)} source="buscador" onBad={isAdmin ? () => teachFrom("") : null} />
+            {isAdmin && !teach && <button type="button" className="link-button" onClick={() => teachFrom("")}><GraduationCap size={14} /> Enseñarle</button>}
+          </div>
+        )}
       </div>
 
       <footer className="assistant-window-foot">

@@ -4,6 +4,7 @@ import { ArrowDownRight, ArrowUpRight, CircleAlert, Clapperboard, Eye, MessageCi
 import { ML_ISSUES, ML_SORTS, ML_STATUS, countQuestions, filterBoard, issuesOf, statusLabel, summarizeBoard } from "./ml-board.mjs";
 import { MEDAL, PERIODS, REPUTATION, buildAlerts, change, combineMetrics, latestBySeller, periodStats } from "./ml-summary.mjs";
 import { Empty } from "./ui-primitives";
+import { descriptionGaps, faqText } from "./ml-faq.mjs";
 
 // Ventas → Mercado Libre (21/10): Resumen (como el de Mercado Libre: ventas, visitas, conversión, preguntas,
 // reputación y qué atender, en 7/14/30 días contra el período anterior) y Publicaciones de las 3 cuentas.
@@ -91,7 +92,55 @@ function DailyChart({ days = [], metric, currency }) {
   );
 }
 
-function Summary({ accounts, metricsBySeller, seller, items, nickname, permalinks, onIssue, isAdmin, session, onReload }) {
+// Lo que más preguntan y no está en la descripción (consejo del asistente de Mercado Libre). Se calcula al
+// tocar el botón: trae las preguntas y las descripciones de las activas con 3+ preguntas.
+function FaqGaps({ supabase, items, seller, nickname }) {
+  const [gaps, setGaps] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState("");
+  async function look() {
+    setBusy(true);
+    try {
+      const questions = await loadAll(() => supabase.from("ml_questions").select("item_id,question,answer").order("id"));
+      const counts = {};
+      for (const row of questions) counts[row.item_id] = (counts[row.item_id] || 0) + 1;
+      const active = items.filter((item) => item.status === "active" && (!seller || item.seller_id === seller) && counts[item.id] >= 3);
+      const descriptions = {};
+      for (let index = 0; index < active.length; index += 100) {
+        const { data } = await supabase.from("ml_items").select("id,description").in("id", active.slice(index, index + 100).map((item) => item.id));
+        for (const row of data || []) descriptions[row.id] = row.description || "";
+      }
+      setGaps(descriptionGaps(active.map((item) => ({ ...item, description: descriptions[item.id] || "" })), questions));
+    } catch { setGaps([]); }
+    setBusy(false);
+  }
+  async function copy(gap) {
+    try { await navigator.clipboard.writeText(faqText(gap)); setCopied(gap.id); setTimeout(() => setCopied(""), 1600); } catch { /* sin portapapeles */ }
+  }
+  return (
+    <section className="panel">
+      <div className="panel-head">
+        <div><span className="eyebrow">Consejo de Mercado Libre · nada se cambia solo</span><h2>Lo que preguntan y no está en la descripción</h2>
+          <p className="muted small">Si una pregunta se repite, sumar la respuesta a la descripción ahorra preguntas y ayuda a vender. Te armo el texto con lo que más respondimos.</p></div>
+        <div className="panel-head-actions"><button type="button" className="secondary" disabled={busy || !supabase} onClick={look}>{busy ? "Revisando…" : gaps ? "Revisar de nuevo" : "Revisar publicaciones"}</button></div>
+      </div>
+      {gaps && gaps.length === 0 && <p className="muted">No encontré preguntas repetidas que falten en las descripciones.</p>}
+      {gaps && gaps.length > 0 && (
+        <ul className="ml-faq">
+          {gaps.map((gap) => (
+            <li key={gap.id}>
+              <div><a href={gap.permalink} target="_blank" rel="noreferrer"><strong>{gap.title}</strong></a> <span className="muted small">{nickname?.[gap.seller_id] || ""}</span></div>
+              <ul>{gap.missing.map((entry) => <li key={entry.key}><strong>{entry.label}</strong> <span className="muted small">({entry.asked} preguntas)</span>{entry.answer ? `: ${entry.answer}` : <span className="muted small"> · respondimos distinto: conviene definir una respuesta</span>}</li>)}</ul>
+              {gap.missing.some((entry) => entry.answer) && <button type="button" className="link-button" onClick={() => copy(gap)}>{copied === gap.id ? "Copiado" : "Copiar texto para la descripción"}</button>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function Summary({ accounts, metricsBySeller, seller, items, nickname, permalinks, onIssue, isAdmin, session, onReload, supabase }) {
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [period, setPeriod] = useState(7);
@@ -173,6 +222,8 @@ function Summary({ accounts, metricsBySeller, seller, items, nickname, permalink
             ))}
           </ul>
         </section>
+
+        <FaqGaps supabase={supabase} items={items} seller={seller} nickname={nickname} />
 
         <section className="panel">
           <div className="panel-head"><div><span className="eyebrow">Reputación</span><h2>Cómo está cada cuenta</h2></div></div>
@@ -355,7 +406,7 @@ export function MercadoLibreBoard({ supabase, session = null, isAdmin = false })
       {items === null && <p className="muted">Cargando…</p>}
       {items && items.length === 0 && !error && <Empty text={supabase ? "Todavía no hay datos: conectá las cuentas en Más → Datos → Mercado Libre." : "Mercado Libre está en la versión en línea."} />}
       {items && items.length > 0 && tab === "resumen" && (
-        <Summary accounts={accounts} metricsBySeller={metricsBySeller} seller={seller} items={items} nickname={nickname} permalinks={permalinks} onIssue={showIssue} isAdmin={isAdmin} session={session} onReload={() => setReload((value) => value + 1)} />
+        <Summary accounts={accounts} metricsBySeller={metricsBySeller} seller={seller} items={items} nickname={nickname} permalinks={permalinks} onIssue={showIssue} isAdmin={isAdmin} session={session} supabase={supabase} onReload={() => setReload((value) => value + 1)} />
       )}
       {items && items.length > 0 && tab === "publicaciones" && (
         <Listings items={items} accounts={accounts} nickname={nickname} questionCounts={questionCounts} seller={seller} issue={issue} setIssue={setIssue} />

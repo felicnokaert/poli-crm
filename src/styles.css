@@ -1055,6 +1055,11 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .assistant-teach label { display: grid; gap: 4px; font-weight: 600; font-size: 12.5px; }
 .assistant-teach input, .assistant-teach textarea { font: inherit; font-weight: 400; padding: 8px 10px; border-radius: 10px; border: 1px solid #e2dcda; resize: vertical; }
 .assistant-teach-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.training-list { display: grid; gap: 12px; margin-top: 12px; }
+.training-row { display: grid; gap: 6px; padding: 12px 14px; border-radius: 12px; border: 1px solid #e6e2e0; }
+.training-compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.training-compare > div { padding: 8px 10px; border-radius: 10px; background: rgba(0,0,0,.03); }
+.training-compare p { margin: 4px 0 0; white-space: pre-wrap; font-size: 13.5px; }
 .assistant-window-foot { border-top: 1px solid #efebe9; padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 6px; }
 .assistant-input { display: flex; align-items: center; gap: 8px; border: 1.5px solid #e2dcda; border-radius: 14px; padding: 10px 12px; }
 .assistant-input:focus-within { border-color: var(--brand-red, #ed1c24); }

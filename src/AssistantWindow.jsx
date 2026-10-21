@@ -33,7 +33,7 @@ function useTeamAnswer(supabase, query, intent) {
 
 // Pregunta a la IA (lib/assistant-ai.mjs vía /api/admin-users). Sin clave o sin crédito devuelve
 // { ok: false, reason } y la ventana sigue como buscador.
-async function askAi(supabase, payload) {
+export async function askAi(supabase, payload) {
   const { data } = await supabase.auth.getSession();
   const response = await adminFetch({ action: "assistant", ...payload }, data?.session?.access_token || "");
   return response.json().catch(() => ({ ok: false, reason: "red" }));
@@ -65,7 +65,7 @@ function Votes({ supabase, question, answer, source, onBad }) {
 }
 
 // Formulario para enseñarle (solo Felipe). Si viene con id, corrige lo ya enseñado.
-function TeachForm({ supabase, initial, onSaved, onCancel }) {
+export function TeachForm({ supabase, initial, onSaved, onCancel }) {
   const [form, setForm] = useState({ question: initial.question || "", product: initial.product || "", answer: initial.answer || "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -195,7 +195,7 @@ export function AssistantWindow({ supabase, clients = [], firstName = "", isAdmi
       setQuery("");
       return;
     }
-    if (reply.reason === "sin-clave" || reply.reason === "sin-credito") { setAi("off"); return; }
+    if (reply.reason === "sin-clave" || reply.reason === "sin-credito" || reply.reason === "clave") { setAi("off"); return; }
     setAiError(reply.error || "La IA no pudo responder ahora. Probá de nuevo.");
   }
 

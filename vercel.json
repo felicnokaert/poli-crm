@@ -3,7 +3,8 @@
   "framework": "vite",
   "cleanUrls": true,
   "crons": [
-    { "path": "/api/cron-daily-maintenance", "schedule": "0 6 * * *" }
+    { "path": "/api/cron-daily-maintenance", "schedule": "0 6 * * *" },
+    { "path": "/api/admin-users?cron=mercadolibre", "schedule": "30 9 * * *" }
   ],
   "functions": {
     "api/prospeccion.js": { "maxDuration": 60 },

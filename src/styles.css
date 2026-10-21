@@ -965,3 +965,11 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .undo-toast span { overflow: hidden; text-overflow: ellipsis; }
 .undo-toast .secondary { min-height: 34px; white-space: nowrap; }
 .undo-toast .icon-button { color: #fff; background: transparent; border: 0; font-size: 18px; }
+/* Mercado Libre: tablero de publicaciones y prueba de Contabilium (21/10) */
+.ml-board .badge, .contabilium-test .badge { display: inline-block; font-style: normal; font-size: 11px; font-weight: 700; padding: 2px 8px; margin: 0 4px 2px 0; border-radius: 999px; background: #ededee; color: #444; white-space: nowrap; }
+.ml-board .badge.warn, .contabilium-test .badge.warn { background: #fff1d6; color: #7a5200; white-space: normal; }
+.contabilium-test .badge.ok { background: var(--color-success-bg); color: var(--color-success); }
+.ml-board .segmented { flex-wrap: wrap; margin-bottom: 8px; }
+.ml-board-title { display: flex; align-items: center; gap: 10px; min-width: 260px; color: inherit; }
+.ml-board-title img { flex: 0 0 40px; border-radius: 6px; object-fit: cover; background: #fff; }
+.ml-board-table td { vertical-align: middle; }

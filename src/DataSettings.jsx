@@ -14,6 +14,7 @@ import { AdminUsers } from "./AdminUsers.jsx";
 import { WorkspaceCleanup } from "./WorkspaceCleanup.jsx";
 import { ErrorLog } from "./ErrorLog.jsx";
 import { MercadoLibreSync } from "./MercadoLibreSync.jsx";
+import { ContabiliumTest } from "./ContabiliumTest.jsx";
 import { mlCallbackParams } from "./ml-callback.mjs";
 import { connectWhatsApp } from "./meta-onboarding";
 import {
@@ -42,7 +43,7 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
     ["respaldos", "Respaldos"],
     ...(onlineConfigured ? [["directorio", "Directorio"]] : []),
     ...(myChannels.length > 0 || (onlineConfigured && isAdmin) ? [["whatsapp", "WhatsApp"]] : []),
-    ...(onlineConfigured && isAdmin ? [["equipo", "Equipo y cuentas"], ["mercadolibre", "Mercado Libre"]] : []),
+    ...(onlineConfigured && isAdmin ? [["equipo", "Equipo y cuentas"], ["mercadolibre", "Mercado Libre"], ["contabilium", "Contabilium"]] : []),
     ...((onlineConfigured && isAdmin) || devPanel ? [["errores", "Errores y pruebas"]] : []),
   ];
   const [section, setSection] = useState(() => (mlCallbackParams() ? "mercadolibre" : "respaldos"));
@@ -439,6 +440,7 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
         <WorkspaceCleanup session={session} />
       </>)}
       {shown === "mercadolibre" && onlineConfigured && isAdmin && <MercadoLibreSync supabase={supabase} session={session} />}
+      {shown === "contabilium" && onlineConfigured && isAdmin && <ContabiliumTest session={session} />}
       {shown === "errores" && (<>
         {onlineConfigured && isAdmin && <ErrorLog session={session} />}
         {devPanel}

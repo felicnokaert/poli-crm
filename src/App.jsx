@@ -19,6 +19,7 @@ const CotizadorFrame = lazy(() => import("./CotizadorFrame").then((m) => ({ defa
 // otros (CommercialKnowledge, Coach, QuickReplies, Training) son internos,
 // consumidos solo por el propio <Academy> - así que separarla en su propio
 // chunk no arrastra nada que este archivo necesite.
+const MercadoLibreBoard = lazy(() => import("./MercadoLibreBoard").then((m) => ({ default: m.MercadoLibreBoard })));
 const Academy = lazy(() => import("./Academy").then((m) => ({ default: m.Academy })));
 import { LoginScreen } from "./Login";
 import { ErrorBoundary } from "./ErrorBoundary.jsx";
@@ -725,6 +726,11 @@ export default function App() {
         {view === "prospecting" && (
           <Suspense fallback={<Splash text="Cargando prospección…" />}>
             <Prospeccion data={data} setData={setData} userEmail={session?.user?.email} session={session} onOpenClient={setSelectedClientId} requests={prospectRequests} supabase={supabase} />
+          </Suspense>
+        )}
+        {view === "mercadolibre" && (
+          <Suspense fallback={<Splash text="Cargando Mercado Libre…" />}>
+            <MercadoLibreBoard supabase={supabase} />
           </Suspense>
         )}
         {view === "academy" && (

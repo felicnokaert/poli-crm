@@ -984,3 +984,18 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .ml-alerts li.is-urgent svg { color: var(--brand-red, #c8102e); }
 .ml-alerts a.secondary { text-decoration: none; padding: 6px 10px; border-radius: 10px; }
 .ml-board .badge.ok { background: var(--color-success-bg); color: var(--color-success); }
+/* Asistente: botón flotante y panel (21/10) */
+.assistant-fab { position: fixed; right: calc(20px + env(safe-area-inset-right, 0px)); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); z-index: 55; width: 58px; height: 58px; padding: 0; border-radius: 50%; border: 1px solid #ecebea; background: #fff; box-shadow: 0 8px 22px rgba(0,0,0,.18); display: grid; place-items: center; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; }
+.assistant-fab:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(0,0,0,.22); }
+.assistant-fab:focus-visible { outline: 3px solid var(--brand-red); outline-offset: 3px; }
+.assistant-drawer { position: fixed; top: 0; right: 0; bottom: 0; z-index: 70; width: min(480px, 100vw); background: var(--color-white); border-left: 1px solid #dfe5e1; box-shadow: -12px 0 32px rgba(0,0,0,.16); display: flex; flex-direction: column; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); padding-right: env(safe-area-inset-right, 0px); }
+.assistant-drawer-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid #dfe5e1; }
+.assistant-drawer-head > div { display: grid; flex: 1; min-width: 0; }
+.assistant-drawer-head .icon-button { background: transparent; border: 0; cursor: pointer; padding: 8px; color: inherit; }
+.assistant-drawer-body { flex: 1; overflow-y: auto; padding: 12px; }
+.assistant-drawer-body .panel { border: 0; padding: 4px; }
+.assistant-drawer-body .panel-head { flex-direction: column; align-items: stretch; }
+.assistant-drawer-body .panel-head .search, .assistant-drawer-body .panel-head .search input { width: 100%; }
+.assistant-drawer-body .knowledge-grid { grid-template-columns: minmax(0, 1fr); }
+@media (prefers-reduced-motion: reduce) { .assistant-fab { transition: none; } .assistant-fab:hover { transform: none; } }
+@media print { .assistant-fab, .assistant-drawer { display: none; } }

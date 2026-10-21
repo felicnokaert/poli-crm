@@ -615,3 +615,12 @@
   :root:not([data-theme="light"]) main { color: #e7e7e9; }
   :root:not([data-theme="light"]) a { color: #f0a0a4; }
 }
+/* Asistente (21/10): panel oscuro; el botón queda blanco para que el logo se vea igual que en claro. */
+:root[data-theme="dark"] .assistant-drawer { background: #1c1c1f; color: #e7e7e9; border-left-color: #333; }
+:root[data-theme="dark"] .assistant-drawer-head { border-bottom-color: #333; }
+:root[data-theme="dark"] .assistant-fab { border-color: #333; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .assistant-drawer { background: #1c1c1f; color: #e7e7e9; border-left-color: #333; }
+  :root:not([data-theme="light"]) .assistant-drawer-head { border-bottom-color: #333; }
+  :root:not([data-theme="light"]) .assistant-fab { border-color: #333; }
+}

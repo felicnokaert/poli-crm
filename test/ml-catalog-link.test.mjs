@@ -43,7 +43,7 @@ test('cruza por SKU: vinculados, sin producto, repetidos, sin SKU y fotos para s
   assert.deepEqual(link.unmatched.map((entry) => entry.sku), ['KT-619-10']);
   assert.deepEqual(link.duplicated.map((entry) => entry.sku), ['RE-608-1']);
   assert.equal(link.noSku.length, 1);
-  assert.deepEqual(link.summary, { activeItems: 5, withSku: 4, noSku: 1, matchedItems: 3, matchedSkus: 2, unmatchedSkus: 1, unmatchedItems: 1, duplicatedSkus: 1, catalogSkus: 3, catalogCovered: 2, photoGain: 1 });
+  assert.deepEqual(link.summary, { activeItems: 5, withSku: 4, noSku: 1, matchedItems: 3, matchedSkus: 2, unmatchedSkus: 1, unmatchedItems: 1, duplicatedSkus: 1, catalogSkus: 3, catalogCovered: 2, photoGain: 1, photosApproved: 0 });
 });
 
 test('el SKU de la publicación sale del atributo SELLER_SKU, del atributo SKU o del campo del vendedor', () => {
@@ -54,10 +54,17 @@ test('el SKU de la publicación sale del atributo SELLER_SKU, del atributo SKU o
   assert.equal(itemRow({ id: 'MLA1', attributes: [{ id: 'SELLER_SKU', name: 'SKU', value_name: 'RE-608-1' }] }, 's1').sku, 'RE-608-1');
 });
 
-function fakeSupabase() {
-  const tables = { catalog_products: products, catalog_variants: variants, ml_items: items.filter((entry) => entry.status === 'active') };
-  const make = (data) => { const b = { select: () => b, eq: () => b, range: () => Promise.resolve({ data, error: null }) }; return b; };
-  return { from: (table) => make(tables[table] || []), rpc: async () => ({ data: [{ seller_id: 's1', nickname: 'POLIPLAST SRL' }] }) };
+function fakeSupabase(calls = []) {
+  const tables = { catalog_products: products, catalog_variants: variants, ml_items: items.filter((entry) => entry.status === 'active'), catalog_product_photos: [] };
+  const make = (table, data) => {
+    const b = {
+      select: () => b, eq: () => b, range: () => Promise.resolve({ data, error: null }),
+      upsert: async (rows, options) => { calls.push({ table, op: 'upsert', rows, options }); return { error: null }; },
+      delete: () => ({ eq: async (column, value) => { calls.push({ table, op: 'delete', column, value }); return { error: null }; } }),
+    };
+    return b;
+  };
+  return { from: (table) => make(table, tables[table] || []), rpc: async () => ({ data: [{ seller_id: 's1', nickname: 'POLIPLAST SRL' }] }) };
 }
 
 test('la pestaña muestra el resumen y cambia de lista', async () => {
@@ -71,4 +78,47 @@ test('la pestaña muestra el resumen y cambia de lista', async () => {
   assert.ok(screen.getByText('no está en el catálogo'));
   fireEvent.click(screen.getByRole('tab', { name: 'Publicaciones sin SKU (1)' }));
   assert.ok(screen.getByText('Publicación M5', { exact: false }));
+});
+
+test('una foto aprobada saca al producto de "para sumar" y queda como aprobada', () => {
+  const link = linkMlToCatalog({ products, variants, items, photos: [{ product_id: 'p1', url: 'https://img/x.jpg' }] });
+  assert.equal(link.summary.photoGain, 0);
+  assert.equal(link.summary.photosApproved, 1);
+  assert.equal(link.matched[0].approvedPhoto.url, 'https://img/x.jpg');
+});
+
+test('usa la foto grande de la publicación si está y avisa si solo hay miniatura', () => {
+  const withPicture = [item('M2', 'RE-608-1', { sold_quantity: 10, picture_url: 'https://img/grande.jpg' })];
+  const big = linkMlToCatalog({ products, variants, items: withPicture });
+  assert.equal(big.matched[0].photoUrl, 'https://img/grande.jpg');
+  assert.equal(big.matched[0].photoIsSmall, false);
+  const small = linkMlToCatalog({ products, variants, items: [item('M2', 'RE-608-1')] });
+  assert.equal(small.matched[0].photoUrl, 'https://img/M2.jpg');
+  assert.equal(small.matched[0].photoIsSmall, true);
+});
+
+test('un administrador aprueba la foto de un producto y se guarda aparte, sin tocar el catálogo', async () => {
+  const { MlCatalogLink } = await loadJsxModule('src/MlCatalogLink.jsx');
+  const calls = [];
+  render(React.createElement(MlCatalogLink, { supabase: fakeSupabase(calls), isAdmin: true, userEmail: 'felipe@grupopoliplast.com.ar' }));
+  await waitFor(() => assert.ok(screen.getByRole('tab', { name: 'Fotos para sumar (1)' })));
+  fireEvent.click(screen.getByRole('button', { name: 'Usar esta foto' }));
+  await waitFor(() => assert.ok(screen.getByRole('tab', { name: 'Fotos para sumar (0)' })));
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].table, 'catalog_product_photos');
+  assert.deepEqual({ ...calls[0].rows[0], approved_at: undefined }, { product_id: 'p1', url: 'https://img/M2.jpg', source: 'mercadolibre', item_id: 'M2', sku: 'RE-608-1', approved_by: 'felipe@grupopoliplast.com.ar', approved_at: undefined });
+  assert.deepEqual(calls[0].options, { onConflict: 'product_id' });
+  fireEvent.click(screen.getByRole('tab', { name: 'Fotos aprobadas (1)' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Quitar' }));
+  await waitFor(() => assert.ok(screen.getByRole('tab', { name: 'Fotos aprobadas (0)' })));
+  assert.deepEqual(calls[1], { table: 'catalog_product_photos', op: 'delete', column: 'product_id', value: 'p1' });
+});
+
+test('quien no es administrador ve las fotos pero no puede aprobarlas', async () => {
+  const { MlCatalogLink } = await loadJsxModule('src/MlCatalogLink.jsx');
+  const calls = [];
+  render(React.createElement(MlCatalogLink, { supabase: fakeSupabase(calls), isAdmin: false }));
+  await waitFor(() => assert.ok(screen.getByRole('tab', { name: 'Fotos para sumar (1)' })));
+  assert.equal(screen.queryByRole('button', { name: 'Usar esta foto' }), null);
+  assert.ok(screen.getByText(/Las aprueba un administrador/));
 });

@@ -5,7 +5,9 @@ export const normSku = (value = '') => String(value || '').trim().toUpperCase().
 
 const bySold = (a, b) => (Number(b.sold_quantity) || 0) - (Number(a.sold_quantity) || 0);
 
-export function linkMlToCatalog({ products = [], variants = [], items = [], onlyActive = true } = {}) {
+// photos: fotos ya aprobadas (catalog_product_photos), por product_id.
+export function linkMlToCatalog({ products = [], variants = [], items = [], photos = [], onlyActive = true } = {}) {
+  const approved = new Map(photos.map((photo) => [photo.product_id, photo]));
   const productById = new Map(products.map((product) => [product.id, product]));
   const variantBySku = new Map();
   for (const variant of variants) {
@@ -30,7 +32,13 @@ export function linkMlToCatalog({ products = [], variants = [], items = [], only
     if (variant) {
       const product = productById.get(variant.product_id) || null;
       const thumbnail = list.find((item) => item.thumbnail)?.thumbnail || '';
-      matched.push({ sku, variant, product, items: list, thumbnail, needsPhoto: Boolean(thumbnail) && !String(product?.photo_path || '').trim() });
+      const picture = list.find((item) => item.picture_url);
+      const photoUrl = picture?.picture_url || thumbnail;
+      const approvedPhoto = product ? approved.get(product.id) || null : null;
+      matched.push({
+        sku, variant, product, items: list, thumbnail, photoUrl, photoItemId: (picture || list.find((item) => item.thumbnail))?.id || '', photoIsSmall: !picture, approvedPhoto,
+        needsPhoto: Boolean(photoUrl) && Boolean(product) && !approvedPhoto && !String(product.photo_path || '').trim(),
+      });
     } else {
       unmatched.push({ sku, items: list });
     }
@@ -52,6 +60,7 @@ export function linkMlToCatalog({ products = [], variants = [], items = [], only
     catalogSkus: variantBySku.size,
     catalogCovered: matched.length,
     photoGain: matched.filter((entry) => entry.needsPhoto).length,
+    photosApproved: matched.filter((entry) => entry.approvedPhoto).length,
   };
   return { matched, unmatched, duplicated, noSku, summary };
 }

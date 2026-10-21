@@ -333,7 +333,7 @@ function TechnicalDocumentsAdminBase({ session }) {
       <div hidden={tab !== "productos"}>
         <ProductSheets supabase={supabase} documents={documents} isAdmin={isAdmin} onChanged={load} onCatalog={setCatalog} />
       </div>
-      {tab === "ml" && <MlCatalogLink supabase={supabase} />}
+      {tab === "ml" && <MlCatalogLink supabase={supabase} isAdmin={isAdmin} userEmail={session?.user?.email} />}
       {tab === "documentos" && (<>
       <TechnicalUpload documents={documents} onDone={load} />
       <section className="panel">

@@ -101,6 +101,15 @@ function loadState() {
   }
 }
 
+const VIEW_KEY = "poliplast-current-view";
+const SAVED_VIEWS = new Set(["dashboard", "conversations", "inbox", "tasks", "sales", "clients", "prospecting", "mercadolibre", "academy", "quoter", "map", "techdocs", "profile", "settings"]);
+function readSavedView() {
+  try {
+    const saved = sessionStorage.getItem(VIEW_KEY);
+    return SAVED_VIEWS.has(saved) ? saved : "dashboard";
+  } catch { return "dashboard"; }
+}
+
 export default function App() {
   const [narrowScreen, setNarrowScreen] = useState(() => typeof window !== "undefined" && window.matchMedia?.("(max-width: 760px)").matches);
   useEffect(() => {
@@ -127,7 +136,10 @@ export default function App() {
   const cronStatus = useCronStatus(session);
   const whatsappHealth = useWhatsAppHealth(session);
   // Al volver de autorizar Mercado Libre se abre Más → Datos → Mercado Libre para terminar la conexión.
-  const [view, setView] = useState(() => (mlCallbackParams() ? "settings" : "dashboard"));
+  // Al recargar (F5) se queda en el módulo donde estaba (21/10, pedido de Felipe). Se guarda por pestaña:
+  // una pestaña nueva arranca en Inicio.
+  const [view, setView] = useState(() => (mlCallbackParams() ? "settings" : readSavedView()));
+  useEffect(() => { try { sessionStorage.setItem(VIEW_KEY, view); } catch { /* sin almacenamiento */ } }, [view]);
   const [mapTab, setMapTab] = useState("aplicadores");
   // Empresa con la que se abre el cotizador (desde "Cotizar" en la ficha); null = cotización libre.
   const [quoterClient, setQuoterClient] = useState(null);

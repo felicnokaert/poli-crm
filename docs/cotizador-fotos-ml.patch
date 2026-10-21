@@ -1,0 +1,109 @@
+diff --git a/src/lib/catalog.ts b/src/lib/catalog.ts
+index fcc5758..6870a3a 100644
+--- a/src/lib/catalog.ts
++++ b/src/lib/catalog.ts
+@@ -1,4 +1,5 @@
+ import { supabase } from './supabase'
++import { applyApprovedPhotos, type ApprovedMlPhoto } from './productPhotos'
+ import type {
+   CatalogProduct,
+   CatalogVariant,
+@@ -137,7 +138,14 @@ export async function loadCatalog(): Promise<CatalogData> {
+       return (data ?? []) as ProductDocumentLink[]
+     } catch { return [] as ProductDocumentLink[] }
+   })()
+-  const [products, variants, priceListsRes, prices, docsRes, inventory, documentLinks] = await Promise.all([
++  // Fotos aprobadas desde Mercado Libre en el CRM: si la tabla no existe o falla, el cotizador sigue igual.
++  const approvedPhotosPromise = (async () => {
++    try {
++      const { data } = await supabase.from('catalog_product_photos').select('product_id,url')
++      return (data ?? []) as ApprovedMlPhoto[]
++    } catch { return [] as ApprovedMlPhoto[] }
++  })()
++  const [products, variants, priceListsRes, prices, docsRes, inventory, documentLinks, approvedPhotos] = await Promise.all([
+     fetchAll<CatalogProduct>((from, to) =>
+       supabase.from('catalog_products').select('*').order('family').order('name').range(from, to),
+     ),
+@@ -147,13 +155,14 @@ export async function loadCatalog(): Promise<CatalogData> {
+     supabase.from('technical_documents').select('id, title, family, product, sku, status, source_url, storage_path'),
+     fetchAll<InventoryBalance>((from, to) => supabase.from('inventory_balances').select('variant_id, approved_quantity, unit, approved_at').range(from, to)),
+     linksPromise,
++    approvedPhotosPromise,
+   ])
+ 
+   if (priceListsRes.error) throw priceListsRes.error
+   if (docsRes.error) throw docsRes.error
+ 
+   return assembleCatalog({
+-    products,
++    products: applyApprovedPhotos(products, approvedPhotos),
+     variants,
+     priceLists: (priceListsRes.data ?? []) as PriceList[],
+     prices,
+diff --git a/src/lib/productPhotos.test.ts b/src/lib/productPhotos.test.ts
+index 4b8dc02..7669f43 100644
+--- a/src/lib/productPhotos.test.ts
++++ b/src/lib/productPhotos.test.ts
+@@ -10,7 +10,7 @@ const { getPublicUrl, storageFrom } = vi.hoisted(() => {
+ vi.mock('./supabase', () => ({ supabase: { from: vi.fn(), storage: { from: storageFrom } } }))
+ 
+ import { supabase } from './supabase'
+-import { photoRelevance, productPhotoUrl, setCatalogProductPhoto, uploadProductPhoto, type BucketPhoto } from './productPhotos'
++import { applyApprovedPhotos, photoRelevance, productPhotoUrl, setCatalogProductPhoto, uploadProductPhoto, type BucketPhoto } from './productPhotos'
+ 
+ describe('productPhotoUrl', () => {
+   it('devuelve null sin foto asignada', () => {
+@@ -20,6 +20,21 @@ describe('productPhotoUrl', () => {
+   it('arma la URL pública del bucket', () => {
+     expect(productPhotoUrl('balde-10l.png')).toBe('https://cdn.test/product-photos/balde-10l.png')
+   })
++  it('deja pasar una URL completa (foto aprobada desde Mercado Libre en el CRM)', () => {
++    expect(productPhotoUrl('https://http2.mlstatic.com/D_1-O.jpg')).toBe('https://http2.mlstatic.com/D_1-O.jpg')
++  })
++})
++
++describe('applyApprovedPhotos', () => {
++  const products = [{ id: 'p1', photo_path: null }, { id: 'p2', photo_path: 'propia.png' }, { id: 'p3' }]
++  it('completa solo los productos sin foto propia y no toca los demás', () => {
++    const result = applyApprovedPhotos(products, [{ product_id: 'p1', url: 'https://ml/1.jpg' }, { product_id: 'p2', url: 'https://ml/2.jpg' }])
++    expect(result.map((product) => product.photo_path ?? null)).toEqual(['https://ml/1.jpg', 'propia.png', null])
++  })
++  it('sin fotos aprobadas devuelve el mismo arreglo y no inventa nada', () => {
++    expect(applyApprovedPhotos(products, [])).toBe(products)
++    expect(applyApprovedPhotos(products, [{ product_id: 'p3', url: '' }]).map((product) => product.photo_path ?? null)).toEqual([null, 'propia.png', null])
++  })
+ })
+ 
+ describe('photoRelevance', () => {
+diff --git a/src/lib/productPhotos.ts b/src/lib/productPhotos.ts
+index 285de67..7d5a3c8 100644
+--- a/src/lib/productPhotos.ts
++++ b/src/lib/productPhotos.ts
+@@ -17,6 +17,8 @@ export async function listBucketPhotos(): Promise<BucketPhoto[]> {
+ 
+ export function productPhotoUrl(path: string | null | undefined): string | null {
+   if (!path) return null
++  // Fotos aprobadas desde Mercado Libre en el CRM: ya vienen como URL completa.
++  if (/^https?:\/\//i.test(path)) return path
+   return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl
+ }
+ 
+@@ -64,3 +66,18 @@ export function photoRelevance(photo: BucketPhoto, productName: string): number
+   for (const word of productWords) if (photoWords.has(word)) shared += 1
+   return shared
+ }
++
++export interface ApprovedMlPhoto {
++  product_id: string
++  url: string
++}
++
++/**
++ * Fotos aprobadas en el CRM (tabla catalog_product_photos, origen Mercado Libre): se usan solo si el producto no
++ * tiene foto propia. No escribe nada en catalog_products: es un valor de lectura que se calcula al cargar el catálogo.
++ */
++export function applyApprovedPhotos<P extends { id: string; photo_path?: string | null }>(products: P[], photos: ApprovedMlPhoto[]): P[] {
++  if (!photos.length) return products
++  const byProduct = new Map(photos.filter((photo) => photo.url).map((photo) => [photo.product_id, photo.url]))
++  return products.map((product) => (!product.photo_path && byProduct.has(product.id) ? { ...product, photo_path: byProduct.get(product.id)! } : product))
++}

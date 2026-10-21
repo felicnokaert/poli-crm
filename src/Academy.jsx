@@ -16,9 +16,8 @@ import {
 } from "./commercial-knowledge.mjs";
 import { TeamSelf } from "./TeamSelf.jsx";
 import { isChannelAdmin } from "./user-channels.mjs";
-import { KNOWLEDGE_TYPES, buildKnowledgePrompt, searchKnowledge, withMercadoLibre } from "./knowledge-search.mjs";
-import { PRODUCT_CATALOG } from "./product-catalog.mjs";
-import { OBJECTIONS } from "./commercial-knowledge.mjs";
+import { KNOWLEDGE_TYPES, buildKnowledgePrompt } from "./knowledge-search.mjs";
+import { useKnowledge } from "./useKnowledge.js";
 import { Competencia } from "./Competencia.jsx";
 import { PROSPECT_FAMILIES } from "./prospect-model.mjs";
 import { ProductQuestion } from "./ProductQuestion.jsx";
@@ -212,45 +211,8 @@ function AcademyBase({ myChannels, interactions, data, setData, supabase, userEm
 
 export function KnowledgeSearch({ supabase, clients = [], sellers = [] }) {
   const [query, setQuery] = useState("");
-  const [docs, setDocs] = useState([]);
-  const [competitors, setCompetitors] = useState([]);
-  const [guides, setGuides] = useState([]);
   const [copied, setCopied] = useState(false);
-  const [pendingDocs, setPendingDocs] = useState(0);
-  const [textsLoaded, setTextsLoaded] = useState(false);
-  useEffect(() => {
-    if (!supabase) return;
-    supabase.from("technical_documents").select("id,title,family,product,sku,doc_type,status,notes").eq("status", "vigente").limit(500)
-      .then(({ data }) => setDocs(data || []));
-    supabase.from("technical_documents").select("id", { count: "exact", head: true }).neq("status", "vigente")
-      .then(({ count }) => setPendingDocs(count || 0), () => {});
-    supabase.from("competitors").select("id,name,kind,families,summary,caveats").then(({ data }) => setCompetitors(data || []));
-    supabase.from("product_guides").select("id,family,product,summary,sections,status").then(({ data }) => setGuides(data || []), () => {});
-  }, [supabase]);
-  // El texto completo de las fichas pesa: se trae una sola vez, recién cuando alguien busca (17/10).
-  const searching = query.trim().length > 2;
-  useEffect(() => {
-    if (!supabase || !searching || textsLoaded) return;
-    setTextsLoaded(true);
-    supabase.from("technical_documents").select("id,extracted_text").eq("status", "vigente").limit(500)
-      .then(({ data }) => {
-        const byId = new Map((data || []).map((row) => [row.id, row.extracted_text || ""]));
-        setDocs((current) => current.map((doc) => ({ ...doc, extractedText: byId.get(doc.id) || "" })));
-      }, () => {});
-  }, [supabase, searching, textsLoaded]);
-  // Mercado Libre se busca en la base (pueden ser miles de preguntas), con una pausa mientras se escribe.
-  const [mlRows, setMlRows] = useState([]);
-  useEffect(() => {
-    if (!supabase || !searching) { setMlRows([]); return undefined; }
-    let active = true;
-    const timer = setTimeout(() => {
-      supabase.rpc("search_ml_knowledge", { q: query.trim(), max_rows: 8 })
-        .then(({ data, error }) => { if (active) setMlRows(error ? [] : data || []); }, () => {});
-    }, 400);
-    return () => { active = false; clearTimeout(timer); };
-  }, [supabase, searching, query]);
-  const sources = { products: PRODUCT_CATALOG, guides, docs, clients, sellers, objections: OBJECTIONS, competitors };
-  const result = withMercadoLibre(searchKnowledge(query, sources), mlRows);
+  const { result, pendingDocs } = useKnowledge(supabase, query, { clients, sellers });
   async function copy() {
     try { await navigator.clipboard.writeText(buildKnowledgePrompt(query, result)); setCopied(true); } catch { setCopied(false); }
   }

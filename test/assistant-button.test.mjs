@@ -6,12 +6,14 @@ import { loadJsxModule } from './helpers/load-jsx.mjs';
 
 const { AssistantButton } = await loadJsxModule('src/AssistantButton.jsx');
 
-test('el botón del asistente abre el buscador y se cierra con Escape', async () => {
+test('el botón del asistente abre la ventana con sugerencias y se cierra con Escape', async () => {
   try {
     render(React.createElement(AssistantButton, { supabase: null, clients: [] }));
     fireEvent.click(screen.getByLabelText('Abrir el asistente'));
-    assert.ok(screen.getByRole('dialog', { name: 'Asistente' }));
-    await waitFor(() => screen.getByText(/Buscar en productos, fichas/));
+    await waitFor(() => screen.getByRole('dialog', { name: 'Asistente' }));
+    await waitFor(() => screen.getByLabelText('Preguntale al asistente'));
+    fireEvent.click(screen.getByText('techo'));
+    assert.equal(screen.getByLabelText('Preguntale al asistente').value, 'techo');
     fireEvent.keyDown(document, { key: 'Escape' });
     await waitFor(() => screen.getByLabelText('Abrir el asistente'));
   } finally { cleanup(); }

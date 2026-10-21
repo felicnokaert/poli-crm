@@ -1,7 +1,32 @@
 import { useEffect, useState } from "react";
 import { CircleAlert, Search } from "lucide-react";
-import { filterGuides, guideFamilies, guideToText } from "./product-guides.mjs";
+import { filterGuides, guideFamilies, guideMlQuery, guideToText } from "./product-guides.mjs";
 import { Empty } from "./ui-primitives";
+
+// Lo que ya se respondió en Mercado Libre sobre este producto (21/10). Son respuestas reales del equipo:
+// sirven de base, pero no siempre coinciden entre sí ni con la ficha, por eso se avisa.
+function MercadoLibreAnswers({ supabase, guide }) {
+  const [rows, setRows] = useState(null);
+  useEffect(() => {
+    const q = guideMlQuery(guide);
+    if (!supabase?.rpc || !q) { setRows([]); return; }
+    supabase.rpc("search_ml_knowledge", { q, max_rows: 6 })
+      .then(({ data, error }) => setRows(error ? [] : (data || []).filter((row) => row.kind === "pregunta").slice(0, 5)), () => setRows([]));
+  }, [supabase, guide]);
+  if (!rows?.length) return null;
+  return (
+    <div className="guide-ml">
+      <h3>Lo que ya respondimos en Mercado Libre</h3>
+      <ul>
+        {rows.map((row) => {
+          const [question, answer] = String(row.body).replace(/^Pregunta: /, "").split("\nRespuesta: ");
+          return <li key={row.id}><strong>{question}</strong><br /><span>{answer}</span>{row.permalink && <> · <a href={row.permalink} target="_blank" rel="noreferrer">publicación</a></>}</li>;
+        })}
+      </ul>
+      <p className="muted small">Respuestas reales del equipo. No siempre coinciden con la ficha: revisá antes de copiar.</p>
+    </div>
+  );
+}
 
 // Academia → Productos: una guía por producto armada con las fichas técnicas (19/10). Todos la leen;
 // solo Felipe valida o la vuelve a borrador.
@@ -84,6 +109,7 @@ export function ProductGuides({ supabase, isAdmin = false, userEmail = "" }) {
                       <ul>{(section.items || []).map((item) => <li key={item}>{item}</li>)}</ul>
                     </div>
                   ))}
+                  <MercadoLibreAnswers supabase={supabase} guide={guide} />
                   <p className="muted small">Fuente: {(guide.sources || []).map((source) => source.title).join(" · ") || "sin fuente"}</p>
                   {guide.status !== "validada" && <p className="muted small">Borrador armado leyendo las fichas: falta que Felipe lo valide. Confirmá antes de pasar un dato a un cliente.</p>}
                   <div className="panel-head-actions">

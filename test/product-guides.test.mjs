@@ -62,3 +62,9 @@ test("el resto del equipo no ve los botones de validar", async () => {
   fireEvent.click(await screen.findByText("Resina UV"));
   assert.equal(screen.queryByRole("button", { name: "Validar" }), null);
 });
+
+import { guideMlQuery } from '../src/product-guides.mjs';
+test('consulta a Mercado Libre desde una guía: palabras del producto sin marcas de línea', () => {
+  assert.equal(guideMlQuery({ product: 'PoxiPlast (resina epoxi)' }), 'poxiplast or resina or epoxi');
+  assert.equal(guideMlQuery({ product: 'isoBUNKER 770-IR' }), '770');
+});

@@ -5,26 +5,29 @@ import { dailyMercadoLibreRefresh, mercadoLibreCron, itemRow } from '../lib/merc
 import { testContabilium, contabiliumAdmin } from '../lib/contabilium.mjs';
 
 const items = [
-  { id: 'MLA1', seller_id: '1', title: 'Espuma poliuretano', status: 'active', sold_quantity: 10, available_quantity: 5, video_id: null, pictures_count: 2, health: 0.5, description_length: 0, item_updated_at: 'x' },
-  { id: 'MLA2', seller_id: '1', title: 'Máquina proyectora', status: 'paused', sold_quantity: 0, video_id: 'v', pictures_count: 6, description_length: 500, item_updated_at: 'x' },
-  { id: 'MLA3', seller_id: '2', title: 'Resina', status: 'active', sold_quantity: 0, available_quantity: 0, video_id: null, pictures_count: null, description_length: 400, item_updated_at: null },
+  { id: 'MLA1', seller_id: '1', title: 'Espuma poliuretano', status: 'active', sold_quantity: 10, available_quantity: 5, clips_count: 0, visits_30d: 50, pictures_count: 2, health: 0.5, description_length: 0, item_updated_at: 'x' },
+  { id: 'MLA2', seller_id: '1', title: 'Máquina proyectora', status: 'paused', sold_quantity: 0, clips_count: 2, pictures_count: 6, description_length: 500, item_updated_at: 'x' },
+  { id: 'MLA3', seller_id: '2', title: 'Resina', status: 'active', sold_quantity: 0, available_quantity: 0, clips_count: null, visits_30d: 300, pictures_count: null, description_length: 400, item_updated_at: null },
 ];
 
-test('resumen por estado y faltas solo de las activas; sin datos nuevos no cuenta como sin video', () => {
+test('resumen por estado y faltas solo de las activas; sin clips revisados no cuenta como sin clip', () => {
   const summary = summarizeBoard(items);
   assert.equal(summary.total, 3);
   assert.equal(summary.byStatus.active, 2);
   assert.equal(summary.byStatus.paused, 1);
-  assert.equal(summary.issues['sin-video'], 1);
+  assert.equal(summary.issues['sin-clip'], 1);
+  assert.equal(summary.clipsUnknown, 1);
+  assert.equal(summary.issues['visitas-sin-ventas'], 1);
   assert.equal(summary.issues['sin-stock'], 1);
   assert.equal(summary.missingDetail, 1);
-  assert.deepEqual(issuesOf(items[0]).map((issue) => issue.key), ['sin-video', 'pocas-fotos', 'sin-descripcion', 'calidad-baja']);
+  assert.deepEqual(issuesOf(items[0]).map((issue) => issue.key), ['sin-clip', 'pocas-fotos', 'sin-descripcion', 'calidad-baja']);
 });
 
 test('filtra por cuenta, estado, falta y palabras (sin acentos)', () => {
   assert.deepEqual(filterBoard(items, { seller: '1' }).map((item) => item.id), ['MLA1', 'MLA2']);
   assert.deepEqual(filterBoard(items, { status: 'active', issue: 'sin-stock' }).map((item) => item.id), ['MLA3']);
   assert.deepEqual(filterBoard(items, { query: 'maquina' }).map((item) => item.id), ['MLA2']);
+  assert.deepEqual(filterBoard(items, { sort: 'visitas30' }).map((item) => item.id), ['MLA3', 'MLA1', 'MLA2']);
   assert.deepEqual(countQuestions([{ item_id: 'MLA1' }, { item_id: 'MLA1' }, { item_id: '' }]), { MLA1: 2 });
 });
 
@@ -101,7 +104,7 @@ test('resumen de ventas: solo pagadas, unidades, por día (hora de Argentina) y 
 test('accountMetrics junta ventas, visitas, preguntas y reputación; si una parte falla, sigue con el resto', async () => {
   const now = () => Date.parse('2026-10-21T12:00:00Z');
   const http = async (url) => {
-    if (url.includes('/orders/search')) return json({ error: 'forbidden' }, 403);
+    if (url.includes('/orders/search')) return json({ message: 'At least one policy returned UNAUTHORIZED.' }, 403);
     if (url.includes('/items_visits')) return json({ total_visits: 200, results: [{ date: '2026-10-20T00:00:00Z', total: 50 }] });
     if (url.includes('status=UNANSWERED')) return json({ total: 4 });
     if (url.includes('/users/9')) return json({ seller_reputation: { level_id: '5_green', power_seller_status: 'platinum', metrics: { claims: { rate: 0.01 } } } });
@@ -109,10 +112,11 @@ test('accountMetrics junta ventas, visitas, preguntas y reputación; si una part
   };
   const data = await accountMetrics({ seller_id: '9' }, 'T', http, { now });
   assert.equal(data.sales, null);
-  assert.equal(data.visits, 200);
+  assert.equal(data.visits, 50, 'suma de los últimos 30 días');
   assert.equal(data.questionsPending, 4);
   assert.equal(data.reputation.level, '5_green');
-  assert.equal(data.days.length, 30);
+  assert.equal(data.days.length, 60);
+  assert.equal(data.ordersBlocked, true);
   assert.match(data.errors[0], /^ventas/);
 });
 
@@ -124,7 +128,41 @@ test('todas las cuentas suman y las alertas muestran la evidencia', () => {
   assert.equal(total.conversion, 3 / 200);
   assert.equal(total.days[0].visits, 120);
   assert.deepEqual(latestBySeller([{ seller_id: '1', taken_on: '2026-10-20' }, { seller_id: '1', taken_on: '2026-10-21' }])['1'].taken_on, '2026-10-21');
-  const alerts = buildAlerts({ metricsBySeller: { 1: a }, nickname: { 1: 'POLI' }, items: [{ id: 'X', status: 'active', available_quantity: 0, sold_quantity: 9, item_updated_at: 'x', video_id: null, description_length: 100 }] });
-  assert.deepEqual(alerts.map((alert) => alert.key), ['q-1', 'r-1', 'stock', 'video']);
+  const alerts = buildAlerts({ metricsBySeller: { 1: a }, nickname: { 1: 'POLI' }, items: [{ id: 'X', status: 'active', available_quantity: 0, sold_quantity: 9, item_updated_at: 'x', clips_count: 0, visits_30d: 40, description_length: 100 }] });
+  assert.deepEqual(alerts.map((alert) => alert.key), ['q-1', 'r-1', 'stock', 'clip']);
+  assert.equal(buildAlerts({ metricsBySeller: { 1: { ordersBlocked: true } }, nickname: { 1: 'POLI' } })[0].key, 'permiso');
   assert.match(alerts[0].text, /POLI: 1 pregunta sin responder/);
+});
+
+import { periodStats, change } from '../src/ml-summary.mjs';
+import { itemExtras, clipsCount } from '../lib/mercadolibre.mjs';
+
+test('períodos: 7 días contra los 7 anteriores', () => {
+  const days = Array.from({ length: 14 }, (_, index) => ({ day: `2026-10-${String(index + 8).padStart(2, '0')}`, orders: index < 7 ? 1 : 2, amount: index < 7 ? 100 : 300, units: 1, visits: 10 }));
+  const { current, previous, series } = periodStats(days, 7);
+  assert.equal(series.length, 7);
+  assert.equal(current.amount, 2100);
+  assert.equal(previous.amount, 700);
+  assert.equal(change(current.amount, previous.amount), 2);
+  assert.equal(current.conversion, 14 / 70);
+  assert.equal(periodStats(days, 30).previous, null);
+});
+
+test('visitas y clips: si Mercado Libre no deja leer clips queda vacío, nunca "sin clip"', async () => {
+  assert.equal(clipsCount([{}, {}]), 2);
+  assert.equal(clipsCount({ clips: [] }), 0);
+  assert.equal(clipsCount({ foo: 1 }), null);
+  const saved = [];
+  const http = async (url, options = {}) => {
+    if (options.method === 'POST') { saved.push(...JSON.parse(options.body)); return json(null, 201); }
+    if (url.includes('/items/visits')) return json([{ item_id: 'MLA1', total_visits: url.includes('2026-10-14') ? 7 : 30 }, { item_id: 'MLA2', total_visits: 0 }]);
+    if (url.includes('/marketplace/items/MLA1/clips')) return json({ clips: [] });
+    if (url.includes('/marketplace/items/MLA2/clips')) return json({ message: 'forbidden' }, 403);
+    return json({}, 404);
+  };
+  const result = await itemExtras({ seller_id: '9' }, 'T', ['MLA1', 'MLA2'], http, { upsert: async (table, rows) => saved.push(...rows) }, { now: () => Date.parse('2026-10-21T12:00:00Z') });
+  assert.equal(result.saved, 2);
+  assert.deepEqual([saved[0].visits_7d, saved[0].visits_30d, saved[0].clips_count], [7, 30, 0]);
+  assert.equal(saved[1].clips_count, null);
+  assert.match(result.errors[0], /^clips/);
 });

@@ -54,10 +54,10 @@ test('comprobanteRow entiende los importes en formato argentino ("39.025,52")', 
   assert.equal(row.saldo, 1000.5);
 });
 
-test('una memoria vieja de antes de 2024 salta al 1/1/2024', async () => {
+test('una memoria a medio camino sigue desde su fecha', async () => {
   const world = fakeWorld({ state: { company: 'POLIPLAST', cursor_date: '2020-06-09', window_days: 4, page: 1, history_done: false, total_saved: 209 } });
   await contabiliumAdmin(req({ op: 'sync', company: 'POLIPLAST' }), env, world.http, options);
-  assert.equal(world.searches[0].from, '2024-01-01');
+  assert.equal(world.searches[0].from, '2020-06-09');
 });
 
 test('si Contabilium no contesta a tiempo, corta y la próxima pasada reintenta el mismo tramo', async () => {

@@ -82,3 +82,49 @@ test('Contabilium: prueba cada empresa sin exponer las claves', async () => {
   const denied = await contabiliumAdmin({ headers: { authorization: 'Bearer t' }, body: { op: 'test' } }, { SUPABASE_URL: 'https://db', SUPABASE_SERVICE_ROLE_KEY: 's' }, async () => json({ id: 'u', email: 'juan@grupopoliplast.com.ar' }));
   assert.equal(denied.status, 403);
 });
+
+import { summarizeOrders, accountMetrics } from '../lib/mercadolibre.mjs';
+import { combineMetrics, buildAlerts, latestBySeller } from '../src/ml-summary.mjs';
+
+test('resumen de ventas: solo pagadas, unidades, por día (hora de Argentina) y lo más vendido, sin compradores', () => {
+  const { sales, daily, topItems } = summarizeOrders([
+    { status: 'paid', total_amount: 1000, currency_id: 'ARS', date_created: '2026-10-20T01:00:00.000-00:00', buyer: { nickname: 'COMPRADOR' }, order_items: [{ item: { id: 'MLA1', title: 'Espuma' }, quantity: 2, unit_price: 500 }] },
+    { status: 'paid', total_amount: 300, date_created: '2026-10-20T15:00:00.000-00:00', order_items: [{ item: { id: 'MLA2', title: 'Resina' }, quantity: 1, unit_price: 300 }] },
+    { status: 'cancelled', total_amount: 999, date_created: '2026-10-20T15:00:00.000-00:00' },
+  ]);
+  assert.deepEqual(sales, { orders: 2, units: 3, amount: 1300, cancelled: 1, currency: 'ARS' });
+  assert.deepEqual(Object.keys(daily).sort(), ['2026-10-19', '2026-10-20']);
+  assert.equal(topItems[0].id, 'MLA1');
+  assert.ok(!JSON.stringify({ sales, daily, topItems }).includes('COMPRADOR'));
+});
+
+test('accountMetrics junta ventas, visitas, preguntas y reputación; si una parte falla, sigue con el resto', async () => {
+  const now = () => Date.parse('2026-10-21T12:00:00Z');
+  const http = async (url) => {
+    if (url.includes('/orders/search')) return json({ error: 'forbidden' }, 403);
+    if (url.includes('/items_visits')) return json({ total_visits: 200, results: [{ date: '2026-10-20T00:00:00Z', total: 50 }] });
+    if (url.includes('status=UNANSWERED')) return json({ total: 4 });
+    if (url.includes('/users/9')) return json({ seller_reputation: { level_id: '5_green', power_seller_status: 'platinum', metrics: { claims: { rate: 0.01 } } } });
+    return json({}, 404);
+  };
+  const data = await accountMetrics({ seller_id: '9' }, 'T', http, { now });
+  assert.equal(data.sales, null);
+  assert.equal(data.visits, 200);
+  assert.equal(data.questionsPending, 4);
+  assert.equal(data.reputation.level, '5_green');
+  assert.equal(data.days.length, 30);
+  assert.match(data.errors[0], /^ventas/);
+});
+
+test('todas las cuentas suman y las alertas muestran la evidencia', () => {
+  const a = { sales: { orders: 2, units: 3, amount: 100, cancelled: 0, currency: 'ARS' }, visits: 100, questionsPending: 1, days: [{ day: '2026-10-20', orders: 2, amount: 100, visits: 100 }], topItems: [{ id: 'A', amount: 100 }], reputation: { level: '3_yellow' } };
+  const b = { sales: { orders: 1, units: 1, amount: 50, cancelled: 1, currency: 'ARS' }, visits: 100, questionsPending: 0, days: [{ day: '2026-10-20', orders: 1, amount: 50, visits: 20 }], topItems: [{ id: 'B', amount: 50 }] };
+  const total = combineMetrics([a, b]);
+  assert.equal(total.sales.amount, 150);
+  assert.equal(total.conversion, 3 / 200);
+  assert.equal(total.days[0].visits, 120);
+  assert.deepEqual(latestBySeller([{ seller_id: '1', taken_on: '2026-10-20' }, { seller_id: '1', taken_on: '2026-10-21' }])['1'].taken_on, '2026-10-21');
+  const alerts = buildAlerts({ metricsBySeller: { 1: a }, nickname: { 1: 'POLI' }, items: [{ id: 'X', status: 'active', available_quantity: 0, sold_quantity: 9, item_updated_at: 'x', video_id: null, description_length: 100 }] });
+  assert.deepEqual(alerts.map((alert) => alert.key), ['q-1', 'r-1', 'stock', 'video']);
+  assert.match(alerts[0].text, /POLI: 1 pregunta sin responder/);
+});

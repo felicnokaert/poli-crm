@@ -24,3 +24,15 @@ language sql stable security definer set search_path = public as $$
 $$;
 revoke all on function public.ml_account_names() from public, anon;
 grant execute on function public.ml_account_names() to authenticated;
+
+-- Resumen diario de cada cuenta (ventas, visitas, preguntas sin responder, reputación): una fila por día,
+-- así se ve la evolución. Solo totales, sin datos de compradores. Lo escribe el servidor; lo lee el equipo.
+create table if not exists public.ml_account_metrics (
+  seller_id text not null,
+  taken_on date not null,
+  data jsonb not null default '{}'::jsonb,
+  taken_at timestamptz not null default now(),
+  primary key (seller_id, taken_on)
+);
+alter table public.ml_account_metrics enable row level security;
+create policy ml_account_metrics_read on public.ml_account_metrics for select to authenticated using (public.is_poliplast_crm_user());

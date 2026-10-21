@@ -730,7 +730,7 @@ export default function App() {
         )}
         {view === "mercadolibre" && (
           <Suspense fallback={<Splash text="Cargando Mercado Libre…" />}>
-            <MercadoLibreBoard supabase={supabase} />
+            <MercadoLibreBoard supabase={supabase} session={session} isAdmin={isChannelAdmin(session?.user?.email)} />
           </Suspense>
         )}
         {view === "academy" && (

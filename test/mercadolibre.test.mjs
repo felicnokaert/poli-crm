@@ -18,7 +18,8 @@ function fakeWorld({ email = 'felipe@grupopoliplast.com.ar', account = null } = 
     if (url.startsWith('https://db/rest/v1/') && options.method === 'PATCH') { saved.patches.push(JSON.parse(options.body)); return json(null, 204); }
     if (url.endsWith('/oauth/token')) return json({ access_token: 'AT', refresh_token: 'RT2', user_id: 9, expires_in: 21600 });
     if (url.endsWith('/users/me')) return json({ id: 9, nickname: 'POLIPLAST' });
-    if (url.includes('/users/9/items/search')) return json({ results: ['MLA1', 'MLA2'], paging: { total: 2 } });
+    if (url.includes('/users/9/items/search') && url.includes('scroll_id=S1')) return json({ results: [], scroll_id: 'S2', paging: { total: 1500 } });
+    if (url.includes('/users/9/items/search')) return json({ results: ['MLA1', 'MLA2'], scroll_id: 'S1', paging: { total: 1500 } });
     if (url.includes('/items?ids=')) return json([{ code: 200, body: { id: 'MLA1', title: 'Espuma poliuretano', price: 100, attributes: [{ name: 'Marca', value_name: 'Poliplast' }, { name: 'Vacío' }] } }, { code: 404 }]);
     if (url.includes('/description')) return json({ plain_text: 'Para techos' });
     if (url.includes('/questions/search')) return json({ total: 2, questions: [{ id: 1, item_id: 'MLA1', text: '¿Sirve para techo?', from: { id: 555 }, answer: { text: 'Sí, hola.', date_created: 'x' } }, { id: 2, text: 'sin respuesta' }] });
@@ -49,7 +50,12 @@ test('sincroniza publicaciones y solo preguntas respondidas, sin quién pregunt�
   const world = fakeWorld({ account: { seller_id: '9', refresh_token: 'RT1', access_token: 'old', expires_at: '2000-01-01' } });
   const items = await mercadoLibreAdmin(req({ op: 'sync', sellerId: '9', stage: 'items', offset: 0 }), env, world.http);
   assert.equal(items.body.saved, 1);
-  assert.equal(items.body.done, true);
+  assert.equal(items.body.total, 1500, 'sin tope de 1000');
+  assert.equal(items.body.done, false);
+  assert.equal(items.body.scrollId, 'S1');
+  assert.match(world.calls.find((call) => call.url.includes('/items/search')).url, /search_type=scan/);
+  const rest = await mercadoLibreAdmin(req({ op: 'sync', sellerId: '9', stage: 'items', offset: 2, scrollId: 'S1' }), env, world.http);
+  assert.equal(rest.body.done, true);
   assert.equal(world.saved.patches[0].refresh_token, 'RT2');
   assert.deepEqual(world.saved.ml_items[0].attributes, [{ name: 'Marca', value: 'Poliplast' }]);
   assert.equal(world.saved.ml_items[0].description, 'Para techos');

@@ -33,10 +33,13 @@ export function productWords(query, intent) {
 }
 
 // Consulta para el buscador de Mercado Libre: (producto y tema) o (producto y sinónimo)…
+// "easy spray" también se escribe "Easyspray": se prueban las dos formas.
 export function mlQuery(query, intent) {
-  const product = productWords(query, intent).join(' ');
-  if (!intent) return product;
-  return intent.search.map((word) => `${product} ${word}`.trim()).join(' or ');
+  const words = productWords(query, intent);
+  const products = [words.join(' ')];
+  if (words.length === 2) products.push(words.join(''));
+  if (!intent) return products.filter(Boolean).join(' or ');
+  return products.flatMap((product) => intent.search.map((word) => `${product} ${word}`.trim())).join(' or ');
 }
 
 const hasAny = (text, words) => { const flat = ` ${plain(text)} `; return words.some((word) => flat.includes(plain(word))); };
@@ -75,6 +78,36 @@ function sentences(text) {
 }
 const key = (sentence) => plain(sentence).replace(/[^a-z0-9]+/g, ' ').trim();
 
+// Cantidades de una frase, en la misma unidad (cm → mm, kilos → kg, m² → m2…), para comparar respuestas.
+const QUANTITY = /(\d+(?:[.,]\d+)?)\s*(m2|m²|mts2|metros cuadrados|cm|mm|kg|kilos?|gr|gramos|g|litros?|lts?|l|hs|horas|h|minutos|min|d[ií]as)(?![a-záéíóúñ])/gi;
+const UNIT = { 'm²': 'm2', mts2: 'm2', 'metros cuadrados': 'm2', kilo: 'kg', kilos: 'kg', gr: 'g', gramos: 'g', litro: 'l', litros: 'l', lt: 'l', lts: 'l', hs: 'h', horas: 'h', minutos: 'min', dias: 'd', 'días': 'd' };
+export function quantities(text) {
+  const found = new Set();
+  for (const [, raw, rawUnit] of String(text).matchAll(QUANTITY)) {
+    let value = Number(raw.replace(',', '.'));
+    let unit = UNIT[rawUnit.toLowerCase()] || rawUnit.toLowerCase();
+    if (unit === 'cm') { value *= 10; unit = 'mm'; }
+    found.add(`${value} ${unit}`);
+  }
+  return [...found].sort();
+}
+
+function sameNumbers(answers, relevant) {
+  const groups = new Map();
+  for (const answer of answers) {
+    const parts = sentences(answer).filter((sentence) => relevant(sentence) && quantities(sentence).length);
+    const signature = quantities(parts.join(' ')).join(' | ');
+    if (!signature) continue;
+    const group = groups.get(signature) || { uses: 0, texts: [] };
+    group.uses += 1;
+    group.texts.push(parts.join(' '));
+    groups.set(signature, group);
+  }
+  const best = [...groups.values()].sort((a, b) => b.uses - a.uses)[0];
+  if (!best || best.uses < 2) return null;
+  return { text: best.texts.sort((a, b) => a.length - b.length)[0], uses: best.uses };
+}
+
 // La respuesta que el equipo más repite: frases que aparecen en varias respuestas, en su orden.
 export function teamAnswer(rows = [], intent) {
   const answers = rows
@@ -88,6 +121,9 @@ export function teamAnswer(rows = [], intent) {
   const ranked = [...counts.entries()].filter(([sentence]) => relevant(sentence)).sort((a, b) => b[1] - a[1]);
   if (!ranked.length) return null;
   const top = ranked[0][1];
+  // Misma respuesta con otras palabras ("rinde 2m2 en 2cm" = "2 m² en 20 mm"): se agrupan por los números.
+  const byNumbers = sameNumbers(answers, relevant);
+  if (byNumbers && byNumbers.uses > top) return { ...byNumbers, total: answers.length };
   // Si ninguna frase se repite, no hay "respuesta del equipo": se muestran las distintas que se dieron.
   if (top < 2) {
     // Solo las frases con el dato (números con horas, kilos por m², etc.), de respuestas distintas.
@@ -107,9 +143,10 @@ export function teamAnswer(rows = [], intent) {
 
 // Lo que se le pasa a la IA (src/AssistantWindow.jsx → lib/assistant-ai.mjs): primero la respuesta del
 // equipo y las líneas de la guía, después lo demás que encontró el buscador, todo con su origen.
-export function buildAiContext({ intent = null, facts = [], team = null, result = null, mlRows = [] } = {}) {
+export function buildAiContext({ intent = null, facts = [], team = null, result = null, mlRows = [], taught = [] } = {}) {
   const lines = [];
   if (intent) lines.push(`Tema detectado: ${intent.label}`);
+  if (taught.length) lines.push('Respuestas validadas por Felipe (son las oficiales: usalas antes que todo lo demás):', ...taught.map((entry) => `- P: ${entry.question}${entry.product ? ` [${entry.product}]` : ''} | R: ${entry.answer}`));
   if (team && !team.varied) lines.push(`Respuesta del equipo en Mercado Libre (la que más repetimos, ${team.uses} de ${team.total} respuestas; es la válida): ${team.text}`);
   if (team?.varied) lines.push('En Mercado Libre respondimos distinto según el producto:', ...team.examples.map((text) => `- ${text}`));
   if (facts.length) lines.push('Según las guías de producto:', ...facts.map((fact) => `- ${fact.text} (${fact.guide}${fact.validated ? ', validada' : ', borrador'})`));
@@ -121,4 +158,21 @@ export function buildAiContext({ intent = null, facts = [], team = null, result 
     .map((row) => { const [question, answer] = String(row.body || '').replace(/^Pregunta: /, '').split('\nRespuesta: '); return `- P: ${question.slice(0, 200)} | R: ${cleanAnswer(answer || '').slice(0, 300)}`; });
   if (answers.length) lines.push('Preguntas parecidas respondidas en Mercado Libre:', ...answers);
   return lines.join('\n');
+}
+
+// Lo que Felipe le enseñó (tabla assistant_knowledge) que coincide con la pregunta: cuantas más palabras
+// en común, mejor. Si la enseñanza es de un producto, la pregunta tiene que nombrarlo.
+export function matchTaught(entries = [], query, { max = 3 } = {}) {
+  const words = plain(query).split(/[^a-z0-9]+/).filter((word) => word.length > 2 && !FILLER.has(word));
+  if (!words.length) return [];
+  const flatQuery = plain(query).replace(/[^a-z0-9]+/g, '');
+  return entries.map((entry) => {
+    const product = plain(entry.product || '').split(/[^a-z0-9]+/).filter((word) => word.length > 2);
+    if (product.length && !product.some((word) => words.includes(word) || flatQuery.includes(word))) return null;
+    const text = ` ${plain(`${entry.question} ${entry.product}`).replace(/[^a-z0-9]+/g, ' ')} `;
+    const joined = product.join('');
+    const hits = words.filter((word) => text.includes(` ${word}`) || (joined && joined === word)).length;
+    const needed = words.length <= 2 ? words.length : Math.ceil(words.length / 2);
+    return hits >= needed ? { ...entry, hits } : null;
+  }).filter(Boolean).sort((a, b) => b.hits - a.hits).slice(0, max);
 }

@@ -266,6 +266,7 @@
 :root[data-theme="dark"] .assistant-chips button:hover { background: #26262a; }
 :root[data-theme="dark"] .assistant-answer { background: #1c1c1f; }
 :root[data-theme="dark"] .assistant-copy { background: #1c1c1f; }
+:root[data-theme="dark"] .assistant-teach { background: #241c1d; border-color: #5a2a2d; }
 :root[data-theme="dark"] :root { color: #e7e7e9; }
 :root[data-theme="dark"] .link-button { color: #b4b5b9; }
 :root[data-theme="dark"] .link-button:hover { color: #b4b5b9; }
@@ -616,6 +617,7 @@
   :root:not([data-theme="light"]) .assistant-chips button:hover { background: #26262a; }
   :root:not([data-theme="light"]) .assistant-answer { background: #1c1c1f; }
   :root:not([data-theme="light"]) .assistant-copy { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .assistant-teach { background: #241c1d; border-color: #5a2a2d; }
   :root:not([data-theme="light"]) :root { color: #e7e7e9; }
   :root:not([data-theme="light"]) .link-button { color: #b4b5b9; }
   :root:not([data-theme="light"]) .link-button:hover { color: #b4b5b9; }

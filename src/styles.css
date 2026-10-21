@@ -1046,6 +1046,15 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .assistant-msg-ai { display: grid; gap: 8px; justify-items: start; }
 .assistant-send { display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--brand-red, #ed1c24); color: #fff; cursor: pointer; flex: none; }
 .assistant-send:disabled { opacity: .4; cursor: default; }
+.assistant-votes { display: inline-flex; gap: 4px; }
+.assistant-votes button { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; border: 1px solid #e6e2e0; background: transparent; color: inherit; cursor: pointer; opacity: .75; }
+.assistant-votes button:hover { opacity: 1; background: rgba(0,0,0,.05); }
+.assistant-answer-tools { display: inline-flex; align-items: center; gap: 8px; }
+.assistant-teach { display: grid; gap: 8px; padding: 12px 14px; border-radius: 14px; border: 1.5px dashed #e2a3a6; background: #fffafa; font-size: 13.5px; }
+.assistant-teach strong { display: inline-flex; align-items: center; gap: 6px; }
+.assistant-teach label { display: grid; gap: 4px; font-weight: 600; font-size: 12.5px; }
+.assistant-teach input, .assistant-teach textarea { font: inherit; font-weight: 400; padding: 8px 10px; border-radius: 10px; border: 1px solid #e2dcda; resize: vertical; }
+.assistant-teach-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .assistant-window-foot { border-top: 1px solid #efebe9; padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 6px; }
 .assistant-input { display: flex; align-items: center; gap: 8px; border: 1.5px solid #e2dcda; border-radius: 14px; padding: 10px 12px; }
 .assistant-input:focus-within { border-color: var(--brand-red, #ed1c24); }

@@ -10,6 +10,19 @@ import { pickQuestions, realAnswer, suggestTeachings, trainingContext, trainingQ
 // Cada pregunta cuesta centavos de dólar del crédito prepago.
 const BATCH = 10;
 
+// La base entrega hasta 1000 filas por pedido: se piden de a páginas hasta traer todo (21/10: sin esto
+// faltaban títulos y preguntas, y las sugeridas daban 0).
+async function fetchAll(page, size = 1000, maxPages = 20) {
+  const rows = [];
+  for (let index = 0; index < maxPages; index += 1) {
+    const { data, error } = await page(index * size, index * size + size - 1);
+    if (error || !data?.length) break;
+    rows.push(...data);
+    if (data.length < size) break;
+  }
+  return { data: rows };
+}
+
 export function AssistantTraining({ supabase }) {
   const [rows, setRows] = useState([]);
   const [running, setRunning] = useState(false);
@@ -25,8 +38,8 @@ export function AssistantTraining({ supabase }) {
   async function load() {
     if (pool.current) return pool.current;
     const [questions, items, guides, taught] = await Promise.all([
-      supabase.from("ml_questions").select("id,item_id,question,answer").order("answered_at", { ascending: false }).limit(5000),
-      supabase.from("ml_items").select("id,title").limit(5000),
+      fetchAll((from, to) => supabase.from("ml_questions").select("id,item_id,question,answer").order("id").range(from, to)),
+      fetchAll((from, to) => supabase.from("ml_items").select("id,title").order("id").range(from, to)),
       supabase.from("product_guides").select("id,family,product,summary,sections,status"),
       supabase.from("assistant_knowledge").select("id,question,product,answer"),
     ]);

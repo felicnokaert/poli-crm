@@ -14,10 +14,32 @@ export const INTENTS = [
   { key: 'espesor', label: 'Espesor', ask: ['espesor', 'capa', 'capas', 'grosor', 'alto', 'profundidad', 'colada'], search: ['espesor', 'capa'], line: ['espesor', 'capa', ' mm', ' cm'] },
 ];
 
-const FILLER = new Set(['que', 'para', 'con', 'los', 'las', 'una', 'uno', 'por', 'del', 'como', 'cual', 'cuales', 'sus', 'este', 'esta', 'hay', 'tiene', 'sirve', 'usar', 'uso', 'hola', 'quiero', 'saber', 'puedo', 'tengo', 'mas', 'menos', 'aprox', 'aproximado', 'cada', 'cuanto', 'cuanta', 'cuantos', 'cuantas', 'cuando', 'donde', 'necesito', 'hacer', 'tienen', 'viene', 'resina', 'producto', 'kit']);
+const FILLER = new Set(['que', 'para', 'con', 'los', 'las', 'una', 'uno', 'por', 'del', 'como', 'cual', 'cuales', 'sus', 'este', 'esta', 'hay', 'tiene', 'sirve', 'usar', 'uso', 'hola', 'quiero', 'saber', 'puedo', 'tengo', 'mas', 'menos', 'aprox', 'aproximado', 'cada', 'cuanto', 'cuanta', 'cuantos', 'cuantas', 'cuando', 'donde', 'necesito', 'hacer', 'tienen', 'viene', 'resina', 'producto', 'kit', 'envase', 'envases', 'lata', 'latas', 'pomo', 'pomos', 'tubo', 'pote', 'frasco', 'unidad', 'unidades', 'aerosol', 'cada', 'aproximadamente', 'buenas', 'tardes', 'dias', 'noches', 'gracias', 'consulta']);
+
+// Cómo lo dicen los clientes (21/10, Felipe: "que distinga cómo le pueden decir los clientes, así como está
+// en las preguntas"): frases y errores comunes de Mercado Libre pasan a la palabra que entiende el asistente.
+// Se aplica antes de reconocer tema y producto. Sumar acá lo que se vea en las preguntas.
+const SAYINGS = [
+  [/\bvidrio liquido\b/g, 'resina epoxi'],
+  [/\b(easy ?spray|easi ?spray|isi ?spray|easy espray|izi ?spray)\b/g, 'easyspray'],
+  [/\bpoxi ?plast\b/g, 'poxiplast'],
+  [/\b(espuma expansiva|espuma de poliuretano|espuma proyectable|espuma aislante|poliuretano expandido)\b/g, 'espuma'],
+  [/\b(cuant[oa]s? (necesito|preciso|tengo que comprar|me hacen falta|compro|llevo)|me alcanza|cuanto me hace falta|para cubrir|cuantas latas|cuantos pomos|cuantos envases|cuantas unidades)\b/g, 'rinde'],
+  [/\b(rendmiento|redimiento|rendimineto|rrinde)\b/g, 'rendimiento'],
+  [/\b(en cuanto tiempo|cuanto tiempo|a las cuantas horas|cuando puedo (usar|pisar|pintar|desmoldar)|cuanto demora)\b/g, 'tiempo'],
+  [/\b(es toxic[oa]|apto (para )?alimentos?|para (el )?mate|tablas? de picar|contacto con comida)\b/g, 'alimentos'],
+  [/\b(cuanto aguanta|aguanta el calor|soporta (el )?calor|al sol)\b/g, 'temperatura'],
+  [/\bembase\b/g, 'envase'],
+];
+
+export function understand(query) {
+  let text = plain(query);
+  for (const [pattern, replacement] of SAYINGS) text = text.replace(pattern, replacement);
+  return text;
+}
 
 export function detectIntent(query) {
-  const words = plain(query).split(/[^a-z0-9]+/).filter(Boolean);
+  const words = understand(query).split(/[^a-z0-9]+/).filter(Boolean);
   let best = null;
   for (const intent of INTENTS) {
     const hits = words.filter((word) => intent.ask.includes(word)).length;
@@ -29,7 +51,7 @@ export function detectIntent(query) {
 // Palabras del producto: lo que queda de la pregunta sin las palabras del tema ni de relleno.
 export function productWords(query, intent) {
   const ask = new Set(intent?.ask || []);
-  return [...new Set(plain(query).split(/[^a-z0-9]+/).filter((word) => word.length > 2 && !ask.has(word) && !FILLER.has(word)))];
+  return [...new Set(understand(query).split(/[^a-z0-9]+/).filter((word) => word.length > 2 && !ask.has(word) && !FILLER.has(word)))];
 }
 
 // Consulta para el buscador de Mercado Libre: (producto y tema) o (producto y sinónimo)…
@@ -163,9 +185,9 @@ export function buildAiContext({ intent = null, facts = [], team = null, result 
 // Lo que Felipe le enseñó (tabla assistant_knowledge) que coincide con la pregunta: cuantas más palabras
 // en común, mejor. Si la enseñanza es de un producto, la pregunta tiene que nombrarlo.
 export function matchTaught(entries = [], query, { max = 3 } = {}) {
-  const words = plain(query).split(/[^a-z0-9]+/).filter((word) => word.length > 2 && !FILLER.has(word));
+  const words = understand(query).split(/[^a-z0-9]+/).filter((word) => word.length > 2 && !FILLER.has(word));
   if (!words.length) return [];
-  const flatQuery = plain(query).replace(/[^a-z0-9]+/g, '');
+  const flatQuery = understand(query).replace(/[^a-z0-9]+/g, '');
   return entries.map((entry) => {
     const product = plain(entry.product || '').split(/[^a-z0-9]+/).filter((word) => word.length > 2);
     if (product.length && !product.some((word) => words.includes(word) || flatQuery.includes(word))) return null;

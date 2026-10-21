@@ -57,7 +57,7 @@ export const realAnswer = (row) => cleanAnswer(row.answer || '') || String(row.a
 
 // Respuestas sugeridas para enseñarle (21/10): por publicación y tema, la respuesta que el equipo repitió
 // en 3 o más preguntas. Felipe las revisa y aprueba; nada se guarda solo.
-const GENERIC = new Set(['resina', 'resinas', 'epoxi', 'epoxy', 'kit', 'kg', 'kgs', 'kilo', 'kilos', 'litro', 'litros', 'gr', 'grs', 'por', 'para', 'con', 'de', 'la', 'el', 'x', 'y', 'cristal', 'transparente', 'poliplast', 'envio', 'gratis', 'pack', 'unidad', 'unidades']);
+const GENERIC = new Set(['resina', 'resinas', 'epoxi', 'epoxy', 'kit', 'kg', 'kgs', 'kilo', 'kilos', 'litro', 'litros', 'gr', 'grs', 'por', 'para', 'con', 'de', 'la', 'el', 'x', 'y', 'cristal', 'transparente', 'poliplast', 'envio', 'gratis', 'pack', 'unidad', 'unidades', 'espuma', 'espumas', 'poliuretano', 'expandido', 'aerosol', 'placa', 'lamina', 'vidrio', 'liquido', 'color', 'artesanias', 'joya', 'mualidades', 'manualidades', 'plastico', 'reforzado', 'fibra', 'proyectable', 'aislante', 'termoacustica', 'original', 'oferta', 'promo']);
 
 export function shortProduct(title = '') {
   const words = String(title).split(/\s+/).filter((word) => word.length > 2 && !/\d/.test(word) && !GENERIC.has(word.toLowerCase()));

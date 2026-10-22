@@ -26,3 +26,10 @@ test('sabe los requisitos de los clips de Mercado Libre', () => {
   assert.equal(item.title, 'Clips de Mercado Libre: requisitos');
   assert.match(item.snippet, /10 a 60 segundos/);
 });
+
+test('lo que más coincide va primero (no las fichas que solo nombran la palabra)', () => {
+  const docs = [{ id: 'd1', title: 'Airless 390', status: 'vigente', extracted_text: 'Requisitos eléctricos del equipo' }];
+  const result = searchKnowledge('¿qué requisitos tiene un clip?', { help: guideItems(), docs });
+  assert.equal(result.order[0], 'ayuda');
+  assert.ok(result.groups.ayuda[0].score >= 6);
+});

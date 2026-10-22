@@ -111,18 +111,19 @@ export function MercadoLibreSync({ supabase, session }) {
   const [clipText, setClipText] = useState("");
   const [clipComplete, setClipComplete] = useState(true);
   const [clipHas, setClipHas] = useState(true); // false = pegó las que NO tienen clip
+  const [clipSeller, setClipSeller] = useState("");
   const [clipOpen, setClipOpen] = useState(false);
   async function saveClips() {
     setError(""); setMessage(""); setBusy("clips");
     try {
       const items = [];
       for (let page = 0; page < 5; page += 1) {
-        const { data } = await supabase.from("ml_items").select("id,title").order("id").range(page * 1000, page * 1000 + 999);
+        const { data } = await supabase.from("ml_items").select("id,title,seller_id").order("id").range(page * 1000, page * 1000 + 999);
         items.push(...(data || []));
         if (!data || data.length < 1000) break;
       }
-      const { ids, titles } = clipIdsFrom(clipText, items);
-      const result = await callApi(session, { op: "clips", ids, complete: clipComplete, has: clipHas });
+      const { ids, titles } = clipIdsFrom(clipText, clipSeller ? items.filter((item) => item.seller_id === clipSeller) : items);
+      const result = await callApi(session, { op: "clips", ids, complete: clipComplete && Boolean(clipSeller), has: clipHas, sellerId: clipSeller });
       setMessage(`Clips: se marcaron ${result.marked} publicaciones ${clipHas ? "con" : "sin"} clip${titles ? ` (${titles} por título)` : ""}.${clipComplete ? ` Las demás activas quedan como “${clipHas ? "sin" : "con"} clip”.` : ""}`);
       setClipText(""); setClipOpen(false);
     } catch (clipError) { setError(clipError.message); }
@@ -168,14 +169,18 @@ export function MercadoLibreSync({ supabase, session }) {
         <button type="button" className="link-button" onClick={() => setClipOpen(!clipOpen)}>{clipOpen ? "Cerrar clips" : "Cargar qué publicaciones tienen clip"}</button>
         {clipOpen && (
           <div className="ml-clips-form">
-            <p className="muted small">Mercado Libre no deja leer los clips desde el CRM. En Mercado Libre abrí tus publicaciones con clip y copiá los links, los códigos MLA o los títulos (uno por renglón), y pegalos acá.</p>
+            <p className="muted small">Mercado Libre no deja leer los clips desde el CRM. En Mercado Libre → Publicaciones, filtrá Activas y "Sin videos publicados" (o las que tienen), copiá cada página (Ctrl+A, Ctrl+C) y pegalas todas acá, una abajo de la otra. Se reconocen los códigos (#…, MLA…), los links y los títulos.</p>
+            <select value={clipSeller} onChange={(event) => setClipSeller(event.target.value)} aria-label="Cuenta de los clips">
+              <option value="">Cuenta…</option>
+              {(accounts || []).map((account) => <option key={account.seller_id} value={account.seller_id}>{account.nickname}</option>)}
+            </select>
             <div className="assistant-teach-actions small">
               <label><input type="radio" checked={clipHas} onChange={() => setClipHas(true)} /> Pegué las que <strong>tienen</strong> clip</label>
               <label><input type="radio" checked={!clipHas} onChange={() => setClipHas(false)} /> Pegué las que <strong>no tienen</strong> clip</label>
             </div>
             <textarea rows={6} value={clipText} onChange={(event) => setClipText(event.target.value)} placeholder={"https://articulo.mercadolibre.com.ar/MLA-3218666158-…\nMLA2212937382\nResina Epoxi Poxiplast 750gr…"} />
-            <label className="small"><input type="checkbox" checked={clipComplete} onChange={(event) => setClipComplete(event.target.checked)} /> Es la lista completa de todas las cuentas (las demás activas quedan al revés)</label>
-            <button type="button" className="primary" disabled={!clipText.trim() || Boolean(busy)} onClick={saveClips}>{busy === "clips" ? "Guardando…" : "Guardar clips"}</button>
+            <label className="small"><input type="checkbox" checked={clipComplete} onChange={(event) => setClipComplete(event.target.checked)} /> Es la lista completa de esta cuenta (las demás activas de la cuenta quedan al revés)</label>
+            <button type="button" className="primary" disabled={!clipText.trim() || !clipSeller || Boolean(busy)} onClick={saveClips}>{busy === "clips" ? "Guardando…" : "Guardar clips"}</button>
           </div>
         )}
       </div>

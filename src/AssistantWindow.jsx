@@ -86,8 +86,10 @@ function ExtraAnswer({ rivals, purchases }) {
 // { ok: false, reason } y la ventana sigue como buscador.
 export async function askAi(supabase, payload) {
   const { data } = await supabase.auth.getSession();
-  const response = await adminFetch({ action: "assistant", ...payload }, data?.session?.access_token || "");
-  return response.json().catch(() => ({ ok: false, reason: "red" }));
+  const response = await adminFetch({ action: "assistant", ...payload }, data?.session?.access_token || "").catch(() => null);
+  if (!response) return { ok: false, reason: "red", error: "Sin conexión con el servidor. Revisá internet y probá de nuevo." };
+  // 22/10: si el servidor no devuelve JSON (se cortó o tardó), se dice con el código para poder rastrearlo.
+  return response.json().catch(() => ({ ok: false, reason: "red", error: `El servidor no respondió bien (código ${response.status}). Probá de nuevo.` }));
 }
 
 function CopyButton({ text }) {
@@ -205,7 +207,11 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   const inputRef = useRef(null);
   const [showAll, setShowAll] = useState(false);
   const { result, guides, competitors } = useKnowledge(supabase, query, { clients });
-  const groups = KNOWLEDGE_TYPES.filter(([key]) => result.groups[key]?.length);
+  const labels = Object.fromEntries(KNOWLEDGE_TYPES);
+  const groups = (result.order || KNOWLEDGE_TYPES.map(([key]) => key)).filter((key) => result.groups[key]?.length).map((key) => [key, labels[key]]);
+  // Si lo que más coincide es una explicación del CRM o de Mercado Libre, va arriba como respuesta.
+  const helpTop = result.groups.ayuda?.[0];
+  const helpAnswer = helpTop && helpTop.score >= 6 && groups[0]?.[0] === "ayuda" ? helpTop : null;
   const typed = query.trim();
   const intent = typed ? detectIntent(typed) : null;
   const teamRows = useTeamAnswer(supabase, typed, intent);
@@ -223,7 +229,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   const purchases = purchaseRows.length ? purchaseSummary(purchaseRows) : [];
   const mine = typed ? workspaceAnswer(typed, workspace) : [];
   const hasExtra = Boolean(rivals || purchases.length || mine.length);
-  const hasAnswer = Boolean(taught.length || (intent && (facts.length || team)));
+  const hasAnswer = Boolean(taught.length || (intent && (facts.length || team)) || helpAnswer);
   useEffect(() => { setShowAll(false); }, [typed]);
   const [chat, setChat] = useState([]);
   const [ai, setAi] = useState("unknown"); // unknown | on | off
@@ -253,7 +259,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
       return;
     }
     if (reply.reason === "sin-clave" || reply.reason === "sin-credito" || reply.reason === "clave") { setAi("off"); return; }
-    setAiError(reply.error || "La IA no pudo responder ahora. Probá de nuevo.");
+    setAiError(`${reply.error || "La IA no pudo responder ahora. Probá de nuevo."}${reply.detail ? ` Detalle: ${reply.detail}` : reply.reason && reply.reason !== "red" ? ` (${reply.reason})` : ""}`);
   }
 
   useEffect(() => {
@@ -312,9 +318,15 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
         )}
         {hasAnswer && (
           <>
-            <Answer intent={intent} facts={facts} team={team} taught={taught} isAdmin={isAdmin} onEdit={(entry) => setTeach(entry)} product={productWords(typed, intent).join(" ")} />
+            {(taught.length > 0 || (intent && (facts.length || team))) && <Answer intent={intent} facts={facts} team={team} taught={taught} isAdmin={isAdmin} onEdit={(entry) => setTeach(entry)} product={productWords(typed, intent).join(" ")} />}
+            {helpAnswer && !(intent && (facts.length || team)) && !taught.length && (
+              <section className="assistant-answer" aria-label="Respuesta">
+                <span className="assistant-group-label">{helpAnswer.title}</span>
+                <div className="assistant-answer-team"><p>{helpAnswer.snippet}</p><div className="assistant-answer-meta"><span className="muted small">Dónde: {helpAnswer.subtitle}</span><CopyButton text={helpAnswer.snippet} /></div></div>
+              </section>
+            )}
             <div className="assistant-answer-meta">
-              <Votes key={typed} supabase={supabase} question={typed} answer={taught[0]?.answer || team?.text || facts.map((fact) => fact.text).join(" · ")} source={taught.length ? "validada" : "buscador"} onBad={isAdmin ? () => teachFrom(team && !team.varied ? team.text : "") : null} />
+              <Votes key={typed} supabase={supabase} question={typed} answer={taught[0]?.answer || team?.text || facts.map((fact) => fact.text).join(" · ") || helpAnswer?.snippet || ""} source={taught.length ? "validada" : "buscador"} onBad={isAdmin ? () => teachFrom(team && !team.varied ? team.text : "") : null} />
               {isAdmin && !teach && <button type="button" className="link-button" onClick={() => teachFrom(taught[0]?.answer || (team && !team.varied ? team.text : ""))}><GraduationCap size={14} /> Enseñarle</button>}
             </div>
           </>

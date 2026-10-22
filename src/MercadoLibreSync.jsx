@@ -110,6 +110,7 @@ export function MercadoLibreSync({ supabase, session }) {
   // Clips pegados desde Mercado Libre (la API no los deja leer).
   const [clipText, setClipText] = useState("");
   const [clipComplete, setClipComplete] = useState(true);
+  const [clipHas, setClipHas] = useState(true); // false = pegó las que NO tienen clip
   const [clipOpen, setClipOpen] = useState(false);
   async function saveClips() {
     setError(""); setMessage(""); setBusy("clips");
@@ -121,8 +122,8 @@ export function MercadoLibreSync({ supabase, session }) {
         if (!data || data.length < 1000) break;
       }
       const { ids, titles } = clipIdsFrom(clipText, items);
-      const result = await callApi(session, { op: "clips", ids, complete: clipComplete });
-      setMessage(`Clips: se marcaron ${result.marked} publicaciones con clip${titles ? ` (${titles} por título)` : ""}.${clipComplete ? " Las demás activas quedan como “sin clip”." : ""}`);
+      const result = await callApi(session, { op: "clips", ids, complete: clipComplete, has: clipHas });
+      setMessage(`Clips: se marcaron ${result.marked} publicaciones ${clipHas ? "con" : "sin"} clip${titles ? ` (${titles} por título)` : ""}.${clipComplete ? ` Las demás activas quedan como “${clipHas ? "sin" : "con"} clip”.` : ""}`);
       setClipText(""); setClipOpen(false);
     } catch (clipError) { setError(clipError.message); }
     setBusy("");
@@ -168,8 +169,12 @@ export function MercadoLibreSync({ supabase, session }) {
         {clipOpen && (
           <div className="ml-clips-form">
             <p className="muted small">Mercado Libre no deja leer los clips desde el CRM. En Mercado Libre abrí tus publicaciones con clip y copiá los links, los códigos MLA o los títulos (uno por renglón), y pegalos acá.</p>
+            <div className="assistant-teach-actions small">
+              <label><input type="radio" checked={clipHas} onChange={() => setClipHas(true)} /> Pegué las que <strong>tienen</strong> clip</label>
+              <label><input type="radio" checked={!clipHas} onChange={() => setClipHas(false)} /> Pegué las que <strong>no tienen</strong> clip</label>
+            </div>
             <textarea rows={6} value={clipText} onChange={(event) => setClipText(event.target.value)} placeholder={"https://articulo.mercadolibre.com.ar/MLA-3218666158-…\nMLA2212937382\nResina Epoxi Poxiplast 750gr…"} />
-            <label className="small"><input type="checkbox" checked={clipComplete} onChange={(event) => setClipComplete(event.target.checked)} /> Es la lista completa (las demás activas quedan como “sin clip”)</label>
+            <label className="small"><input type="checkbox" checked={clipComplete} onChange={(event) => setClipComplete(event.target.checked)} /> Es la lista completa de todas las cuentas (las demás activas quedan al revés)</label>
             <button type="button" className="primary" disabled={!clipText.trim() || Boolean(busy)} onClick={saveClips}>{busy === "clips" ? "Guardando…" : "Guardar clips"}</button>
           </div>
         )}

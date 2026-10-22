@@ -19,6 +19,13 @@ export const CRM_GUIDE = [
   { id: 'datos', name: 'Datos', where: 'Menú → Más → Datos', what: 'Respaldos, directorio compartido, errores y (solo Felipe) usuarios, Mercado Libre, Contabilium y entrenamiento del asistente.', how: 'Traé el directorio compartido desde acá.', words: 'datos configuracion respaldo backup directorio contabilium' },
 ];
 
+// Lo que nos enseñó el asistente de Mercado Libre (22/10). Sirve para responder sin buscar en otro lado.
+CRM_GUIDE.push(
+  { id: 'ml-clips', name: 'Clips de Mercado Libre: requisitos', where: 'Mercado Libre → Clips (mercadolibre.com.ar/video/creator) y filtro "sin videos publicados" en Publicaciones', what: 'Video vertical 9:16 de 10 a 60 segundos, con voz o música, buena luz y respetando las zonas seguras de la pantalla. El producto tiene que estar activo, en una categoría habilitada, y la cuenta con reputación suficiente; en catálogo, con vendedor ganador. No se permite contenido duplicado, datos de contacto, precios o promociones, ni material de terceros sin permiso.', how: 'Mostrá el producto y cómo se usa siguiendo las indicaciones del envase. Después cargá en el CRM cuáles tienen o no clip (Más → Datos → Mercado Libre).', words: 'clips clip video videos vertical subir clip requisitos mercado libre' },
+  { id: 'ml-preguntas', name: 'Responder preguntas en Mercado Libre', where: 'Mercado Libre → Preguntas (mercadolibre.com.ar/preguntas/vendedor)', what: 'Consejo de Mercado Libre: responder antes de una hora y empezar por las más viejas; contestar amable, directo y con datos precisos; usar respuestas guardadas para lo frecuente y sumar a la descripción lo que se repite. No pasar datos de contacto externos.', how: 'Mirá en Ventas → Mercado Libre → Resumen "Lo que preguntan y no está en la descripción" para saber qué sumar.', words: 'responder preguntas mercado libre tiempo de respuesta respuestas guardadas descripcion' },
+  { id: 'ml-conversion', name: 'Muchas visitas y pocas ventas en Mercado Libre', where: 'Mercado Libre → Publicaciones → Analizar rendimiento → Experiencia de compra', what: 'Consejo de Mercado Libre: comparar visitas con conversión y revisar título, fotos, ficha técnica, descripción, precio, stock y condiciones de venta. La Experiencia de compra afecta la exposición.', how: 'En el CRM: Ventas → Mercado Libre → Publicaciones, filtro "Muchas visitas, nunca vendió".', words: 'visitas conversion pocas ventas no vende experiencia de compra mejorar publicacion' },
+);
+
 export function guideItems() {
   return CRM_GUIDE.map((entry) => ({ type: 'ayuda', id: entry.id, title: entry.name, subtitle: entry.where, text: `${entry.what} Cómo usarlo: ${entry.how} ${entry.words}`, snippet: `${entry.what} Cómo usarlo: ${entry.how}` }));
 }

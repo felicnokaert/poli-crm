@@ -20,3 +20,9 @@ test('el asistente encuentra lo pegado de Mercado Libre → Competencia', () => 
   assert.match(item.snippet, /Sika Boom/);
   assert.equal(item.subtitle, 'pegado el 22/10/2026');
 });
+
+test('sabe los requisitos de los clips de Mercado Libre', () => {
+  const [item] = searchKnowledge('requisitos para subir un clip', { help: guideItems() }).groups.ayuda;
+  assert.equal(item.title, 'Clips de Mercado Libre: requisitos');
+  assert.match(item.snippet, /10 a 60 segundos/);
+});

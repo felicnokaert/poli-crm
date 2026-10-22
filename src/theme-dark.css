@@ -262,6 +262,7 @@
 :root[data-theme="dark"] .assistant-fab { background: #1c1c1f; }
 :root[data-theme="dark"] .assistant-window-logo { background: #1c1c1f; }
 :root[data-theme="dark"] .assistant-bubble { background: #26262a; }
+:root[data-theme="dark"] .assistant-action { background: #1d1d20; border-color: #3a3a40; }
 :root[data-theme="dark"] .assistant-chips button { background: #1c1c1f; }
 :root[data-theme="dark"] .assistant-chips button:hover { background: #26262a; }
 :root[data-theme="dark"] .assistant-answer { background: #1c1c1f; }
@@ -613,6 +614,7 @@
   :root:not([data-theme="light"]) .assistant-fab { background: #1c1c1f; }
   :root:not([data-theme="light"]) .assistant-window-logo { background: #1c1c1f; }
   :root:not([data-theme="light"]) .assistant-bubble { background: #26262a; }
+  :root:not([data-theme="light"]) .assistant-action { background: #1d1d20; border-color: #3a3a40; }
   :root:not([data-theme="light"]) .assistant-chips button { background: #1c1c1f; }
   :root:not([data-theme="light"]) .assistant-chips button:hover { background: #26262a; }
   :root:not([data-theme="light"]) .assistant-answer { background: #1c1c1f; }

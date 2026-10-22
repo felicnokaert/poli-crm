@@ -1,7 +1,8 @@
 // Buscador de conocimiento de la Academia: una sola búsqueda sobre productos, fichas técnicas,
 // clientes, vendedores, objeciones y competencia. Sin IA: coincidencia de palabras, y un armado de
 // consulta con los datos reales para pegar en la IA de cada uno. No inventa nada.
-const STOP = new Set(['que', 'para', 'con', 'los', 'las', 'una', 'uno', 'por', 'del', 'como', 'cual', 'cuales', 'sus', 'este', 'esta', 'hay', 'tiene', 'sirve', 'usar', 'uso']);
+// 22/10: también las palabras de pedido ("contame todo de lavopa"), que traían guías que no venían al caso.
+const STOP = new Set(['que', 'para', 'con', 'los', 'las', 'una', 'uno', 'por', 'del', 'como', 'cual', 'cuales', 'sus', 'este', 'esta', 'hay', 'tiene', 'sirve', 'usar', 'uso', 'contame', 'decime', 'todo', 'toda', 'sobre', 'info', 'informacion', 'datos', 'sabemos', 'quien', 'armame', 'pasame', 'dame', 'recordame', 'necesito', 'quiero']);
 
 export const KNOWLEDGE_TYPES = [
   ['productos', 'Productos'],

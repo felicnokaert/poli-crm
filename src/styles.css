@@ -1091,3 +1091,5 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .ml-faq { display: grid; gap: 12px; padding: 0; margin: 0; list-style: none; }
 .ml-faq > li { padding: 10px 12px; border: 1px solid #e6e2e0; border-radius: 12px; display: grid; gap: 4px; }
 .ml-faq ul { margin: 0; padding-left: 18px; font-size: 13.5px; display: grid; gap: 3px; }
+.ml-board .ml-clip-toggle { border: 1px dashed currentColor; cursor: pointer; font-family: inherit; }
+.ml-board .ml-clip-toggle:hover { filter: brightness(0.95); }

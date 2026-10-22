@@ -271,7 +271,17 @@ function Summary({ accounts, metricsBySeller, seller, items, nickname, permalink
   );
 }
 
-function Listings({ items, accounts, nickname, questionCounts, seller, issue, setIssue }) {
+// Clip de una publicación (22/10, Felipe: "un botón que diga con clip"): Mercado Libre no deja leerlo, así que
+// se marca a mano. Tocar cambia Sin revisar → Tiene → No tiene.
+function ClipCell({ item, canEdit, onClip }) {
+  const has = item.clips_count;
+  const label = typeof has !== "number" ? "Sin revisar" : has > 0 ? "Tiene clip" : "No tiene";
+  const tone = typeof has !== "number" ? "" : has > 0 ? "ok" : "warn";
+  if (!canEdit) return <span className={`badge ${tone}`}>{label}</span>;
+  return <button type="button" className={`badge ml-clip-toggle ${tone}`} title="Tocá para cambiar" onClick={() => onClip(item, !(has > 0))}>{label}</button>;
+}
+
+function Listings({ items, accounts, nickname, questionCounts, seller, issue, setIssue, canEdit = false, onClip }) {
   const [status, setStatus] = useState("active");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("vendidas");
@@ -316,12 +326,12 @@ function Listings({ items, accounts, nickname, questionCounts, seller, issue, se
           {ML_SORTS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
         </select>
       </label>
-      <p className="muted small">Los números de "qué les falta" cuentan solo las activas. Las visitas de cada publicación se completan de a poco cada mañana (o con "Solo visitas" en Más → Datos). Los clips se cargan a mano en Más → Datos → Mercado Libre ("Cargar qué publicaciones tienen clip"), porque Mercado Libre no deja leerlos.</p>
+      <p className="muted small">Los números de "qué les falta" cuentan solo las activas. Las visitas de cada publicación se completan de a poco cada mañana (o con "Solo visitas" en Más → Datos). Los clips se marcan a mano porque Mercado Libre no deja leerlos: tocá la columna Clip de cada publicación, o pegá una lista en Más → Datos → Mercado Libre.</p>
 
       {items.length > 0 && shown.length === 0 && <Empty text="No hay publicaciones con ese filtro." />}
       {page.length > 0 && (
         <div className="table-scroll"><table className="sales-history-table ml-board-table">
-          <thead><tr><th>Publicación</th><th>Cuenta</th><th>Estado</th><th>Precio</th><th>Vendidas</th><th>Stock</th><th>Visitas 7 d</th><th>Visitas 30 d</th><th>Preguntas</th><th>Le falta</th></tr></thead>
+          <thead><tr><th>Publicación</th><th>Cuenta</th><th>Estado</th><th>Precio</th><th>Vendidas</th><th>Stock</th><th>Visitas 7 d</th><th>Visitas 30 d</th><th>Preguntas</th><th>Clip</th><th>Le falta</th></tr></thead>
           <tbody>
             {page.map((item) => (
               <tr key={item.id}>
@@ -339,6 +349,7 @@ function Listings({ items, accounts, nickname, questionCounts, seller, issue, se
                 <td>{number(item.visits_7d)}</td>
                 <td>{number(item.visits_30d)}</td>
                 <td>{questionCounts[item.id] || 0}</td>
+                <td>{item.status === "active" ? <ClipCell item={item} canEdit={canEdit} onClip={onClip} /> : "—"}</td>
                 <td>{issuesOf(item).map((found) => <span key={found.key} className="badge warn">{found.label}</span>)}</td>
               </tr>
             ))}
@@ -360,6 +371,16 @@ export function MercadoLibreBoard({ supabase, session = null, isAdmin = false })
   const [seller, setSeller] = useState("");
   const [issue, setIssue] = useState("");
   const [reload, setReload] = useState(0);
+
+  async function markClip(item, has) {
+    const before = item.clips_count;
+    setItems((rows) => rows.map((row) => (row.id === item.id ? { ...row, clips_count: has ? 1 : 0 } : row)));
+    const response = await adminFetch({ action: "mercadolibre", op: "clips", ids: [item.id], has }, session?.access_token).catch(() => null);
+    if (!response?.ok) {
+      setItems((rows) => rows.map((row) => (row.id === item.id ? { ...row, clips_count: before } : row)));
+      setError("No se pudo guardar el clip. Probá de nuevo.");
+    }
+  }
 
   useEffect(() => {
     if (!supabase) { setItems([]); return; }
@@ -409,7 +430,7 @@ export function MercadoLibreBoard({ supabase, session = null, isAdmin = false })
         <Summary accounts={accounts} metricsBySeller={metricsBySeller} seller={seller} items={items} nickname={nickname} permalinks={permalinks} onIssue={showIssue} isAdmin={isAdmin} session={session} supabase={supabase} onReload={() => setReload((value) => value + 1)} />
       )}
       {items && items.length > 0 && tab === "publicaciones" && (
-        <Listings items={items} accounts={accounts} nickname={nickname} questionCounts={questionCounts} seller={seller} issue={issue} setIssue={setIssue} />
+        <Listings items={items} accounts={accounts} nickname={nickname} questionCounts={questionCounts} seller={seller} issue={issue} setIssue={setIssue} canEdit={isAdmin && Boolean(session)} onClip={markClip} />
       )}
     </div>
   );

@@ -96,3 +96,16 @@ export function suggestTeachings(questions = [], titles = {}, { taught = [], min
   }
   return out.sort((a, b) => b.uses - a.uses).slice(0, max);
 }
+
+// "Preguntas sin buena respuesta" (22/10, Felipe: "que el sistema aprenda de sí mismo"): si la IA contesta
+// que no tiene el dato, deriva a alguien o usa conocimiento general, se anota sola para que Felipe la
+// enseñe. Así lo que falta cargar aparece sin esperar a que alguien vote 👎.
+const GAP = [
+  /dato general/i,
+  /no (lo )?(tengo|tenemos|encuentro|encontr[eé]|figura|aparece|est[aá] (cargad|en el contexto)|hay (datos?|informaci))/i,
+  /(el contexto|el crm) no (trae|tiene|incluye|dice)/i,
+  /(consult[aá]|preguntale|confirm[aá]) (con|a) (juan|ezequiel|brenda|yuliani|david)/i,
+];
+export function answerHasGap(text = '') {
+  return GAP.some((pattern) => pattern.test(String(text)));
+}

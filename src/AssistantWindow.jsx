@@ -1,3 +1,4 @@
+import { answerHasGap } from "./assistant-training.mjs";
 import { useEffect, useRef, useState } from "react";
 import { adminFetch } from "./admin-api.mjs";
 import { ChevronDown, Copy, GraduationCap, Search, Send, ThumbsDown, ThumbsUp, X } from "lucide-react";
@@ -275,6 +276,8 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
     if (reply.ok) {
       setAi("on");
       setChat((current) => [...current, { role: "user", text: typed }, { role: "assistant", text: reply.text }]);
+      // Si no tenía el dato, queda anotada para enseñársela (Más → Datos → Asistente).
+      if (answerHasGap(reply.text) && supabase?.from) Promise.resolve(supabase.from("assistant_feedback").insert({ question: typed, answer: String(reply.text).slice(0, 4000), source: "ia-sin-dato", vote: -1 })).catch(() => {});
       setQuery("");
       return;
     }

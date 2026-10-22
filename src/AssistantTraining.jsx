@@ -52,8 +52,8 @@ function FeedbackReview({ supabase }) {
   const shown = showDone ? bad : pending;
   return (
     <section className="panel" aria-label="Revisar votos">
-      <h3>Lo que no le sirvió al equipo (👎)</h3>
-      <p className="muted small">{pending.length} para revisar · {bad.length - pending.length} ya resueltos · {good} 👍 en total. Enseñale la respuesta correcta o descartalo si el 👎 no corresponde.</p>
+      <h3>Lo que no le sirvió al equipo (👎) y preguntas sin buena respuesta</h3>
+      <p className="muted small">{pending.length} para revisar · {bad.length - pending.length} ya resueltos · {good} 👍 en total. Enseñale la respuesta correcta o descartalo si no corresponde. Las marcadas “automático” son preguntas en las que la IA no tenía el dato: enseñándolas, la próxima vez responde bien.</p>
       {error && <p className="muted small">{error}</p>}
       <div className="assistant-teach-actions">
         <button type="button" className="secondary" onClick={load}>Actualizar</button>
@@ -64,7 +64,7 @@ function FeedbackReview({ supabase }) {
       <div className="training-list">
         {shown.map((row) => (
           <article key={row.id} className="training-row">
-            <span className="muted small">{when(row.created_at)} · {who(row.email)} · {row.source === "ia" ? "respuesta de la IA" : row.source === "validada" ? "respuesta validada" : "buscador"}{row.resolved_at ? ` · resuelto (${row.resolution || "sí"})` : ""}</span>
+            <span className="muted small">{when(row.created_at)} · {who(row.email)} · {row.source === "ia-sin-dato" ? "automático: la IA no tenía el dato" : row.source === "ia" ? "respuesta de la IA" : row.source === "validada" ? "respuesta validada" : "buscador"}{row.resolved_at ? ` · resuelto (${row.resolution || "sí"})` : ""}</span>
             <strong>{row.question}</strong>
             {row.answer && <div className="training-compare"><div><span className="muted small">Lo que respondió</span><p>{row.answer}</p></div></div>}
             {!row.resolved_at && (

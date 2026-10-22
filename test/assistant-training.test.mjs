@@ -41,3 +41,11 @@ test('sugeridas: la respuesta repetida por publicación y tema, con el producto 
   assert.equal(list[0].uses, 3);
   assert.equal(suggestTeachings(questions, { A: 'Resina Easy Spray 2 Kg' }, { taught: [{ product: 'Easy Spray', question: list[0].question }] }).length, 0);
 });
+
+test('answerHasGap: anota sola las respuestas en las que a la IA le faltó el dato', async () => {
+  const { answerHasGap } = await import('../src/assistant-training.mjs');
+  assert.equal(answerHasGap('Dato general (no es de Poliplast, conviene verificar): el poliuretano…'), true);
+  assert.equal(answerHasGap('No tengo ese dato cargado. Consultá con Juan.'), true);
+  assert.equal(answerHasGap('El contexto no trae precios, así que no lo pude verificar.'), true);
+  assert.equal(answerHasGap('Rinde 2 m² en 2 cm de espesor. Fuente: Mercado Libre.'), false);
+});

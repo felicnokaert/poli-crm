@@ -127,3 +127,11 @@ test('empareja por CUIT o teléfono de la ficha de Contabilium aunque el nombre 
   assert.equal(byClient.get('a').purchaseCount, 1);
   assert.equal(byClient.get('b').purchaseCount, 1);
 });
+
+test('lo trabajado a la noche (después de las 21:00 argentinas, ya es el día siguiente en UTC) también queda enfriado 14 días', () => {
+  const worked = logClientContact({ id: 'c1' }, { queue: 'reactivar', outcome: 'Precio', now: '2026-10-22T01:30:00.000Z' }); // 22:30 del 21/10 en Argentina
+  assert.equal(worked.lastContact, '2026-10-21');
+  assert.equal(recentlyWorked(worked, 'reactivar', '2026-10-21'), true, 'el mismo día argentino ya cuenta como trabajado');
+  assert.equal(recentlyWorked(worked, 'reactivar', '2026-11-04'), true);
+  assert.equal(recentlyWorked(worked, 'reactivar', '2026-11-06'), false);
+});

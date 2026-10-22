@@ -12,6 +12,8 @@ export const QUOTE_MAX_DAYS = 90; // pasados 90 días ya es otra conversación: 
 export const REACTIVATE_MAX_DAYS = 730;
 
 const day = (value) => String(value || '').slice(0, 10);
+// Fecha argentina (UTC-3) de un instante guardado en UTC: pasadas las 21:00 en Argentina el día UTC ya es el siguiente.
+const arDay = (value) => (/T/.test(String(value || '')) ? new Date(Date.parse(value) - 3 * 3600 * 1000).toISOString().slice(0, 10) : day(value));
 const daysBetween = (from, to) => Math.round((Date.parse(`${day(to)}T12:00:00Z`) - Date.parse(`${day(from)}T12:00:00Z`)) / 86400000);
 
 export function firstName(client = {}) {
@@ -22,12 +24,12 @@ export function firstName(client = {}) {
 
 // ¿Ya lo trabajamos en esta cola hace poco? (contactLog lo escribe la propia cola al anotar el resultado)
 export function recentlyWorked(client = {}, queue, today, days = COOLDOWN_DAYS) {
-  return (Array.isArray(client.contactLog) ? client.contactLog : []).some((entry) => entry.queue === queue && daysBetween(entry.at, today) <= days && daysBetween(entry.at, today) >= 0);
+  return (Array.isArray(client.contactLog) ? client.contactLog : []).some((entry) => entry.queue === queue && daysBetween(arDay(entry.at), today) <= days && daysBetween(arDay(entry.at), today) >= 0);
 }
 
 export function logClientContact(client = {}, { queue, outcome = '', user = '', now = new Date().toISOString() } = {}) {
   const log = [...(Array.isArray(client.contactLog) ? client.contactLog : []), { at: now, queue, outcome, user }].slice(-30);
-  return { ...client, contactLog: log, lastContact: day(now), updatedAt: now };
+  return { ...client, contactLog: log, lastContact: arDay(now), updatedAt: now };
 }
 
 function monthYear(date) {

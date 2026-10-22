@@ -121,12 +121,14 @@ test('en modo local se puede simular la vista de un miembro del equipo', async (
 test('el historial de ventas muestra el año, cambia a trimestral y salta al período al tocar una barra', async () => {
   const { SalesHistory } = await loadJsxModule('src/SalesHistory.jsx');
   const picked = [];
-  const sales = [{ id: '1', date: '2026-02-10', unit: 'Resinplast', netAmount: 5000, currency: 'ARS' }];
-  render(React.createElement(SalesHistory, { sales, goals: [{ metric: 'netArs', periodType: 'quarter', period: '2026-Q1', target: 10000, unit: 'Todas' }], units: {}, unitNames: ['Resinplast'], onPickPeriod: (mode, key) => picked.push([mode, key]) }));
+  // El año por defecto es el actual: los datos de la prueba usan el año de hoy para que no dependa de cuándo se corra.
+  const year = new Date().getFullYear();
+  const sales = [{ id: '1', date: `${year}-02-10`, unit: 'Resinplast', netAmount: 5000, currency: 'ARS' }];
+  render(React.createElement(SalesHistory, { sales, goals: [{ metric: 'netArs', periodType: 'quarter', period: `${year}-Q1`, target: 10000, unit: 'Todas' }], units: {}, unitNames: ['Resinplast'], onPickPeriod: (mode, key) => picked.push([mode, key]) }));
   fireEvent.click(screen.getByRole('button', { name: 'Trimestral' }));
   const bar = screen.getByRole('button', { name: /T1: .*objetivo/ });
   fireEvent.click(bar);
-  assert.deepEqual(picked[0], ['quarter', '2026-Q1']);
+  assert.deepEqual(picked[0], ['quarter', `${year}-Q1`]);
   assert.equal(screen.queryByText(/Ver los números en tabla/), null);
   assert.equal(screen.queryByText(/Cumplimiento/), null);
 });

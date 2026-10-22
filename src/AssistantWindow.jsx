@@ -1,4 +1,5 @@
 import { answerHasGap } from "./assistant-training.mjs";
+import { asksClient, clientCards, clientContext, clientWords } from "./assistant-client.mjs";
 import { useEffect, useRef, useState } from "react";
 import { adminFetch } from "./admin-api.mjs";
 import { ChevronDown, Copy, GraduationCap, Search, Send, ThumbsDown, ThumbsUp, X } from "lucide-react";
@@ -15,7 +16,54 @@ import { extraContext, purchaseLine, purchaseNameWords, purchaseSummary, rivalsF
 // 21/10: arriba va la respuesta concreta (src/assistant-answer.mjs); el resto queda en "Ver todo".
 // "Enseñarle" (solo Felipe): la respuesta correcta queda en assistant_knowledge y va primero para todos.
 // 👍/👎 de cualquiera quedan en assistant_feedback para que Felipe corrija.
-const SUGGESTIONS = ["qué tengo pendiente hoy", "rendimiento epoxi", "a cuánto vendimos easyspray", "competidores de poliuretano", "secado poxiplast", "de qué me sirve prospección"];
+// 22/10: sugerencias de asistente (hacer cosas), no solo de buscador.
+const SUGGESTIONS = ["¿qué hago hoy?", "armame un mensaje para reactivar un cliente", "recordame llamar mañana a un cliente", "¿cuánto rinde el Easyspray?", "competidores de poliuretano", "¿a cuánto vendimos el kit x12 de Easyspray?"];
+
+const isoToday = () => new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10); // hora de Argentina
+const dmyShort = (iso) => (/^\d{4}-\d{2}-\d{2}/.test(String(iso || "")) ? String(iso).slice(0, 10).split("-").reverse().slice(0, 2).join("/") : String(iso || ""));
+
+// Lo que la IA propone hacer: se guarda recién cuando la persona confirma.
+function ActionCard({ action, onAction }) {
+  const [state, setState] = useState("");
+  const input = action.input || {};
+  async function confirm() {
+    setState("guardando");
+    const result = await Promise.resolve(onAction ? onAction(action) : null).catch(() => null);
+    setState(result?.ok ? "hecho" : `error:${result?.error || "No se pudo guardar."}`);
+  }
+  if (action.kind === "redactar_mensaje") {
+    return (
+      <div className="assistant-action">
+        <span className="assistant-group-label">Mensaje{input.para ? ` para ${input.para}` : ""}</span>
+        <p className="assistant-action-text">{input.texto}</p>
+        <div className="assistant-answer-meta"><span className="muted small">Copialo y mandalo vos: el CRM no envía mensajes.</span><CopyButton text={input.texto} /></div>
+      </div>
+    );
+  }
+  const task = action.kind === "crear_tarea";
+  return (
+    <div className="assistant-action">
+      <span className="assistant-group-label">{task ? "Tarea para agendar" : `Nota para ${input.empresa}`}</span>
+      <p className="assistant-action-text">{task ? `${input.titulo}${input.empresa ? ` · ${input.empresa}` : ""} · vence ${dmyShort(input.fecha)}${input.prioridad && input.prioridad !== "Media" ? ` · prioridad ${input.prioridad}` : ""}` : input.nota}</p>
+      {state === "hecho" ? <span className="muted small">✓ {task ? "Tarea creada: la ves en Tareas." : "Nota guardada en la ficha."}</span> : state === "descartada" ? <span className="muted small">Descartada.</span> : (
+        <div className="assistant-teach-actions">
+          <button type="button" className="primary" disabled={state === "guardando" || !onAction} onClick={confirm}>{task ? "Crear tarea" : "Guardar nota"}</button>
+          <button type="button" className="secondary" onClick={() => setState("descartada")}>Descartar</button>
+          {state.startsWith("error:") && <span className="muted small">{state.slice(6)}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Saludo con el día de la persona (sin IA ni costo).
+export function dayBrief(tasks = [], today = isoToday()) {
+  const open = tasks.filter((task) => task && !task.done && !task.deleted && task.kind !== "evento" && task.dueDate);
+  const late = open.filter((task) => task.dueDate < today).length;
+  const now = open.filter((task) => task.dueDate === today).length;
+  if (!late && !now) return "No tenés tareas vencidas ni para hoy.";
+  return `Hoy tenés ${now} tarea${now === 1 ? "" : "s"}${late ? ` y ${late} vencida${late === 1 ? "" : "s"}` : ""}. Preguntame "¿qué hago hoy?" y te armo el plan.`;
+}
 const PER_GROUP = 3;
 
 // Las respuestas de Mercado Libre del tema y producto, con una pausa mientras se escribe.
@@ -35,9 +83,8 @@ function useTeamAnswer(supabase, query, intent) {
 }
 
 // Comprobantes de Contabilium del cliente nombrado ("cuándo compró X"), con una pausa mientras se escribe.
-function usePurchases(supabase, query) {
+function usePurchases(supabase, words = []) {
   const [rows, setRows] = useState([]);
-  const words = purchaseNameWords(query);
   const key = words.join(" ");
   useEffect(() => {
     if (!supabase?.from || !key) { setRows([]); return undefined; }
@@ -219,7 +266,7 @@ function Answer({ intent, facts, team, product, taught = [], isAdmin, onEdit }) 
   );
 }
 
-export function AssistantWindow({ supabase, clients = [], workspace = {}, firstName = "", isAdmin = false, onClose }) {
+export function AssistantWindow({ supabase, clients = [], workspace = {}, firstName = "", isAdmin = false, onClose, onAction = null }) {
   const [query, setQuery] = useState("");
   const inputRef = useRef(null);
   const [showAll, setShowAll] = useState(false);
@@ -243,10 +290,13 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   }, [supabase]);
   const taught = typed ? matchTaught(taughtAll, typed) : [];
   const rivals = typed ? rivalsFor(competitors || [], typed) : null;
-  const purchaseRows = usePurchases(supabase, typed);
+  // "Contame todo de lavopa": ficha de la cartera + sus compras en Contabilium (aunque no diga "compró").
+  const clientsFound = typed && (asksClient(typed) || !intent) ? clientCards(clients, typed) : [];
+  const buyWords = purchaseNameWords(typed);
+  const purchaseRows = usePurchases(supabase, buyWords.length ? buyWords : clientsFound.length ? clientWords(typed) : []);
   const purchases = purchaseRows.length ? purchaseSummary(purchaseRows) : [];
   const mine = typed ? workspaceAnswer(typed, workspace) : [];
-  const hasExtra = Boolean(rivals || purchases.length || mine.length);
+  const hasExtra = Boolean(rivals || purchases.length || mine.length || clientsFound.length);
   const hasAnswer = Boolean(taught.length || (intent && (facts.length || team)) || helpAnswer);
   useEffect(() => { setShowAll(false); }, [typed]);
   const [chat, setChat] = useState([]);
@@ -270,17 +320,25 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
     // 22/10: aunque antes haya fallado (clave o crédito), se vuelve a intentar: si ya se arregló, responde.
     if (!typed || thinking || !supabase?.auth) return;
     setThinking(true); setAiError("");
-    const context = [workspaceContext(mine), extraContext({ rivals, purchases }), buildAiContext({ intent, facts, team, result, mlRows: teamRows, taught })].filter(Boolean).join("\n");
-    const reply = await askAi(supabase, { question: typed, context, history: chat }).catch(() => ({ ok: false, reason: "red" }));
+    const asked = typed;
+    const history = chat.map((turn) => ({ role: turn.role, text: turn.text }));
+    setChat((current) => [...current, { role: "user", text: asked }]);
+    setQuery("");
+    // La agenda va siempre: así puede planificar el día o proponer un seguimiento.
+    const agenda = mine.some((block) => block.key === "tareas") ? [] : workspaceAnswer("tareas pendientes", workspace);
+    const context = [clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases }), buildAiContext({ intent, facts, team, result, mlRows: teamRows, taught })].filter(Boolean).join("\n");
+    const reply = await askAi(supabase, { question: asked, context, history, today: isoToday(), userName: firstName }).catch(() => ({ ok: false, reason: "red" }));
     setThinking(false);
     if (reply.ok) {
       setAi("on");
-      setChat((current) => [...current, { role: "user", text: typed }, { role: "assistant", text: reply.text }]);
+      setChat((current) => [...current, { role: "assistant", text: reply.text, actions: reply.actions || [] }]);
       // Si no tenía el dato, queda anotada para enseñársela (Más → Datos → Asistente).
-      if (answerHasGap(reply.text) && supabase?.from) Promise.resolve(supabase.from("assistant_feedback").insert({ question: typed, answer: String(reply.text).slice(0, 4000), source: "ia-sin-dato", vote: -1 })).catch(() => {});
-      setQuery("");
+      if (answerHasGap(reply.text) && supabase?.from) Promise.resolve(supabase.from("assistant_feedback").insert({ question: asked, answer: String(reply.text).slice(0, 4000), source: "ia-sin-dato", vote: -1 })).catch(() => {});
       return;
     }
+    // Sin IA: la pregunta vuelve al cuadro para ver lo que encontró el buscador.
+    setChat((current) => current.slice(0, -1));
+    setQuery(asked);
     if (reply.reason === "sin-clave" || reply.reason === "sin-credito" || reply.reason === "clave") { setAi("off"); setAiError(isAdmin && reply.error ? reply.error : "La IA no está disponible ahora; te muestro lo que hay cargado."); return; }
     setAiError(`${reply.error || "La IA no pudo responder ahora. Probá de nuevo."}${reply.detail ? ` Detalle: ${reply.detail}` : reply.reason && reply.reason !== "red" ? ` (${reply.reason})` : ""}`);
   }
@@ -304,18 +362,19 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
         <span className="assistant-window-logo"><AssistantLogo size={34} /></span>
         <div>
           <strong>Asistente Poliplast</strong>
-          <span>Fichas, guías, clientes, competencia y Mercado Libre</span>
+          <span>Te ayudo con clientes, tareas, productos y Mercado Libre</span>
         </div>
         <button type="button" className="assistant-close" aria-label="Cerrar el asistente" onClick={onClose}><X size={18} /></button>
       </header>
 
       <div className="assistant-window-body" ref={bodyRef}>
         <div className="assistant-bubble">
-          <strong>¡Hola{firstName ? `, ${firstName}` : ""}!</strong> ¿Qué necesitás saber? Escribí un producto, un uso, un cliente o un competidor y te muestro lo que hay cargado.
+          <strong>¡Hola{firstName ? `, ${firstName}` : ""}!</strong> {dayBrief(workspace.tasks)} Pedime lo que necesites: armar el plan del día, el resumen de un cliente, un mensaje para mandar, agendar un seguimiento o cualquier dato de producto.
         </div>
         {chat.map((turn, index) => (
           <div key={index} className={turn.role === "user" ? "assistant-msg-user" : "assistant-bubble assistant-msg-ai"}>
             {turn.role === "assistant" ? <div className="assistant-ai-text"><AiText text={turn.text} /></div> : <p>{turn.text}</p>}
+            {(turn.actions || []).map((action) => <ActionCard key={action.id || action.kind} action={action} onAction={onAction} />)}
             {turn.role === "assistant" && (
               <div className="assistant-answer-meta">
                 <Votes supabase={supabase} question={chat[index - 1]?.text || ""} answer={turn.text} source="ia" onBad={isAdmin ? () => setTeach({ question: chat[index - 1]?.text || "", product: "", answer: turn.text }) : null} />
@@ -331,6 +390,12 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
             {SUGGESTIONS.map((text) => <button key={text} type="button" onClick={() => { setQuery(text); setAutoAsk(text); }}>{text}</button>)}
           </div>
         )}
+        {clientsFound.map((card) => (
+          <section key={card.id} className="assistant-answer" aria-label={`Ficha de ${card.name}`}>
+            <span className="assistant-group-label">Cliente · {card.name}</span>
+            <ul className="assistant-rivals">{card.lines.map((line) => <li key={line}>{line}</li>)}</ul>
+          </section>
+        ))}
         {mine.map((block) => (
           <section key={block.key} className="assistant-answer" aria-label={block.label}>
             <span className="assistant-group-label">{block.label}</span>
@@ -361,12 +426,12 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
           </>
         )}
         {teach && <TeachForm key={teach.id || teach.question} supabase={supabase} initial={teach} onSaved={taughtSaved} onCancel={() => setTeach(null)} />}
-        {hasAnswer && result.total > 0 && (
+        {(hasAnswer || clientsFound.length > 0) && result.total > 0 && (
           <button type="button" className="assistant-more" aria-expanded={showAll} onClick={() => setShowAll(!showAll)}>
             <ChevronDown size={15} /> {showAll ? "Ocultar lo demás" : `Ver todo lo que encontré (${result.total})`}
           </button>
         )}
-        {(!hasAnswer || showAll) && groups.map(([key, label]) => (
+        {((!hasAnswer && !clientsFound.length) || showAll) && groups.map(([key, label]) => (
           <section key={key} className="assistant-group">
             <span className="assistant-group-label">{label}</span>
             {result.groups[key].slice(0, PER_GROUP).map((item) => (
@@ -389,7 +454,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
       <footer className="assistant-window-foot">
         <form className="assistant-input" onSubmit={submit}>
           <Search size={17} />
-          <input ref={inputRef} aria-label="Preguntale al asistente" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={chat.length ? "Seguí preguntando…" : "Ej.: cuánto rinde la epoxi"} />
+          <input ref={inputRef} aria-label="Preguntale al asistente" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={chat.length ? "Seguí la charla…" : "Ej.: contame todo de un cliente, o recordame llamarlo el lunes"} />
           <button type="submit" className="assistant-send" aria-label="Preguntar" disabled={!typed || thinking}><Send size={16} /></button>
         </form>
         <small className="muted">{ai === "off" ? "La IA no respondió la última vez; apretá Enter para reintentar. Mientras, te muestro lo que hay cargado." : ai === "on" ? "Responde con lo cargado y con lo que más respondimos en Mercado Libre. Revisá antes de pasarle un dato a un cliente." : "Escribí y apretá Enter para preguntar. Responde con lo cargado y con lo que ya respondimos en Mercado Libre."}</small>

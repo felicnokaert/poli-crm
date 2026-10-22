@@ -12,8 +12,8 @@ test('el botón del asistente abre la ventana con sugerencias y se cierra con Es
     fireEvent.click(screen.getByLabelText('Abrir el asistente'));
     await waitFor(() => screen.getByRole('dialog', { name: 'Asistente' }));
     await waitFor(() => screen.getByLabelText('Preguntale al asistente'));
-    fireEvent.click(screen.getByText('rendimiento epoxi'));
-    assert.equal(screen.getByLabelText('Preguntale al asistente').value, 'rendimiento epoxi');
+    fireEvent.click(screen.getByText('¿cuánto rinde el Easyspray?'));
+    assert.equal(screen.getByLabelText('Preguntale al asistente').value, '¿cuánto rinde el Easyspray?');
     fireEvent.keyDown(document, { key: 'Escape' });
     await waitFor(() => screen.getByLabelText('Abrir el asistente'));
   } finally { cleanup(); }

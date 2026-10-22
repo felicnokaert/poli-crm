@@ -215,6 +215,42 @@ export default function App() {
     prospects: data.prospects || EMPTY_ARRAY,
   }), [data.tasks, data.sales, data.interactions, data.prospects]);
 
+  // Lo que el asistente propone y la persona confirma (22/10): crear una tarea o anotar en la ficha de un
+  // cliente. Mandar mensajes no existe: el CRM solo recibe.
+  const assistantAction = useCallback((action) => {
+    const input = action?.input || {};
+    const stamp = new Date().toISOString();
+    const plainName = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    const findClient = (clients, name) => {
+      const wanted = plainName(name);
+      if (!wanted) return null;
+      return clients.find((client) => plainName(client.company) === wanted)
+        || clients.find((client) => plainName(client.company).includes(wanted) || wanted.includes(plainName(client.company)));
+    };
+    if (action?.kind === "crear_tarea") {
+      if (!String(input.titulo || "").trim()) return { ok: false, error: "Falta qué hay que hacer." };
+      const dueDate = /^\d{4}-\d{2}-\d{2}$/.test(String(input.fecha || "")) ? input.fecha : today();
+      setData((current) => {
+        const client = findClient(current.clients || [], input.empresa);
+        return { ...current, tasks: [...(current.tasks || []), {
+          ...blankTask(), id: crypto.randomUUID(), clientId: client?.id || "", company: client?.company || String(input.empresa || "").trim() || "Sin empresa",
+          title: String(input.titulo).trim(), dueDate, priority: ["Alta", "Media", "Baja"].includes(input.prioridad) ? input.prioridad : "Media",
+          source: "asistente", done: false, createdAt: stamp, updatedAt: stamp,
+        }] };
+      });
+      return { ok: true };
+    }
+    if (action?.kind === "anotar_en_cliente") {
+      const client = findClient(data.clients || [], input.empresa);
+      if (!client) return { ok: false, error: `No encontré "${input.empresa}" en la cartera.` };
+      const line = `${today().split("-").reverse().join("/")}: ${String(input.nota || "").trim()}`;
+      setData((current) => ({ ...current, clients: (current.clients || []).map((item) => (item.id === client.id
+        ? { ...item, notes: [String(item.notes || "").trim(), line].filter(Boolean).join("\n"), updatedAt: stamp } : item)) }));
+      return { ok: true };
+    }
+    return { ok: false, error: "Esa acción no existe." };
+  }, [data.clients]);
+
   const metrics = useMemo(() => {
     const now = today();
     const weekAgo = new Date();
@@ -906,7 +942,7 @@ export default function App() {
           }}
         />
       )}
-      {onlineConfigured && session && <AssistantButton supabase={supabase} isAdmin={isChannelAdmin(session?.user?.email)} clients={data.clients || EMPTY_ARRAY} workspace={assistantWorkspace} firstName={String(session.user?.user_metadata?.full_name || "").trim().split(/\s+/)[0]} />}
+      {onlineConfigured && session && <AssistantButton supabase={supabase} isAdmin={isChannelAdmin(session?.user?.email)} clients={data.clients || EMPTY_ARRAY} workspace={assistantWorkspace} onAction={assistantAction} firstName={String(session.user?.user_metadata?.full_name || "").trim().split(/\s+/)[0]} />}
       {showPalette && (
         <CommandPalette
           clients={data.clients || []}

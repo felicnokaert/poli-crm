@@ -64,7 +64,7 @@ function FeedbackReview({ supabase }) {
       <div className="training-list">
         {shown.map((row) => (
           <article key={row.id} className="training-row">
-            <span className="muted small">{when(row.created_at)} · {who(row.email)} · {row.source === "ia-sin-dato" ? "automático: la IA no tenía el dato" : row.source === "ia" ? "respuesta de la IA" : row.source === "validada" ? "respuesta validada" : "buscador"}{row.resolved_at ? ` · resuelto (${row.resolution || "sí"})` : ""}</span>
+            <span className="muted small">{when(row.created_at)} · {who(row.email)} · {row.source === "ia-sin-dato" ? "automático: la IA no tenía el dato" : row.source === "pedido-guardar" ? "pidieron guardarla desde el chat (la respuesta es la propuesta)" : row.source === "ia" ? "respuesta de la IA" : row.source === "validada" ? "respuesta validada" : "buscador"}{row.resolved_at ? ` · resuelto (${row.resolution || "sí"})` : ""}</span>
             <strong>{row.question}</strong>
             {row.answer && <div className="training-compare"><div><span className="muted small">Lo que respondió</span><p>{row.answer}</p></div></div>}
             {!row.resolved_at && (

@@ -28,3 +28,13 @@ test('actionsFrom: solo las acciones conocidas y completas', () => {
   ]);
   assert.deepEqual(actions.map((action) => action.kind), ['crear_tarea', 'redactar_mensaje']);
 });
+
+test('guardar_respuesta: la IA propone guardar lo acordado (con pregunta y respuesta)', async () => {
+  const { actionsFrom: fromContent } = await import('../lib/assistant-ai.mjs');
+  const actions = fromContent([
+    { type: 'tool_use', id: 't1', name: 'guardar_respuesta', input: { pregunta: '¿Cuánto rinde el Easyspray en otro espesor?', producto: 'Easy Spray', respuesta: 'Regla de 3 inversa: m² = 2 × 20 / espesor (mm).' } },
+    { type: 'tool_use', id: 't2', name: 'guardar_respuesta', input: { pregunta: 'sin respuesta' } },
+  ]);
+  assert.equal(actions.length, 1);
+  assert.equal(actions[0].kind, 'guardar_respuesta');
+});

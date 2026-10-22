@@ -42,6 +42,21 @@ function ActionCard({ action, onAction }) {
       </div>
     );
   }
+  if (action.kind === "guardar_respuesta") {
+    return (
+      <div className="assistant-action">
+        <span className="assistant-group-label">Guardar en lo que sabe el asistente{input.producto ? ` · ${input.producto}` : ""}</span>
+        <p className="assistant-action-text"><strong>{input.pregunta}</strong><br />{input.respuesta}</p>
+        {state === "hecho" ? <span className="muted small">✓ Guardada. Desde ahora la usa para todo el equipo (si no sos Felipe, le llega para aprobar).</span> : state === "descartada" ? <span className="muted small">Descartada.</span> : (
+          <div className="assistant-teach-actions">
+            <button type="button" className="primary" disabled={state === "guardando" || !onAction} onClick={confirm}>Guardar respuesta</button>
+            <button type="button" className="secondary" onClick={() => setState("descartada")}>Descartar</button>
+            {state.startsWith("error:") && <span className="muted small">{state.slice(6)}</span>}
+          </div>
+        )}
+      </div>
+    );
+  }
   const task = action.kind === "crear_tarea";
   return (
     <div className="assistant-action">
@@ -69,19 +84,21 @@ export function dayBrief(tasks = [], today = isoToday()) {
 const PER_GROUP = 3;
 
 // Las respuestas de Mercado Libre del tema y producto, con una pausa mientras se escribe.
+// 22/10: devuelve también para qué búsqueda son las filas; si se pregunta antes de que lleguen (o son de
+// lo escrito antes), submit las pide en el momento: así la IA no dice "no tengo el dato" teniéndolo.
 function useTeamAnswer(supabase, query, intent) {
-  const [rows, setRows] = useState([]);
+  const [state, setState] = useState({ q: "", rows: [] });
   const q = intent ? mlQuery(query, intent) : "";
   useEffect(() => {
-    if (!supabase?.rpc || !q) { setRows([]); return undefined; }
+    if (!supabase?.rpc || !q) { setState({ q, rows: [] }); return undefined; }
     let active = true;
     const timer = setTimeout(() => {
       supabase.rpc("search_ml_knowledge", { q, max_rows: 40 })
-        .then(({ data, error }) => { if (active) setRows(error ? [] : data || []); }, () => {});
+        .then(({ data, error }) => { if (active) setState({ q, rows: error ? [] : data || [] }); }, () => {});
     }, 400);
     return () => { active = false; clearTimeout(timer); };
   }, [supabase, q]);
-  return rows;
+  return { rows: state.q === q ? state.rows : [], ready: state.q === q, q };
 }
 
 // Comprobantes de Contabilium del cliente nombrado ("cuándo compró X"), con una pausa mientras se escribe.
@@ -300,7 +317,8 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   const helpAnswer = helpTop && helpTop.score >= 3 && groups[0]?.[0] === "ayuda" ? helpTop : null;
   const typed = query.trim();
   const intent = typed ? detectIntent(typed) : null;
-  const teamRows = useTeamAnswer(supabase, typed, intent);
+  const teamSearch = useTeamAnswer(supabase, typed, intent);
+  const teamRows = teamSearch.rows;
   const facts = intent ? guideFacts(guides, typed, intent) : [];
   const team = intent ? teamAnswer(teamRows, intent) : null;
   const [taughtAll, setTaughtAll] = useState([]);
@@ -344,6 +362,22 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
     setTeach(null);
   }
 
+  // "Guardala" (22/10): Felipe la guarda validada; el resto se la manda para aprobar (panel de 👎, "pedido").
+  async function handleAction(action) {
+    if (action?.kind !== "guardar_respuesta") return onAction ? onAction(action) : { ok: false };
+    const input = action.input || {};
+    if (!supabase?.from) return { ok: false, error: "Sin conexión." };
+    if (isAdmin) {
+      const row = { question: String(input.pregunta).trim(), product: String(input.producto || "").trim(), answer: String(input.respuesta).trim(), updated_at: new Date().toISOString() };
+      const { data, error } = await supabase.from("assistant_knowledge").insert(row).select("*");
+      if (error || !data?.length) return { ok: false, error: "No se pudo guardar." };
+      setTaughtAll((current) => [data[0], ...current]);
+      return { ok: true };
+    }
+    const { error } = await supabase.from("assistant_feedback").insert({ question: String(input.pregunta), answer: String(input.respuesta).slice(0, 4000), source: "pedido-guardar", vote: -1 });
+    return error ? { ok: false, error: "No se pudo mandar." } : { ok: true };
+  }
+
   async function submit(event) {
     event.preventDefault();
     // 22/10: aunque antes haya fallado (clave o crédito), se vuelve a intentar: si ya se arregló, responde.
@@ -351,11 +385,23 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
     setThinking(true); setAiError("");
     const asked = typed;
     const history = chat.map((turn) => ({ role: turn.role, text: turn.text }));
+    // Lo validado de las preguntas anteriores de la charla sigue en el contexto ("si es otro espesor…").
+    const withEarlier = (current) => {
+      const earlier = chat.filter((turn) => turn.role === "user").slice(-3).flatMap((turn) => matchTaught(taughtAll, turn.text));
+      const seen = new Set();
+      return [...current, ...earlier].filter((entry) => !seen.has(entry.id) && seen.add(entry.id)).slice(0, 5);
+    };
     setChat((current) => [...current, { role: "user", text: asked }]);
     setQuery("");
     // La agenda va siempre: así puede planificar el día o proponer un seguimiento.
     const agenda = mine.some((block) => block.key === "tareas") ? [] : workspaceAnswer("tareas pendientes", workspace);
-    const context = [rulesContext({ rules, competitors: competitors || [], rapyp }), routesContext(), teamNotesContext(notes), learningText, clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases }), buildAiContext({ intent, facts, team, result, mlRows: teamRows, taught })].filter(Boolean).join("\n");
+    let mlNow = teamRows;
+    if (teamSearch.q && !teamSearch.ready && supabase?.rpc) {
+      const fetched = await Promise.resolve(supabase.rpc("search_ml_knowledge", { q: teamSearch.q, max_rows: 40 })).catch(() => null);
+      mlNow = fetched?.data || [];
+    }
+    const teamNow = mlNow === teamRows ? team : intent ? teamAnswer(mlNow, intent) : null;
+    const context = [rulesContext({ rules, competitors: competitors || [], rapyp }), routesContext(), teamNotesContext(notes), learningText, clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases }), buildAiContext({ intent, facts, team: teamNow, result, mlRows: mlNow, taught: withEarlier(taught) })].filter(Boolean).join("\n");
     const reply = await askAi(supabase, { question: asked, context, history, today: isoToday(), userName: firstName }).catch(() => ({ ok: false, reason: "red" }));
     setThinking(false);
     if (reply.ok) {
@@ -403,7 +449,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
         {chat.map((turn, index) => (
           <div key={index} className={turn.role === "user" ? "assistant-msg-user" : "assistant-bubble assistant-msg-ai"}>
             {turn.role === "assistant" ? <div className="assistant-ai-text"><AiText text={turn.text} /></div> : <p>{turn.text}</p>}
-            {(turn.actions || []).map((action) => <ActionCard key={action.id || action.kind} action={action} onAction={onAction} />)}
+            {(turn.actions || []).map((action) => <ActionCard key={action.id || action.kind} action={action} onAction={handleAction} />)}
             {turn.role === "assistant" && (
               <div className="assistant-answer-meta">
                 <Votes supabase={supabase} question={chat[index - 1]?.text || ""} answer={turn.text} source="ia" onBad={isAdmin ? () => setTeach({ question: chat[index - 1]?.text || "", product: "", answer: turn.text }) : null} />

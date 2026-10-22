@@ -305,7 +305,8 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
         {hasExtra && <ExtraAnswer rivals={rivals} purchases={purchases} />}
         {typed && result.total === 0 && !hasAnswer && !hasExtra && (
           <div className="assistant-bubble muted">
-            No encontré nada con “{typed}”. Probá con otra palabra o más corta.
+            No encontré nada cargado con “{typed}”.
+            {ai !== "off" && <> <button type="button" className="link-button" onClick={() => submit({ preventDefault() {} })}>Preguntale a la IA</button> (sabe de todo; lo que no sea de Poliplast lo marca como dato general).</>}
             {isAdmin && !teach && <> <button type="button" className="link-button" onClick={() => teachFrom("")}>Enseñarle esta respuesta</button></>}
           </div>
         )}

@@ -247,7 +247,8 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
 
   async function submit(event) {
     event.preventDefault();
-    if (!typed || thinking || ai === "off" || !supabase?.auth) return;
+    // 22/10: aunque antes haya fallado (clave o crédito), se vuelve a intentar: si ya se arregló, responde.
+    if (!typed || thinking || !supabase?.auth) return;
     setThinking(true); setAiError("");
     const context = [workspaceContext(mine), extraContext({ rivals, purchases }), buildAiContext({ intent, facts, team, result, mlRows: teamRows, taught })].filter(Boolean).join("\n");
     const reply = await askAi(supabase, { question: typed, context, history: chat }).catch(() => ({ ok: false, reason: "red" }));
@@ -258,7 +259,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
       setQuery("");
       return;
     }
-    if (reply.reason === "sin-clave" || reply.reason === "sin-credito" || reply.reason === "clave") { setAi("off"); if (reply.error && isAdmin) setAiError(reply.error); return; }
+    if (reply.reason === "sin-clave" || reply.reason === "sin-credito" || reply.reason === "clave") { setAi("off"); setAiError(isAdmin && reply.error ? reply.error : "La IA no está disponible ahora; te muestro lo que hay cargado."); return; }
     setAiError(`${reply.error || "La IA no pudo responder ahora. Probá de nuevo."}${reply.detail ? ` Detalle: ${reply.detail}` : reply.reason && reply.reason !== "red" ? ` (${reply.reason})` : ""}`);
   }
 
@@ -312,7 +313,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
         {typed && result.total === 0 && !hasAnswer && !hasExtra && (
           <div className="assistant-bubble muted">
             No encontré nada cargado con “{typed}”.
-            {ai !== "off" && <> <button type="button" className="link-button" onClick={() => submit({ preventDefault() {} })}>Preguntale a la IA</button> (sabe de todo; lo que no sea de Poliplast lo marca como dato general).</>}
+            {" "}<button type="button" className="link-button" onClick={() => submit({ preventDefault() {} })}>Preguntale a la IA</button> (sabe de todo; lo que no sea de Poliplast lo marca como dato general).
             {isAdmin && !teach && <> <button type="button" className="link-button" onClick={() => teachFrom("")}>Enseñarle esta respuesta</button></>}
           </div>
         )}
@@ -361,9 +362,9 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
         <form className="assistant-input" onSubmit={submit}>
           <Search size={17} />
           <input ref={inputRef} aria-label="Preguntale al asistente" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={chat.length ? "Seguí preguntando…" : "Ej.: cuánto rinde la epoxi"} />
-          {ai !== "off" && <button type="submit" className="assistant-send" aria-label="Preguntar" disabled={!typed || thinking}><Send size={16} /></button>}
+          <button type="submit" className="assistant-send" aria-label="Preguntar" disabled={!typed || thinking}><Send size={16} /></button>
         </form>
-        <small className="muted">{ai === "off" ? "La IA se activa cuando se carguen los créditos; mientras, te muestro lo que hay cargado." : ai === "on" ? "Responde con lo cargado y con lo que más respondimos en Mercado Libre. Revisá antes de pasarle un dato a un cliente." : "Escribí y apretá Enter para preguntar. Responde con lo cargado y con lo que ya respondimos en Mercado Libre."}</small>
+        <small className="muted">{ai === "off" ? "La IA no respondió la última vez; apretá Enter para reintentar. Mientras, te muestro lo que hay cargado." : ai === "on" ? "Responde con lo cargado y con lo que más respondimos en Mercado Libre. Revisá antes de pasarle un dato a un cliente." : "Escribí y apretá Enter para preguntar. Responde con lo cargado y con lo que ya respondimos en Mercado Libre."}</small>
       </footer>
     </aside>
   );

@@ -22,6 +22,7 @@ const CotizadorFrame = lazy(() => import("./CotizadorFrame").then((m) => ({ defa
 const MercadoLibreBoard = lazy(() => import("./MercadoLibreBoard").then((m) => ({ default: m.MercadoLibreBoard })));
 const Academy = lazy(() => import("./Academy").then((m) => ({ default: m.Academy })));
 import { LoginScreen } from "./Login";
+import { canSeeWeeklySummary } from "./weekly-summary.mjs";
 import { ErrorBoundary } from "./ErrorBoundary.jsx";
 const DataSettings = lazy(() => import("./DataSettings").then((m) => ({ default: m.DataSettings })));
 import { InteractionDetail } from "./Interactions";
@@ -671,6 +672,9 @@ export default function App() {
             cronStatus={cronStatus}
             whatsappHealth={whatsappHealth}
             supabase={onlineConfigured && session ? supabase : null}
+            prospects={data.prospects || EMPTY_ARRAY}
+            showWeekly={canSeeWeeklySummary(session?.user?.email)}
+            isAdmin={isChannelAdmin(session?.user?.email)}
             onToggle={toggleTask}
             onOpenTask={setSelectedTaskId}
             onOpenInteraction={setSelectedInteractionId}

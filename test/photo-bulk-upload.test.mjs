@@ -13,12 +13,12 @@ const PRODUCTS = [
 ];
 const VARIANTS = [{ id: 'v1', product_id: 'p1', sku: 'PM490', active: true }, { id: 'v2', product_id: 'p2', sku: 'BLAZ-10-1', active: true }, { id: 'v3', product_id: 'p3', sku: '3M-6200-1', active: true }];
 
-function fakeSupabase() {
+function fakeSupabase(products = PRODUCTS, variants = VARIANTS) {
   const uploads = []; const upserts = [];
   const table = (rows) => { const b = { select: () => b, range: () => Promise.resolve({ data: rows, error: null }), upsert: (payload) => { upserts.push(payload); return Promise.resolve({ error: null }); } }; return b; };
   return {
     uploads, upserts,
-    from: (name) => (name === 'catalog_products' ? table(PRODUCTS) : name === 'catalog_variants' ? table(VARIANTS) : table([])),
+    from: (name) => (name === 'catalog_products' ? table(products) : name === 'catalog_variants' ? table(variants) : table([])),
     storage: { from: () => ({ upload: (path) => { uploads.push(path); return Promise.resolve({ error: null }); }, getPublicUrl: (path) => ({ data: { publicUrl: `https://cdn.test/product-photos/${path}` } }) }) },
   };
 }
@@ -52,4 +52,32 @@ test('solo la ven los administradores y sin cuenta en línea avisa', async () =>
   cleanup();
   render(React.createElement(PhotoBulkUpload, { supabase: null, isAdmin: true }));
   assert.ok(screen.getByText(/entrá con tu cuenta/));
+});
+
+test('una foto para varios productos: filtra por palabras, saca los que tienen cierta palabra y la sube una sola vez', async () => {
+  globalThis.URL.createObjectURL = () => 'blob:x';
+  globalThis.URL.revokeObjectURL = () => {};
+  const { PhotoBulkUpload } = await loadJsxModule('src/PhotoBulkUpload.jsx');
+  const products = [
+    { id: 'a1', name: 'ALMOHADA DE VELLON 60 X 35 CLASICA', photo_path: '', status: 'vigente', family: 'Almohadas', subfamily: '' },
+    { id: 'a2', name: 'ALMOHADA VISCOELASTICA RECTA 60X35 AZUL', photo_path: '', status: 'vigente', family: 'Almohadas', subfamily: '' },
+    { id: 'a3', name: 'ALMOHADA VISCOELASTICA CERVICAL 60X35', photo_path: '', status: 'vigente', family: 'Almohadas', subfamily: '' },
+    { id: 'a4', name: 'ALMOHADA VISCOELASTICA RECTA 60X35 BLANCA', photo_path: 'ya.png', status: 'vigente', family: 'Almohadas', subfamily: '' },
+  ];
+  const supabase = fakeSupabase(products, []);
+  const { container } = render(React.createElement(PhotoBulkUpload, { supabase, isAdmin: true, userEmail: 'marketing@grupopoliplast.com.ar' }));
+  await waitFor(() => assert.ok(screen.getByRole('tab', { name: 'Una foto para varios productos' })));
+  fireEvent.click(screen.getByRole('tab', { name: 'Una foto para varios productos' }));
+  fireEvent.change(container.querySelector('input[type=file]'), { target: { files: [file('almohada.jpg')] } });
+  fireEvent.change(screen.getByLabelText('Palabras del nombre'), { target: { value: 'almohada' } });
+  fireEvent.change(screen.getByLabelText('Sacar los que tengan'), { target: { value: 'cervical' } });
+  assert.ok(screen.getByText(/3 productos coinciden/));
+  assert.ok(screen.getByText(/ya tiene foto propia \(no se reemplaza\)/));
+  fireEvent.click(screen.getByRole('button', { name: 'Usar esta foto en 2 productos' }));
+  await waitFor(() => assert.ok(screen.getByText(/La foto quedó en 2 productos/)));
+  assert.equal(supabase.uploads.length, 1, 'se sube una sola vez');
+  const [saved] = supabase.upserts;
+  assert.deepEqual(saved.map((row) => row.product_id).sort(), ['a1', 'a2']);
+  assert.equal(new Set(saved.map((row) => row.url)).size, 1);
+  assert.ok(saved.every((row) => row.approved_by === 'marketing@grupopoliplast.com.ar' && row.source === 'una-foto-varios'));
 });

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fileBase, matchPhotos, photoState, selectedByDefault, skuKeys, summarize } from '../src/photo-match.mjs';
+import { fileBase, filterProductsByText, matchPhotos, photoState, selectedByDefault, skuKeys, summarize } from '../src/photo-match.mjs';
 
 const products = [
   { id: 'p1', name: 'AIRLESS SPRAYER BLUE PURMAC 220 V 490', photo_path: '' },
@@ -65,4 +65,19 @@ test('estado de la foto actual y qué se marca por defecto', () => {
 test('resumen por estado', () => {
   const rows = run('PM490.jpg', 'Balde 10 litros azul.jpg', 'balde 10 litros.jpg', 'xx.jpg', 'PM490_foto.jpg');
   assert.deepEqual(summarize(rows), { total: 5, exacto: 1, probable: 1, ambiguo: 1, sin: 1, repetida: 1 });
+});
+
+test('una foto para varios: filtra por palabras (sin acentos, cualquier orden), familia y exclusiones', () => {
+  const list = [
+    { id: 'a', name: 'ALMOHADA VISCOELASTICA CERVICAL 60X35', family: 'Almohadas' },
+    { id: 'b', name: 'ALMOHADA DE VELLÓN 60 X 35 CLÁSICA', family: 'Almohadas' },
+    { id: 'c', name: '426 POLIOL VISCO MOL', family: 'POLIURETANOS', subfamily: 'Flexibles' },
+    { id: 'd', name: '1517 ISO VISCO MOL', family: 'POLIURETANOS', subfamily: 'Flexibles' },
+    { id: 'e', name: '500 PA BLANCO LATA 20 KG', family: 'POLIURETANOS', subfamily: 'Membrana' },
+  ];
+  assert.deepEqual(filterProductsByText(list, { text: 'almohada', exclude: 'cervical' }).map((p) => p.id), ['b']);
+  assert.deepEqual(filterProductsByText(list, { text: 'vellon almohada' }).map((p) => p.id), ['b']);
+  assert.deepEqual(filterProductsByText(list, { text: 'poliol' }).map((p) => p.id), ['c']);
+  assert.deepEqual(filterProductsByText(list, { family: 'POLIURETANOS', subfamily: 'Flexibles' }).map((p) => p.id), ['c', 'd']);
+  assert.deepEqual(filterProductsByText(list, {}), [], 'sin ningún criterio no devuelve todo el catálogo');
 });

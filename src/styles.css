@@ -1104,3 +1104,9 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .learning-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
 .learning-table th, .learning-table td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--color-border-light); }
 .learning-table td:not(:first-child), .learning-table th:not(:first-child) { text-align: right; }
+
+/* Subir fotos: una foto para varios productos */
+.photo-one-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; margin: 10px 0; }
+.photo-one-list { list-style: none; margin: 8px 0 0; padding: 0; max-height: 360px; overflow: auto; display: grid; gap: 4px; }
+.photo-one-list li { padding: 4px 6px; border-radius: 6px; }
+.photo-one-list li:hover { background: rgba(0, 0, 0, .04); }

@@ -89,3 +89,21 @@ export const summarize = (rows) => ({
   sin: rows.filter((row) => row.status === 'sin').length,
   repetida: rows.filter((row) => row.status === 'repetida').length,
 });
+
+const plain = (value = '') => String(value).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+// "Una foto para varios productos": productos cuyo nombre tiene TODAS las palabras escritas (sin acentos ni mayúsculas,
+// en cualquier orden), opcionalmente de una familia/subfamilia. Sirve para poner la misma foto a todos los polioles,
+// todas las almohadas no cervicales, etc. `exclude` (palabras separadas por coma) saca lo que no va.
+export function filterProductsByText(products = [], { text = '', family = '', subfamily = '', exclude = '' } = {}) {
+  const must = plain(text).split(/\s+/).filter(Boolean);
+  const not = plain(exclude).split(/[,;]+/).map((word) => word.trim()).filter(Boolean);
+  if (!must.length && !family && !subfamily) return [];
+  return products.filter((product) => {
+    const name = plain(product.name);
+    return must.every((word) => name.includes(word))
+      && not.every((word) => !name.includes(word))
+      && (!family || product.family === family)
+      && (!subfamily || product.subfamily === subfamily);
+  });
+}

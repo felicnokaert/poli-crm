@@ -1,0 +1,25 @@
+name: Pruebas y build
+
+# 22/10: corre las pruebas y el build en cada subida a main y en cada PR. Antes solo existía el hook local
+# (.claude/hooks/pre-push.mjs): un cambio hecho desde la web de GitHub se publicaba sin probar.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - run: pnpm build

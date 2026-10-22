@@ -1,6 +1,7 @@
 import { answerHasGap } from "./assistant-training.mjs";
 import { asksClient, clientCards, clientContext, clientWords } from "./assistant-client.mjs";
 import { isRule, rapypFor, rulesContext } from "./assistant-rapyp.mjs";
+import { asksLearning, learningContext, prospectLearning, routeFor, routesContext, teamNotes, teamNotesContext } from "./assistant-team.mjs";
 import { useEffect, useRef, useState } from "react";
 import { adminFetch } from "./admin-api.mjs";
 import { ChevronDown, Copy, GraduationCap, Search, Send, ThumbsDown, ThumbsUp, X } from "lucide-react";
@@ -319,7 +320,12 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   const purchaseRows = usePurchases(supabase, buyWords.length ? buyWords : clientsFound.length ? clientWords(typed) : [], !buyWords.length && clientsFound.length === 1 ? clientsFound[0].cuit : null);
   const purchases = purchaseRows.length ? purchaseSummary(purchaseRows) : [];
   const mine = typed ? workspaceAnswer(typed, workspace) : [];
-  const hasExtra = Boolean(rivals || purchases.length || mine.length || clientsFound.length || rapyp);
+  // 22/10: lo que anotó el equipo sobre el tema, a quién derivar y qué aprendimos en la Cola del día.
+  const notes = typed && !clientsFound.length ? teamNotes(typed, { interactions: workspace.interactions || [], clients, prospects: workspace.prospects || [] }) : [];
+  const routes = typed ? routeFor(typed) : [];
+  const learning = typed && asksLearning(typed) ? prospectLearning({ prospects: workspace.prospects || [], clients }) : null;
+  const learningText = learning ? learningContext(learning) : "";
+  const hasExtra = Boolean(rivals || purchases.length || mine.length || clientsFound.length || rapyp || notes.length || learningText);
   const hasAnswer = Boolean(taught.length || (intent && (facts.length || team)) || helpAnswer);
   useEffect(() => { setShowAll(false); }, [typed]);
   const [chat, setChat] = useState([]);
@@ -349,7 +355,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
     setQuery("");
     // La agenda va siempre: así puede planificar el día o proponer un seguimiento.
     const agenda = mine.some((block) => block.key === "tareas") ? [] : workspaceAnswer("tareas pendientes", workspace);
-    const context = [rulesContext({ rules, competitors: competitors || [], rapyp }), clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases }), buildAiContext({ intent, facts, team, result, mlRows: teamRows, taught })].filter(Boolean).join("\n");
+    const context = [rulesContext({ rules, competitors: competitors || [], rapyp }), routesContext(), teamNotesContext(notes), learningText, clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases }), buildAiContext({ intent, facts, team, result, mlRows: teamRows, taught })].filter(Boolean).join("\n");
     const reply = await askAi(supabase, { question: asked, context, history, today: isoToday(), userName: firstName }).catch(() => ({ ok: false, reason: "red" }));
     setThinking(false);
     if (reply.ok) {
@@ -432,6 +438,20 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
             <ul className="assistant-rivals">{block.lines.map((line) => <li key={line}>{line}</li>)}</ul>
           </section>
         ))}
+        {notes.length > 0 && (
+          <section className="assistant-answer" aria-label="Lo que anotó el equipo">
+            <span className="assistant-group-label">Lo que anotó el equipo</span>
+            <ul className="assistant-rivals">{notes.map((line) => <li key={line}>{line}</li>)}</ul>
+          </section>
+        )}
+        {learningText && (
+          <section className="assistant-answer" aria-label="Qué aprendimos">
+            <span className="assistant-group-label">Qué aprendimos en la Cola del día</span>
+            <ul className="assistant-rivals">{learningText.split("\n").slice(1).map((line) => <li key={line}>{line.replace(/^- /, "")}</li>)}</ul>
+            <span className="muted small">{learningText.split("\n")[0]}</span>
+          </section>
+        )}
+        {routes.length > 0 && <p className="muted small">Si hace falta una persona: {routes.map((route) => `${route.who} (${route.why})`).join(" · ")}.</p>}
         {hasExtra && <ExtraAnswer rivals={rivals} purchases={purchases} />}
         {typed && result.total === 0 && !hasAnswer && !hasExtra && (
           <div className="assistant-bubble muted">

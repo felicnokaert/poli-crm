@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ExternalLink } from "lucide-react";
-import { linkMlToCatalog } from "./ml-catalog-link.mjs";
+import { linkMlToCatalog, secureUrl } from "./ml-catalog-link.mjs";
 
 // Catálogo del cotizador ↔ Mercado Libre, por SKU. Solo lectura: muestra qué publicaciones ya tienen su producto en el
 // catálogo, de cuáles se podría tomar la foto, y qué SKU de ML todavía no están en el catálogo o se repiten.
@@ -25,7 +25,7 @@ async function readAll(supabase, table, columns, filter) {
 function Pub({ item, accounts, isPhotoSource }) {
   return (
     <span className="ml-link-pub">
-      {item.thumbnail && <img src={item.thumbnail} alt="" width="28" height="28" loading="lazy" style={{ objectFit: "cover", borderRadius: 4, marginRight: 6, verticalAlign: "middle" }} />}
+      {item.thumbnail && <img src={secureUrl(item.thumbnail)} alt="" width="28" height="28" loading="lazy" style={{ objectFit: "cover", borderRadius: 4, marginRight: 6, verticalAlign: "middle" }} />}
       <a href={item.permalink} target="_blank" rel="noreferrer">{String(item.title || item.id).slice(0, 60)} <ExternalLink size={11} /></a>
       {isPhotoSource && <em className="badge ok"> foto de esta</em>}
       <span className="muted small"> · {accounts[item.seller_id] || "cuenta"}{item.sold_quantity != null ? ` · ${item.sold_quantity} vendidos` : ""}{item.visits_30d != null ? ` · ${item.visits_30d} visitas/30 días` : ""}</span>

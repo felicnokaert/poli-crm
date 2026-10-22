@@ -137,3 +137,13 @@ test('las fotos que subió Claude aparecen "sin revisar", con la publicación de
   await waitFor(() => assert.ok(screen.getByRole('tab', { name: 'Fotos sin revisar (0)' })));
   assert.deepEqual(calls[0], { table: 'catalog_product_photos', op: 'delete', column: 'product_id', value: 'p1' });
 });
+
+test('las miniaturas de Mercado Libre se pasan a https (el navegador bloquea http y la base solo acepta https)', () => {
+  const result = linkMlToCatalog({
+    products: [{ id: 'p1', name: 'P', photo_path: '' }],
+    variants: [{ id: 'v1', product_id: 'p1', sku: 'ABC-1' }],
+    items: [{ id: 'MLA1', status: 'active', sku: 'ABC-1', thumbnail: 'http://http2.mlstatic.com/D_1-I.jpg', sold_quantity: 3 }],
+  });
+  assert.equal(result.matched[0].photoUrl, 'https://http2.mlstatic.com/D_1-I.jpg');
+  assert.equal(result.matched[0].thumbnail, 'https://http2.mlstatic.com/D_1-I.jpg');
+});

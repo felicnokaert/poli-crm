@@ -54,8 +54,8 @@ test('el SKU de la publicación sale del atributo SELLER_SKU, del atributo SKU o
   assert.equal(itemRow({ id: 'MLA1', attributes: [{ id: 'SELLER_SKU', name: 'SKU', value_name: 'RE-608-1' }] }, 's1').sku, 'RE-608-1');
 });
 
-function fakeSupabase(calls = []) {
-  const tables = { catalog_products: products, catalog_variants: variants, ml_items: items.filter((entry) => entry.status === 'active'), catalog_product_photos: [] };
+function fakeSupabase(calls = [], photoRows = []) {
+  const tables = { catalog_products: products, catalog_variants: variants, ml_items: items.filter((entry) => entry.status === 'active'), catalog_product_photos: photoRows };
   const make = (table, data) => {
     const b = {
       select: () => b, eq: () => b, range: () => Promise.resolve({ data, error: null }),
@@ -121,4 +121,19 @@ test('quien no es administrador ve las fotos pero no puede aprobarlas', async ()
   await waitFor(() => assert.ok(screen.getByRole('tab', { name: 'Fotos para sumar (1)' })));
   assert.equal(screen.queryByRole('button', { name: 'Usar esta foto' }), null);
   assert.ok(screen.getByText(/Las aprueba un administrador/));
+});
+
+test('las fotos que subió Claude aparecen "sin revisar", con la publicación de origen, y se pueden quitar', async () => {
+  const { MlCatalogLink } = await loadJsxModule('src/MlCatalogLink.jsx');
+  const calls = [];
+  const photoRows = [{ product_id: 'p1', url: 'https://img/M2.jpg', item_id: 'M2', sku: 'RE-608-1', approved_by: 'claude - falta revisar' }];
+  render(React.createElement(MlCatalogLink, { supabase: fakeSupabase(calls, photoRows), isAdmin: true, userEmail: 'felipe@grupopoliplast.com.ar' }));
+  await waitFor(() => assert.ok(screen.getByRole('tab', { name: 'Fotos sin revisar (1)' })));
+  assert.ok(screen.getByRole('tab', { name: 'Fotos para sumar (0)' }), 'ya no figura como pendiente de sumar');
+  fireEvent.click(screen.getByRole('tab', { name: 'Fotos sin revisar (1)' }));
+  assert.ok(screen.getByText('RESINA EPOXI 1KG'));
+  assert.ok(screen.getByText('foto de esta'));
+  fireEvent.click(screen.getByRole('button', { name: 'Quitar' }));
+  await waitFor(() => assert.ok(screen.getByRole('tab', { name: 'Fotos sin revisar (0)' })));
+  assert.deepEqual(calls[0], { table: 'catalog_product_photos', op: 'delete', column: 'product_id', value: 'p1' });
 });

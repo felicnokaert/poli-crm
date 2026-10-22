@@ -5,6 +5,8 @@ import { linkMlToCatalog } from "./ml-catalog-link.mjs";
 // Catálogo del cotizador ↔ Mercado Libre, por SKU. Solo lectura: muestra qué publicaciones ya tienen su producto en el
 // catálogo, de cuáles se podría tomar la foto, y qué SKU de ML todavía no están en el catálogo o se repiten.
 const PAGE = 1000;
+// Las que subió Claude para que Felipe las revise (approved_by empieza con "claude").
+const unreviewed = (entry) => String(entry.approvedPhoto?.approved_by || "").toLowerCase().startsWith("claude");
 const SHOW = 100;
 
 async function readAll(supabase, table, columns, filter) {
@@ -20,11 +22,12 @@ async function readAll(supabase, table, columns, filter) {
   return rows;
 }
 
-function Pub({ item, accounts }) {
+function Pub({ item, accounts, isPhotoSource }) {
   return (
     <span className="ml-link-pub">
       {item.thumbnail && <img src={item.thumbnail} alt="" width="28" height="28" loading="lazy" style={{ objectFit: "cover", borderRadius: 4, marginRight: 6, verticalAlign: "middle" }} />}
       <a href={item.permalink} target="_blank" rel="noreferrer">{String(item.title || item.id).slice(0, 60)} <ExternalLink size={11} /></a>
+      {isPhotoSource && <em className="badge ok"> foto de esta</em>}
       <span className="muted small"> · {accounts[item.seller_id] || "cuenta"}{item.sold_quantity != null ? ` · ${item.sold_quantity} vendidos` : ""}{item.visits_30d != null ? ` · ${item.visits_30d} visitas/30 días` : ""}</span>
     </span>
   );
@@ -67,6 +70,7 @@ export function MlCatalogLink({ supabase, isAdmin = false, userEmail = "" }) {
     const needle = search.trim().toLowerCase();
     const base = view === "foto" ? link.matched.filter((entry) => entry.needsPhoto)
       : view === "aprobadas" ? link.matched.filter((entry) => entry.approvedPhoto)
+      : view === "sinrevisar" ? link.matched.filter(unreviewed)
       : view === "vinculados" ? link.matched
         : view === "sinCatalogo" ? link.unmatched
           : view === "repetidos" ? link.duplicated
@@ -104,6 +108,7 @@ export function MlCatalogLink({ supabase, isAdmin = false, userEmail = "" }) {
   const summary = link.summary;
   const tabs = [
     ["foto", `Fotos para sumar (${summary.photoGain})`],
+    ["sinrevisar", `Fotos sin revisar (${link.matched.filter(unreviewed).length})`],
     ["aprobadas", `Fotos aprobadas (${summary.photosApproved})`],
     ["vinculados", `Vinculados (${summary.matchedSkus})`],
     ["sinCatalogo", `SKU de ML sin producto (${summary.unmatchedSkus})`],
@@ -130,6 +135,7 @@ export function MlCatalogLink({ supabase, isAdmin = false, userEmail = "" }) {
       <input aria-label="Buscar por SKU o título" placeholder="Buscar por SKU o título" value={search} onChange={(event) => { setSearch(event.target.value); setShown(SHOW); }} />
       {view === "foto" && <p className="muted small">Productos del catálogo sin foto que sí tienen foto en alguna publicación de ML (la de la publicación que más vendió). {isAdmin ? "Aprobás una por una o varias juntas; no se toca ninguna foto que el catálogo ya tenga." : "Las aprueba un administrador."} Las aprobadas quedan guardadas aparte: el catálogo y el cotizador no cambian.</p>}
       {view === "aprobadas" && <p className="muted small">Fotos aprobadas desde Mercado Libre. Se pueden quitar.</p>}
+      {view === "sinrevisar" && <p className="muted small">Fotos que subió Claude por coincidencia de SKU (la publicación que más vendió). Revisá que el título y la foto correspondan al producto; las que no, tocá "Quitar". El cotizador no las usa hasta que estén revisadas.</p>}
       {message && <p className="muted small" role="status">{message}</p>}
       {view === "foto" && isAdmin && rows.length > 0 && (
         <div className="panel-head-actions">
@@ -141,21 +147,21 @@ export function MlCatalogLink({ supabase, isAdmin = false, userEmail = "" }) {
       {rows.length === 0 ? <p className="muted">No hay nada en esta lista.</p> : (
         <div className="table-scroll">
           <table className="sales-history-table">
-            <thead><tr><th>SKU</th><th>Producto del catálogo</th>{(view === "foto" || view === "aprobadas") && <th>Foto</th>}<th>Publicaciones en Mercado Libre</th></tr></thead>
+            <thead><tr><th>SKU</th><th>Producto del catálogo</th>{(view === "foto" || view === "aprobadas" || view === "sinrevisar") && <th>Foto</th>}<th>Publicaciones en Mercado Libre</th></tr></thead>
             <tbody>
               {rows.slice(0, shown).map((entry, index) => (
                 <tr key={`${entry.sku}-${index}`}>
                   <td><strong>{entry.sku || "—"}</strong></td>
                   <td>{entry.product ? <>{entry.product.name}<br /><span className="muted small">{[entry.product.brand, entry.product.family].filter(Boolean).join(" · ")}{entry.product.photo_path ? " · ya tiene foto" : " · sin foto"}</span></> : <span className="muted">no está en el catálogo</span>}</td>
-                  {(view === "foto" || view === "aprobadas") && (
+                  {(view === "foto" || view === "aprobadas" || view === "sinrevisar") && (
                     <td>
-                      {(view === "aprobadas" ? entry.approvedPhoto?.url : entry.photoUrl) && <img src={view === "aprobadas" ? entry.approvedPhoto.url : entry.photoUrl} alt={`Foto de ${entry.product?.name || entry.sku}`} width="72" height="72" loading="lazy" style={{ objectFit: "cover", borderRadius: 6, display: "block" }} />}
+                      {(view !== "foto" ? entry.approvedPhoto?.url : entry.photoUrl) && <img src={view !== "foto" ? entry.approvedPhoto.url : entry.photoUrl} alt={`Foto de ${entry.product?.name || entry.sku}`} width="72" height="72" loading="lazy" style={{ objectFit: "cover", borderRadius: 6, display: "block" }} />}
                       {view === "foto" && entry.photoIsSmall && <span className="muted small">miniatura: la foto grande llega con la próxima actualización de Mercado Libre</span>}
                       {isAdmin && view === "foto" && <button type="button" className="secondary" disabled={busy} onClick={() => approve([entry])}>Usar esta foto</button>}
-                      {isAdmin && view === "aprobadas" && <button type="button" className="secondary" disabled={busy} onClick={() => remove(entry)}>Quitar</button>}
+                      {isAdmin && view !== "foto" && <button type="button" className="secondary" disabled={busy} onClick={() => remove(entry)}>Quitar</button>}
                     </td>
                   )}
-                  <td>{entry.items.slice(0, 4).map((item) => <div key={item.id}><Pub item={item} accounts={accounts} /></div>)}{entry.items.length > 4 && <span className="muted small">y {entry.items.length - 4} más</span>}</td>
+                  <td>{entry.items.slice(0, 4).map((item) => <div key={item.id}><Pub item={item} accounts={accounts} isPhotoSource={Boolean(entry.approvedPhoto) && entry.approvedPhoto.item_id === item.id} /></div>)}{entry.items.length > 4 && <span className="muted small">y {entry.items.length - 4} más</span>}</td>
                 </tr>
               ))}
             </tbody>

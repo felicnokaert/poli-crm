@@ -8,11 +8,34 @@ import { buildOutreachDraft } from './prospect-outreach.mjs';
 import { outreachVariant, REJECTION_REASONS, possibleWhatsAppLink } from './prospect-model.mjs';
 import { normalizePhoneAR } from './prospect-contact.mjs';
 import { prospectLearning } from './assistant-team.mjs';
+import { CLOSE_WINDOW_DAYS, quoteConversion } from './quote-conversion.mjs';
+
+const pesos = (value) => `$ ${Math.round(value || 0).toLocaleString('es-AR')}`;
+// Cotizaciones de Contabilium que terminaron en factura (22/10): el resultado que antes no se medía.
+function QuoteConversionPanel({ stats }) {
+  if (!stats?.quotes) return null;
+  return (
+    <section className="panel">
+      <h3>Cotizaciones de Contabilium: cuántas se cierran (últimos 12 meses)</h3>
+      <p>{stats.quotes} cotizaciones · <strong>{stats.closed} cerradas</strong> con factura en {CLOSE_WINDOW_DAYS} días · {stats.lost} sin factura · {stats.pending} todavía en curso.{stats.rate != null ? <> Se cierra el <strong>{stats.rate} %</strong></> : ''}{stats.medianDays != null ? `, en ${stats.medianDays} días (mitad de los casos)` : ''}.</p>
+      <p className="muted small">Cotizado {pesos(stats.quotedAmount)} · de eso se facturó {pesos(stats.closedAmount)} (montos tal como figuran en Contabilium).</p>
+      <table className="learning-table">
+        <thead><tr><th>Empresa</th><th>Cotizaciones</th><th>Cerradas</th><th>%</th></tr></thead>
+        <tbody>{stats.byCompany.map((row) => <tr key={row.key}><td>{row.key}</td><td>{row.quotes}</td><td>{row.closed}</td><td>{row.rate != null ? `${row.rate} %` : '—'}</td></tr>)}</tbody>
+      </table>
+      <table className="learning-table">
+        <thead><tr><th>Mes</th><th>Cotizaciones</th><th>Cerradas</th><th>%</th></tr></thead>
+        <tbody>{stats.byMonth.map((row) => <tr key={row.key}><td>{row.key.split('-').reverse().join('/')}</td><td>{row.quotes}</td><td>{row.closed}</td><td>{row.rate != null ? `${row.rate} %` : 'en curso'}</td></tr>)}</tbody>
+      </table>
+      <p className="muted small">Cerrada = el mismo cliente tiene una factura dentro de los {CLOSE_WINDOW_DAYS} días de la cotización. Las de los últimos {CLOSE_WINDOW_DAYS} días sin factura cuentan como "en curso" y no entran en el porcentaje.</p>
+    </section>
+  );
+}
 
 // "Qué aprendimos" (22/10): con lo que se anota en las colas, qué versión del mensaje, familia y zona
 // responden mejor y por qué nos rechazan. Respeta el filtro de familia.
-function LearningPanel({ stats }) {
-  if (!stats.contacted && !stats.byQueue.length) return <p className="muted">Todavía no hay resultados anotados. A medida que marques Contactado, Con interés o el motivo de rechazo, acá vas a ver qué funciona.</p>;
+function LearningPanel({ stats, quotes }) {
+  if (!stats.contacted && !stats.byQueue.length) return <><QuoteConversionPanel stats={quotes} /><p className="muted">Todavía no hay resultados anotados. A medida que marques Contactado, Con interés o el motivo de rechazo, acá vas a ver qué funciona.</p></>;
   const Table = ({ title, rows }) => rows.length > 0 && (
     <section className="panel">
       <h3>{title}</h3>
@@ -25,6 +48,7 @@ function LearningPanel({ stats }) {
   const top = stats.reasons[0];
   return (
     <div className="daily-learning">
+      <QuoteConversionPanel stats={quotes} />
       <p>Prospectos contactados: <strong>{stats.contacted}</strong> · con interés: <strong>{stats.interested}</strong> ({stats.rate} %).{top ? ` El motivo de rechazo más común es "${top.reason}" (${top.count}).` : ''}</p>
       <Table title="Por versión del mensaje" rows={stats.byVariant} />
       <Table title="Por familia" rows={stats.byFamily} />
@@ -111,6 +135,7 @@ export function DailyQueues({ supabase, clients: allClients = [], prospects: all
   const coverage = useMemo(() => coverageByCompany(rows), [rows]);
   const syncing = sync.filter((item) => !item.history_done).map((item) => item.company);
   const learning = useMemo(() => prospectLearning({ prospects, clients }), [prospects, clients]);
+  const quoteStats = useMemo(() => (status === 'ready' ? quoteConversion(rows, { today }) : null), [status, rows, today]);
 
   // Tarea para llamarlo mañana (22/10, clientes atrasados): queda en Tareas con el cliente vinculado.
   function createTask(item) {
@@ -169,7 +194,7 @@ export function DailyQueues({ supabase, clients: allClients = [], prospects: all
         ? <p className="muted">No hay cotizaciones sin respuesta entre 3 y 90 días (o ya las trabajaste en los últimos 14 días).</p>
         : cotizaron.map((item) => <ClientQueueCard key={item.client.id} item={item} queue="cotizaron" message={quoteMessage(item.client, item.quote, sender)} onOpenClient={onOpenClient} onResult={recordResult} />))}
 
-      {view === 'aprendido' && <LearningPanel stats={learning} />}
+      {view === 'aprendido' && <LearningPanel stats={learning} quotes={quoteStats} />}
       {view === 'nuevos' && (nuevos.length === 0
         ? <p className="muted">No quedan prospectos nuevos pendientes. Importá la planilla de prospección desde la pestaña Prospectos.</p>
         : nuevos.map((prospect) => {

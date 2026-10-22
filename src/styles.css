@@ -1098,3 +1098,9 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .assistant-ai-text ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 .assistant-action { display: grid; gap: 6px; margin-top: 8px; padding: 10px 12px; border-radius: 12px; border: 1px solid #e2dcda; background: #fff; width: 100%; box-sizing: border-box; }
 .assistant-action-text { margin: 0; white-space: pre-wrap; }
+
+/* Cola del día → Qué aprendimos (22/10) */
+.daily-learning { display: grid; gap: 12px; }
+.learning-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.learning-table th, .learning-table td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--color-border-light); }
+.learning-table td:not(:first-child), .learning-table th:not(:first-child) { text-align: right; }

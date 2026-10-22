@@ -6,6 +6,39 @@ import { QUEUE_SIZE, logClientContact, matchesFamily, queueFamilies, newProspect
 import { buildOutreachDraft } from './prospect-outreach.mjs';
 import { outreachVariant, REJECTION_REASONS, possibleWhatsAppLink } from './prospect-model.mjs';
 import { normalizePhoneAR } from './prospect-contact.mjs';
+import { prospectLearning } from './assistant-team.mjs';
+
+// "Qué aprendimos" (22/10): con lo que se anota en las colas, qué versión del mensaje, familia y zona
+// responden mejor y por qué nos rechazan. Respeta el filtro de familia.
+function LearningPanel({ stats }) {
+  if (!stats.contacted && !stats.byQueue.length) return <p className="muted">Todavía no hay resultados anotados. A medida que marques Contactado, Con interés o el motivo de rechazo, acá vas a ver qué funciona.</p>;
+  const Table = ({ title, rows }) => rows.length > 0 && (
+    <section className="panel">
+      <h3>{title}</h3>
+      <table className="learning-table">
+        <thead><tr><th>Grupo</th><th>Contactados</th><th>Con interés</th><th>%</th></tr></thead>
+        <tbody>{rows.map((row) => <tr key={row.key}><td>{row.key}</td><td>{row.contacted}</td><td>{row.interested}</td><td>{row.contacted >= 5 ? `${row.rate} %` : <span className="muted small">pocos datos</span>}</td></tr>)}</tbody>
+      </table>
+    </section>
+  );
+  const top = stats.reasons[0];
+  return (
+    <div className="daily-learning">
+      <p>Prospectos contactados: <strong>{stats.contacted}</strong> · con interés: <strong>{stats.interested}</strong> ({stats.rate} %).{top ? ` El motivo de rechazo más común es "${top.reason}" (${top.count}).` : ''}</p>
+      <Table title="Por versión del mensaje" rows={stats.byVariant} />
+      <Table title="Por familia" rows={stats.byFamily} />
+      <Table title="Por zona" rows={stats.byZone} />
+      <Table title="Clientes (Reactivar / Cotizaron)" rows={stats.byQueue} />
+      {stats.reasons.length > 0 && (
+        <section className="panel">
+          <h3>Por qué nos rechazan</h3>
+          <ul>{stats.reasons.map((row) => <li key={row.reason}>{row.reason}: {row.count}</li>)}</ul>
+        </section>
+      )}
+      <p className="muted small">Con menos de 5 contactos por grupo el porcentaje todavía no dice mucho. El asistente también lo sabe: preguntale "¿qué mensaje funciona mejor?".</p>
+    </div>
+  );
+}
 
 // Cola del día: tres listas cortas con el mensaje listo para copiar (el CRM nunca envía nada) y el resultado en un toque.
 const CLIENT_RESULTS = ['Respondió, sigue interesado', 'No respondió', ...REJECTION_REASONS.filter((reason) => reason !== 'No respondió')];
@@ -73,6 +106,7 @@ export function DailyQueues({ supabase, clients: allClients = [], prospects: all
   const nuevos = useMemo(() => newProspectsQueue({ prospects, checks, skipped }), [prospects, checks, skipped]);
   const coverage = useMemo(() => coverageByCompany(rows), [rows]);
   const syncing = sync.filter((item) => !item.history_done).map((item) => item.company);
+  const learning = useMemo(() => prospectLearning({ prospects, clients }), [prospects, clients]);
 
   function recordResult(clientId, queue, result) {
     const found = clients.find((client) => client.id === clientId);
@@ -80,7 +114,7 @@ export function DailyQueues({ supabase, clients: allClients = [], prospects: all
     setNote(`${found?.company || 'Cliente'}: ${result}. No vuelve a aparecer por 14 días.`);
   }
 
-  const tabs = [['reactivar', 'Reactivar', reactivar.length], ['cotizaron', 'Cotizaron y no compraron', cotizaron.length], ['nuevos', 'Prospectos nuevos', nuevos.length]];
+  const tabs = [['reactivar', 'Reactivar', reactivar.length], ['cotizaron', 'Cotizaron y no compraron', cotizaron.length], ['nuevos', 'Prospectos nuevos', nuevos.length], ['aprendido', 'Qué aprendimos', learning.contacted]];
   const needsData = ['reactivar', 'cotizaron'].includes(view);
   return (
     <div className="daily-queues">
@@ -119,6 +153,7 @@ export function DailyQueues({ supabase, clients: allClients = [], prospects: all
         ? <p className="muted">No hay cotizaciones sin respuesta entre 3 y 90 días (o ya las trabajaste en los últimos 14 días).</p>
         : cotizaron.map((item) => <ClientQueueCard key={item.client.id} item={item} queue="cotizaron" message={quoteMessage(item.client, item.quote, sender)} onOpenClient={onOpenClient} onResult={recordResult} />))}
 
+      {view === 'aprendido' && <LearningPanel stats={learning} />}
       {view === 'nuevos' && (nuevos.length === 0
         ? <p className="muted">No quedan prospectos nuevos pendientes. Importá la planilla de prospección desde la pestaña Prospectos.</p>
         : nuevos.map((prospect) => {

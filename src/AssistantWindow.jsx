@@ -211,7 +211,8 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   const groups = (result.order || KNOWLEDGE_TYPES.map(([key]) => key)).filter((key) => result.groups[key]?.length).map((key) => [key, labels[key]]);
   // Si lo que más coincide es una explicación del CRM o de Mercado Libre, va arriba como respuesta.
   const helpTop = result.groups.ayuda?.[0];
-  const helpAnswer = helpTop && helpTop.score >= 6 && groups[0]?.[0] === "ayuda" ? helpTop : null;
+  // 22/10: el puntaje de una pantalla del CRM ronda 3-4 (título + texto); antes pedía 6 y nunca aparecía.
+  const helpAnswer = helpTop && helpTop.score >= 3 && groups[0]?.[0] === "ayuda" ? helpTop : null;
   const typed = query.trim();
   const intent = typed ? detectIntent(typed) : null;
   const teamRows = useTeamAnswer(supabase, typed, intent);
@@ -235,6 +236,8 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   const [ai, setAi] = useState("unknown"); // unknown | on | off
   const [thinking, setThinking] = useState(false);
   const [aiError, setAiError] = useState("");
+  // Una sugerencia tocada se le pregunta a la IA apenas el buscador junta lo que encontró.
+  const [autoAsk, setAutoAsk] = useState("");
   const bodyRef = useRef(null);
   useEffect(() => { const body = bodyRef.current; if (body && typeof body.scrollTo === "function") body.scrollTo({ top: body.scrollHeight, behavior: "smooth" }); }, [chat, thinking]);
 
@@ -262,6 +265,12 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
     if (reply.reason === "sin-clave" || reply.reason === "sin-credito" || reply.reason === "clave") { setAi("off"); setAiError(isAdmin && reply.error ? reply.error : "La IA no está disponible ahora; te muestro lo que hay cargado."); return; }
     setAiError(`${reply.error || "La IA no pudo responder ahora. Probá de nuevo."}${reply.detail ? ` Detalle: ${reply.detail}` : reply.reason && reply.reason !== "red" ? ` (${reply.reason})` : ""}`);
   }
+
+  useEffect(() => {
+    if (!autoAsk || autoAsk !== typed) return undefined;
+    const timer = setTimeout(() => { setAutoAsk(""); submit({ preventDefault() {} }); }, 900);
+    return () => clearTimeout(timer);
+  });
 
   useEffect(() => {
     const onKey = (event) => { if (event.key === "Escape") onClose(); };
@@ -300,7 +309,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
         {aiError && <div className="assistant-bubble muted">{aiError}</div>}
         {!typed && !chat.length && (
           <div className="assistant-chips" aria-label="Sugerencias">
-            {SUGGESTIONS.map((text) => <button key={text} type="button" onClick={() => setQuery(text)}>{text}</button>)}
+            {SUGGESTIONS.map((text) => <button key={text} type="button" onClick={() => { setQuery(text); setAutoAsk(text); }}>{text}</button>)}
           </div>
         )}
         {mine.map((block) => (
@@ -319,8 +328,8 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
         )}
         {hasAnswer && (
           <>
-            {(taught.length > 0 || (intent && (facts.length || team))) && <Answer intent={intent} facts={facts} team={team} taught={taught} isAdmin={isAdmin} onEdit={(entry) => setTeach(entry)} product={productWords(typed, intent).join(" ")} />}
-            {helpAnswer && !(intent && (facts.length || team)) && !taught.length && (
+            {(taught.length > 0 || (!helpAnswer && intent && (facts.length || team))) && <Answer intent={intent} facts={facts} team={team} taught={taught} isAdmin={isAdmin} onEdit={(entry) => setTeach(entry)} product={productWords(typed, intent).join(" ")} />}
+            {helpAnswer && !taught.length && (
               <section className="assistant-answer" aria-label="Respuesta">
                 <span className="assistant-group-label">{helpAnswer.title}</span>
                 <div className="assistant-answer-team"><p>{helpAnswer.snippet}</p><div className="assistant-answer-meta"><span className="muted small">Dónde: {helpAnswer.subtitle}</span><CopyButton text={helpAnswer.snippet} /></div></div>

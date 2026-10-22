@@ -29,18 +29,26 @@ function looksLike(name, rivals) {
 
 // Aplicadores RAPYP de la zona nombrada (o todos), del mejor cliente al peor: más kilos comprados y
 // compra más reciente.
+const PROVINCE_WORDS = new Set(['buenos', 'aires', 'caba', 'capital', 'catamarca', 'chaco', 'chubut', 'cordoba', 'corrientes', 'entre', 'rios', 'formosa', 'jujuy', 'pampa', 'rioja', 'mendoza', 'misiones', 'neuquen', 'negro', 'salta', 'juan', 'luis', 'santa', 'cruz', 'santiago', 'estero', 'tierra', 'fuego', 'tucuman', 'patagonia', 'cuyo', 'litoral', 'norte', 'noa', 'nea']);
+
 export function rapypFor(clients = [], query, { competitors = [], today = new Date().toISOString().slice(0, 10), max = 8 } = {}) {
   if (!asksApplicators(query)) return null;
   const rivals = competitorNames(competitors);
   const zone = [...new Set(plain(query).split(/[^a-z0-9]+/).filter((word) => word.length > 3 && !ZONE_FILLER.has(word)))];
   const all = clients.map((client) => ({ crm: client, map: toMapClient(client) }))
     .filter(({ map }) => map && map.es_aplicador === 'si' && !looksLike(map.razon_social, rivals));
-  const inZone = zone.length ? all.filter(({ map }) => zone.some((word) => plain(`${map.localidad} ${map.provincia}`).includes(word))) : all;
+  // 22/10 (Felipe: "qué aplicadores me recomendás en X zona y de X provincia"): solo cuentan como lugar las
+  // palabras que aparecen en la localidad o provincia de algún aplicador ("recomendás", "provincia"… no).
+  const placeOf = ({ map }) => plain(`${map.localidad} ${map.provincia}`);
+  const places = zone.filter((word) => all.some((row) => placeOf(row).includes(word)));
+  // Si nombró una provincia y no hay aplicadores ahí, la lista queda vacía (no se ofrecen los de otro lado).
+  const namedProvince = zone.some((word) => PROVINCE_WORDS.has(word));
+  const inZone = places.length ? all.filter((row) => places.some((word) => placeOf(row).includes(word))) : namedProvince ? [] : all;
   const ranked = inZone
     .map(({ crm, map }) => ({ crm, map, kg: kgOf(map), days: daysSince(map.ultima_compra, today) }))
     .sort((a, b) => (a.days == null) - (b.days == null) || (b.kg - a.kg) || ((a.days ?? 1e9) - (b.days ?? 1e9)));
   return {
-    zone,
+    zone: places.length ? places : namedProvince ? zone.filter((word) => PROVINCE_WORDS.has(word)) : [],
     total: inZone.length,
     list: ranked.slice(0, max).map(({ crm, map, kg, days }) => [
       map.razon_social,

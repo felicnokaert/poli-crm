@@ -27,3 +27,11 @@ test('las reglas y los competidores van siempre a la IA', () => {
   assert.match(text, /REGLAS DE LA EMPRESA[\s\S]*Adrián/);
   assert.match(text, /nunca ofrecerles nada.*Integral Buenos Aires/);
 });
+
+test('zona y provincia escritas como se habla: "qué aplicadores me recomendás de la provincia de Córdoba"', () => {
+  const cordoba = rapypFor(clients, 'qué aplicadores me recomendás de la provincia de Córdoba?', { competitors, today: '2026-10-22' });
+  assert.equal(cordoba.total, 1);
+  assert.match(cordoba.list[0], /^Proyectados Córdoba/);
+  assert.equal(rapypFor(clients, 'qué aplicadores me recomendás?', { competitors }).total, 3, 'sin lugar: todos menos el competidor');
+  assert.equal(rapypFor(clients, 'aplicadores en Salta', { competitors }).total, 0, 'provincia sin aplicadores: ninguno de otro lado');
+});

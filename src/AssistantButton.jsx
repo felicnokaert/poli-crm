@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { AssistantLogo } from "./AssistantLogo.jsx";
 
 // Botón del asistente (21/10): abajo a la derecha en todas las pantallas. Abre la ventana flotante del
@@ -8,6 +8,12 @@ const AssistantWindow = lazy(() => import("./AssistantWindow.jsx").then((m) => (
 export function AssistantButton({ supabase, clients = [], workspace, firstName = "", isAdmin = false, onAction = null, rapypClients = null }) {
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
+  // Otras pantallas lo abren con window.dispatchEvent(new CustomEvent("poliplast:open-assistant")) (22/10: Academia).
+  useEffect(() => {
+    const show = () => setOpen(true);
+    window.addEventListener("poliplast:open-assistant", show);
+    return () => window.removeEventListener("poliplast:open-assistant", show);
+  }, []);
   return (
     <>
       {!open && (

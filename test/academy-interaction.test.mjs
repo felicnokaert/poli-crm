@@ -34,7 +34,7 @@ describe("Academy.jsx - interacción real", () => {
     return { setDataCalls, data, setData };
   }
 
-  test("navega por las 5 pestañas (Preguntar, Cómo vender, Competencia, Equipo, Práctica) y las subpestañas de Cómo vender", async () => {
+  test("navega por las pestañas (Productos, Cómo vender, Competencia, Equipo, Práctica) y las subpestañas de Cómo vender", async () => {
     const mod = await loadJsxModule("src/Academy.jsx");
     const { data, setData } = renderAcademy();
     render(
@@ -46,7 +46,7 @@ describe("Academy.jsx - interacción real", () => {
       }),
     );
 
-    // Arranca en Preguntar; Cómo vender abre en Método (proceso E-C-E-R-A).
+    // Arranca en Productos; Cómo vender abre en Método (proceso E-C-E-R-A).
     assert.equal(screen.queryByText("Proceso y método E-C-E-R-A"), null);
     fireEvent.click(screen.getByText("Cómo vender"));
     assert.ok(screen.getByText("Proceso y método E-C-E-R-A"));

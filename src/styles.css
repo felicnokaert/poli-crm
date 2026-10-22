@@ -1111,3 +1111,8 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .photo-one-list { list-style: none; margin: 8px 0 0; padding: 0; max-height: 360px; overflow: auto; display: grid; gap: 4px; }
 .photo-one-list li { padding: 4px 6px; border-radius: 6px; }
 .photo-one-list li:hover { background: rgba(0, 0, 0, .04); }
+.practice-setup { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.practice-setup label { display: grid; gap: 4px; font-size: 0.85rem; }
+.practice-chat { display: grid; gap: 8px; margin-top: 12px; }
+.practice-reply { display: flex; gap: 6px; flex-wrap: wrap; }
+.practice-reply input { flex: 1 1 200px; }

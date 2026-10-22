@@ -20,8 +20,8 @@ import { KNOWLEDGE_TYPES, buildKnowledgePrompt } from "./knowledge-search.mjs";
 import { useKnowledge } from "./useKnowledge.js";
 import { Competencia } from "./Competencia.jsx";
 import { PROSPECT_FAMILIES } from "./prospect-model.mjs";
-import { ProductQuestion } from "./ProductQuestion.jsx";
 import { ProductGuides } from "./ProductGuides.jsx";
+import { PracticeRoleplay } from "./PracticeRoleplay.jsx";
 import { buildBattlecard } from "./competitor-battlecard.mjs";
 import { Empty, Goal } from "./ui-primitives";
 
@@ -151,9 +151,10 @@ export function CompetitorTalk({ supabase }) {
 }
 
 function AcademyBase({ myChannels, interactions, data, setData, supabase, userEmail }) {
-  // 6 pestañas: Preguntar, Productos (guías por producto armadas con las fichas, 19/10), Cómo vender (método,
+  // 22/10 (Felipe): "Preguntar" se sacó porque hacía lo mismo que el asistente (que además razona); el botón
+  // de arriba abre el asistente. 5 pestañas: Productos (guías por producto armadas con las fichas, 19/10), Cómo vender (método,
   // objeciones y perfiles), Competencia (cómo hablar de cada uno + la lista), Equipo y Práctica.
-  const [section, setSection] = useState("search");
+  const [section, setSection] = useState("products");
   const [sellTopic, setSellTopic] = useState("method");
   const admin = isChannelAdmin(userEmail);
   const felipeNotes = useFelipeNotes(supabase, admin);
@@ -164,9 +165,9 @@ function AcademyBase({ myChannels, interactions, data, setData, supabase, userEm
           <span className="eyebrow">Sistema Comercial Grupo Poliplast</span>
           <h2>Academia comercial</h2>
           <p>Prepará conversaciones, practicá situaciones reales y convertí cada resultado en aprendizaje para el equipo.</p>
+          <button type="button" className="secondary" onClick={() => window.dispatchEvent(new CustomEvent("poliplast:open-assistant"))}><Sparkles size={15} /> ¿Tenés una duda? Preguntale al asistente</button>
         </div>
         <div className="segmented">
-          <button className={section === "search" ? "selected" : ""} onClick={() => setSection("search")}>Preguntar</button>
           <button className={section === "products" ? "selected" : ""} onClick={() => setSection("products")}>Productos</button>
           <button className={section === "sell" ? "selected" : ""} onClick={() => setSection("sell")}>Cómo vender</button>
           <button className={section === "competition" ? "selected" : ""} onClick={() => setSection("competition")}>Competencia</button>
@@ -197,10 +198,9 @@ function AcademyBase({ myChannels, interactions, data, setData, supabase, userEm
         </>
       )}
       {section === "products" && <ProductGuides supabase={supabase} isAdmin={admin} userEmail={userEmail} />}
-      {section === "search" && <ProductQuestion supabase={supabase} />}
-      {section === "search" && <KnowledgeSearch supabase={supabase} clients={data.clients || []} sellers={felipeNotes} />}
       {section === "practice" && (
         <>
+          <PracticeRoleplay supabase={supabase} />
           <QuickReplies myChannels={myChannels} />
           <Coach interactions={interactions} data={data} setData={setData} />
         </>

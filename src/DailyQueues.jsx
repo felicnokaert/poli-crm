@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { buildCustomerBase, coverageByCompany } from './customer-base.mjs';
 import { useComprobantes, argentinaToday } from './CustomerBasePanel.jsx';
-import { QUEUE_SIZE, logClientContact, newProspectsQueue, quoteMessage, quotedQueue, reactivationMessage, reactivationQueue } from './daily-queues.mjs';
+import { QUEUE_SIZE, logClientContact, matchesFamily, queueFamilies, newProspectsQueue, quoteMessage, quotedQueue, reactivationMessage, reactivationQueue } from './daily-queues.mjs';
 import { buildOutreachDraft } from './prospect-outreach.mjs';
 import { outreachVariant, REJECTION_REASONS, possibleWhatsAppLink } from './prospect-model.mjs';
 import { normalizePhoneAR } from './prospect-contact.mjs';
@@ -56,9 +56,14 @@ function ClientQueueCard({ item, queue, message, onOpenClient, onResult }) {
   );
 }
 
-export function DailyQueues({ supabase, clients, prospects, checks, userEmail, defaultSender, setData, onOpenClient, onMarkProspect, onOpenProspect, skipped, onSkip }) {
+export function DailyQueues({ supabase, clients: allClients = [], prospects: allProspects = [], checks, userEmail, defaultSender, setData, onOpenClient, onMarkProspect, onOpenProspect, skipped, onSkip }) {
   const [view, setView] = useState('reactivar');
   const [note, setNote] = useState('');
+  // 22/10: filtro por familia ("hoy quiero reactivar clientes de espuma"), para las tres listas.
+  const [family, setFamily] = useState('');
+  const families = useMemo(() => queueFamilies(allClients, allProspects), [allClients, allProspects]);
+  const clients = useMemo(() => allClients.filter((client) => matchesFamily(client, family)), [allClients, family]);
+  const prospects = useMemo(() => allProspects.filter((prospect) => matchesFamily(prospect, family)), [allProspects, family]);
   const { status, rows, sync } = useComprobantes(supabase);
   const today = argentinaToday();
   const sender = useMemo(() => { try { return localStorage.getItem('poliplast-sender-name') || defaultSender || ''; } catch { return defaultSender || ''; } }, [defaultSender]);
@@ -85,6 +90,14 @@ export function DailyQueues({ supabase, clients, prospects, checks, userEmail, d
           <button key={key} type="button" role="tab" aria-selected={view === key} className={view === key ? 'selected' : ''} onClick={() => setView(key)}>{label} ({count})</button>
         ))}
       </div>
+      {families.length > 0 && (
+        <label className="ml-sort muted small">Familia{' '}
+          <select value={family} onChange={(event) => setFamily(event.target.value)} aria-label="Filtrar por familia">
+            <option value="">Todas</option>
+            {families.map((name) => <option key={name} value={name}>{name}</option>)}
+          </select>
+        </label>
+      )}
       {note && <p className="muted small" role="status">{note}</p>}
 
       {needsData && status === 'offline' && <p className="muted">Estas dos listas usan la facturación de Contabilium, que se lee desde la cuenta en línea. Entrá con tu cuenta para verlas.</p>}

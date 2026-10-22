@@ -13,7 +13,7 @@ const ROWS = [
   { company: 'POLIPLAST', tipo: 'FCA', fecha: ago(100), cliente: 'CARROCERIAS NORTE', total: 50000, neto: null },
 ];
 const fake = (rows) => {
-  const make = (data) => { const b = { select: () => b, or: () => b, order: () => b, range: () => Promise.resolve({ data, error: null }), then: (ok) => ok({ data, error: null }) }; return b; };
+  const make = (data) => { const b = { select: () => b, or: () => b, not: () => b, order: () => b, range: () => Promise.resolve({ data, error: null }), then: (ok) => ok({ data, error: null }) }; return b; };
   return { from: (table) => make(table === 'contabilium_comprobantes' ? rows : []) };
 };
 

@@ -13,12 +13,24 @@ export const argentinaToday = (now = Date.now()) => new Date(now - 3 * 3600000).
 async function loadComprobantes(supabase) {
   const rows = [];
   for (let from = 0; from < 50000; from += PAGE) {
-    const { data, error } = await supabase.from('contabilium_comprobantes').select('company,tipo,fecha,cliente,total,neto:raw->>ImporteTotalNeto').or(SALE_FILTER).order('fecha', { ascending: false }).range(from, from + PAGE - 1);
+    const { data, error } = await supabase.from('contabilium_comprobantes').select('company,tipo,fecha,cliente,cliente_id,total,neto:raw->>ImporteTotalNeto').or(SALE_FILTER).order('fecha', { ascending: false }).range(from, from + PAGE - 1);
     if (error) throw error;
     rows.push(...data);
     if (data.length < PAGE) break;
   }
-  const { data: sync } = await supabase.from('contabilium_sync').select('company,history_done,cursor_date');
+  // 22/10: CUIT y teléfono de la ficha de Contabilium, para emparejar con la cartera aunque el nombre difiera.
+  const contacts = new Map();
+  for (let from = 0; from < 50000; from += PAGE) {
+    const { data, error } = await supabase.from('contabilium_clientes').select('company,id,cuit,telefono').order('id').range(from, from + PAGE - 1);
+    if (error) break;
+    for (const row of data || []) contacts.set(`${row.company}|${row.id}`, row);
+    if (!data || data.length < PAGE) break;
+  }
+  for (const row of rows) {
+    const contact = contacts.get(`${row.company}|${row.cliente_id}`);
+    if (contact) { row.cuit = contact.cuit; row.tel = contact.telefono; }
+  }
+  const { data: sync } = await supabase.from('contabilium_sync').select('company,history_done,cursor_date').not('company', 'like', '%:clientes');
   return { rows, sync: sync || [] };
 }
 

@@ -20,7 +20,7 @@ const ROWS = [
 function fakeSupabase() {
   const result = (data) => ({ data, error: null });
   const chain = (data) => {
-    const builder = { select: () => builder, or: () => builder, order: () => builder, range: () => Promise.resolve(result(data)), then: (resolve) => resolve(result(data)) };
+    const builder = { select: () => builder, or: () => builder, not: () => builder, order: () => builder, range: () => Promise.resolve(result(data)), then: (resolve) => resolve(result(data)) };
     return builder;
   };
   return { from: (table) => chain(table === 'contabilium_comprobantes' ? ROWS : [{ company: 'COMARG', history_done: false, cursor_date: '2025-03-01' }]) };

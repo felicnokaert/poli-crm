@@ -115,3 +115,15 @@ test('Prospectos nuevos: encaje y puntaje altos primero', () => {
   const b = blankProspect({ id: 'b', company: 'B', phone: '1', fitLevel: 'Alto', sheetScore: 80, zone: 'A' }, { now: '2026-10-02' });
   assert.deepEqual(newProspectsQueue({ prospects: [a, b] }).map((item) => item.id), ['b', 'a']);
 });
+
+test('empareja por CUIT o teléfono de la ficha de Contabilium aunque el nombre difiera (22/10)', async () => {
+  const { buildCustomerBase } = await import('../src/customer-base.mjs');
+  const clients = [{ id: 'a', company: 'Aislaciones Lavopa', cuit: '20-22575469-2' }, { id: 'b', company: 'Espumas Norte', phone: '+54 9 11 6832-5335' }];
+  const rows = [
+    { company: 'POLIPLAST', tipo: 'FCA', fecha: '2026-09-01', cliente: 'ROLANDO MAXIMILIANO LAVOPA', total: 1000, cuit: '20225754692' },
+    { company: 'POLIPLAST', tipo: 'FCA', fecha: '2026-09-05', cliente: 'OTRO NOMBRE SRL', total: 500, tel: '011 6832 5335' },
+  ];
+  const { byClient } = buildCustomerBase(rows, clients, { today: '2026-10-22' });
+  assert.equal(byClient.get('a').purchaseCount, 1);
+  assert.equal(byClient.get('b').purchaseCount, 1);
+});

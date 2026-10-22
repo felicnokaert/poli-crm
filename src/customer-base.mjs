@@ -85,8 +85,14 @@ export function coverageByCompany(rows = []) {
   return out;
 }
 
+// 22/10: además del nombre, el CUIT y el teléfono (últimos 8 dígitos) de la ficha de Contabilium.
+const onlyDigits = (value) => String(value ?? '').replace(/\D/g, '');
+export const cuitKey = (value) => { const doc = onlyDigits(value); return doc.length >= 7 ? `cuit:${doc}` : ''; };
+export const phoneKey = (value) => { const tel = onlyDigits(value); return tel.length >= 8 ? `tel:${tel.slice(-8)}` : ''; };
+
 function clientKeys(client = {}) {
-  return [...new Set([client.company, client.legalName, ...(Array.isArray(client.legalNames) ? client.legalNames : [])].map(nameKey).filter(Boolean))];
+  const names = [client.company, client.legalName, ...(Array.isArray(client.legalNames) ? client.legalNames : [])].map(nameKey);
+  return [...new Set([...names, cuitKey(client.cuit), phoneKey(client.phone), phoneKey(client.whatsapp)].filter(Boolean))];
 }
 
 // rows: filas de contabilium_comprobantes ({company, tipo, fecha, cliente, total, neto?}).
@@ -107,7 +113,7 @@ export function buildCustomerBase(rows = [], clients = [], { today = new Date().
     const isCredit = CREDIT.test(tipo);
     const isQuote = tipo === QUOTE;
     if (!isSale && !isCredit && !isQuote) continue;
-    const clientId = byKey.get(nameKey(row.cliente));
+    const clientId = byKey.get(nameKey(row.cliente)) || byKey.get(cuitKey(row.cuit)) || byKey.get(phoneKey(row.tel));
     if (!clientId) { if (isSale) unmatched.add(row.cliente); continue; }
     const entry = touch(clientId);
     entry.names.add(String(row.cliente || '').trim());

@@ -63,6 +63,32 @@ export function ContabiliumTest({ session }) {
     setBusy("");
   }
 
+  // Fichas de clientes (22/10): CUIT, teléfono y mail, para emparejar con la cartera. Página a página.
+  async function bringClients() {
+    setBusy("clients"); setError(""); stop.current = false;
+    const problems = [];
+    for (const company of sync || []) {
+      let fails = 0;
+      for (let round = 0; round < MAX_ROUNDS && !stop.current; round += 1) {
+        let result;
+        try { result = await callApi(session, { op: "clients", company: company.key }); } catch (clientError) {
+          fails += 1;
+          if (fails < 3) continue;
+          problems.push(`${company.name}: ${clientError.message}`); break;
+        }
+        fails = 0;
+        const state = result.company;
+        setProgress(`Fichas de ${company.name}: ${state.total_saved || 0} clientes${state.history_done ? " (completo)" : ` · página ${state.page}`}`);
+        if (state.last_error) { problems.push(`${company.name}: ${state.last_error}`); break; }
+        if (state.history_done && state.page === 1) break;
+      }
+      if (stop.current) break;
+    }
+    setProgress(stop.current ? "Pausado. La próxima vez sigue desde donde quedó." : "Listo: fichas de clientes copiadas. Ahora la cartera se empareja también por CUIT y teléfono.");
+    if (problems.length) setError(problems.join(" · "));
+    setBusy("");
+  }
+
   return (
     <section className="panel contabilium-test">
       <div className="panel-head">
@@ -98,9 +124,12 @@ export function ContabiliumTest({ session }) {
           <p className="muted small">Facturas, notas de crédito y cotizaciones de las ventas directas de cada empresa, desde el principio. Las ventas de Mercado Libre no se guardan: están en su panel. Se traen de a tramos y se acuerda hasta dónde llegó: si cerrás la página, la próxima vez sigue desde ahí. Todos los días a las 7 se suma solo lo nuevo.</p>
         </div>
         <div className="panel-head-actions">
-          {busy === "sync"
+          {busy === "sync" || busy === "clients"
             ? <button type="button" className="secondary" onClick={() => { stop.current = true; }}>Pausar</button>
-            : <button type="button" className="primary" disabled={Boolean(busy) || !sync} onClick={bring}>Traer comprobantes</button>}
+            : <>
+              <button type="button" className="primary" disabled={Boolean(busy) || !sync} onClick={bring}>Traer comprobantes</button>
+              <button type="button" className="secondary" disabled={Boolean(busy) || !sync} onClick={bringClients}>Traer fichas de clientes</button>
+            </>}
         </div>
       </div>
       {progress && <p className="muted small" role="status">{progress}</p>}

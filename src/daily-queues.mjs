@@ -51,10 +51,32 @@ export function quoteMessage(client = {}, quote = {}, sender = '') {
 }
 
 // Clientes que fueron buenos y dejaron de comprar: grandes primero, después recurrentes; entre iguales, el que más facturó.
+// 22/10 (Felipe: "que no se base solamente en Contabilium, sino también en nuestra lista"): si el cliente no
+// coincide con la facturación, se usa lo que dice su ficha (última compra y cantidad de compras de la cartera
+// o de la importación POLIOCHO).
+const crmIso = (value) => { const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(value || '').trim()); return match ? `${match[3]}-${match[2]}-${match[1]}` : (/^\d{4}-\d{2}-\d{2}/.test(String(value || '')) ? String(value).slice(0, 10) : ''); };
+export function infoFromCrm(client = {}, today) {
+  const last = [crmIso(client.lastPurchase), client.polio8?.invoiced !== false ? crmIso(client.polio8?.lastDate) : ''].filter(Boolean).sort().pop();
+  if (!last) return null;
+  const count = Number(client.polio8?.documents) || Number(client.totalPurchases) || 0;
+  const daysSince = daysBetween(last, today);
+  return { lastPurchase: last, daysSince, purchases24: count, purchaseCount: count, recurrent: count >= 3, big: false, total24: 0, quotes: [], status: daysSince <= 90 ? 'activo' : daysSince <= 365 ? 'dormido' : 'inactivo', fromCrm: true };
+}
+
+// Familias para filtrar la cola (las que tienen la cartera y los prospectos).
+export function queueFamilies(clients = [], prospects = []) {
+  return [...new Set([...clients.map((client) => client.family), ...prospects.map((prospect) => prospect.family)].map((value) => String(value || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+}
+const plainText = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+export function matchesFamily(record = {}, family = '') {
+  if (!family) return true;
+  return plainText([record.family, record.mainProduct, record.rubro, record.products].filter(Boolean).join(' ')).includes(plainText(family));
+}
+
 export function reactivationQueue({ clients = [], base = new Map(), today, limit = QUEUE_SIZE } = {}) {
   const items = [];
   for (const client of clients) {
-    const info = base.get(client.id);
+    const info = base.get(client.id) || infoFromCrm(client, today);
     if (!info || !['dormido', 'inactivo'].includes(info.status)) continue;
     if (!(info.big || info.recurrent)) continue;
     if (info.daysSince > REACTIVATE_MAX_DAYS) continue;

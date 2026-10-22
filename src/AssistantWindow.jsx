@@ -1,5 +1,6 @@
 import { answerHasGap } from "./assistant-training.mjs";
 import { asksClient, clientCards, clientContext, clientWords } from "./assistant-client.mjs";
+import { isRule, rapypFor, rulesContext } from "./assistant-rapyp.mjs";
 import { useEffect, useRef, useState } from "react";
 import { adminFetch } from "./admin-api.mjs";
 import { ChevronDown, Copy, GraduationCap, Search, Send, ThumbsDown, ThumbsUp, X } from "lucide-react";
@@ -266,7 +267,7 @@ function Answer({ intent, facts, team, product, taught = [], isAdmin, onEdit }) 
   );
 }
 
-export function AssistantWindow({ supabase, clients = [], workspace = {}, firstName = "", isAdmin = false, onClose, onAction = null }) {
+export function AssistantWindow({ supabase, clients = [], workspace = {}, firstName = "", isAdmin = false, onClose, onAction = null, rapypClients = null }) {
   const [query, setQuery] = useState("");
   const inputRef = useRef(null);
   const [showAll, setShowAll] = useState(false);
@@ -290,13 +291,16 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   }, [supabase]);
   const taught = typed ? matchTaught(taughtAll, typed) : [];
   const rivals = typed ? rivalsFor(competitors || [], typed) : null;
+  // Reglas de la empresa (Felipe las edita como "regla") y aplicadores de la red RAPYP (solo quien ve ese mapa).
+  const rules = taughtAll.filter(isRule);
+  const rapyp = typed && rapypClients ? rapypFor(rapypClients, typed, { competitors: competitors || [] }) : null;
   // "Contame todo de lavopa": ficha de la cartera + sus compras en Contabilium (aunque no diga "compró").
   const clientsFound = typed && (asksClient(typed) || !intent) ? clientCards(clients, typed) : [];
   const buyWords = purchaseNameWords(typed);
   const purchaseRows = usePurchases(supabase, buyWords.length ? buyWords : clientsFound.length ? clientWords(typed) : []);
   const purchases = purchaseRows.length ? purchaseSummary(purchaseRows) : [];
   const mine = typed ? workspaceAnswer(typed, workspace) : [];
-  const hasExtra = Boolean(rivals || purchases.length || mine.length || clientsFound.length);
+  const hasExtra = Boolean(rivals || purchases.length || mine.length || clientsFound.length || rapyp);
   const hasAnswer = Boolean(taught.length || (intent && (facts.length || team)) || helpAnswer);
   useEffect(() => { setShowAll(false); }, [typed]);
   const [chat, setChat] = useState([]);
@@ -326,7 +330,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
     setQuery("");
     // La agenda va siempre: así puede planificar el día o proponer un seguimiento.
     const agenda = mine.some((block) => block.key === "tareas") ? [] : workspaceAnswer("tareas pendientes", workspace);
-    const context = [clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases }), buildAiContext({ intent, facts, team, result, mlRows: teamRows, taught })].filter(Boolean).join("\n");
+    const context = [rulesContext({ rules, competitors: competitors || [], rapyp }), clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases }), buildAiContext({ intent, facts, team, result, mlRows: teamRows, taught })].filter(Boolean).join("\n");
     const reply = await askAi(supabase, { question: asked, context, history, today: isoToday(), userName: firstName }).catch(() => ({ ok: false, reason: "red" }));
     setThinking(false);
     if (reply.ok) {
@@ -389,6 +393,13 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
           <div className="assistant-chips" aria-label="Sugerencias">
             {SUGGESTIONS.map((text) => <button key={text} type="button" onClick={() => { setQuery(text); setAutoAsk(text); }}>{text}</button>)}
           </div>
+        )}
+        {rapyp && (
+          <section className="assistant-answer" aria-label="Aplicadores RAPYP">
+            <span className="assistant-group-label">Aplicadores de la red RAPYP{rapyp.zone.length ? ` · ${rapyp.zone.join(" ")}` : ""} ({rapyp.total})</span>
+            {rapyp.list.length ? <ul className="assistant-rivals">{rapyp.list.map((line) => <li key={line}>{line}</li>)}</ul> : <p className="muted small">No hay aplicadores RAPYP cargados en esa zona: consultá con Juan o David.</p>}
+            <span className="muted small">Ordenados del mejor cliente: más kilos comprados y compra más reciente. Los competidores quedan afuera.</span>
+          </section>
         )}
         {clientsFound.map((card) => (
           <section key={card.id} className="assistant-answer" aria-label={`Ficha de ${card.name}`}>

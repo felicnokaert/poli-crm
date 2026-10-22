@@ -942,7 +942,7 @@ export default function App() {
           }}
         />
       )}
-      {onlineConfigured && session && <AssistantButton supabase={supabase} isAdmin={isChannelAdmin(session?.user?.email)} clients={data.clients || EMPTY_ARRAY} workspace={assistantWorkspace} onAction={assistantAction} firstName={String(session.user?.user_metadata?.full_name || "").trim().split(/\s+/)[0]} />}
+      {onlineConfigured && session && <AssistantButton supabase={supabase} isAdmin={isChannelAdmin(session?.user?.email)} clients={data.clients || EMPTY_ARRAY} workspace={assistantWorkspace} onAction={assistantAction} rapypClients={seesRapyp ? companyMapClients : null} firstName={String(session.user?.user_metadata?.full_name || "").trim().split(/\s+/)[0]} />}
       {showPalette && (
         <CommandPalette
           clients={data.clients || []}

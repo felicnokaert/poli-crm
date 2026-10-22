@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { GraduationCap, Play } from "lucide-react";
 import { askAi, TeachForm } from "./AssistantWindow.jsx";
 import { matchTaught } from "./assistant-answer.mjs";
-import { pickQuestions, realAnswer, suggestTeachings, trainingContext, trainingQuestion } from "./assistant-training.mjs";
+import { conflictingAnswers, pickQuestions, realAnswer, suggestTeachings, trainingContext, trainingQuestion } from "./assistant-training.mjs";
 
 // Más → Datos → Asistente (solo Felipe, 21/10). Toma preguntas reales ya respondidas en Mercado Libre, se
 // las hace a la IA sin mostrarle la respuesta real y pone las dos lado a lado. Si la IA le erra, "Enseñarle"
@@ -87,6 +87,7 @@ export function AssistantTraining({ supabase }) {
   const [teach, setTeach] = useState(null);
   const [usage, setUsage] = useState({ input: 0, output: 0 });
   const [suggested, setSuggested] = useState(null);
+  const [conflicts, setConflicts] = useState(null);
   const [teachingId, setTeachingId] = useState("");
   const stop = useRef(false);
   const pool = useRef(null);
@@ -143,9 +144,17 @@ export function AssistantTraining({ supabase }) {
     setSuggested(suggestTeachings(questions, titles, { taught }));
     setStatus("");
   }
+  // Respuestas que no coinciden: mismo producto y tema, números distintos. Felipe elige la correcta.
+  async function findConflicts() {
+    setStatus("Buscando respuestas que no coinciden…");
+    const { questions, titles, taught } = await load();
+    setConflicts(conflictingAnswers(questions, titles, { taught }));
+    setStatus("");
+  }
   function saved() {
     setTeach(null); pool.current = null;
     if (teachingId) setSuggested((current) => (current || []).filter((entry) => entry.id !== teachingId));
+    if (teachingId) setConflicts((current) => (current || []).filter((entry) => entry.id !== teachingId));
     setTeachingId("");
     setStatus("Guardado: desde ahora va primero para todo el equipo.");
   }
@@ -166,10 +175,31 @@ export function AssistantTraining({ supabase }) {
         {running && <button type="button" className="secondary" onClick={() => { stop.current = true; }}>Pausar</button>}
         <button type="button" className="secondary" disabled={running} onClick={check}>¿Anda la IA?</button>
         <button type="button" className="secondary" disabled={running} onClick={suggest}><GraduationCap size={15} /> Ver respuestas sugeridas</button>
+        <button type="button" className="secondary" disabled={running} onClick={findConflicts}>Respuestas que no coinciden</button>
         {status && <span className="muted small" role="status">{status}</span>}
       </div>
       {usage.input > 0 && <p className="muted small">Usado en esta prueba: {usage.input.toLocaleString("es-AR")} tokens de entrada y {usage.output.toLocaleString("es-AR")} de salida (el gasto exacto se ve en la consola de Anthropic → Usage).</p>}
       {teach && <TeachForm key={teach.question} supabase={supabase} initial={teach} onSaved={saved} onCancel={() => setTeach(null)} />}
+      {conflicts && (
+        <div className="training-list">
+          <strong>Respuestas que no coinciden ({conflicts.length}) · mismo producto y tema, con números distintos en Mercado Libre</strong>
+          {conflicts.length === 0 && <p className="muted small">No encontré respuestas con números distintos (o ya enseñaste la correcta).</p>}
+          {conflicts.map((entry) => (
+            <article key={entry.id} className="training-row">
+              <span className="muted small">{entry.titles.join(" · ")}</span>
+              <strong>{entry.product} · {entry.intent}</strong>
+              {entry.options.map((option) => (
+                <div key={option.signature} className="training-option">
+                  <p>{option.text}</p>
+                  <span className="muted small">Lo respondimos así {option.uses} veces · </span>
+                  <button type="button" className="link-button" onClick={() => { setTeachingId(entry.id); setTeach({ question: entry.question, product: entry.product, answer: option.text }); }}><GraduationCap size={14} /> Esta es la correcta</button>
+                </div>
+              ))}
+              <span className="muted small">Si ninguna está bien, elegí la más cercana y corregila antes de guardar.</span>
+            </article>
+          ))}
+        </div>
+      )}
       {suggested && (
         <div className="training-list">
           <strong>Respuestas sugeridas ({suggested.length}) · lo que más repetimos en Mercado Libre, sin costo</strong>

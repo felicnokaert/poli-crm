@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { resolveWeeklyTargets } from "./weekly-targets.mjs";
 import {
   BarChart3,
@@ -11,6 +11,9 @@ import {
   X,
 } from "lucide-react";
 import { buildRepurchaseRadar } from "./repurchase-radar.mjs";
+import { useComprobantes, argentinaToday } from "./CustomerBasePanel.jsx";
+import { buildCustomerBase } from "./customer-base.mjs";
+import { overdueQueue } from "./daily-queues.mjs";
 import { findColdQuotes } from "./cold-quotes.mjs";
 import { findStaleHotLeads } from "./hot-leads-radar.mjs";
 import { findStaleClients } from "./stale-clients-radar.mjs";
@@ -491,6 +494,7 @@ function DashboardBase({
   welcomeName,
   onDismissWelcome,
   onNewInteraction,
+  supabase = null,
 }) {
   const targets = resolveWeeklyTargets(weeklyTargets);
   const clientsById = new Map(clients.map((client) => [client.id, client]));
@@ -585,9 +589,37 @@ function DashboardBase({
           <button type="button" className="secondary" onClick={() => onNavigate("settings")}>Ir a Datos para el diagnóstico</button>
         </section>
       )}
+      {supabase && <OverdueCard supabase={supabase} clients={clients} onNavigate={onNavigate} />}
       <AlertsPanel hotLeads={hotLeads} coldQuotes={coldQuotes} expiredQuotes={expiredQuotes} staleClients={staleClients} repurchaseRadar={repurchaseRadar} onNavigate={onNavigate} />
       <AutomationSummary tasks={tasks} cronStatus={cronStatus} />
     </div>
+  );
+}
+
+// Clientes que se pasaron de su frecuencia de compra (22/10), con la facturación de Contabilium. Espera unos
+// segundos para no demorar la entrada a Inicio; la lectura queda en memoria y la reusa la Cola del día.
+function OverdueCard({ supabase, clients, onNavigate }) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => { const timer = setTimeout(() => setReady(true), 2500); return () => clearTimeout(timer); }, []);
+  return ready ? <OverdueList supabase={supabase} clients={clients} onNavigate={onNavigate} /> : null;
+}
+function OverdueList({ supabase, clients, onNavigate }) {
+  const { status, rows } = useComprobantes(supabase);
+  const today = argentinaToday();
+  const list = useMemo(() => (status === "ready" ? overdueQueue({ clients, base: buildCustomerBase(rows, clients, { today }).byClient, today, limit: 50 }) : []), [status, rows, clients, today]);
+  if (!list.length) return null;
+  const open = () => { try { sessionStorage.setItem("poliplast-queue-view", "atrasados"); } catch { /* sin almacenamiento: abre la cola igual */ } onNavigate?.("prospecting"); };
+  return (
+    <section className="panel overdue-card" aria-label="Se pasaron de su frecuencia">
+      <div className="panel-head">
+        <div>
+          <span className="eyebrow">Plata que se escapa</span>
+          <h2>{list.length} {list.length === 1 ? "cliente se pasó" : "clientes se pasaron"} de su frecuencia de compra</h2>
+        </div>
+      </div>
+      <p className="muted small">{list.slice(0, 3).map((item) => `${item.client.company} (+${item.late} días)`).join(" · ")}{list.length > 3 ? "…" : ""}</p>
+      <button type="button" className="primary" onClick={open}>Ver la lista con el mensaje listo</button>
+    </section>
   );
 }
 

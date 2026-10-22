@@ -1,9 +1,11 @@
 import { answerHasGap } from "./assistant-training.mjs";
 import { asksClient, clientCards, clientContext, clientWords } from "./assistant-client.mjs";
 import { isRule, rapypFor, rulesContext } from "./assistant-rapyp.mjs";
+import { asksBusiness, businessContext, businessFacts, businessLines } from "./assistant-business.mjs";
+import { argentinaToday, useComprobantes } from "./CustomerBasePanel.jsx";
 import { asksPrice, currentListPrices, priceLine, priceWords, pricesContext } from "./assistant-prices.mjs";
 import { asksLearning, learningContext, prospectLearning, routeFor, routesContext, teamNotes, teamNotesContext } from "./assistant-team.mjs";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { adminFetch } from "./admin-api.mjs";
 import { ChevronDown, Copy, GraduationCap, Search, Send, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import { AssistantLogo } from "./AssistantLogo.jsx";
@@ -394,12 +396,21 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   const purchases = purchaseRows.length ? purchaseSummary(purchaseRows) : [];
   const mine = typed ? workspaceAnswer(typed, workspace) : [];
   const listPrices = useListPrices(supabase, typed);
+  // Números del negocio (22/10): la facturación se lee recién la primera vez que se pregunta por ellos.
+  const wantsBusiness = Boolean(typed && asksBusiness(typed));
+  const [businessOn, setBusinessOn] = useState(false);
+  useEffect(() => { if (wantsBusiness) setBusinessOn(true); }, [wantsBusiness]);
+  const billing = useComprobantes(businessOn ? supabase : null);
+  const business = useMemo(() => (businessOn && billing.status === "ready" ? businessFacts(billing.rows, clients, argentinaToday()) : null), [businessOn, billing.status, billing.rows, clients]);
+  const businessShown = wantsBusiness && business ? businessLines(business) : [];
+  // Si se pregunta antes de que llegue la facturación, se espera y se pregunta solo (así no dice "no tengo el dato").
+  const waitingBusiness = wantsBusiness && !business && billing.status !== "error" && Boolean(supabase?.from);
   // 22/10: lo que anotó el equipo sobre el tema, a quién derivar y qué aprendimos en la Cola del día.
   const notes = typed && !clientsFound.length ? teamNotes(typed, { interactions: workspace.interactions || [], clients, prospects: workspace.prospects || [] }) : [];
   const routes = typed ? routeFor(typed) : [];
   const learning = typed && asksLearning(typed) ? prospectLearning({ prospects: workspace.prospects || [], clients }) : null;
   const learningText = learning ? learningContext(learning) : "";
-  const hasExtra = Boolean(rivals || purchases.length || mine.length || clientsFound.length || rapyp || notes.length || learningText || listPrices.entries.length);
+  const hasExtra = Boolean(rivals || purchases.length || mine.length || clientsFound.length || rapyp || notes.length || learningText || listPrices.entries.length || businessShown.length);
   const hasAnswer = Boolean(taught.length || (intent && (facts.length || team)) || helpAnswer);
   useEffect(() => { setShowAll(false); }, [typed]);
   const [chat, setChat] = useState([]);
@@ -438,6 +449,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
     event.preventDefault();
     // 22/10: aunque antes haya fallado (clave o crédito), se vuelve a intentar: si ya se arregló, responde.
     if (!typed || thinking || !supabase?.auth) return;
+    if (waitingBusiness) { setAutoAsk(typed); return; }
     setThinking(true); setAiError("");
     const asked = typed;
     const history = chat.map((turn) => ({ role: turn.role, text: turn.text }));
@@ -458,7 +470,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
     }
     const teamNow = mlNow === teamRows ? team : intent ? teamAnswer(mlNow, intent) : null;
     const pricesNow = listPrices.key && !listPrices.ready ? await loadListPrices(supabase, listPrices.words, isoToday()).catch(() => []) : listPrices.entries;
-    const context = [rulesContext({ rules, competitors: competitors || [], rapyp }), routesContext(), pricesContext(pricesNow), teamNotesContext(notes), learningText, clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases }), buildAiContext({ intent, facts, team: teamNow, result, mlRows: mlNow, taught: withEarlier(taught) })].filter(Boolean).join("\n");
+    const context = [rulesContext({ rules, competitors: competitors || [], rapyp }), routesContext(), wantsBusiness ? businessContext(business) : "", pricesContext(pricesNow), teamNotesContext(notes), learningText, clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases }), buildAiContext({ intent, facts, team: teamNow, result, mlRows: mlNow, taught: withEarlier(taught) })].filter(Boolean).join("\n");
     const reply = await askAi(supabase, { question: asked, context, history, today: isoToday(), userName: firstName }).catch(() => ({ ok: false, reason: "red" }));
     setThinking(false);
     if (reply.ok) {
@@ -476,7 +488,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   }
 
   useEffect(() => {
-    if (!autoAsk || autoAsk !== typed) return undefined;
+    if (!autoAsk || autoAsk !== typed || waitingBusiness) return undefined;
     const timer = setTimeout(() => { setAutoAsk(""); submit({ preventDefault() {} }); }, 900);
     return () => clearTimeout(timer);
   });
@@ -542,6 +554,14 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
             <ul className="assistant-rivals">{block.lines.map((line) => <li key={line}>{line}</li>)}</ul>
           </section>
         ))}
+        {waitingBusiness && <p className="muted small" role="status">Leyendo la facturación de Contabilium…</p>}
+        {businessShown.length > 0 && (
+          <section className="assistant-answer" aria-label="Números del negocio">
+            <span className="assistant-group-label">Números del negocio</span>
+            <ul className="assistant-rivals">{businessShown.map((line) => <li key={line}>{line}</li>)}</ul>
+            <span className="muted small">De la facturación de Contabilium (sin Mercado Libre). El detalle está en Prospección → Cola del día.</span>
+          </section>
+        )}
         {listPrices.entries.length > 0 && (
           <section className="assistant-answer" aria-label="Precios de lista">
             <span className="assistant-group-label">Precio de lista vigente</span>

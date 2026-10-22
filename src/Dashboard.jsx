@@ -14,6 +14,8 @@ import { buildRepurchaseRadar } from "./repurchase-radar.mjs";
 import { useComprobantes, argentinaToday } from "./CustomerBasePanel.jsx";
 import { buildCustomerBase } from "./customer-base.mjs";
 import { overdueQueue } from "./daily-queues.mjs";
+import { businessFacts } from "./assistant-business.mjs";
+import { weekActivity, weeklySummaryText } from "./weekly-summary.mjs";
 import { findColdQuotes } from "./cold-quotes.mjs";
 import { findStaleHotLeads } from "./hot-leads-radar.mjs";
 import { findStaleClients } from "./stale-clients-radar.mjs";
@@ -495,6 +497,9 @@ function DashboardBase({
   onDismissWelcome,
   onNewInteraction,
   supabase = null,
+  prospects = [],
+  showWeekly = false,
+  isAdmin = false,
 }) {
   const targets = resolveWeeklyTargets(weeklyTargets);
   const clientsById = new Map(clients.map((client) => [client.id, client]));
@@ -589,6 +594,7 @@ function DashboardBase({
           <button type="button" className="secondary" onClick={() => onNavigate("settings")}>Ir a Datos para el diagnóstico</button>
         </section>
       )}
+      {supabase && showWeekly && <WeeklySummaryCard supabase={supabase} clients={clients} prospects={prospects} tasks={tasks} isAdmin={isAdmin} />}
       {supabase && <OverdueCard supabase={supabase} clients={clients} onNavigate={onNavigate} />}
       <AlertsPanel hotLeads={hotLeads} coldQuotes={coldQuotes} expiredQuotes={expiredQuotes} staleClients={staleClients} repurchaseRadar={repurchaseRadar} onNavigate={onNavigate} />
       <AutomationSummary tasks={tasks} cronStatus={cronStatus} />
@@ -620,6 +626,49 @@ function OverdueList({ supabase, clients, onNavigate }) {
       <p className="muted small">{list.slice(0, 3).map((item) => `${item.client.company} (+${item.late} días)`).join(" · ")}{list.length > 3 ? "…" : ""}</p>
       <button type="button" className="primary" onClick={open}>Ver la lista con el mensaje listo</button>
     </section>
+  );
+}
+
+// Resumen de la semana (22/10, Felipe y David): se arma al tocar el botón (lee la facturación) y se copia.
+function WeeklySummaryCard({ supabase, clients, prospects, tasks, isAdmin }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="panel weekly-summary" aria-label="Resumen de la semana">
+      <div className="panel-head">
+        <div>
+          <span className="eyebrow">Para vos y David</span>
+          <h2>Resumen de la semana</h2>
+        </div>
+        {!open && <button type="button" className="secondary" onClick={() => setOpen(true)}>Armar el resumen</button>}
+      </div>
+      {open && <WeeklySummaryBody supabase={supabase} clients={clients} prospects={prospects} tasks={tasks} isAdmin={isAdmin} />}
+    </section>
+  );
+}
+function WeeklySummaryBody({ supabase, clients, prospects, tasks, isAdmin }) {
+  const { status, rows } = useComprobantes(supabase);
+  const [gaps, setGaps] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const today = argentinaToday();
+  useEffect(() => {
+    // Las preguntas sin respuesta solo las lee Felipe (para el resto la base devuelve 0: no se muestra).
+    if (!isAdmin) return undefined;
+    let active = true;
+    Promise.resolve(supabase.from("assistant_feedback").select("id", { count: "exact", head: true }).is("resolved_at", null))
+      .then(({ count, error }) => { if (active && !error && Number.isFinite(count)) setGaps(count); }, () => {});
+    return () => { active = false; };
+  }, [supabase, isAdmin]);
+  const text = useMemo(() => {
+    const facts = status === "ready" ? businessFacts(rows, clients, today) : null;
+    return weeklySummaryText({ facts, activity: weekActivity({ prospects, clients, tasks, today }), gaps, today });
+  }, [status, rows, clients, prospects, tasks, gaps, today]);
+  async function copy() { try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { setCopied(false); } }
+  return (
+    <>
+      {status !== "ready" && status !== "error" && <p className="muted small" role="status">Leyendo la facturación de Contabilium…</p>}
+      <textarea readOnly rows={9} value={text} aria-label="Resumen de la semana" />
+      <button type="button" className="primary" onClick={copy}>{copied ? "Copiado ✓" : "Copiar para WhatsApp"}</button>
+    </>
   );
 }
 

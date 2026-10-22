@@ -35,6 +35,7 @@ export function clientCards(clients = [], query) {
   return found.map((client) => ({
     id: client.id || client.company,
     name: client.company,
+    cuit: String(client.cuit || '').replace(/\D/g, '') || null,
     lines: [
       [client.contact && `Contacto: ${client.contact}`, client.phone && `Tel: ${client.phone}`, client.email && `Mail: ${client.email}`].filter(Boolean).join(' · '),
       [client.cuit && `CUIT: ${client.cuit}`, [client.city, client.province].filter(Boolean).join(', '), client.type, client.rubro].filter(Boolean).join(' · '),

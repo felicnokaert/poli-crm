@@ -179,7 +179,7 @@ export function AssistantTraining({ supabase }) {
               <span className="muted small">{entry.title}</span>
               <strong>{entry.product} · {entry.question}</strong>
               <p>{entry.answer}</p>
-              <span className="muted small">Lo respondimos así en {entry.uses} de {entry.total} preguntas</span>
+              <span className="muted small">Lo respondimos así en {entry.uses} de {entry.total} preguntas{entry.titles?.length > 1 ? ` (en ${entry.titles.length} variantes del producto)` : ""}</span>
               <button type="button" className="link-button" onClick={() => { setTeachingId(entry.id); setTeach({ question: entry.question, product: entry.product, answer: entry.answer }); }}><GraduationCap size={14} /> Revisar y aprobar</button>
             </article>
           ))}

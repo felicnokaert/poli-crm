@@ -2,7 +2,7 @@
 // IA con las mismas preguntas de Mercado Libre"). Se toma una pregunta ya respondida, se le pasa a la IA lo
 // que el equipo respondió en OTRAS preguntas de esa misma publicación (la respuesta real queda afuera) y se
 // compara con lo que respondimos de verdad. Si la IA le erra, Felipe le enseña la respuesta correcta.
-import { buildAiContext, cleanAnswer, detectIntent, guideFacts, teamAnswer } from './assistant-answer.mjs';
+import { buildAiContext, cleanAnswer, detectIntent, guideFacts, quantities, teamAnswer } from './assistant-answer.mjs';
 
 // Mezcla estable (la misma semilla da el mismo orden) para no repetir siempre las mismas preguntas.
 function shuffle(list, seed) {
@@ -72,7 +72,6 @@ export function suggestTeachings(questions = [], titles = {}, { taught = [], min
     byItem.get(row.item_id).push(row);
   }
   const known = new Set(taught.map((entry) => `${String(entry.product || '').toLowerCase()}|${String(entry.question || '').toLowerCase()}`));
-  const seen = new Set();
   const out = [];
   for (const [itemId, rows] of byItem) {
     if (rows.length < minUses) continue;
@@ -86,15 +85,54 @@ export function suggestTeachings(questions = [], titles = {}, { taught = [], min
     for (const { intent, rows: asked } of byIntent.values()) {
       const team = teamAnswer(asked, intent);
       if (!team || team.varied || team.uses < minUses) continue;
-      const product = shortProduct(titles[itemId] || '');
+      const product = shortProduct(titles[itemId] || '') || baseProduct([titles[itemId] || '']);
       const question = `${intent.label} (${intent.search.join(', ')})`;
       const key = `${product.toLowerCase()}|${question.toLowerCase()}`;
-      if (!product || seen.has(key) || known.has(key)) continue;
-      seen.add(key);
-      out.push({ id: `${itemId}-${intent.key}`, title: titles[itemId] || '', product, question, answer: team.text, uses: team.uses, total: team.total });
+      if (!product || known.has(key)) continue;
+      out.push({ id: `${itemId}-${intent.key}`, title: titles[itemId] || '', titles: [titles[itemId] || ''], product, question, answer: team.text, uses: team.uses, total: team.total, signature: `${intent.key}|${answerSignature(team.text)}` });
     }
   }
-  return out.sort((a, b) => b.uses - a.uses).slice(0, max);
+  // 22/10 (Felipe: "la resina epoxi rinde lo que rinde, pero me aparece en 700 g, 450 g y 25 kg"): la misma
+  // respuesta del mismo tema en variantes de un producto (otro peso, otro tamaño) se muestra una sola vez.
+  const groups = new Map();
+  for (const entry of out) {
+    const group = groups.get(entry.signature);
+    if (!group) { groups.set(entry.signature, { ...entry }); continue; }
+    group.titles.push(...entry.titles);
+    group.uses += entry.uses;
+    group.total += entry.total;
+    if (entry.answer.length < group.answer.length) group.answer = entry.answer;
+  }
+  return [...groups.values()].map(({ signature, ...entry }) => {
+    if (entry.titles.length < 2) return entry;
+    const product = baseProduct(entry.titles) || entry.product;
+    return { ...entry, product, title: `${entry.titles.length} variantes: ${entry.titles.slice(0, 3).join(' · ')}${entry.titles.length > 3 ? '…' : ''}` };
+  })
+    .filter((entry) => !known.has(`${entry.product.toLowerCase()}|${entry.question.toLowerCase()}`))
+    .sort((a, b) => b.uses - a.uses).slice(0, max);
+}
+
+// Mismo dato aunque esté escrito distinto: los números con su unidad, o el texto sin signos.
+function answerSignature(text = '') {
+  const numbers = quantities(text).join(' | ');
+  return numbers || String(text).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+// Lo que comparten los títulos de las variantes, sin pesos ni medidas ("Resina Epoxi Cristal 700 Gr" y
+// "Resina Epoxi Cristal 25 Kg" → "Resina Epoxi Cristal"). Con un solo título, sus primeras palabras.
+const SIZE_WORD = /\d|^(x|kg|kgs|kilos?|gr|grs|gramos|g|lt|lts|litros?|ml|cc|cm|mm|m2|mts?|unidades?|pack|kit|de|con|por|para|envio|gratis)$/i;
+export function baseProduct(titleList = []) {
+  const lists = titleList.map((title) => String(title).split(/\s+/).filter((word) => word && !SIZE_WORD.test(word)));
+  if (!lists.length || !lists[0].length) return '';
+  const common = [];
+  for (let index = 0; index < 3; index += 1) {
+    const word = lists[0][index];
+    if (!word || !lists.every((list) => (list[index] || '').toLowerCase() === word.toLowerCase())) break;
+    common.push(word);
+  }
+  if (common.length) return common.join(' ');
+  const shared = lists[0].filter((word) => lists.every((list) => list.some((other) => other.toLowerCase() === word.toLowerCase())));
+  return shared.slice(0, 3).join(' ');
 }
 
 // "Preguntas sin buena respuesta" (22/10, Felipe: "que el sistema aprenda de sí mismo"): si la IA contesta

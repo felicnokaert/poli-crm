@@ -117,3 +117,29 @@ test('cron: pide la clave y avisa de la empresa sin claves', async () => {
   assert.equal(result.status, 200);
   assert.equal(result.body.results.find((row) => row.company === 'COMARG').error, 'faltan las claves en Vercel');
 });
+
+test('fichas de clientes: con la lista completa, pide de a uno los que facturaron y no vinieron', async () => {
+  const { syncClients, missingClientIds } = await import('../lib/contabilium.mjs');
+  const sync = [{ company: 'POLIPLAST:clientes', page: 1, history_done: true, total_saved: 1 }];
+  const clientes = new Map([['1', { id: '1' }]]);
+  const asked = [];
+  const http = async (url, options = {}) => {
+    if (url === 'https://rest.contabilium.com/token') return json({ access_token: 'T' });
+    if (url.startsWith('https://rest.contabilium.com/api/clientes/search')) { asked.push('lista'); return json({ Items: [] }); }
+    const one = /api\/clientes\/(\d+)$/.exec(url);
+    if (one) { asked.push(one[1]); return one[1] === '3' ? json({ error: 'no' }, 404) : json({ Id: Number(one[1]), RazonSocial: 'ACME', NroDoc: '30-71234567-8', Telefono: '11 4444-5555' }); }
+    if (url.startsWith('https://db/rest/v1/contabilium_sync?select=*')) return json(sync);
+    if (url.startsWith('https://db/rest/v1/contabilium_comprobantes?select=cliente_id')) return json(new URL(url).searchParams.get('offset') === '0' ? [{ cliente_id: '1' }, { cliente_id: '2' }, { cliente_id: '2' }, { cliente_id: '3' }] : []);
+    if (url.startsWith('https://db/rest/v1/contabilium_clientes?select=id')) return options.method === 'HEAD' ? { ok: true, status: 200, headers: { get: () => `0-0/${clientes.size}` } } : json(new URL(url).searchParams.get('offset') === '0' ? [...clientes.values()].map((row) => ({ id: row.id })) : []);
+    if (url === 'https://db/rest/v1/contabilium_sync' && options.method === 'POST') { sync.splice(0, 1, JSON.parse(options.body)[0]); return json(null, 201); }
+    if (url === 'https://db/rest/v1/contabilium_clientes' && options.method === 'POST') { for (const row of JSON.parse(options.body)) clientes.set(row.id, row); return json(null, 201); }
+    return json({ error: 'no' }, 404);
+  };
+  const store = { select: async (path) => (await http(`https://db/rest/v1/${path}`)).json(), count: async () => clientes.size, upsert: async (table, rows) => http(`https://db/rest/v1/${table}`, { method: 'POST', body: JSON.stringify(rows) }) };
+  const state = await syncClients({ key: 'POLIPLAST' }, env, http, store, { deadline: NOW + 1000, now: () => NOW, pause: 0 });
+  assert.deepEqual(asked, ['2', '3'], 'no relee la lista mientras falten fichas');
+  assert.equal(clientes.get('2').cuit, '30712345678');
+  assert.equal(clientes.get('3').raw.notFound, true, 'el que no existe queda marcado para no pedirlo otra vez');
+  assert.equal(state.missing_left, 0);
+  assert.deepEqual(await missingClientIds('POLIPLAST', store), []);
+});

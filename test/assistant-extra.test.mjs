@@ -33,3 +33,13 @@ test('cuándo compró un cliente: nombre, última factura, 24 meses y cotizació
   assert.match(line, /saldo pendiente \$ 200/);
   assert.match(extraContext({ purchases: [summary], today: '2026-10-21' }), /LAVOPA ROLANDO \(POLIPLAST\)/);
 });
+
+test('perfil de compra: cada cuántos días compra y si ya le toca', () => {
+  const rows = ['2026-01-10', '2026-03-10', '2026-05-10', '2026-07-10'].map((fecha, index) => ({ company: 'POLIPLAST', tipo: 'FCA', fecha, cliente: 'ACME', total: 1000, id: String(index) }));
+  rows.push({ company: 'POLIPLAST', tipo: 'FCA', fecha: '2025-03-01', cliente: 'ACME', total: 500, id: 'x' });
+  const [summary] = purchaseSummary(rows, { today: '2026-10-21' });
+  assert.ok(summary.everyDays >= 59 && summary.everyDays <= 62);
+  const line = purchaseLine(summary, { today: '2026-10-21' });
+  assert.match(line, /suele comprar cada ~\d+ días \(ya pasaron \d+ días de cuando solía volver/);
+  assert.match(line, /\+\d+ % contra los 12 anteriores/);
+});

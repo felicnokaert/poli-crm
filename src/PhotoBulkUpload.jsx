@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ImagePlus, FolderUp } from "lucide-react";
-import { IMAGE_EXT, matchPhotos, photoState, selectedByDefault, summarize } from "./photo-match.mjs";
+import { IMAGE_EXT, filterProductsByText, matchPhotos, photoState, selectedByDefault, summarize } from "./photo-match.mjs";
 
 // Carga masiva de fotos del catálogo (solo administradores): se eligen fotos sueltas o una carpeta, el CRM las empareja por
 // SKU (nombre del archivo) o por nombre del producto, se revisa y se sube. Las fotos se achican a 1200 px, se guardan en el
@@ -42,6 +42,98 @@ const slug = (value) => String(value).normalize("NFD").replace(/[̀-ͯ]/g, "").t
 const STATUS = { exacto: ["SKU exacto", "ok"], probable: ["Por nombre", "warn"], ambiguo: ["Varios posibles", "warn"], sin: ["Sin coincidencia", ""], repetida: ["Repetida", ""], manual: ["Elegido a mano", "ok"] };
 const label = (product, variants) => `${product.name}${variants.get(product.id) ? ` · ${variants.get(product.id)}` : ""}`;
 
+
+// Una sola foto para muchos productos que se ven igual (todas las almohadas que no son cervicales, los polioles en tambor
+// azul, los isocianatos en tambor rojo...): se filtra por palabras del nombre y/o familia, se tilda lo que va y se sube
+// una vez. Mismas reglas que la carga por carpeta: no pisa fotos propias del catálogo.
+function OnePhotoPanel({ supabase, data, photoByProduct, userEmail, onSaved }) {
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState("");
+  const [text, setText] = useState("");
+  const [exclude, setExclude] = useState("");
+  const [family, setFamily] = useState("");
+  const [subfamily, setSubfamily] = useState("");
+  const [overrides, setOverrides] = useState({});
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const families = useMemo(() => [...new Set(data.products.map((product) => product.family).filter(Boolean))].sort(), [data.products]);
+  const subfamilies = useMemo(() => [...new Set(data.products.filter((product) => !family || product.family === family).map((product) => product.subfamily).filter(Boolean))].sort(), [data.products, family]);
+  const rows = useMemo(() => filterProductsByText(data.products, { text, exclude, family, subfamily }).map((product) => {
+    const state = photoState(product, photoByProduct.get(product.id));
+    return { product, state, locked: state === "propia" };
+  }), [data.products, text, exclude, family, subfamily, photoByProduct]);
+  const checked = (row) => !row.locked && (overrides[row.product.id] ?? ["sin-revisar", null].includes(row.state));
+  const chosen = rows.filter(checked);
+
+  function pickFile(event) {
+    const picked = [...(event.target.files || [])].find((item) => IMAGE_EXT.test(item.name));
+    event.target.value = "";
+    if (!picked) { setMessage("Elegí una imagen (JPG, PNG o WebP)."); return; }
+    if (preview) URL.revokeObjectURL(preview);
+    setFile(picked); setPreview(URL.createObjectURL(picked)); setMessage("");
+  }
+
+  async function save() {
+    if (!file || !chosen.length) return;
+    setBusy(true); setMessage("");
+    try {
+      const { blob, ext, type } = await prepareImage(file);
+      const path = `crm-varios-${slug(text || family || "foto")}-${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, blob, { contentType: type, upsert: false });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path);
+      const now = new Date().toISOString();
+      const rowsToSave = chosen.map((row) => ({ product_id: row.product.id, url: urlData.publicUrl, source: "una-foto-varios", item_id: "", sku: "", approved_by: String(userEmail || ""), approved_at: now }));
+      const { error } = await supabase.from("catalog_product_photos").upsert(rowsToSave, { onConflict: "product_id" });
+      if (error) throw error;
+      if (preview) URL.revokeObjectURL(preview);
+      setFile(null); setPreview(""); setOverrides({});
+      await onSaved(`La foto quedó en ${rowsToSave.length} producto${rowsToSave.length === 1 ? "" : "s"} y ya la usa el cotizador.`);
+    } catch {
+      setMessage("No se pudo subir la foto. Probá de nuevo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="photo-one">
+      <p className="muted small">Para productos que se ven igual. Elegí la foto, escribí palabras del nombre (por ejemplo <code>almohada</code>, y en "sacar" <code>cervical</code>) o elegí una familia, tildá los que van y subila una sola vez.</p>
+      <div className="panel-head-actions">
+        <label className="secondary file-pick"><ImagePlus size={15} /> Elegir la foto<input type="file" accept="image/*" hidden onChange={pickFile} /></label>
+        {preview && <img src={preview} alt="Foto elegida" width="56" height="56" style={{ objectFit: "cover", borderRadius: 6 }} />}
+      </div>
+      <div className="photo-one-filters">
+        <input aria-label="Palabras del nombre" placeholder="Palabras del nombre (ej. poliol)" value={text} onChange={(event) => { setText(event.target.value); setOverrides({}); }} />
+        <input aria-label="Sacar los que tengan" placeholder="Sacar los que tengan… (ej. cervical)" value={exclude} onChange={(event) => { setExclude(event.target.value); setOverrides({}); }} />
+        <select aria-label="Familia" value={family} onChange={(event) => { setFamily(event.target.value); setSubfamily(""); setOverrides({}); }}><option value="">Todas las familias</option>{families.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+        <select aria-label="Subfamilia" value={subfamily} onChange={(event) => { setSubfamily(event.target.value); setOverrides({}); }}><option value="">Todas las subfamilias</option>{subfamilies.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+      </div>
+      {message && <p className="muted small" role="status">{message}</p>}
+      {rows.length === 0 ? <p className="muted small">Escribí una palabra o elegí una familia para ver los productos.</p> : (
+        <>
+          <p className="muted small">{rows.length} producto{rows.length === 1 ? "" : "s"} coinciden. Marcados: <strong>{chosen.length}</strong>.</p>
+          <div className="panel-head-actions">
+            <button type="button" className="primary" disabled={busy || !file || !chosen.length} onClick={save}>{busy ? "Subiendo…" : `Usar esta foto en ${chosen.length} producto${chosen.length === 1 ? "" : "s"}`}</button>
+          </div>
+          <ul className="photo-one-list">
+            {rows.slice(0, 300).map((row) => (
+              <li key={row.product.id}>
+                <label>
+                  <input type="checkbox" disabled={row.locked || busy} checked={checked(row)} onChange={(event) => setOverrides((current) => ({ ...current, [row.product.id]: event.target.checked }))} />
+                  {" "}{row.product.name}
+                  <span className="muted small"> · {[row.product.family, row.product.subfamily].filter(Boolean).join(" › ")}{row.state === "propia" ? " · ya tiene foto propia (no se reemplaza)" : row.state === "aprobada" ? " · ya tiene foto aprobada: marcalo para reemplazar" : row.state === "sin-revisar" ? " · reemplaza la foto sin revisar" : " · sin foto"}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+          {rows.length > 300 && <p className="muted small">Se muestran los primeros 300; afiná el filtro para ver el resto.</p>}
+        </>
+      )}
+    </div>
+  );
+}
+
 export function PhotoBulkUpload({ supabase, isAdmin = false, userEmail = "" }) {
   const [data, setData] = useState({ status: supabase ? "loading" : "offline", products: [], variants: [], photos: [] });
   const [rows, setRows] = useState([]);
@@ -51,10 +143,11 @@ export function PhotoBulkUpload({ supabase, isAdmin = false, userEmail = "" }) {
   const [progress, setProgress] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState("carpeta");
 
   async function load() {
     const [products, variants, photos] = await Promise.all([
-      readAll(supabase, "catalog_products", "id,name,photo_path,status"),
+      readAll(supabase, "catalog_products", "id,name,photo_path,status,family,subfamily"),
       readAll(supabase, "catalog_variants", "id,product_id,sku,active"),
       readAll(supabase, "catalog_product_photos", "product_id,url,approved_by"),
     ]);
@@ -135,12 +228,19 @@ export function PhotoBulkUpload({ supabase, isAdmin = false, userEmail = "" }) {
           <p className="muted">Elegí fotos sueltas o una carpeta entera. Se emparejan por el <strong>SKU en el nombre del archivo</strong> (ej. <code>PM490.jpg</code>, <code>KT-740-1.png</code>) o, si no, por el nombre del producto. Antes de subir ves cada una y corregís lo dudoso. Hoy faltan fotos en {withoutPhoto} productos.</p>
         </div>
       </div>
+      <div className="segmented" role="tablist" aria-label="Cómo subir las fotos" style={{ marginBottom: 12, width: "fit-content" }}>
+        {[["carpeta", "Por carpeta (por SKU)"], ["una", "Una foto para varios productos"]].map(([key, text]) => (
+          <button key={key} type="button" role="tab" aria-selected={mode === key} className={mode === key ? "selected" : ""} onClick={() => setMode(key)}>{text}</button>
+        ))}
+      </div>
+      {message && <p className="muted small" role="status">{message}</p>}
+      {progress && <p className="muted small" role="status">{progress}</p>}
+      {mode === "una" && <OnePhotoPanel supabase={supabase} data={data} photoByProduct={photoByProduct} userEmail={userEmail} onSaved={async (text) => { try { setData(await load()); } catch { /* se actualiza al volver a entrar */ } setMessage(text); }} />}
+      {mode === "carpeta" && (<>
       <div className="panel-head-actions">
         <label className="secondary file-pick"><ImagePlus size={15} /> Elegir fotos<input type="file" accept="image/*" multiple hidden onChange={pick} /></label>
         <label className="secondary file-pick"><FolderUp size={15} /> Elegir una carpeta<input type="file" accept="image/*" multiple hidden webkitdirectory="" directory="" onChange={pick} /></label>
       </div>
-      {message && <p className="muted small" role="status">{message}</p>}
-      {progress && <p className="muted small" role="status">{progress}</p>}
       {rows.length > 0 && (
         <>
           <p className="muted small">
@@ -186,6 +286,7 @@ export function PhotoBulkUpload({ supabase, isAdmin = false, userEmail = "" }) {
           <datalist id="photo-bulk-products">{options.map((option) => <option key={option.id} value={option.text} />)}</datalist>
         </>
       )}
+      </>)}
     </section>
   );
 }

@@ -49,3 +49,21 @@ test('answerHasGap: anota sola las respuestas en las que a la IA le faltó el da
   assert.equal(answerHasGap('El contexto no trae precios, así que no lo pude verificar.'), true);
   assert.equal(answerHasGap('Rinde 2 m² en 2 cm de espesor. Fuente: Mercado Libre.'), false);
 });
+
+test('sugeridas: la misma respuesta en variantes del producto (700 g, 450 g, 25 kg) aparece una sola vez', async () => {
+  const { baseProduct } = await import('../src/assistant-training.mjs');
+  const variant = (item, n) => [
+    { id: `${item}1`, item_id: item, question: 'cuanto rinde?', answer: `Rinde 1 kg por m2 en 1 mm. ${n}` },
+    { id: `${item}2`, item_id: item, question: 'que rendimiento tiene?', answer: 'Rinde 1 kg por m2 en 1 mm.' },
+    { id: `${item}3`, item_id: item, question: 'cuantos metros cubre?', answer: 'Rinde 1 kg x m2 en 1 mm de espesor.' },
+  ];
+  const rows = [...variant('X', ''), ...variant('Y', ''), ...variant('Z', '')];
+  const titles = { X: 'Resina Epoxi Bicomponente 700 Gr', Y: 'Resina Epoxi Bicomponente 450 g', Z: 'Resina Epoxi Bicomponente x 25 Kg' };
+  const list = suggestTeachings(rows, titles);
+  assert.equal(list.length, 1);
+  assert.equal(list[0].product, 'Resina Epoxi Bicomponente');
+  assert.equal(list[0].titles.length, 3);
+  assert.equal(list[0].uses, 9);
+  assert.match(list[0].title, /^3 variantes/);
+  assert.equal(baseProduct(['Resina Epoxi Cristal 700 Gr']), 'Resina Epoxi Cristal');
+});

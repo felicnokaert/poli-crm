@@ -67,7 +67,18 @@ export function purchaseSummary(rows = [], { today = new Date().toISOString().sl
     const quote = sorted.find((row) => row.tipo === 'COT');
     const balance = invoices.reduce((sum, row) => sum + (Number(row.saldo) || 0), 0);
     const companies = [...new Set(sorted.map((row) => row.company))];
-    return { name, companies, last: invoices[0] || null, lastQuote: quote || null, purchases24: recent.length, billed24: billed, invoices: invoices.length, balance, recentRows: sorted.slice(0, 5) };
+    // 22/10 (Felipe: "que aprenda de los clientes, por lo que compra, su frecuencia"): cada cuántos días
+    // compra (mediana entre días de compra), cuándo le tocaría y si viene comprando más o menos que antes.
+    const days = [...new Set(invoices.map((row) => String(row.fecha).slice(0, 10)))].sort();
+    const gaps = days.slice(1).map((day, index) => daysAgo(days[index], day)).filter((gap) => gap > 0).sort((a, b) => a - b);
+    const everyDays = gaps.length >= 2 ? gaps[Math.floor(gaps.length / 2)] : null;
+    const lastDay = days[days.length - 1];
+    const late = everyDays && lastDay ? daysAgo(lastDay, today) - everyDays : null;
+    const yearAgo = new Date(Date.parse(today) - 365 * 86400000).toISOString().slice(0, 10);
+    const sumOf = (list) => list.reduce((sum, row) => sum + comprobanteAmount(row), 0);
+    const last12 = sumOf(recent.filter((row) => String(row.fecha) >= yearAgo));
+    const prev12 = sumOf(recent.filter((row) => String(row.fecha) < yearAgo));
+    return { name, companies, last: invoices[0] || null, lastQuote: quote || null, purchases24: recent.length, billed24: billed, invoices: invoices.length, balance, recentRows: sorted.slice(0, 5), everyDays, late, last12, prev12 };
   }).sort((a, b) => String(b.last?.fecha || '').localeCompare(String(a.last?.fecha || '')));
 }
 
@@ -78,6 +89,14 @@ export function purchaseLine(summary, { today = new Date().toISOString().slice(0
   parts.push(`${summary.purchases24} compra${summary.purchases24 === 1 ? '' : 's'} en 24 meses${summary.purchases24 ? ` por ${pesos(summary.billed24)}` : ''}`);
   if (summary.lastQuote) parts.push(`última cotización ${dmy(summary.lastQuote.fecha)}`);
   if (summary.balance > 0) parts.push(`saldo pendiente ${pesos(summary.balance)}`);
+  if (summary.everyDays) {
+    const when = summary.late > 15 ? `ya pasaron ${summary.late} días de cuando solía volver: conviene llamarlo` : summary.late >= -15 ? 'le toca comprar por estos días' : `le tocaría en unos ${-summary.late} días`;
+    parts.push(`suele comprar cada ~${summary.everyDays} días (${when})`);
+  }
+  if (summary.prev12 > 0 && summary.last12 >= 0) {
+    const change = Math.round(((summary.last12 - summary.prev12) / summary.prev12) * 100);
+    if (Math.abs(change) >= 20) parts.push(`últimos 12 meses ${change > 0 ? `+${change}` : change} % contra los 12 anteriores`);
+  }
   return parts.join(' · ');
 }
 

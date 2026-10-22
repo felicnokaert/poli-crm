@@ -84,20 +84,39 @@ function useTeamAnswer(supabase, query, intent) {
 }
 
 // Comprobantes de Contabilium del cliente nombrado ("cuándo compró X"), con una pausa mientras se escribe.
-function usePurchases(supabase, words = []) {
+// 22/10: si la ficha tiene CUIT, primero por CUIT (fichas de Contabilium): encuentra las compras aunque la
+// razón social de la factura no se parezca al nombre de la cartera.
+function usePurchases(supabase, words = [], cuit = null) {
   const [rows, setRows] = useState([]);
   const key = words.join(" ");
   useEffect(() => {
-    if (!supabase?.from || !key) { setRows([]); return undefined; }
+    if (!supabase?.from || (!key && !cuit)) { setRows([]); return undefined; }
     let active = true;
-    const timer = setTimeout(() => {
-      let request = supabase.from("contabilium_comprobantes").select("company,tipo,numero,fecha,cliente,total,saldo");
+    const columns = "company,tipo,numero,fecha,cliente,total,saldo";
+    const byName = () => {
+      if (!key) return Promise.resolve({ data: [] });
+      let request = supabase.from("contabilium_comprobantes").select(columns);
       for (const word of key.split(" ")) request = request.ilike("cliente", `%${word}%`);
-      Promise.resolve(request.order("fecha", { ascending: false }).limit(300))
+      return Promise.resolve(request.order("fecha", { ascending: false }).limit(300));
+    };
+    const byCuit = async () => {
+      if (!cuit) return null;
+      const { data: fichas, error } = await supabase.from("contabilium_clientes").select("company,id").eq("cuit", cuit).limit(20);
+      if (error || !fichas?.length) return null;
+      const found = [];
+      for (const company of [...new Set(fichas.map((ficha) => ficha.company))]) {
+        const ids = fichas.filter((ficha) => ficha.company === company).map((ficha) => ficha.id);
+        const { data } = await supabase.from("contabilium_comprobantes").select(columns).eq("company", company).in("cliente_id", ids).order("fecha", { ascending: false }).limit(300);
+        found.push(...(data || []));
+      }
+      return found.length ? { data: found } : null;
+    };
+    const timer = setTimeout(() => {
+      byCuit().catch(() => null).then((result) => result || byName())
         .then(({ data, error }) => { if (active) setRows(error ? [] : data || []); }, () => {});
     }, 450);
     return () => { active = false; clearTimeout(timer); };
-  }, [supabase, key]);
+  }, [supabase, key, cuit]);
   return rows;
 }
 
@@ -297,7 +316,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   // "Contame todo de lavopa": ficha de la cartera + sus compras en Contabilium (aunque no diga "compró").
   const clientsFound = typed && (asksClient(typed) || !intent) ? clientCards(clients, typed) : [];
   const buyWords = purchaseNameWords(typed);
-  const purchaseRows = usePurchases(supabase, buyWords.length ? buyWords : clientsFound.length ? clientWords(typed) : []);
+  const purchaseRows = usePurchases(supabase, buyWords.length ? buyWords : clientsFound.length ? clientWords(typed) : [], !buyWords.length && clientsFound.length === 1 ? clientsFound[0].cuit : null);
   const purchases = purchaseRows.length ? purchaseSummary(purchaseRows) : [];
   const mine = typed ? workspaceAnswer(typed, workspace) : [];
   const hasExtra = Boolean(rivals || purchases.length || mine.length || clientsFound.length || rapyp);

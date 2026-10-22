@@ -78,9 +78,10 @@ export function ContabiliumTest({ session }) {
         }
         fails = 0;
         const state = result.company;
-        setProgress(`Fichas de ${company.name}: ${state.total_saved || 0} clientes${state.history_done ? " (completo)" : ` · página ${state.page}`}`);
+        const left = state.missing_left ? ` · faltan ${state.missing_left} que facturaron` : "";
+        setProgress(`Fichas de ${company.name}: ${state.total_saved || 0} clientes${state.history_done ? (left || " (completo)") : ` · página ${state.page}`}`);
         if (state.last_error) { problems.push(`${company.name}: ${state.last_error}`); break; }
-        if (state.history_done && state.page === 1) break;
+        if (state.history_done && !state.missing_left) break;
       }
       if (stop.current) break;
     }

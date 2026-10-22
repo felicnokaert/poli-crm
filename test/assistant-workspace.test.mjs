@@ -39,3 +39,9 @@ test('prospectos y preguntas que no son del espacio de trabajo', () => {
   assert.match(workspaceAnswer('mis prospectos', workspace)[0].lines[0], /Aislaciones Sur · estado: nuevo/);
   assert.deepEqual(workspaceAnswer('cuanto rinde la epoxi', workspace), []);
 });
+
+test('último precio aunque la pregunta tenga palabras de más ("dame", "con pistola y limpiador")', () => {
+  const sales = [{ id: 's1', date: '2026-10-09', customer: 'Ramón', items: [{ description: 'KIT X 12 Easyspray Espuma Pro + Pistola + Limpiador', unitPrice: 324000 }] }];
+  const [block] = workspaceAnswer('Dame el ultimo precio de easy spray x 12 con pistola y limpiador', { sales });
+  assert.match(block.lines[0], /KIT X 12 Easyspray.*324\.000 \+ IVA el 09\/10\/2026/);
+});

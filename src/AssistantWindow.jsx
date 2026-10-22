@@ -92,6 +92,22 @@ export async function askAi(supabase, payload) {
   return response.json().catch(() => ({ ok: false, reason: "red", error: `El servidor no respondió bien (código ${response.status}). Probá de nuevo.` }));
 }
 
+// Texto de la IA (22/10): **negrita** y viñetas "- " se ven como tales, no con los asteriscos.
+const bold = (line) => line.split(/\*\*(.+?)\*\*/g).map((part, index) => (index % 2 ? <strong key={index}>{part}</strong> : part));
+export function AiText({ text = "" }) {
+  const blocks = [];
+  for (const line of String(text).split(/\r?\n/)) {
+    const item = line.match(/^\s*[-•*]\s+(.*)$/);
+    if (item) {
+      if (blocks.at(-1)?.type !== "list") blocks.push({ type: "list", lines: [] });
+      blocks.at(-1).lines.push(item[1]);
+    } else if (line.trim()) blocks.push({ type: "p", line: line.replace(/^#+\s*/, "") });
+  }
+  return blocks.map((block, index) => (block.type === "list"
+    ? <ul key={index}>{block.lines.map((line, at) => <li key={at}>{bold(line)}</li>)}</ul>
+    : <p key={index}>{bold(block.line)}</p>));
+}
+
 function CopyButton({ text }) {
   const [copied, setCopied] = useState(false);
   async function copy() {
@@ -296,7 +312,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
         </div>
         {chat.map((turn, index) => (
           <div key={index} className={turn.role === "user" ? "assistant-msg-user" : "assistant-bubble assistant-msg-ai"}>
-            <p>{turn.text}</p>
+            {turn.role === "assistant" ? <div className="assistant-ai-text"><AiText text={turn.text} /></div> : <p>{turn.text}</p>}
             {turn.role === "assistant" && (
               <div className="assistant-answer-meta">
                 <Votes supabase={supabase} question={chat[index - 1]?.text || ""} answer={turn.text} source="ia" onBad={isAdmin ? () => setTeach({ question: chat[index - 1]?.text || "", product: "", answer: turn.text }) : null} />

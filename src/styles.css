@@ -1093,3 +1093,6 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .ml-faq ul { margin: 0; padding-left: 18px; font-size: 13.5px; display: grid; gap: 3px; }
 .ml-board .ml-clip-toggle { border: 1px dashed currentColor; cursor: pointer; font-family: inherit; }
 .ml-board .ml-clip-toggle:hover { filter: brightness(0.95); }
+.assistant-ai-text { display: grid; gap: 6px; }
+.assistant-ai-text p { margin: 0; white-space: pre-wrap; }
+.assistant-ai-text ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }

@@ -2,7 +2,21 @@
 // tareas pendientes, ventas cargadas (y la memoria de precios), lo hablado con cada empresa (Historial) y
 // los prospectos. Todo se resuelve en el navegador, sin IA ni costo; lo encontrado también va a la IA.
 import { plain } from './knowledge-search.mjs';
-import { buildPriceMemory, findPriceMatches, ivaLabel } from './price-memory.mjs';
+import { buildPriceMemory, ivaLabel, normalizeProduct } from './price-memory.mjs';
+
+// 22/10: "a cuánto vendimos easy spray x12 con pistola y limpiador": no hace falta que estén TODAS las
+// palabras; gana el producto que tiene más (al menos 6 de cada 10).
+function priceMatches(memory, terms, limit = 5) {
+  const wanted = [...new Set(normalizeProduct(terms.join(' ')).split(' ').filter((term) => term.length > 1))];
+  if (!wanted.length) return [];
+  const need = Math.max(1, Math.ceil(wanted.length * 0.6));
+  return [...memory.values()]
+    .map((entry) => ({ entry, hits: wanted.filter((term) => entry.key.includes(term)).length }))
+    .filter((row) => row.hits >= need)
+    .sort((a, b) => b.hits - a.hits || String(b.entry.date).localeCompare(String(a.entry.date)))
+    .slice(0, limit)
+    .map((row) => row.entry);
+}
 
 const ASK = {
   tasks: /\b(tareas?|pendientes?|agenda|vencid\w*|que tengo|para hoy|hoy tengo|que hago|recordatorios?|seguimientos?)\b/,
@@ -10,7 +24,7 @@ const ASK = {
   history: /\b(hablamos|hable|historial|conversaci\w*|charla\w*|que (nos )?dijo|ultima vez|ultimo contacto|interacci\w*)\b/,
   prospects: /\b(prospect\w*|leads?|clientes? nuevos?|para captar)\b/,
 };
-const FILLER = new Set(['que', 'para', 'con', 'los', 'las', 'una', 'uno', 'por', 'del', 'como', 'cual', 'cuales', 'sus', 'este', 'esta', 'hay', 'tiene', 'tengo', 'tenemos', 'hoy', 'mis', 'mi', 'cuanto', 'cuando', 'donde', 'quien', 'vendimos', 'vendemos', 'vendi', 'vendio', 'venta', 'ventas', 'precio', 'precios', 'ultimo', 'ultima', 'ultimos', 'vez', 'tarea', 'tareas', 'pendiente', 'pendientes', 'hablamos', 'hable', 'historial', 'conversacion', 'prospecto', 'prospectos', 'cliente', 'clientes', 'empresa', 'sale', 'salio', 'cobramos', 'facturamos', 'dijo', 'nos', 'les', 'le', 'agenda', 'vencidas', 'vencida', 'semana', 'nuevos', 'nuevo', 'hacer', 'hago', 'contacto', 'interaccion', 'seguimiento', 'seguimientos', 'algo', 'todo', 'todos', 'fue', 'qué', 'leads', 'captar']);
+const FILLER = new Set(['que', 'para', 'con', 'los', 'las', 'una', 'uno', 'por', 'del', 'como', 'cual', 'cuales', 'sus', 'este', 'esta', 'hay', 'tiene', 'tengo', 'tenemos', 'hoy', 'mis', 'mi', 'cuanto', 'cuando', 'donde', 'quien', 'vendimos', 'vendemos', 'vendi', 'vendio', 'venta', 'ventas', 'precio', 'precios', 'ultimo', 'ultima', 'ultimos', 'vez', 'tarea', 'tareas', 'pendiente', 'pendientes', 'hablamos', 'hable', 'historial', 'conversacion', 'prospecto', 'prospectos', 'cliente', 'clientes', 'empresa', 'sale', 'salio', 'cobramos', 'facturamos', 'dijo', 'nos', 'les', 'le', 'agenda', 'vencidas', 'vencida', 'semana', 'nuevos', 'nuevo', 'hacer', 'hago', 'contacto', 'interaccion', 'seguimiento', 'seguimientos', 'algo', 'todo', 'todos', 'fue', 'qué', 'leads', 'captar', 'dame', 'decime', 'pasame', 'quiero', 'saber', 'necesito', 'buscame', 'mostrame', 'cual', 'era', 'estaba', 'esta', 'kit', 'con']);
 
 const words = (query) => [...new Set(plain(query).split(/[^a-z0-9]+/).filter((word) => word.length > 2 && !FILLER.has(word)))];
 const matchesName = (name, terms) => terms.length > 0 && terms.every((term) => plain(name).includes(term));
@@ -65,7 +79,7 @@ export function workspaceAnswer(query, { tasks = [], sales = [], interactions = 
       for (const sale of toClient.slice(0, 4)) lines.push(`${dmy(sale.date)} · ${money(saleTotal(sale), sale.currency)} + IVA${(sale.items || []).length ? ` · ${(sale.items || []).slice(0, 3).map((item) => item.description).filter(Boolean).join(', ')}` : ''}`);
     }
     if (terms.length && !toClient.length) {
-      const prices = findPriceMatches(buildPriceMemory(sales.filter(alive)), terms.join(' '), 5);
+      const prices = priceMatches(buildPriceMemory(sales.filter(alive)), terms, 5);
       for (const entry of prices) lines.push(`${entry.description}: ${money(entry.unitPrice, entry.currency)} ${ivaLabel(entry)} el ${dmy(entry.date)}${entry.customer ? ` a ${entry.customer}` : ''}${entry.history.length > 1 ? ` (antes: ${entry.history.slice(1).map((old) => `${money(old.unitPrice, old.currency)} el ${dmy(old.date)}`).join('; ')})` : ''}`);
     }
     if (!terms.length) {

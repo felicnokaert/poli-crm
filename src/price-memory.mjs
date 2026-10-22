@@ -1,4 +1,4 @@
-function normalizeProduct(value = '') {
+export function normalizeProduct(value = '') {
   return String(value)
     .trim()
     .toLocaleLowerCase('es-AR')

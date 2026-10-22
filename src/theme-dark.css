@@ -707,3 +707,15 @@
 :root[data-theme="dark"] .training-row { border-color: #333338; }
 :root[data-theme="dark"] .training-compare > div { background: rgba(255,255,255,.05); }
 :root[data-theme="dark"] .ml-faq > li { border-color: #333338; }
+
+/* 22/10: chat del asistente en oscuro */
+:root[data-theme="dark"] .assistant-window-head { background: linear-gradient(135deg, #1c1c1f 0%, #241c1d 100%); }
+:root[data-theme="dark"] .assistant-avatar { background: #1c1c1f; }
+:root[data-theme="dark"] .assistant-ai-text strong { color: #ff8a8f; }
+:root[data-theme="dark"] .assistant-source { border-top-color: rgba(255, 255, 255, .1); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .assistant-window-head { background: linear-gradient(135deg, #1c1c1f 0%, #241c1d 100%); }
+  :root:not([data-theme="light"]) .assistant-avatar { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .assistant-ai-text strong { color: #ff8a8f; }
+  :root:not([data-theme="light"]) .assistant-source { border-top-color: rgba(255, 255, 255, .1); }
+}

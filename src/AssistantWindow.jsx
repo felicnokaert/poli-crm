@@ -1,6 +1,7 @@
 import { answerHasGap } from "./assistant-training.mjs";
 import { asksClient, clientCards, clientContext, clientWords } from "./assistant-client.mjs";
 import { isRule, rapypFor, rulesContext } from "./assistant-rapyp.mjs";
+import { asksPrice, currentListPrices, priceLine, priceWords, pricesContext } from "./assistant-prices.mjs";
 import { asksLearning, learningContext, prospectLearning, routeFor, routesContext, teamNotes, teamNotesContext } from "./assistant-team.mjs";
 import { useEffect, useRef, useState } from "react";
 import { adminFetch } from "./admin-api.mjs";
@@ -101,6 +102,50 @@ function useTeamAnswer(supabase, query, intent) {
   return { rows: state.q === q ? state.rows : [], ready: state.q === q, q };
 }
 
+// Precios de lista vigentes del catálogo del cotizador (22/10). Busca la variante por nombre o SKU; si no, el
+// producto. Se usa en el hook (mientras se escribe) y en submit si todavía no llegó.
+export async function loadListPrices(supabase, words, today) {
+  if (!supabase?.from || !words.length) return [];
+  const all = (request) => Promise.resolve(request).then(({ data }) => data || [], () => []);
+  let variantsQuery = supabase.from("catalog_variants").select("id,sku,name,product_id,active").eq("active", true);
+  for (const word of words) variantsQuery = variantsQuery.or(`name.ilike.%${word}%,sku.ilike.%${word}%`);
+  let variants = await all(variantsQuery.limit(12));
+  if (!variants.length) {
+    for (const productWords of words.length > 1 ? [words, [words[0]]] : [words]) {
+      let productQuery = supabase.from("catalog_products").select("id,name");
+      for (const word of productWords) productQuery = productQuery.ilike("name", `%${word}%`);
+      const products = await all(productQuery.limit(5));
+      if (products.length) { variants = await all(supabase.from("catalog_variants").select("id,sku,name,product_id,active").eq("active", true).in("product_id", products.map((product) => product.id)).limit(12)); break; }
+    }
+  }
+  if (!variants.length) return [];
+  const [products, lists, prices] = await Promise.all([
+    all(supabase.from("catalog_products").select("id,name").in("id", [...new Set(variants.map((variant) => variant.product_id))])),
+    all(supabase.from("price_lists").select("id,name,currency,vat_rate,valid_from,valid_until,status")),
+    all(supabase.from("variant_prices").select("price_list_id,variant_id,min_quantity,max_quantity,amount,status").in("variant_id", variants.map((variant) => variant.id))),
+  ]);
+  const productName = new Map(products.map((product) => [product.id, product.name]));
+  const named = variants.map((variant) => {
+    const base = productName.get(variant.product_id) || "";
+    return { ...variant, name: base && !plainText(variant.name).includes(plainText(base)) ? `${base} · ${variant.name}` : variant.name };
+  });
+  return currentListPrices({ variants: named, prices, lists, today });
+}
+const plainText = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+function useListPrices(supabase, query) {
+  const words = asksPrice(query) ? priceWords(query) : [];
+  const key = words.join(" ");
+  const [state, setState] = useState({ key: "", entries: [] });
+  useEffect(() => {
+    if (!key) { setState({ key: "", entries: [] }); return undefined; }
+    let active = true;
+    const timer = setTimeout(() => { loadListPrices(supabase, key.split(" "), isoToday()).then((entries) => { if (active) setState({ key, entries }); }); }, 450);
+    return () => { active = false; clearTimeout(timer); };
+  }, [supabase, key]);
+  return { key, words, entries: state.key === key ? state.entries : [], ready: state.key === key };
+}
+
 // Comprobantes de Contabilium del cliente nombrado ("cuándo compró X"), con una pausa mientras se escribe.
 // 22/10: si la ficha tiene CUIT, primero por CUIT (fichas de Contabilium): encuentra las compras aunque la
 // razón social de la factura no se parezca al nombre de la cartera.
@@ -180,18 +225,28 @@ export async function askAi(supabase, payload) {
 
 // Texto de la IA (22/10): **negrita** y viñetas "- " se ven como tales, no con los asteriscos.
 const bold = (line) => line.split(/\*\*(.+?)\*\*/g).map((part, index) => (index % 2 ? <strong key={index}>{part}</strong> : part));
+// 22/10: listas numeradas, títulos "###" en negrita, la primera línea destacada y "Fuente:" aparte, en chico.
 export function AiText({ text = "" }) {
   const blocks = [];
   for (const line of String(text).split(/\r?\n/)) {
     const item = line.match(/^\s*[-•*]\s+(.*)$/);
-    if (item) {
-      if (blocks.at(-1)?.type !== "list") blocks.push({ type: "list", lines: [] });
-      blocks.at(-1).lines.push(item[1]);
-    } else if (line.trim()) blocks.push({ type: "p", line: line.replace(/^#+\s*/, "") });
+    const numbered = line.match(/^\s*\d+[.)]\s+(.*)$/);
+    if (item || numbered) {
+      const type = item ? "list" : "olist";
+      if (blocks.at(-1)?.type !== type) blocks.push({ type, lines: [] });
+      blocks.at(-1).lines.push((item || numbered)[1]);
+    } else if (/^\s*fuente\s*:/i.test(line)) blocks.push({ type: "source", line: line.trim() });
+    else if (/^\s*#+\s+/.test(line)) blocks.push({ type: "title", line: line.replace(/^\s*#+\s*/, "").replace(/\*\*/g, "") });
+    else if (line.trim()) blocks.push({ type: "p", line });
   }
-  return blocks.map((block, index) => (block.type === "list"
-    ? <ul key={index}>{block.lines.map((line, at) => <li key={at}>{bold(line)}</li>)}</ul>
-    : <p key={index}>{bold(block.line)}</p>));
+  const firstText = blocks.findIndex((block) => block.type === "p");
+  return blocks.map((block, index) => {
+    if (block.type === "list") return <ul key={index}>{block.lines.map((line, at) => <li key={at}>{bold(line)}</li>)}</ul>;
+    if (block.type === "olist") return <ol key={index}>{block.lines.map((line, at) => <li key={at}>{bold(line)}</li>)}</ol>;
+    if (block.type === "source") return <p key={index} className="assistant-source">{block.line}</p>;
+    if (block.type === "title") return <p key={index} className="assistant-title">{block.line}</p>;
+    return <p key={index} className={index === firstText ? "assistant-lead" : undefined}>{bold(block.line)}</p>;
+  });
 }
 
 function CopyButton({ text }) {
@@ -338,12 +393,13 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   const purchaseRows = usePurchases(supabase, buyWords.length ? buyWords : clientsFound.length ? clientWords(typed) : [], !buyWords.length && clientsFound.length === 1 ? clientsFound[0].cuit : null);
   const purchases = purchaseRows.length ? purchaseSummary(purchaseRows) : [];
   const mine = typed ? workspaceAnswer(typed, workspace) : [];
+  const listPrices = useListPrices(supabase, typed);
   // 22/10: lo que anotó el equipo sobre el tema, a quién derivar y qué aprendimos en la Cola del día.
   const notes = typed && !clientsFound.length ? teamNotes(typed, { interactions: workspace.interactions || [], clients, prospects: workspace.prospects || [] }) : [];
   const routes = typed ? routeFor(typed) : [];
   const learning = typed && asksLearning(typed) ? prospectLearning({ prospects: workspace.prospects || [], clients }) : null;
   const learningText = learning ? learningContext(learning) : "";
-  const hasExtra = Boolean(rivals || purchases.length || mine.length || clientsFound.length || rapyp || notes.length || learningText);
+  const hasExtra = Boolean(rivals || purchases.length || mine.length || clientsFound.length || rapyp || notes.length || learningText || listPrices.entries.length);
   const hasAnswer = Boolean(taught.length || (intent && (facts.length || team)) || helpAnswer);
   useEffect(() => { setShowAll(false); }, [typed]);
   const [chat, setChat] = useState([]);
@@ -401,7 +457,8 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
       mlNow = fetched?.data || [];
     }
     const teamNow = mlNow === teamRows ? team : intent ? teamAnswer(mlNow, intent) : null;
-    const context = [rulesContext({ rules, competitors: competitors || [], rapyp }), routesContext(), teamNotesContext(notes), learningText, clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases }), buildAiContext({ intent, facts, team: teamNow, result, mlRows: mlNow, taught: withEarlier(taught) })].filter(Boolean).join("\n");
+    const pricesNow = listPrices.key && !listPrices.ready ? await loadListPrices(supabase, listPrices.words, isoToday()).catch(() => []) : listPrices.entries;
+    const context = [rulesContext({ rules, competitors: competitors || [], rapyp }), routesContext(), pricesContext(pricesNow), teamNotesContext(notes), learningText, clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases }), buildAiContext({ intent, facts, team: teamNow, result, mlRows: mlNow, taught: withEarlier(taught) })].filter(Boolean).join("\n");
     const reply = await askAi(supabase, { question: asked, context, history, today: isoToday(), userName: firstName }).catch(() => ({ ok: false, reason: "red" }));
     setThinking(false);
     if (reply.ok) {
@@ -448,6 +505,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
         </div>
         {chat.map((turn, index) => (
           <div key={index} className={turn.role === "user" ? "assistant-msg-user" : "assistant-bubble assistant-msg-ai"}>
+            {turn.role === "assistant" && <span className="assistant-avatar" aria-hidden="true"><AssistantLogo size={18} /></span>}
             {turn.role === "assistant" ? <div className="assistant-ai-text"><AiText text={turn.text} /></div> : <p>{turn.text}</p>}
             {(turn.actions || []).map((action) => <ActionCard key={action.id || action.kind} action={action} onAction={handleAction} />)}
             {turn.role === "assistant" && (
@@ -458,7 +516,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
             )}
           </div>
         ))}
-        {thinking && <div className="assistant-bubble muted" role="status">Pensando…</div>}
+        {thinking && <div className="assistant-bubble assistant-typing" role="status" aria-label="Pensando"><span /><span /><span /></div>}
         {aiError && <div className="assistant-bubble muted">{aiError}</div>}
         {!typed && !chat.length && (
           <div className="assistant-chips" aria-label="Sugerencias">
@@ -484,6 +542,18 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
             <ul className="assistant-rivals">{block.lines.map((line) => <li key={line}>{line}</li>)}</ul>
           </section>
         ))}
+        {listPrices.entries.length > 0 && (
+          <section className="assistant-answer" aria-label="Precios de lista">
+            <span className="assistant-group-label">Precio de lista vigente</span>
+            {listPrices.entries.slice(0, 4).map(({ variant, rows }) => (
+              <div key={variant.id} className="assistant-price">
+                <strong>{variant.name}{variant.sku ? <span className="muted small"> · {variant.sku}</span> : null}</strong>
+                <ul className="assistant-rivals">{rows.map((row) => <li key={`${row.list}-${row.from}`}>{priceLine(row)}</li>)}</ul>
+              </div>
+            ))}
+            <span className="muted small">Del catálogo del cotizador. Para un pedido, el cotizador puede aplicar reglas por cantidad, mayorista o forma de pago.</span>
+          </section>
+        )}
         {notes.length > 0 && (
           <section className="assistant-answer" aria-label="Lo que anotó el equipo">
             <span className="assistant-group-label">Lo que anotó el equipo</span>

@@ -35,9 +35,11 @@ function scoreItem(item, tokens) {
 }
 
 // Normaliza cada fuente a { type, id, title, subtitle, text }.
-export function toItems({ products = [], guides = [], docs = [], clients = [], sellers = [], objections = [], competitors = [], help = [] } = {}) {
+export function toItems({ products = [], guides = [], docs = [], clients = [], sellers = [], objections = [], competitors = [], help = [], mlReports = [] } = {}) {
   return [
     ...help,
+    // Reportes pegados de Mercado Libre (Métricas → Competencia), 22/10.
+    ...mlReports.map((r) => ({ type: 'competencia', id: `ml-${r.id}`, title: `Mercado Libre · ${r.section}${r.account ? ` (${r.account})` : ''}`, subtitle: `pegado el ${String(r.created_at || '').slice(0, 10).split('-').reverse().join('/')}`, text: r.content, fullText: r.content })),
     ...guides.map((g) => {
       const body = [g.summary, ...(g.sections || []).flatMap((section) => section.items || [])].join(' ');
       return { type: 'guias', id: g.id, title: g.product, subtitle: [g.family, g.status === 'validada' ? 'validada' : 'borrador sin validar'].join(' · '), text: body, fullText: body };

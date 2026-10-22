@@ -23,6 +23,63 @@ async function fetchAll(page, size = 1000, maxPages = 20) {
   return { data: rows };
 }
 
+// 👎 para revisar (22/10): lo que el equipo marcó como "no me sirvió". Felipe le enseña la respuesta correcta
+// (queda resuelto como "enseñada") o lo descarta. Los 👍 solo se cuentan.
+const when = (iso) => (iso ? new Date(iso).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" }) : "");
+const who = (email) => String(email || "").split("@")[0];
+
+function FeedbackReview({ supabase }) {
+  const [rows, setRows] = useState(null);
+  const [showDone, setShowDone] = useState(false);
+  const [teach, setTeach] = useState(null);
+  const [error, setError] = useState("");
+  async function load() {
+    const { data, error: loadError } = await supabase.from("assistant_feedback").select("id,question,answer,source,vote,email,created_at,resolved_at,resolution").order("created_at", { ascending: false }).limit(500);
+    if (loadError) { setError("No se pudieron leer los votos."); setRows([]); return; }
+    setRows(data || []);
+  }
+  useEffect(() => { if (supabase?.from) load(); }, [supabase]); // eslint-disable-line react-hooks/exhaustive-deps
+  async function resolve(row, resolution) {
+    const resolvedAt = new Date().toISOString();
+    const { error: saveError } = await supabase.from("assistant_feedback").update({ resolved_at: resolvedAt, resolution }).eq("id", row.id);
+    if (saveError) { setError("No se pudo marcar como resuelto."); return; }
+    setRows((current) => current.map((item) => (item.id === row.id ? { ...item, resolved_at: resolvedAt, resolution } : item)));
+  }
+  if (!rows) return <p className="muted small">Cargando votos…</p>;
+  const bad = rows.filter((row) => row.vote < 0);
+  const pending = bad.filter((row) => !row.resolved_at);
+  const good = rows.filter((row) => row.vote > 0).length;
+  const shown = showDone ? bad : pending;
+  return (
+    <section className="panel" aria-label="Revisar votos">
+      <h3>Lo que no le sirvió al equipo (👎)</h3>
+      <p className="muted small">{pending.length} para revisar · {bad.length - pending.length} ya resueltos · {good} 👍 en total. Enseñale la respuesta correcta o descartalo si el 👎 no corresponde.</p>
+      {error && <p className="muted small">{error}</p>}
+      <div className="assistant-teach-actions">
+        <button type="button" className="secondary" onClick={load}>Actualizar</button>
+        <label className="small"><input type="checkbox" checked={showDone} onChange={(event) => setShowDone(event.target.checked)} /> Ver también los resueltos</label>
+      </div>
+      {teach && <TeachForm key={teach.row.id} supabase={supabase} initial={{ question: teach.row.question, product: "", answer: "" }} onSaved={() => { resolve(teach.row, "enseñada"); setTeach(null); }} onCancel={() => setTeach(null)} />}
+      {shown.length === 0 && <p className="muted">{pending.length ? "" : "No hay 👎 pendientes. ¡Bien!"}</p>}
+      <div className="training-list">
+        {shown.map((row) => (
+          <article key={row.id} className="training-row">
+            <span className="muted small">{when(row.created_at)} · {who(row.email)} · {row.source === "ia" ? "respuesta de la IA" : row.source === "validada" ? "respuesta validada" : "buscador"}{row.resolved_at ? ` · resuelto (${row.resolution || "sí"})` : ""}</span>
+            <strong>{row.question}</strong>
+            {row.answer && <div className="training-compare"><div><span className="muted small">Lo que respondió</span><p>{row.answer}</p></div></div>}
+            {!row.resolved_at && (
+              <div className="assistant-teach-actions">
+                <button type="button" className="link-button" onClick={() => setTeach({ row })}><GraduationCap size={14} /> Enseñarle la correcta</button>
+                <button type="button" className="link-button" onClick={() => resolve(row, "descartada")}>Descartar</button>
+              </div>
+            )}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function AssistantTraining({ supabase }) {
   const [rows, setRows] = useState([]);
   const [running, setRunning] = useState(false);
@@ -89,6 +146,8 @@ export function AssistantTraining({ supabase }) {
   useEffect(() => () => { stop.current = true; }, []);
 
   return (
+    <>
+    <FeedbackReview supabase={supabase} />
     <section className="panel" aria-label="Probar el asistente">
       <h3>Probar el asistente con Mercado Libre</h3>
       <p className="muted small">
@@ -132,5 +191,6 @@ export function AssistantTraining({ supabase }) {
         ))}
       </div>
     </section>
+    </>
   );
 }

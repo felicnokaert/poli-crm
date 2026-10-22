@@ -128,6 +128,28 @@ export function MercadoLibreSync({ supabase, session }) {
     setBusy("");
   }
 
+  // Reportes de competencia pegados desde Mercado Libre (Métricas → Competencia / mejores vendedores).
+  const [reports, setReports] = useState([]);
+  const [report, setReport] = useState({ open: false, account: "", section: "Competencia", content: "" });
+  useEffect(() => {
+    if (!supabase?.from) return;
+    try { Promise.resolve(supabase.from("ml_competition_reports").select("id,account,section,created_at,content").order("created_at", { ascending: false }).limit(30)).then(({ data }) => setReports(data || []), () => {}); } catch { /* sin reportes */ }
+  }, [supabase]);
+  async function saveReport() {
+    setError(""); setBusy("report");
+    const row = { account: report.account, section: report.section, content: report.content.trim().slice(0, 60000) };
+    const { data, error: saveError } = await supabase.from("ml_competition_reports").insert(row).select("id,account,section,created_at,content");
+    setBusy("");
+    if (saveError || !data?.length) { setError("No se pudo guardar el reporte."); return; }
+    setReports((current) => [data[0], ...current]);
+    setReport({ open: false, account: "", section: "Competencia", content: "" });
+    setMessage("Reporte guardado: el asistente ya lo puede usar.");
+  }
+  async function removeReport(id) {
+    const { error: deleteError } = await supabase.from("ml_competition_reports").delete().eq("id", id);
+    if (!deleteError) setReports((current) => current.filter((item) => item.id !== id));
+  }
+
   return (
     <section className="panel">
       <div className="panel-head">
@@ -150,6 +172,30 @@ export function MercadoLibreSync({ supabase, session }) {
             <label className="small"><input type="checkbox" checked={clipComplete} onChange={(event) => setClipComplete(event.target.checked)} /> Es la lista completa (las demás activas quedan como “sin clip”)</label>
             <button type="button" className="primary" disabled={!clipText.trim() || Boolean(busy)} onClick={saveClips}>{busy === "clips" ? "Guardando…" : "Guardar clips"}</button>
           </div>
+        )}
+      </div>
+      <div className="ml-clips">
+        <button type="button" className="link-button" onClick={() => setReport((current) => ({ ...current, open: !current.open }))}>{report.open ? "Cerrar" : "Pegar un reporte de competencia de Mercado Libre"}</button>
+        {report.open && (
+          <div className="ml-clips-form">
+            <p className="muted small">Mercado Libre no entrega la competencia por la API. Abrí Métricas → Competencia (o mejores vendedores) en la cuenta, seleccioná todo (Ctrl+A), copiá (Ctrl+C) y pegalo acá. Queda guardado con la fecha y el asistente lo usa para responder.</p>
+            <div className="assistant-teach-actions">
+              <select value={report.account} onChange={(event) => setReport((current) => ({ ...current, account: event.target.value }))} aria-label="Cuenta">
+                <option value="">Cuenta…</option>
+                {(accounts || []).map((account) => <option key={account.seller_id} value={account.nickname}>{account.nickname}</option>)}
+              </select>
+              <select value={report.section} onChange={(event) => setReport((current) => ({ ...current, section: event.target.value }))} aria-label="Sección">
+                {["Competencia", "Mejores vendedores", "Métricas del negocio", "Otro"].map((name) => <option key={name}>{name}</option>)}
+              </select>
+            </div>
+            <textarea rows={8} value={report.content} onChange={(event) => setReport((current) => ({ ...current, content: event.target.value }))} placeholder="Pegá acá lo que copiaste de Mercado Libre" />
+            <button type="button" className="primary" disabled={!report.content.trim() || Boolean(busy)} onClick={saveReport}>{busy === "report" ? "Guardando…" : "Guardar reporte"}</button>
+          </div>
+        )}
+        {reports.length > 0 && (
+          <ul className="assistant-rivals">
+            {reports.map((item) => <li key={item.id} className="small">{new Date(item.created_at).toLocaleDateString("es-AR")} · {item.section}{item.account ? ` · ${item.account}` : ""} · {item.content.length.toLocaleString("es-AR")} caracteres <button type="button" className="link-button" onClick={() => removeReport(item.id)}>Borrar</button></li>)}
+          </ul>
         )}
       </div>
       {message && <div className="system-message">{message}</div>}

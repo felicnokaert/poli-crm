@@ -12,3 +12,11 @@ test('el asistente sabe para qué sirve cada pantalla y el contacto de cada clie
   const client = searchKnowledge('contacto de Lavopa', sources).groups.clientes[0];
   assert.match(client.snippet, /Tel: 11 5555-0000/);
 });
+
+test('el asistente encuentra lo pegado de Mercado Libre → Competencia', () => {
+  const mlReports = [{ id: 'r1', section: 'Competencia', account: 'POLIPLAST SRL', created_at: '2026-10-22T10:00:00Z', content: 'Ranking Espumas Expansivas: 1. Sika Boom 2. Penosil Easyspray 3. Fischer' }];
+  const [item] = searchKnowledge('competencia espumas sika', { mlReports }).groups.competencia;
+  assert.equal(item.title, 'Mercado Libre · Competencia (POLIPLAST SRL)');
+  assert.match(item.snippet, /Sika Boom/);
+  assert.equal(item.subtitle, 'pegado el 22/10/2026');
+});

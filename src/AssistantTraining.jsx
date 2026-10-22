@@ -129,6 +129,13 @@ export function AssistantTraining({ supabase }) {
     setRunning(false);
   }
 
+  // "¿Anda la IA?" (22/10): una pregunta mínima (menos de un centavo) que dice si responde o el error exacto.
+  async function check() {
+    setStatus("Probando la IA…");
+    const reply = await askAi(supabase, { question: "Respondé solo: La IA del CRM está funcionando.", context: "" }).catch(() => ({ ok: false, reason: "red" }));
+    setStatus(reply.ok ? `✓ La IA responde: “${reply.text.split(/\n/)[0].slice(0, 120)}”` : `✗ No responde: ${reply.error || reply.reason}${reply.detail ? ` (${reply.detail})` : ""}`);
+  }
+
   // Sugeridas: lo que el equipo repitió 3+ veces por producto y tema. No usa IA: no gasta nada.
   async function suggest() {
     setStatus("Buscando lo que más repetimos…");
@@ -157,6 +164,7 @@ export function AssistantTraining({ supabase }) {
       <div className="assistant-teach-actions">
         <button type="button" className="primary" disabled={running} onClick={run}><Play size={15} /> {rows.length ? "Probar otras 10" : "Probar 10 preguntas"}</button>
         {running && <button type="button" className="secondary" onClick={() => { stop.current = true; }}>Pausar</button>}
+        <button type="button" className="secondary" disabled={running} onClick={check}>¿Anda la IA?</button>
         <button type="button" className="secondary" disabled={running} onClick={suggest}><GraduationCap size={15} /> Ver respuestas sugeridas</button>
         {status && <span className="muted small" role="status">{status}</span>}
       </div>

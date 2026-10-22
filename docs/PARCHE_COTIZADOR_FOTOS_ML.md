@@ -7,7 +7,7 @@ approved_at). No toca `catalog_products.photo_path`. Este parche hace que el cot
 ## Qué hace el parche (`docs/cotizador-fotos-ml.patch`, 3 archivos en `src/lib`)
 - `productPhotos.ts`: `productPhotoUrl` deja pasar una URL completa (las del bucket siguen igual) y se suma
   `applyApprovedPhotos(products, photos)`: completa `photo_path` en memoria para los productos sin foto propia.
-- `catalog.ts`: `loadCatalog` lee `catalog_product_photos` (si la tabla falla, sigue como antes) y aplica las fotos.
+- `catalog.ts`: `loadCatalog` lee `catalog_product_photos` (si la tabla falla, sigue como antes) y aplica las fotos. **Ignora las que figuran sin revisar** (`approved_by` empieza con "claude"): hasta que Felipe las revise en el CRM, el cotizador no las usa.
 - `productPhotos.test.ts`: pruebas de ambas cosas.
 - No escribe nada en la base. Si después se sube una foto propia al bucket, esa gana.
 

@@ -1,5 +1,5 @@
 diff --git a/src/lib/catalog.ts b/src/lib/catalog.ts
-index fcc5758..6870a3a 100644
+index fcc5758..bfa3f83 100644
 --- a/src/lib/catalog.ts
 +++ b/src/lib/catalog.ts
 @@ -1,4 +1,5 @@
@@ -8,7 +8,7 @@ index fcc5758..6870a3a 100644
  import type {
    CatalogProduct,
    CatalogVariant,
-@@ -137,7 +138,14 @@ export async function loadCatalog(): Promise<CatalogData> {
+@@ -137,7 +138,15 @@ export async function loadCatalog(): Promise<CatalogData> {
        return (data ?? []) as ProductDocumentLink[]
      } catch { return [] as ProductDocumentLink[] }
    })()
@@ -16,7 +16,8 @@ index fcc5758..6870a3a 100644
 +  // Fotos aprobadas desde Mercado Libre en el CRM: si la tabla no existe o falla, el cotizador sigue igual.
 +  const approvedPhotosPromise = (async () => {
 +    try {
-+      const { data } = await supabase.from('catalog_product_photos').select('product_id,url')
++      // Las fotos que todavía no revisó una persona (approved_by empieza con "claude") no se usan.
++      const { data } = await supabase.from('catalog_product_photos').select('product_id,url').not('approved_by', 'ilike', 'claude%')
 +      return (data ?? []) as ApprovedMlPhoto[]
 +    } catch { return [] as ApprovedMlPhoto[] }
 +  })()
@@ -24,7 +25,7 @@ index fcc5758..6870a3a 100644
      fetchAll<CatalogProduct>((from, to) =>
        supabase.from('catalog_products').select('*').order('family').order('name').range(from, to),
      ),
-@@ -147,13 +155,14 @@ export async function loadCatalog(): Promise<CatalogData> {
+@@ -147,13 +156,14 @@ export async function loadCatalog(): Promise<CatalogData> {
      supabase.from('technical_documents').select('id, title, family, product, sku, status, source_url, storage_path'),
      fetchAll<InventoryBalance>((from, to) => supabase.from('inventory_balances').select('variant_id, approved_quantity, unit, approved_at').range(from, to)),
      linksPromise,

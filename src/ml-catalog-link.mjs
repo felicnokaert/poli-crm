@@ -3,6 +3,9 @@
 // en mayúsculas y sin espacios. Solo muestra: no copia fotos ni cambia nada.
 export const normSku = (value = '') => String(value || '').trim().toUpperCase().replace(/\s+/g, '');
 
+// Mercado Libre entrega miniaturas con http://: en una página https el navegador las bloquea y la base solo acepta https.
+export const secureUrl = (value = '') => String(value || '').replace(/^http:\/\//i, 'https://');
+
 const bySold = (a, b) => (Number(b.sold_quantity) || 0) - (Number(a.sold_quantity) || 0);
 
 // photos: fotos ya aprobadas (catalog_product_photos), por product_id.
@@ -31,9 +34,9 @@ export function linkMlToCatalog({ products = [], variants = [], items = [], phot
     const variant = variantBySku.get(sku);
     if (variant) {
       const product = productById.get(variant.product_id) || null;
-      const thumbnail = list.find((item) => item.thumbnail)?.thumbnail || '';
+      const thumbnail = secureUrl(list.find((item) => item.thumbnail)?.thumbnail || '');
       const picture = list.find((item) => item.picture_url);
-      const photoUrl = picture?.picture_url || thumbnail;
+      const photoUrl = secureUrl(picture?.picture_url) || thumbnail;
       const approvedPhoto = product ? approved.get(product.id) || null : null;
       matched.push({
         sku, variant, product, items: list, thumbnail, photoUrl, photoItemId: (picture || list.find((item) => item.thumbnail))?.id || '', photoIsSmall: !picture, approvedPhoto,

@@ -1,4 +1,6 @@
-# SQL listo para endurecer las fotos del catálogo (NO aplicado: pide el OK de Felipe)
+# Endurecer las fotos del catálogo — APLICADO el 22/10 con el OK de Felipe (supabase/migrations/20261023_product_photos_hardening.sql)
+
+Al aplicarlo apareció que 9 fotos de Mercado Libre estaban con http:// (las bloquea el navegador en una página https): se pasaron a https, igual que las 1.684 miniaturas de ml_items. El código ahora normaliza a https (secureUrl en src/ml-catalog-link.mjs y itemRow).
 
 Verificado en vivo el 22/10: la política de escritura del bucket `product-photos` ya es solo administradores
 (`product-photos admin write` con `is_poliplast_crm_admin()`); la lectura es pública. Lo que falta es limitar QUÉ se puede subir.

@@ -85,9 +85,12 @@ export function searchKnowledge(query, sources, { perType = 5 } = {}) {
   if (!tokens.length) return { tokens, groups, total: 0 };
   const scored = toItems(sources).map((item) => ({ item, score: scoreItem(item, tokens) })).filter((row) => row.score > 0);
   scored.sort((a, b) => b.score - a.score);
-  for (const { item } of scored) if (groups[item.type].length < perType) groups[item.type].push(item.fullText ? { ...item, snippet: snippetFor(item.fullText, tokens) } : item);
+  for (const { item, score } of scored) if (groups[item.type].length < perType) groups[item.type].push(item.fullText ? { ...item, score, snippet: snippetFor(item.fullText, tokens) } : { ...item, score });
   const total = Object.values(groups).reduce((sum, list) => sum + list.length, 0);
-  return { tokens, groups, total };
+  // 22/10: los grupos van ordenados por su mejor resultado (antes "Fichas" salía primero aunque no viniera al caso).
+  const order = KNOWLEDGE_TYPES.map(([key]) => key).filter((key) => groups[key].length)
+    .sort((a, b) => (groups[b][0]?.score || 0) - (groups[a][0]?.score || 0));
+  return { tokens, groups, total, order };
 }
 
 // Texto para pegar en la IA de cada uno, con lo que el CRM sabe de verdad.
@@ -120,5 +123,7 @@ export function mlItems(rows = []) {
 export function withMercadoLibre(result, rows = [], { perType = 5 } = {}) {
   const items = mlItems(rows).slice(0, perType);
   if (!items.length) return result;
-  return { ...result, groups: { ...result.groups, mercadolibre: items }, total: result.total + items.length };
+  const order = (result.order || []).filter((key) => key !== 'mercadolibre');
+  order.splice(Math.min(1, order.length), 0, 'mercadolibre');
+  return { ...result, groups: { ...result.groups, mercadolibre: items }, total: result.total + items.length, order };
 }

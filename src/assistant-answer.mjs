@@ -181,7 +181,8 @@ export function buildAiContext({ intent = null, facts = [], team = null, result 
   if (team && !team.varied) lines.push(`Respuesta del equipo en Mercado Libre (la que más repetimos, ${team.uses} de ${team.total} respuestas; es la válida): ${team.text}`);
   if (team?.varied) lines.push('En Mercado Libre respondimos distinto según el producto:', ...team.examples.map((text) => `- ${text}`));
   if (facts.length) lines.push('Según las guías de producto:', ...facts.map((fact) => `- ${fact.text} (${fact.guide}${fact.validated ? ', validada' : ', borrador'})`));
-  for (const [key, items] of Object.entries(result?.groups || {})) {
+  for (const key of result?.order || Object.keys(result?.groups || {})) {
+    const items = result?.groups?.[key];
     if (!items?.length) continue;
     lines.push(`[${key}]`, ...items.slice(0, 4).map((item) => `- ${item.title}${item.subtitle ? ` (${item.subtitle})` : ''}: ${String(item.snippet || item.text || '').replace(/\s+/g, ' ').slice(0, 400)}`));
   }

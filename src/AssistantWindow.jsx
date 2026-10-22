@@ -258,7 +258,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
       setQuery("");
       return;
     }
-    if (reply.reason === "sin-clave" || reply.reason === "sin-credito" || reply.reason === "clave") { setAi("off"); return; }
+    if (reply.reason === "sin-clave" || reply.reason === "sin-credito" || reply.reason === "clave") { setAi("off"); if (reply.error && isAdmin) setAiError(reply.error); return; }
     setAiError(`${reply.error || "La IA no pudo responder ahora. Probá de nuevo."}${reply.detail ? ` Detalle: ${reply.detail}` : reply.reason && reply.reason !== "red" ? ` (${reply.reason})` : ""}`);
   }
 

@@ -63,3 +63,13 @@ test('el contexto pone primero la respuesta del equipo', () => {
   assert.match(lines[1], /^Respuesta del equipo en Mercado Libre .*30 de 40.*Se calcula 1 kilo x M2\./);
   assert.match(context, /- P: Cuanto rinde \| R: Se calcula 1 kilo x M2\.$/m);
 });
+
+test('clave sin workspace: manda el id del workspace si está cargado', async () => {
+  const { http, calls } = world();
+  await assistantAi(req({ question: 'hola' }), { ...env, ANTHROPIC_WORKSPACE_ID: 'wrkspc_1' }, http);
+  assert.equal(calls.find((call) => call.url.includes('anthropic')).options.headers['anthropic-workspace-id'], 'wrkspc_1');
+  const noWorkspace = world({ reply: json({ error: { type: 'invalid_request_error', message: 'This API key is not scoped to a workspace, so this request must include the anthropic-workspace-id header' } }, 400) });
+  const body = (await assistantAi(req({ question: 'hola' }), env, noWorkspace.http)).body;
+  assert.equal(body.reason, 'clave');
+  assert.match(body.error, /workspace/);
+});

@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { buildCustomerBase, coverageByCompany } from './customer-base.mjs';
 import { useComprobantes, argentinaToday } from './CustomerBasePanel.jsx';
-import { QUEUE_SIZE, logClientContact, matchesFamily, queueFamilies, newProspectsQueue, quoteMessage, quotedQueue, reactivationMessage, reactivationQueue } from './daily-queues.mjs';
+import { QUEUE_SIZE, logClientContact, matchesFamily, queueFamilies, newProspectsQueue, overdueMessage, overdueQueue, quoteMessage, quotedQueue, reactivationMessage, reactivationQueue } from './daily-queues.mjs';
+import { blankTask } from './app-shared';
 import { buildOutreachDraft } from './prospect-outreach.mjs';
 import { outreachVariant, REJECTION_REASONS, possibleWhatsAppLink } from './prospect-model.mjs';
 import { normalizePhoneAR } from './prospect-contact.mjs';
@@ -73,7 +74,7 @@ function ResultChips({ results, onPick }) {
   );
 }
 
-function ClientQueueCard({ item, queue, message, onOpenClient, onResult }) {
+function ClientQueueCard({ item, queue, message, onOpenClient, onResult, onTask }) {
   return (
     <article className="queue-card daily-item">
       <h3>{item.client.company}</h3>
@@ -83,6 +84,7 @@ function ClientQueueCard({ item, queue, message, onOpenClient, onResult }) {
       <div className="queue-actions">
         <CopyButton text={message} />
         <button type="button" className="secondary" onClick={() => onOpenClient(item.client.id)}><ExternalLink size={14} /> Abrir empresa</button>
+        {onTask && <button type="button" className="secondary" onClick={onTask}>Crear tarea para mañana</button>}
       </div>
       <ResultChips results={CLIENT_RESULTS} onPick={(result) => onResult(item.client.id, queue, result)} />
     </article>
@@ -90,7 +92,8 @@ function ClientQueueCard({ item, queue, message, onOpenClient, onResult }) {
 }
 
 export function DailyQueues({ supabase, clients: allClients = [], prospects: allProspects = [], checks, userEmail, defaultSender, setData, onOpenClient, onMarkProspect, onOpenProspect, skipped, onSkip }) {
-  const [view, setView] = useState('reactivar');
+  // Desde Inicio ("Se pasaron de su frecuencia") se abre directo en esa lista.
+  const [view, setView] = useState(() => { try { const wanted = sessionStorage.getItem('poliplast-queue-view'); sessionStorage.removeItem('poliplast-queue-view'); return wanted || 'reactivar'; } catch { return 'reactivar'; } });
   const [note, setNote] = useState('');
   // 22/10: filtro por familia ("hoy quiero reactivar clientes de espuma"), para las tres listas.
   const [family, setFamily] = useState('');
@@ -103,10 +106,19 @@ export function DailyQueues({ supabase, clients: allClients = [], prospects: all
   const { byClient } = useMemo(() => buildCustomerBase(rows, clients, { today }), [rows, clients, today]);
   const reactivar = useMemo(() => reactivationQueue({ clients, base: byClient, today }), [clients, byClient, today]);
   const cotizaron = useMemo(() => quotedQueue({ clients, base: byClient, today }), [clients, byClient, today]);
+  const atrasados = useMemo(() => overdueQueue({ clients, base: byClient, today }), [clients, byClient, today]);
   const nuevos = useMemo(() => newProspectsQueue({ prospects, checks, skipped }), [prospects, checks, skipped]);
   const coverage = useMemo(() => coverageByCompany(rows), [rows]);
   const syncing = sync.filter((item) => !item.history_done).map((item) => item.company);
   const learning = useMemo(() => prospectLearning({ prospects, clients }), [prospects, clients]);
+
+  // Tarea para llamarlo mañana (22/10, clientes atrasados): queda en Tareas con el cliente vinculado.
+  function createTask(item) {
+    const stamp = new Date().toISOString();
+    const due = new Date(Date.parse(`${today}T12:00:00`) + 86400000).toISOString().slice(0, 10);
+    setData((current) => ({ ...current, tasks: [...(current.tasks || []), { ...blankTask(), id: crypto.randomUUID(), clientId: item.client.id, company: item.client.company, title: `Llamar: se pasó de su frecuencia de compra (${item.late} días)`, dueDate: due, priority: item.info.big ? 'Alta' : 'Media', source: 'cola-atrasados', done: false, createdAt: stamp, updatedAt: stamp }] }));
+    setNote(`${item.client.company}: tarea creada para mañana.`);
+  }
 
   function recordResult(clientId, queue, result) {
     const found = clients.find((client) => client.id === clientId);
@@ -114,8 +126,8 @@ export function DailyQueues({ supabase, clients: allClients = [], prospects: all
     setNote(`${found?.company || 'Cliente'}: ${result}. No vuelve a aparecer por 14 días.`);
   }
 
-  const tabs = [['reactivar', 'Reactivar', reactivar.length], ['cotizaron', 'Cotizaron y no compraron', cotizaron.length], ['nuevos', 'Prospectos nuevos', nuevos.length], ['aprendido', 'Qué aprendimos', learning.contacted]];
-  const needsData = ['reactivar', 'cotizaron'].includes(view);
+  const tabs = [['atrasados', 'Se pasaron de su frecuencia', atrasados.length], ['reactivar', 'Reactivar', reactivar.length], ['cotizaron', 'Cotizaron y no compraron', cotizaron.length], ['nuevos', 'Prospectos nuevos', nuevos.length], ['aprendido', 'Qué aprendimos', learning.contacted]];
+  const needsData = ['atrasados', 'reactivar', 'cotizaron'].includes(view);
   return (
     <div className="daily-queues">
       <p className="muted">Lo que conviene contactar hoy: hasta {QUEUE_SIZE} por lista, con el mensaje listo para copiar y editar. El CRM no envía nada: lo mandás vos y anotás qué respondieron para que el sistema aprenda por qué falla cada mensaje.</p>
@@ -144,6 +156,10 @@ export function DailyQueues({ supabase, clients: allClients = [], prospects: all
           {' '}Activo: compró hace 90 días o menos · dormido: hasta 1 año · inactivo: más de 1 año.
         </p>
       )}
+
+      {view === 'atrasados' && status === 'ready' && (atrasados.length === 0
+        ? <p className="muted">Ningún cliente frecuente se pasó de su frecuencia de compra (o ya los trabajaste en los últimos 14 días).</p>
+        : atrasados.map((item) => <ClientQueueCard key={item.client.id} item={item} queue="atrasados" message={overdueMessage(item.client, item.info, sender)} onOpenClient={onOpenClient} onResult={recordResult} onTask={() => createTask(item)} />))}
 
       {view === 'reactivar' && status === 'ready' && (reactivar.length === 0
         ? <p className="muted">No hay clientes recurrentes o grandes para reactivar hoy (o ya los trabajaste en los últimos 14 días).</p>

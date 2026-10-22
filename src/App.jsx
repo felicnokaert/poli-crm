@@ -670,6 +670,7 @@ export default function App() {
             dailySignals={data.dailySignals}
             cronStatus={cronStatus}
             whatsappHealth={whatsappHealth}
+            supabase={onlineConfigured && session ? supabase : null}
             onToggle={toggleTask}
             onOpenTask={setSelectedTaskId}
             onOpenInteraction={setSelectedInteractionId}

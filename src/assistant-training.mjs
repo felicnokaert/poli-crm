@@ -135,6 +135,57 @@ export function baseProduct(titleList = []) {
   return shared.slice(0, 3).join(' ');
 }
 
+// "Respuestas que no coinciden" (22/10): mismo producto y tema, pero el equipo respondió con números distintos
+// en Mercado Libre (ej. "rinde 2 m² a 2 cm" y "rinde 1,5 m² a 2 cm"). Felipe elige la correcta y queda enseñada.
+// Solo temas con números (rendimiento, tiempos, mezcla, espesor, temperatura). Sin IA ni costo.
+const NUMERIC = new Set(['rendimiento', 'tiempos', 'mezcla', 'espesor', 'temperatura']);
+const flat = (text) => String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const splitSentences = (text) => String(text).split(/(?<=[.!?])\s+/).map((part) => part.trim()).filter((part) => part.length > 8);
+
+export function conflictingAnswers(questions = [], titles = {}, { taught = [], minUses = 2, max = 25 } = {}) {
+  const groups = new Map();
+  for (const row of questions) {
+    if (!row?.item_id || !String(row.answer || '').trim()) continue;
+    const intent = detectIntent(row.question);
+    if (!intent || !NUMERIC.has(intent.key)) continue;
+    const title = titles[row.item_id] || '';
+    const product = shortProduct(title) || baseProduct([title]);
+    if (!product) continue;
+    const key = `${product.toLowerCase()}|${intent.key}`;
+    if (!groups.has(key)) groups.set(key, { product, intent, titles: new Set(), answers: [] });
+    const group = groups.get(key);
+    group.titles.add(title);
+    group.answers.push({ question: row.question, answer: cleanAnswer(row.answer) });
+  }
+  const isTaught = (product, intent) => taught.some((entry) => flat(entry.product) === flat(product) && detectIntent(entry.question)?.key === intent.key);
+  const out = [];
+  for (const group of groups.values()) {
+    if (isTaught(group.product, group.intent)) continue;
+    const options = new Map();
+    for (const { question, answer } of group.answers) {
+      const parts = splitSentences(answer).filter((sentence) => group.intent.line.some((word) => flat(` ${sentence} `).includes(flat(word))));
+      const signature = quantities(parts.join(' ')).join(' | ');
+      if (!signature) continue;
+      const option = options.get(signature) || { signature, uses: 0, texts: [], question };
+      option.uses += 1;
+      option.texts.push(parts.join(' '));
+      options.set(signature, option);
+    }
+    const kept = [...options.values()].filter((option) => option.uses >= minUses).sort((a, b) => b.uses - a.uses);
+    if (kept.length < 2) continue;
+    out.push({
+      id: `${group.product}-${group.intent.key}`,
+      product: group.product,
+      intent: group.intent.label,
+      question: `${group.intent.label} (${group.intent.search.join(', ')})`,
+      titles: [...group.titles].slice(0, 4),
+      options: kept.slice(0, 4).map((option) => ({ signature: option.signature, uses: option.uses, text: option.texts.sort((a, b) => a.length - b.length)[0] })),
+      total: kept.reduce((sum, option) => sum + option.uses, 0),
+    });
+  }
+  return out.sort((a, b) => b.total - a.total).slice(0, max);
+}
+
 // "Preguntas sin buena respuesta" (22/10, Felipe: "que el sistema aprenda de sí mismo"): si la IA contesta
 // que no tiene el dato, deriva a alguien o usa conocimiento general, se anota sola para que Felipe la
 // enseñe. Así lo que falta cargar aparece sin esperar a que alguien vote 👎.

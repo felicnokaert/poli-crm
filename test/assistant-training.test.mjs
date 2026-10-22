@@ -67,3 +67,21 @@ test('sugeridas: la misma respuesta en variantes del producto (700 g, 450 g, 25 
   assert.match(list[0].title, /^3 variantes/);
   assert.equal(baseProduct(['Resina Epoxi Cristal 700 Gr']), 'Resina Epoxi Cristal');
 });
+
+test('respuestas que no coinciden: mismo producto y tema con números distintos', async () => {
+  const { conflictingAnswers } = await import('../src/assistant-training.mjs');
+  const row = (id, item, question, answer) => ({ id, item_id: item, question, answer });
+  const rows = [
+    row('1', 'A', 'cuanto rinde?', 'Rinde 2 m2 en 2 cm de espesor.'),
+    row('2', 'A', 'cuantos metros cubre?', 'Rinde 2 m² en 20 mm de espesor.'),
+    row('3', 'B', 'que rendimiento tiene?', 'Rinde 1,5 m2 en 2 cm de espesor.'),
+    row('4', 'B', 'cuanto rinde cada uno?', 'Cada uno rinde 1,5 m2 en 2 cm.'),
+    row('5', 'C', 'cuanto rinde?', 'Rinde 1 kg por m2.'),
+  ];
+  const titles = { A: 'Espuma Easyspray Penosil 700 ml', B: 'Espuma Easyspray Penosil x 6', C: 'Otra Cosa 1 kg' };
+  const list = conflictingAnswers(rows, titles);
+  assert.equal(list.length, 1);
+  assert.equal(list[0].options.length, 2);
+  assert.deepEqual(list[0].options.map((option) => option.uses), [2, 2]);
+  assert.equal(conflictingAnswers(rows, titles, { taught: [{ product: list[0].product, question: '¿cuánto rinde?' }] }).length, 0, 'lo ya enseñado no vuelve');
+});

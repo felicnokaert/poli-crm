@@ -88,6 +88,30 @@ export function reactivationQueue({ clients = [], base = new Map(), today, limit
   return items.slice(0, limit);
 }
 
+// Se pasaron de su frecuencia (22/10): clientes activos que compran seguido (3+ compras en 24 meses) y ya
+// pasaron bastante de cuando suelen volver (al menos 15 días y la mitad de su frecuencia). Es plata que se escapa
+// antes de que el cliente quede "dormido" (eso ya lo cubre Reactivar).
+export function overdueQueue({ clients = [], base = new Map(), today, limit = QUEUE_SIZE } = {}) {
+  const items = [];
+  for (const client of clients) {
+    const info = base.get(client.id);
+    if (!info?.frequencyDays || info.status !== 'activo' || info.purchases24 < 3) continue;
+    const late = info.daysSince - info.frequencyDays;
+    if (late < Math.max(15, Math.round(info.frequencyDays / 2))) continue;
+    if (recentlyWorked(client, 'atrasados', today)) continue;
+    items.push({ client, info, late, reason: `compra cada ~${info.frequencyDays} días · la última hace ${info.daysSince} (${late} días más de lo habitual)${info.big ? ' · cliente grande' : ''}` });
+  }
+  items.sort((a, b) => Number(b.info.big) - Number(a.info.big) || b.info.total24 - a.info.total24 || b.late - a.late);
+  return items.slice(0, limit);
+}
+
+export function overdueMessage(client = {}, info = {}, sender = '') {
+  const who = sender || '[tu nombre]';
+  const name = firstName(client) || client.company || 'equipo';
+  const product = String(client.mainProduct || '').trim();
+  return `Hola ${name}, ¿cómo va? Soy ${who} de Grupo Poliplast. Por lo general para esta época ya nos estaban pidiendo${product ? ` ${product}` : ''}: ¿cómo vienen de stock? Si necesitan, te paso precio actualizado y lo coordinamos.`;
+}
+
 // Cotizaron y no compraron: la cotización más reciente (Contabilium o la marca "Coticé hoy" de la ficha) sin factura posterior.
 export function quotedQueue({ clients = [], base = new Map(), today, limit = QUEUE_SIZE } = {}) {
   const items = [];

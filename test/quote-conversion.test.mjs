@@ -32,3 +32,18 @@ test('cotizaciones: el mismo cliente con dos ids en la misma empresa se empareja
   assert.equal(result.closed, 1);
   assert.equal(result.quotes, 2);
 });
+
+test('cotizaciones: mismo CUIT entre empresas del grupo cuenta como cerrada y se informa aparte', () => {
+  const rows = [
+    { company: 'POLIPLAST', tipo: 'COT', fecha: '2026-09-01', cliente_id: '1', cliente: 'Aislar SRL', cuit: '30-71234567-9', total: 1000 },
+    { company: 'COMARG', tipo: 'FC', fecha: '2026-09-20', cliente_id: '77', cliente: 'AISLAR S.R.L.', cuit: '30712345679', total: 1000 },
+    { company: 'POLIPLAST', tipo: 'COT', fecha: '2026-09-02', cliente_id: '2', cliente: 'Sin cuit', cuit: '', total: 500 },
+    { company: 'COMARG', tipo: 'FC', fecha: '2026-09-05', cliente_id: '2', cliente: 'Sin cuit', cuit: '', total: 500 },
+    { company: 'POLIPLAST', tipo: 'COT', fecha: '2026-09-03', cliente_id: '5', cliente: 'Otro', cuit: '20-11111111-1', total: 100 },
+    { company: 'FOAMFACTORY', tipo: 'FC', fecha: '2026-07-01', cliente_id: '9', cliente: 'Otro', cuit: '20-11111111-1', total: 100 }, // antes de cotizar: no cuenta
+  ];
+  const result = quoteConversion(rows, { today: '2026-10-23' });
+  assert.equal(result.closed, 1);
+  assert.equal(result.crossCompany, 1);
+  assert.equal(result.quotes, 3);
+});

@@ -59,7 +59,7 @@ export function retailPrice(entry) {
   return rows.find((row) => !row.wholesale && row.from <= 1) || rows.find((row) => !row.wholesale) || null;
 }
 
-export const asksMlEconomics = (query) => /\b(stock|reponer|reposicion|sin stock|se termina|se acaba|ganancia\w*|rentab\w*|margen\w*|comision\w*|nos queda|me queda|deja plata|dejan plata|cuanto ganamos)\b/.test(plain(query));
+export const asksMlEconomics = (query) => /\b(stock|reponer|reposicion|sin stock|se termina|se acaba|ganancia\w*|rentab\w*|margen\w*|comision\w*|nos queda|me queda|deja plata|dejan plata|cuanto ganamos|cuanto gano|gano|ganamos)\b/.test(plain(query));
 
 export function economicsContext(view, nickname = {}, { max = 8 } = {}) {
   if (!view?.selling?.length) return '';

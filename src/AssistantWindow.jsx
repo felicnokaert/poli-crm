@@ -1,3 +1,5 @@
+import { asksOps, asksTacos, opsContext } from "./assistant-ops.mjs";
+import { useOpsAlerts } from "./hooks/useOpsAlerts.js";
 import { answerHasGap } from "./assistant-training.mjs";
 import { asksClient, clientCards, clientContext, clientWords } from "./assistant-client.mjs";
 import { isRule, rapypFor, rulesContext } from "./assistant-rapyp.mjs";
@@ -439,6 +441,12 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   const wantsImprove = Boolean(typed && asksMlImprove(typed));
   const wantsCompetition = Boolean(typed && asksMlCompetition(typed));
   const wantsEconomics = Boolean(typed && asksMlEconomics(typed));
+  // 24/10: alertas del día, Shopify (pedidos sin despachar, carritos) y TACoS: salen de crm_alerts, se leen al preguntar.
+  const wantsOps = Boolean(typed && asksOps(typed));
+  const [opsOn, setOpsOn] = useState(false);
+  useEffect(() => { if (wantsOps) setOpsOn(true); }, [wantsOps]);
+  const opsRows = useOpsAlerts(opsOn ? supabase : null);
+  const opsText = wantsOps && opsRows ? opsContext(opsRows, { tacos: asksTacos(typed) }) : "";
   const wantsMl = wantsImprove || wantsCompetition || wantsEconomics;
   const [mlOn, setMlOn] = useState(false);
   const [competitionOn, setCompetitionOn] = useState(false);
@@ -457,13 +465,13 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
     if (wantsEconomics && mlData.economics) parts.push(economicsContext(economicsView({ items: mlData.items, ...mlData.economics }), mlData.nickname));
     return parts.filter(Boolean).join("\n");
   }, [wantsMl, wantsImprove, wantsCompetition, wantsEconomics, mlData]);
-  const waitingBusiness = (wantsBusiness && !business && billing.status !== "error" && Boolean(supabase?.from)) || (wantsMl && (mlData.status !== "ready" || (wantsCompetition && mlData.competition === null && !competitionOn) || (wantsEconomics && mlData.economics === null && !economicsOn)) && mlData.status !== "error" && Boolean(supabase?.from));
+  const waitingBusiness = (wantsBusiness && !business && billing.status !== "error" && Boolean(supabase?.from)) || (wantsMl && (mlData.status !== "ready" || (wantsCompetition && mlData.competition === null && !competitionOn) || (wantsEconomics && mlData.economics === null && !economicsOn)) && mlData.status !== "error" && Boolean(supabase?.from)) || (wantsOps && opsRows === null && Boolean(supabase?.from));
   // 22/10: lo que anotó el equipo sobre el tema, a quién derivar y qué aprendimos en la Cola del día.
   const notes = typed && !clientsFound.length ? teamNotes(typed, { interactions: workspace.interactions || [], clients, prospects: workspace.prospects || [], shared: sharedNotes }) : [];
   const routes = typed ? routeFor(typed) : [];
   const learning = typed && asksLearning(typed) ? prospectLearning({ prospects: workspace.prospects || [], clients }) : null;
   const learningText = learning ? learningContext(learning) : "";
-  const hasExtra = Boolean(rivals || purchases.length || mine.length || clientsFound.length || rapyp || notes.length || learningText || listPrices.entries.length || businessShown.length || krypton);
+  const hasExtra = Boolean(rivals || purchases.length || mine.length || clientsFound.length || rapyp || notes.length || learningText || listPrices.entries.length || businessShown.length || krypton || opsText);
   const hasAnswer = Boolean(taught.length || (intent && (facts.length || team)) || helpAnswer);
   useEffect(() => { setShowAll(false); }, [typed]);
   const [chat, setChat] = useState([]);
@@ -523,7 +531,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
     }
     const teamNow = mlNow === teamRows ? team : intent ? teamAnswer(mlNow, intent) : null;
     const pricesNow = listPrices.key && !listPrices.ready ? await loadListPrices(supabase, listPrices.words, isoToday()).catch(() => []) : listPrices.entries;
-    const context = [rulesContext({ rules, competitors: competitors || [], rapyp }), routesContext(), wantsBusiness ? businessContext(business) : "", kryptonContext(kryptonFor(asked)), mlText, pricesContext(pricesNow), teamNotesContext(notes), learningText, clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases }), buildAiContext({ intent, facts, team: teamNow, result, mlRows: mlNow, taught: withEarlier(taught) })].filter(Boolean).join("\n");
+    const context = [rulesContext({ rules, competitors: competitors || [], rapyp }), routesContext(), wantsBusiness ? businessContext(business) : "", kryptonContext(kryptonFor(asked)), mlText, opsText, pricesContext(pricesNow), teamNotesContext(notes), learningText, clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases }), buildAiContext({ intent, facts, team: teamNow, result, mlRows: mlNow, taught: withEarlier(taught) })].filter(Boolean).join("\n");
     const reply = await askAi(supabase, { question: asked, context, history, today: isoToday(), userName: firstName }).catch(() => ({ ok: false, reason: "red" }));
     setThinking(false);
     if (reply.ok) {

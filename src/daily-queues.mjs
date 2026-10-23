@@ -133,8 +133,8 @@ export function quotedQueue({ clients = [], base = new Map(), today, limit = QUE
 }
 
 // Prospectos nuevos: la cola de Prospección (ya sube a los de encaje, zona y puntaje altos).
-export function newProspectsQueue({ prospects = [], checks = new Map(), skipped = [], limit = QUEUE_SIZE } = {}) {
-  const ids = buildQueue(prospects, checks, { skipped }).slice(0, limit);
+export function newProspectsQueue({ prospects = [], checks = new Map(), skipped = [], limit = QUEUE_SIZE, rules } = {}) {
+  const ids = buildQueue(prospects, checks, { skipped, rules }).slice(0, limit);
   const byId = new Map(prospects.map((item) => [item.id, item]));
   return ids.map((id) => byId.get(id)).filter(Boolean);
 }

@@ -149,6 +149,8 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
     profileName: local.profileName || remote.profileName || '',
     // Publicidad de Mercado Libre (tablas pegadas por Felipe, una por cuenta): gana la pegada más reciente de cada cuenta.
     ...(local.mlAds || remote.mlAds ? { mlAds: newerByAccount(local.mlAds, remote.mlAds) } : {}),
+    // Reglas de prospección editadas (solo las que difieren de las de fábrica): gana lo de este navegador.
+    ...(local.prospectRules || remote.prospectRules ? { prospectRules: { ...(remote.prospectRules || {}), ...(local.prospectRules || {}) } } : {}),
     ...(local.weeklyTargets || remote.weeklyTargets ? { weeklyTargets: local.weeklyTargets || remote.weeklyTargets } : {}),
     ...(local.welcomeDismissed || remote.welcomeDismissed ? { welcomeDismissed: true } : {}),
     mergeLogs: mergeRecords(local.mergeLogs, remote.mergeLogs),

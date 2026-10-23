@@ -17,7 +17,7 @@ function QuoteConversionPanel({ stats }) {
   return (
     <section className="panel">
       <h3>Cotizaciones de Contabilium: cuántas se cierran (últimos 12 meses)</h3>
-      <p>{stats.quotes} cotizaciones · <strong>{stats.closed} cerradas</strong> con factura en {CLOSE_WINDOW_DAYS} días · {stats.lost} sin factura · {stats.pending} todavía en curso.{stats.rate != null ? <> Se cierra el <strong>{stats.rate} %</strong></> : ''}{stats.medianDays != null ? `, en ${stats.medianDays} días (mitad de los casos)` : ''}.</p>
+      <p>{stats.quotes} cotizaciones · <strong>{stats.closed} cerradas</strong> con factura en {CLOSE_WINDOW_DAYS} días{stats.crossCompany ? ` (${stats.crossCompany} compraron en otra empresa del grupo, mismo CUIT)` : ''} · {stats.lost} sin factura · {stats.pending} todavía en curso.{stats.rate != null ? <> Se cierra el <strong>{stats.rate} %</strong></> : ''}{stats.medianDays != null ? `, en ${stats.medianDays} días (mitad de los casos)` : ''}.</p>
       <p className="muted small">Cotizado {pesos(stats.quotedAmount)} · de eso se facturó {pesos(stats.closedAmount)} (montos tal como figuran en Contabilium).</p>
       <table className="learning-table">
         <thead><tr><th>Empresa</th><th>Cotizaciones</th><th>Cerradas</th><th>%</th></tr></thead>
@@ -115,7 +115,7 @@ function ClientQueueCard({ item, queue, message, onOpenClient, onResult, onTask 
   );
 }
 
-export function DailyQueues({ supabase, clients: allClients = [], prospects: allProspects = [], checks, userEmail, defaultSender, setData, onOpenClient, onMarkProspect, onOpenProspect, skipped, onSkip }) {
+export function DailyQueues({ rules, supabase, clients: allClients = [], prospects: allProspects = [], checks, userEmail, defaultSender, setData, onOpenClient, onMarkProspect, onOpenProspect, skipped, onSkip }) {
   // Desde Inicio ("Se pasaron de su frecuencia") se abre directo en esa lista.
   const [view, setView] = useState(() => { try { const wanted = sessionStorage.getItem('poliplast-queue-view'); sessionStorage.removeItem('poliplast-queue-view'); return wanted || 'reactivar'; } catch { return 'reactivar'; } });
   const [note, setNote] = useState('');
@@ -131,7 +131,7 @@ export function DailyQueues({ supabase, clients: allClients = [], prospects: all
   const reactivar = useMemo(() => reactivationQueue({ clients, base: byClient, today }), [clients, byClient, today]);
   const cotizaron = useMemo(() => quotedQueue({ clients, base: byClient, today }), [clients, byClient, today]);
   const atrasados = useMemo(() => overdueQueue({ clients, base: byClient, today }), [clients, byClient, today]);
-  const nuevos = useMemo(() => newProspectsQueue({ prospects, checks, skipped }), [prospects, checks, skipped]);
+  const nuevos = useMemo(() => newProspectsQueue({ prospects, checks, skipped, rules }), [prospects, checks, skipped, rules]);
   const coverage = useMemo(() => coverageByCompany(rows), [rows]);
   const syncing = sync.filter((item) => !item.history_done).map((item) => item.company);
   const learning = useMemo(() => prospectLearning({ prospects, clients }), [prospects, clients]);

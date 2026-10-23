@@ -721,3 +721,8 @@
 }
 :root[data-theme="dark"] .ml-trend-words .badge.warn { background: #3a2f17; color: #f3d28b; }
 :root[data-theme="dark"] .ml-below { color: #ff8a80; }
+
+/* 23/10: Mercado Libre rediseño (modo oscuro) */
+:root[data-theme="dark"] .ml-account-chip { background: #1b1b1e; border-color: #343438; }
+:root[data-theme="dark"] .ml-tabs button:hover { color: #f2f2f2; }
+:root[data-theme="dark"] .ml-account-chip.selected { background: #f2f2f2; color: #111; }

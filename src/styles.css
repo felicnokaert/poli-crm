@@ -1190,3 +1190,66 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .ml-competition-add textarea:focus, .ml-competition-add input:focus { outline: none; border-color: var(--brand-red); box-shadow: 0 0 0 3px rgba(237, 28, 36, .12); }
 .ml-competition-add .ml-competition-form { margin: 0; }
 .ml-competition-add .panel-head-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+
+/* 23/10: Mercado Libre, rediseño (Felipe: "la sección está fea: gráficas, botones, vista y transiciones; un color por cuenta") */
+:root { --acct-poliplast: #ed1c24; --acct-foam: #2563eb; --acct-comarg: #d97706; --acct-other: #6b7280; }
+.acct-tag { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; white-space: nowrap; }
+.acct-tag i, .ml-account-chip i { width: 9px; height: 9px; border-radius: 50%; background: var(--acct-other); flex: none; }
+.acct-poliplast i, .acct-bar.acct-poliplast { background: var(--acct-poliplast); }
+.acct-foam i, .acct-bar.acct-foam { background: var(--acct-foam); }
+.acct-comarg i, .acct-bar.acct-comarg { background: var(--acct-comarg); }
+.acct-bar.acct-other { background: var(--acct-other); }
+
+/* Encabezado: pestañas con subrayado y cuentas como chips de color */
+.ml-board-head { gap: 12px; padding: 10px 16px 14px; }
+.ml-tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--color-border-light); scrollbar-width: none; }
+.ml-tabs::-webkit-scrollbar { display: none; }
+.ml-tabs button { appearance: none; background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 12px; margin-bottom: -1px; font: inherit; font-weight: 600; font-size: 0.92rem; color: var(--brand-gray); cursor: pointer; white-space: nowrap; transition: color .15s ease, border-color .2s ease; }
+.ml-tabs button:hover { color: var(--brand-charcoal); }
+.ml-tabs button.selected { color: var(--brand-red); border-bottom-color: var(--brand-red); }
+.ml-accounts { display: flex; flex-wrap: wrap; gap: 8px; }
+.ml-account-chip { appearance: none; display: inline-flex; align-items: center; gap: 7px; font: inherit; font-size: 0.86rem; font-weight: 600; padding: 6px 14px; border-radius: var(--radius-pill); border: 1px solid var(--color-border-soft); background: var(--color-white); color: inherit; cursor: pointer; transition: background .15s ease, border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+.ml-account-chip:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(20, 16, 16, .08); }
+.ml-account-chip.selected { background: var(--brand-charcoal); border-color: var(--brand-charcoal); color: #fff; }
+.ml-account-chip.acct-poliplast.selected { background: var(--acct-poliplast); border-color: var(--acct-poliplast); }
+.ml-account-chip.acct-foam.selected { background: var(--acct-foam); border-color: var(--acct-foam); }
+.ml-account-chip.acct-comarg.selected { background: var(--acct-comarg); border-color: var(--acct-comarg); }
+.ml-account-chip.selected i { background: #fff; }
+
+/* Entrada suave de cada pestaña y de las tarjetas */
+.ml-pane { display: grid; gap: 16px; animation: ml-pane-in .28s ease both; }
+@keyframes ml-pane-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.ml-board .metric-card { transition: transform .18s ease, box-shadow .18s ease; animation: ml-pane-in .35s ease both; }
+.ml-metric-grid .metric-card:nth-child(2) { animation-delay: .04s; } .ml-metric-grid .metric-card:nth-child(3) { animation-delay: .08s; } .ml-metric-grid .metric-card:nth-child(4) { animation-delay: .12s; } .ml-metric-grid .metric-card:nth-child(5) { animation-delay: .16s; }
+.ml-board .metric-card:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(20, 16, 16, .08); }
+.ml-board .metric-card strong { font-size: 22px; letter-spacing: -.01em; }
+.ml-board .metric-card > svg { color: var(--brand-red); background: rgba(237, 28, 36, .08); padding: 6px; width: 32px; height: 32px; border-radius: 10px; box-sizing: border-box; }
+
+/* Botones y filtros más parejos */
+.ml-board .secondary, .ml-board .primary { transition: background .15s ease, border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+.ml-board .secondary:not(:disabled):hover, .ml-board .primary:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(20, 16, 16, .1); }
+.ml-board .secondary:not(:disabled):active, .ml-board .primary:not(:disabled):active { transform: none; box-shadow: none; }
+.ml-board .segmented { background: var(--color-bg-soft); }
+
+/* Gráfico más chico, con el detalle por cuenta al costado */
+.ml-chart-layout { display: grid; gap: 14px; align-items: center; }
+.ml-chart-layout.has-accounts { grid-template-columns: minmax(0, 1.9fr) minmax(210px, 1fr); }
+.ml-chart { max-height: 150px; width: 100%; }
+.ml-chart-bar { transform-box: fill-box; transform-origin: bottom; animation: ml-bar-grow .5s ease both; animation-delay: calc(var(--i, 0) * 25ms); }
+@keyframes ml-bar-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.ml-by-account { display: grid; gap: 12px; padding-left: 16px; border-left: 1px solid var(--color-border-light); }
+.ml-by-account-row { display: grid; gap: 4px; }
+.ml-by-account-row > div:first-child { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font-size: 0.9rem; }
+.ml-share { height: 6px; border-radius: 99px; background: var(--color-bg-soft); overflow: hidden; }
+.ml-share .acct-bar { display: block; height: 100%; border-radius: 99px; transition: width .5s ease; }
+@media (max-width: 820px) { .ml-chart-layout.has-accounts { grid-template-columns: 1fr; } .ml-by-account { padding: 12px 0 0; border-left: 0; border-top: 1px solid var(--color-border-light); } }
+
+/* Cargando: esqueleto en vez de un texto suelto */
+.ml-skeleton { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.ml-skeleton i { height: 96px; border-radius: var(--radius-xl); background: linear-gradient(100deg, var(--color-bg-soft) 30%, var(--color-white) 50%, var(--color-bg-soft) 70%); background-size: 220% 100%; animation: ml-shimmer 1.2s linear infinite; }
+@keyframes ml-shimmer { to { background-position: -120% 0; } }
+@media (prefers-reduced-motion: reduce) { .ml-pane, .ml-metric-grid .metric-card, .ml-chart-bar, .ml-skeleton i { animation: none; } .ml-account-chip:hover, .ml-metric-grid .metric-card:hover, .ml-board .secondary:hover, .ml-board .primary:hover { transform: none; } }
+.ml-chart-layout { padding-top: 6px; }
+.ml-chart-bar { opacity: .92; }
+.ml-alerts a.secondary, .ml-alerts button.secondary { padding: 6px 12px; font-size: 0.86rem; white-space: nowrap; }
+.ml-chart-col { --i: 0; }

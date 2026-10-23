@@ -1,3 +1,4 @@
+import { AccountTag } from "./MlAccountTag.jsx";
 import { useEffect, useMemo, useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { colorLabel, improvePlan } from "./ml-improve.mjs";
@@ -11,7 +12,7 @@ function Title({ item, nickname }) {
   return (
     <>
       <a href={item.permalink} target="_blank" rel="noreferrer">{String(item.title || item.id).slice(0, 70)} <ExternalLink size={11} /></a>
-      <div className="muted small">{nickname[item.seller_id] || "cuenta"} · {Number(item.visits_30d) || 0} visitas/30 días · {Number(item.sold_quantity) || 0} vendidas</div>
+      <div className="muted small"><AccountTag name={nickname[item.seller_id] || "cuenta"} /> · {Number(item.visits_30d) || 0} visitas/30 días · {Number(item.sold_quantity) || 0} vendidas</div>
     </>
   );
 }

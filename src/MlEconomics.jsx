@@ -1,3 +1,4 @@
+import { AccountTag } from "./MlAccountTag.jsx";
 import { useEffect, useMemo, useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { adminFetch } from "./admin-api.mjs";
@@ -11,7 +12,7 @@ const pct = (value) => (value == null ? "—" : `${value.toLocaleString("es-AR")
 const SHOW = 30;
 
 function Title({ item, nickname }) {
-  return <><a href={item.permalink} target="_blank" rel="noreferrer">{String(item.title || item.id).slice(0, 60)} <ExternalLink size={11} /></a><div className="muted small">{nickname[item.seller_id] || "cuenta"}</div></>;
+  return <><a href={item.permalink} target="_blank" rel="noreferrer">{String(item.title || item.id).slice(0, 60)} <ExternalLink size={11} /></a><div className="small"><AccountTag name={nickname[item.seller_id] || "cuenta"} /></div></>;
 }
 
 function CostCell({ row, isAdmin, session, onSaved }) {

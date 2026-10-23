@@ -78,3 +78,9 @@ export function countQuestions(rows = []) {
   for (const row of rows) if (row.item_id) counts[row.item_id] = (counts[row.item_id] || 0) + 1;
   return counts;
 }
+
+// 23/10 (Felipe: "marcar con un color cada empresa de Mercado Libre"): POLIPLAST rojo, FOAMFACTORY azul, COMARG ámbar.
+// Se reconoce por el apodo de la cuenta; cualquier otra queda gris.
+const ACCOUNT_TONES = [[/poliplast/i, 'poliplast'], [/foam/i, 'foam'], [/comarg/i, 'comarg']];
+export const ACCOUNT_COLORS = { poliplast: '#ed1c24', foam: '#2563eb', comarg: '#d97706', other: '#6b7280' };
+export const accountTone = (nickname = '') => ACCOUNT_TONES.find(([pattern]) => pattern.test(String(nickname)))?.[1] || 'other';

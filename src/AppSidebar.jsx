@@ -1,5 +1,5 @@
-import { Building2, Calculator, ChevronRight, ClipboardList, Database, FileCheck2, GraduationCap, Inbox, LayoutDashboard, ListChecks, MapPin, MessageCircle, ReceiptText, Search, ShoppingBag, Store, UserCog } from "lucide-react";
-import { useEffect } from "react";
+import { Building2, Calculator, ChevronRight, Menu, X, ClipboardList, Database, FileCheck2, GraduationCap, Inbox, LayoutDashboard, ListChecks, MapPin, MessageCircle, ReceiptText, Search, ShoppingBag, Store, UserCog } from "lucide-react";
+import { useEffect, useState } from "react";
 import { onlineConfigured } from "./online";
 import { filterNav } from "./module-access.mjs";
 
@@ -37,8 +37,23 @@ export const NAV_GROUPS = [
 
 export const NAV_ITEMS = NAV_GROUPS.flatMap(([, items]) => items);
 
+// Atajos de la barra inferior del celular (con nombre, no solo ícono). Lo demás está en "Menú".
+const QUICK_IDS = ["dashboard", "tasks", "sales", "clients"];
+
 export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNavGroups, narrowScreen, overdueTaskCount, inboxSignalCount, email = "", denied = null }) {
   const groups = filterNav(NAV_GROUPS, email, denied);
+  const [sheet, setSheet] = useState(false);
+  const allowed = groups.flatMap(([, items]) => items);
+  const quick = QUICK_IDS.map((id) => allowed.find(([itemId]) => itemId === id)).filter(Boolean);
+  const current = allowed.find(([id]) => id === view)?.[1] || "Menú";
+  const badgeFor = (id) => (id === "tasks" ? overdueTaskCount : id === "inbox" ? inboxSignalCount : 0);
+  const pick = (id) => { setSheet(false); onSelect(id); };
+  useEffect(() => {
+    if (!sheet) return undefined;
+    const onKey = (event) => { if (event.key === "Escape") setSheet(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sheet]);
   // Al entrar a una pantalla se abre su sección; después se puede cerrar igual (23/10, Felipe: "Canales online
   // no deja minimizarlo": antes la sección donde estabas parado quedaba siempre abierta y el botón no hacía nada).
   useEffect(() => {
@@ -53,6 +68,9 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
         src="/poliplast-logo.png"
         alt="Grupo Poliplast"
       />
+      <button type="button" className="mobile-menu-button" onClick={() => setSheet(true)} aria-haspopup="dialog" aria-expanded={sheet}>
+        <Menu size={20} /> <span>{current}</span>
+      </button>
     </div>
     <nav>
       {groups.map(([group, items]) => {
@@ -120,6 +138,41 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
         </a>
       </div>
     </div>
+    <nav className="mobile-tabbar" aria-label="Accesos rápidos">
+      {quick.map(([id, label, Icon]) => (
+        <button key={id} type="button" className={view === id ? "active" : ""} onClick={() => pick(id)} aria-current={view === id ? "page" : undefined}>
+          <Icon size={21} /><span>{label === "Empresas y contactos" ? "Empresas" : label}</span>
+          {badgeFor(id) > 0 && <b className="nav-badge" aria-label={`${badgeFor(id)} pendientes`}>{badgeFor(id)}</b>}
+        </button>
+      ))}
+      <button type="button" className={!quick.some(([id]) => id === view) ? "active" : ""} onClick={() => setSheet(true)} aria-haspopup="dialog">
+        <Menu size={21} /><span>Menú</span>
+        {(badgeFor("inbox") > 0) && <b className="nav-badge" aria-label="Hay algo por revisar">{badgeFor("inbox")}</b>}
+      </button>
+    </nav>
+    {sheet && (
+      <div className="mobile-sheet" role="dialog" aria-modal="true" aria-label="Menú de la app">
+        <div className="mobile-sheet-head">
+          <strong>¿Adónde vas?</strong>
+          <button type="button" onClick={() => setSheet(false)} aria-label="Cerrar menú"><X size={22} /> Cerrar</button>
+        </div>
+        <div className="mobile-sheet-body">
+          {groups.map(([group, items]) => (
+            <section key={group}>
+              <h3>{group}</h3>
+              <div className="mobile-sheet-list">
+                {items.map(([id, label, Icon]) => (
+                  <button key={id} type="button" className={view === id ? "active" : ""} onClick={() => pick(id)}>
+                    <Icon size={22} /><span>{label}</span>
+                    {badgeFor(id) > 0 && <b className="nav-badge">{badgeFor(id)}</b>}
+                  </button>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      </div>
+    )}
   </aside>
   );
 }

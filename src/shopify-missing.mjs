@@ -111,7 +111,7 @@ export function missingFromShopify({ products = [], variants = [], mlItems = [],
       sku: entry.sku, mlId: item.id, permalink: item.permalink || '', mlTitle: item.title || '', title, mlPrice: price,
       price: price > 0 ? Math.round(price * (1 - discount)) : 0, sold: entry.sold, visits: entry.visits, listings: entry.listings,
       stock: Number(item.available_quantity) || 0, pictures: Number(item.pictures_count) || 0, image: item.picture_url || item.thumbnail || '',
-      description, seoTitle: shortTitle(`${title} | Poliplast`, 60), seoDescription: firstSentences(seoSource, 155),
+      description, seoTitle: `${shortTitle(title, 48)} | Poliplast`, seoDescription: firstSentences(seoSource, 155),
       brand, tags: [...new Set([brand, 'mercado-libre'].filter(Boolean))], metafields: metafieldsFrom(item.attributes),
       stem, attrs: parseTitle(item.title).attrs, joinsProduct: stem ? stems.get(stem) || null : null, twin, lookalike: best >= 0.7 && !(stem && stems.has(stem)) ? lookalike : null, warnings,
     };
@@ -131,6 +131,12 @@ export function missingFromShopify({ products = [], variants = [], mlItems = [],
     const varying = names.filter((name) => new Set(kin.map((row) => row.attrs[name] ?? '—')).size > 1).slice(0, 3);
     const options = varying.length ? varying : ['Modelo'];
     const groupId = seed.stem;
+    // Dos SKU para el mismo producto y tamaño (RE-608-0.750 y RE-608-750): se crea uno solo (el que más vendió) y se avisa.
+    const taken = new Map();
+    for (const row of [...kin].sort((a, b) => b.sold - a.sold)) {
+      const id = options.map((name) => (name === 'Modelo' ? row.sku : row.attrs[name] ?? '—')).join('|');
+      if (taken.has(id)) { row.dupOf = taken.get(id); row.warnings.push(`Mismo producto que ${taken.get(id)} con otro SKU: se crea solo uno. Unificá el SKU en Mercado Libre.`); } else taken.set(id, row.sku);
+    }
     for (const row of kin) {
       row.group = { id: groupId, size: kin.length, options, values: options.map((name) => (name === 'Modelo' ? row.sku.split('-').pop() : row.attrs[name] ?? '—')) };
     }
@@ -165,31 +171,53 @@ export function filterMissing(rows = [], { query = '', view = '' } = {}) {
 
 const cell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
 const handleOf = (text) => plain(text).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80);
-const html = (text) => text.split(/\n{2,}/).map((part) => `<p>${part.replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch])).replace(/\n/g, '<br>')}</p>`).join('');
+export const descriptionHtml = (text) => text.split(/\n{2,}/).map((part) => `<p>${part.replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch])).replace(/\n/g, '<br>')}</p>`).join('');
 
-// CSV con el formato de importación de productos de Shopify, siempre como BORRADOR. Solo los que no se suman a un producto existente
-// ni parecen duplicados; los agrupados salen como un producto con sus variantes.
-export function shopifyImportCsv(rows = []) {
-  const head = ['Handle', 'Title', 'Body (HTML)', 'Vendor', 'Type', 'Tags', 'Published', 'Option1 Name', 'Option1 Value', 'Option2 Name', 'Option2 Value', 'Option3 Name', 'Option3 Value', 'Variant SKU', 'Variant Inventory Tracker', 'Variant Inventory Qty', 'Variant Inventory Policy', 'Variant Fulfillment Service', 'Variant Price', 'Variant Requires Shipping', 'Variant Taxable', 'Image Src', 'SEO Title', 'SEO Description', 'Status'];
-  const importable = rows.filter((row) => !row.joinsProduct && !row.twin && row.price > 0);
+// Título de un producto con variantes: el de la publicación más vendida sin los tamaños ni el pack (eso pasa a ser la opción).
+export const groupTitle = (lead) => shortTitle(String(lead.mlTitle).replace(/\b\d+(?:[.,]\d+)?\s?(?:kg|gr|g|lts|lt|l|ml|cc|m2|mts|mt|m|cm|mm)\b/gi, ' ').replace(/\bx\s?\d+\b/gi, ' ').replace(/\s+/g, ' ').trim(), 70);
+
+// Lo que se puede crear: sin los que se suman a un producto existente ni los que parecen duplicados. Los de una misma familia
+// van juntos como un producto con variantes. Lo usan el CSV y la creación de borradores.
+export function draftGroups(rows = []) {
+  const importable = rows.filter((row) => !row.joinsProduct && !row.twin && !row.lookalike && !row.dupOf && row.price > 0);
   const products = new Map();
   for (const row of importable) {
     const id = row.group ? `g:${row.group.id}` : `s:${row.sku}`;
     if (!products.has(id)) products.set(id, []);
     products.get(id).push(row);
   }
-  const lines = [];
-  for (const list of products.values()) {
+  return [...products.values()].map((list) => {
     const lead = [...list].sort((a, b) => b.sold - a.sold)[0];
-    const grouped = list.length > 1 && lead.group;
-    const handle = handleOf(grouped ? shortTitle(lead.mlTitle, 50) : lead.title) || handleOf(lead.sku);
+    return { list, lead, grouped: Boolean(list.length > 1 && lead.group) };
+  });
+}
+
+// Pedido para crear cada grupo como borrador en Shopify (ver lib/shopify-write.mjs).
+export function draftSpecs(rows = []) {
+  return draftGroups(rows).map(({ list, lead, grouped }) => ({
+    title: grouped ? groupTitle(lead) : lead.title,
+    descriptionHtml: descriptionHtml(lead.description), tags: lead.tags, seoTitle: lead.seoTitle, seoDescription: lead.seoDescription,
+    images: lead.image ? [lead.image] : [], metafields: lead.metafields.map((field) => ({ key: field.key, value: field.value })),
+    options: grouped ? lead.group.options.map((name, index) => ({ name, values: list.map((row) => row.group.values[index]) })) : [],
+    variants: list.map((row) => ({ optionValues: grouped ? row.group.values : [], sku: row.sku, price: row.price, stock: row.stock > 0 })),
+  }));
+}
+
+// CSV con el formato de importación de productos de Shopify, siempre como BORRADOR. Solo los que no se suman a un producto existente
+// ni parecen duplicados; los agrupados salen como un producto con sus variantes.
+export function shopifyImportCsv(rows = []) {
+  const head = ['Handle', 'Title', 'Body (HTML)', 'Vendor', 'Type', 'Tags', 'Published', 'Option1 Name', 'Option1 Value', 'Option2 Name', 'Option2 Value', 'Option3 Name', 'Option3 Value', 'Variant SKU', 'Variant Inventory Tracker', 'Variant Inventory Qty', 'Variant Inventory Policy', 'Variant Fulfillment Service', 'Variant Price', 'Variant Requires Shipping', 'Variant Taxable', 'Image Src', 'SEO Title', 'SEO Description', 'Status'];
+  const products = draftGroups(rows);
+  const lines = [];
+  for (const { list, lead, grouped } of products) {
+    const handle = handleOf(grouped ? groupTitle(lead) : lead.title) || handleOf(lead.sku);
     list.forEach((row, index) => {
       const opts = grouped ? lead.group.options : ['Title'];
       const vals = grouped ? row.group.values : ['Default Title'];
       const optCells = [0, 1, 2].flatMap((n) => (opts[n] ? [opts[n], vals[n]] : ['', '']));
       const first = index === 0;
       lines.push([
-        handle, first ? lead.title : '', first ? html(lead.description) : '', first ? 'Poliplast' : '', '', first ? lead.tags.join(', ') : '', first ? 'FALSE' : '',
+        handle, first ? (grouped ? groupTitle(lead) : lead.title) : '', first ? descriptionHtml(lead.description) : '', first ? 'Poliplast' : '', '', first ? lead.tags.join(', ') : '', first ? 'FALSE' : '',
         ...optCells, row.sku, 'shopify', row.stock > 0 ? 999 : 0, 'deny', 'manual', row.price, 'TRUE', 'TRUE', first ? lead.image : '', first ? lead.seoTitle : '', first ? lead.seoDescription : '', first ? 'draft' : '',
       ].map(cell).join(','));
     });

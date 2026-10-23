@@ -4,9 +4,11 @@ import { adminFetch } from "./admin-api.mjs";
 import { SHOPIFY_ISSUES, SHOPIFY_SORTS, SHOPIFY_STATUS, boardRows, facets, filterRows, issueLabel, dailySeries, periodTotals, productsCsv, statusLabel, summarize } from "./shopify-board.mjs";
 import { canSee } from "./module-access.mjs";
 import { Empty } from "./ui-primitives";
-import { groupProposals, proposalsCsv } from "./shopify-grouping.mjs";
+import { groupProposals, proposalSpec, proposalsCsv } from "./shopify-grouping.mjs";
 import { DailyChart } from "./DailyChart.jsx";
-import { filterMissing, missingFromShopify, missingReviewCsv, shopifyImportCsv } from "./shopify-missing.mjs";
+import { skuCleanup, skuCleanupCsv } from "./ml-sku-cleanup.mjs";
+import { DraftButton } from "./ShopifyDrafts.jsx";
+import { filterMissing, draftSpecs, missingFromShopify, missingReviewCsv, shopifyImportCsv } from "./shopify-missing.mjs";
 import { PRICE_STATES, DISCOUNT, filterPriceRows, priceCross, priceProposalCsv, priceSummary } from "./shopify-prices.mjs";
 import { PICKUP_LIMIT_DAYS, SHIP_LIMIT_HOURS, operationSummary, pendingOrders, recoverList, weeklyFunnel } from "./shopify-operation.mjs";
 
@@ -168,14 +170,14 @@ function downloadText(name, text) {
   URL.revokeObjectURL(url);
 }
 
-function Organize({ products, variants }) {
+function Organize({ products, variants, session }) {
   const proposals = useMemo(() => groupProposals(products, variants), [products, variants]);
   const [open, setOpen] = useState("");
   if (proposals.length === 0) return <Empty title="Nada para agrupar" text="No hay productos que parezcan el mismo con distinto tamaño, color o presentación." />;
   const saved = proposals.reduce((total, item) => total + item.products.length - 1, 0);
   return (
     <div className="stack">
-      <p className="muted small">Propuesta de solo lectura: {proposals.length} grupos que juntarían {proposals.reduce((total, item) => total + item.products.length, 0)} productos en {proposals.length} (quedan {saved} menos). No se cambia nada en la tienda: escribir en Shopify necesita tu aprobación y otro permiso. Revisá cada grupo: si dos productos distintos quedaron juntos, es un error de la propuesta.</p>
+      <p className="muted small">Propuesta: {proposals.length} grupos que juntarían {proposals.reduce((total, item) => total + item.products.length, 0)} productos en {proposals.length} (quedan {saved} menos). Nada se cambia solo: cada grupo tiene un botón que lo crea como BORRADOR (sin tocar los originales; necesita el permiso write_products de la app). Revisá cada grupo: si dos productos distintos quedaron juntos, es un error de la propuesta.</p>
       <p className="muted small"><strong>Orden para ejecutar:</strong> 1) corregir los SKU repetidos, 2) fusionar un grupo por vez (el stock 999 es a propósito: se mantiene), 3) crear redirecciones 301 de los productos que desaparecen y revisar qué links de Mercado Libre o Instagram apuntaban a ellos. Si hay más de 3 opciones, la propuesta ya parte el grupo en varios productos (por capacidad y por línea).</p>
       <button type="button" className="ghost" onClick={() => downloadText(`shopify-agrupar-${argentinaToday()}.csv`, proposalsCsv(proposals))}>Descargar propuesta (CSV)</button>
       {proposals.map((item) => (
@@ -190,6 +192,7 @@ function Organize({ products, variants }) {
             <div>
               {item.warnings.map((warning) => <p key={warning} className="muted small">⚠ {warning}</p>)}
               <p className="muted small">Quedaría como base: {item.survivor.title}</p>
+              <DraftButton session={session} build={() => [proposalSpec(item)]} label="Crear este producto unificado como borrador" confirmText={() => `Se crea «${item.name}» como BORRADOR con ${item.variants.length} variantes, copiando descripción y fotos de «${item.survivor.title}». Los ${item.products.length} productos originales NO se tocan: cuando publiques el nuevo, archivalos vos. ¿Seguimos?`} />
               <ul>{item.variants.map((variant, index) => <li key={index}>{item.options.map((option) => variant.optionValues[option.name]).join(" / ")} — {variant.from.member.product.title}</li>)}</ul>
             </div>
           )}
@@ -307,7 +310,7 @@ function Prices({ products, variants, mlItems }) {
 }
 
 // Lo que se vende en Mercado Libre y no está en la tienda: propuesta completa para revisar y, si se quiere, importar como BORRADOR.
-function Missing({ supabase, products, variants }) {
+function Missing({ supabase, products, variants, session }) {
   const [full, setFull] = useState({ status: "loading", items: [] });
   const [query, setQuery] = useState("");
   const [view, setView] = useState("");
@@ -321,6 +324,7 @@ function Missing({ supabase, products, variants }) {
   }, [supabase]);
   const result = useMemo(() => missingFromShopify({ products, variants, mlItems: full.items }), [products, variants, full.items]);
   const shown = useMemo(() => filterMissing(result.rows, { query, view }), [result.rows, query, view]);
+  const cleanup = useMemo(() => skuCleanup(full.items), [full.items]);
   if (full.status === "loading") return <div className="ml-skeleton" aria-busy="true"><i /><i /><i /></div>;
   if (full.status === "error") return <Empty title="No se pudieron leer las publicaciones de Mercado Libre" text={full.error} />;
   if (!full.items.length) return <Empty title="Faltan las publicaciones de Mercado Libre" text="Más → Datos → Mercado Libre → Actualizar todo." />;
@@ -338,11 +342,12 @@ function Missing({ supabase, products, variants }) {
           <div><span className="eyebrow">Mercado Libre → Shopify · nada se publica solo</span><h2>Productos que faltan en la tienda</h2></div>
           <label className="ml-search"><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por título o SKU…" aria-label="Buscar" /></label>
         </div>
-        <p className="muted small">Publicaciones activas de ML con SKU que ninguna variante de Shopify tiene, de las que más vendieron a las que menos. Cada fila trae precio sugerido (ML − 10 %), título corto, descripción sin links ni teléfonos, SEO, etiquetas, metacampos y con quién se agruparía. El CSV de importación sale como <strong>borrador</strong> (Shopify → Productos → Importar): lo revisás en la tienda antes de publicar. Stock inicial 999 si ML tiene stock (tu criterio de stock constante).</p>
+        <p className="muted small">Publicaciones activas de ML con SKU que ninguna variante de Shopify tiene, de las que más vendieron a las que menos. Cada fila trae precio sugerido (ML − 10 %), título corto, descripción sin links ni teléfonos, SEO, etiquetas, metacampos y con quién se agruparía. Podés crearlos directo como <strong>borrador</strong> en Shopify (de a 40 por vez, siguiendo los filtros) o bajar el CSV para importarlo vos; en los dos casos los revisás en la tienda antes de publicar. Stock inicial 999 si ML tiene stock (tu criterio de stock constante).</p>
         <div className="ml-tabs ml-filter-tabs" role="tablist" aria-label="Filtro">
           {chips.map(([key, label, count]) => <button key={key || "todos"} type="button" role="tab" aria-selected={view === key} className={view === key ? "selected" : ""} onClick={() => setView(key)}>{label} ({count})</button>)}
         </div>
         <div className="ml-toolbar">
+          <DraftButton session={session} className="primary" build={() => draftSpecs(shown).slice(0, 40)} label={`Crear en Shopify como borrador (${Math.min(draftSpecs(shown).length, 40)})`} confirmText={(count) => `Se van a crear ${count} producto(s) como BORRADOR en Shopify (con precio ML − 10 %, descripción, SEO y metacampos). No se publica nada ni se toca lo que ya existe. ¿Seguimos?`} />
           <button type="button" className="ghost" onClick={() => downloadText(`shopify-borradores-${argentinaToday()}.csv`, shopifyImportCsv(shown))}>CSV para importar como borrador</button>
           <button type="button" className="ghost" onClick={() => downloadText(`faltan-en-shopify-${argentinaToday()}.csv`, missingReviewCsv(shown))}>Hoja de revisión (todo lo sugerido)</button>
         </div>
@@ -356,13 +361,29 @@ function Missing({ supabase, products, variants }) {
         )}
         {shown.length > 200 && <p className="muted small">Se muestran los primeros 200; usá los filtros o descargá el CSV.</p>}
       </section>
-      {result.noSku.length > 0 && (
+      {(cleanup.similar.length > 0 || cleanup.suggestions.length > 0) && (
         <section className="panel">
-          <div className="panel-head"><div><span className="eyebrow">No se pueden cruzar</span><h2>Publicaciones activas de ML sin SKU ({result.noSku.length})</h2></div></div>
-          <p className="muted small">Sin SKU no se sabe si están en Shopify. Cargarles el SKU en Mercado Libre (el mismo del catálogo) las incorpora a este cruce y a Precios vs ML. Las más vendidas primero:</p>
-          <ul className="ml-simple-list">{result.noSku.slice(0, 15).map((item) => (
-            <li key={item.mlId}><a href={item.permalink} target="_blank" rel="noreferrer">{item.title}</a> <small className="muted">· {number(item.sold)} vendidas{item.maybe ? ` · parece ser «${item.maybe.title}» de Shopify` : ""}</small></li>
-          ))}</ul>
+          <div className="panel-head">
+            <div><span className="eyebrow">Se corrige en Mercado Libre</span><h2>Ordenar los SKU de ML</h2></div>
+            <button type="button" className="ghost" onClick={() => downloadText(`sku-mercado-libre-${argentinaToday()}.csv`, skuCleanupCsv(cleanup))}>Descargar hoja para corregir ({cleanup.similar.length + cleanup.suggestions.length})</button>
+          </div>
+          <p className="muted small">Un mismo producto con dos SKU distintos, o sin SKU, rompe los cruces con Shopify (precios y faltantes). El CRM no escribe en Mercado Libre: corregilos ahí y en la próxima actualización se acomodan solos.</p>
+          {cleanup.similar.length > 0 && (
+            <>
+              <h3 className="small">Mismo producto, SKU distinto ({cleanup.similar.length})</h3>
+              <ul className="ml-simple-list">{cleanup.similar.slice(0, 10).map((row) => (
+                <li key={`${row.keepSku}|${row.otherSku}`}><strong>{row.otherSku}</strong> → <strong>{row.keepSku}</strong> <small className="muted">· {row.otherLink ? <a href={row.otherLink} target="_blank" rel="noreferrer">{row.otherTitle}</a> : row.otherTitle}</small></li>
+              ))}</ul>
+            </>
+          )}
+          {cleanup.suggestions.length > 0 && (
+            <>
+              <h3 className="small">Sin SKU ({cleanup.suggestions.length}), las más vendidas primero</h3>
+              <ul className="ml-simple-list">{cleanup.suggestions.slice(0, 15).map((row) => (
+                <li key={row.id}><a href={row.permalink} target="_blank" rel="noreferrer">{row.title}</a> <small className="muted">· {number(row.sold)} vendidas · {row.suggestedSku ? <>SKU sugerido <strong>{row.suggestedSku}</strong> (por parecerse a «{row.suggestedFrom}»)</> : "SKU a definir"}</small></li>
+              ))}</ul>
+            </>
+          )}
         </section>
       )}
     </div>
@@ -481,9 +502,9 @@ export function ShopifyBoard({ supabase, session, isAdmin, hiddenTabs = null, em
         {data.status === "ready" && data.products.length > 0 && tab === "mejorar" && <Issues rows={rows} onPick={pick} />}
         {data.status === "ready" && data.products.length > 0 && tab === "productos" && <Products rows={rows} issue={issue} setIssue={setIssue} />}
         {data.status === "ready" && data.products.length > 0 && tab === "precios" && <Prices products={data.products} variants={data.variants} mlItems={data.mlItems || []} />}
-        {data.status === "ready" && data.products.length > 0 && tab === "faltan" && <Missing supabase={supabase} products={data.products} variants={data.variants} />}
+        {data.status === "ready" && data.products.length > 0 && tab === "faltan" && <Missing supabase={supabase} products={data.products} variants={data.variants} session={session} />}
         {data.status === "ready" && data.products.length > 0 && tab === "operacion" && <Operation orders={data.orders || []} checkouts={data.checkouts || []} />}
-        {data.status === "ready" && data.products.length > 0 && tab === "ordenar" && <Organize products={data.products} variants={data.variants} />}
+        {data.status === "ready" && data.products.length > 0 && tab === "ordenar" && <Organize products={data.products} variants={data.variants} session={session} />}
       </div>
     </div>
   );

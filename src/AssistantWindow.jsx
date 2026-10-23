@@ -136,7 +136,8 @@ export async function loadListPrices(supabase, words, today) {
 const plainText = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 function useListPrices(supabase, query) {
-  const words = asksPrice(query) ? priceWords(query) : [];
+  // 23/10: "cuántas cotizaciones cerramos" es una pregunta de números, no de precios.
+  const words = asksPrice(query) && !asksBusiness(query) ? priceWords(query) : [];
   const key = words.join(" ");
   const [state, setState] = useState({ key: "", entries: [] });
   useEffect(() => {

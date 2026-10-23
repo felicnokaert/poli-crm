@@ -6,7 +6,8 @@
 import { plain } from './knowledge-search.mjs';
 import { toMapClient } from './map-clients-adapter.mjs';
 
-const ASK = /\b(aplicador\w*|aplica(r|dor|n)?|recomend\w*|rapyp|instalador\w*|quien (me )?(lo |la )?(aplica|hace|coloca|proyecta)|red de aplicadores|colocador\w*)\b/;
+// 23/10: "con qué pistola se aplica" o "qué me recomendás para el techo" no son pedidos de aplicador.
+const ASK = /\b(aplicador\w*|recomend\w* (a )?(un |algun |alguien|quien)|rapyp|instalador\w*|quien (me )?(lo |la )?(aplica|hace|coloca|proyecta)|red de aplicadores|colocador\w*)\b/;
 const ZONE_FILLER = new Set(['aplicador', 'aplicadores', 'recomendar', 'recomendame', 'recomenda', 'recomiendo', 'rapyp', 'quien', 'aplica', 'aplicar', 'cerca', 'zona', 'para', 'que', 'hay', 'tenemos', 'cliente', 'clientes', 'red', 'del', 'los', 'las', 'una', 'uno', 'con', 'por', 'mejor', 'mejores', 'espuma', 'poliuretano', 'poliurea', 'proyectado', 'proyectada', 'techo', 'techos', 'galpon', 'necesita', 'busca', 'buscando', 'alguien', 'instalador', 'instaladores', 'colocador']);
 
 export const asksApplicators = (query) => ASK.test(plain(query));

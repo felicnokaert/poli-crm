@@ -4,8 +4,8 @@
 // los otros bloques del asistente. Sin IA ni costo.
 import { plain } from './knowledge-search.mjs';
 
-const ASK = /\b(contame|conta|decime|todo (de|sobre|lo de)|info\w*|datos|ficha|resumen|quien es|que sabemos|que hay de|novedades)\b/;
-const FILLER = new Set(['contame', 'conta', 'decime', 'todo', 'toda', 'sobre', 'info', 'informacion', 'datos', 'dato', 'ficha', 'resumen', 'quien', 'que', 'sabemos', 'hay', 'del', 'los', 'las', 'cliente', 'empresa', 'novedades', 'con', 'para', 'por', 'una', 'uno', 'sus', 'mas', 'tenemos', 'tiene', 'lo']);
+const ASK = /\b(contame|conta|decime|hablame|todo (de|sobre|lo de)|info\w*|datos|ficha|resumen|quien es|que sabemos|que sabes|que hay de|novedades|el cliente|la empresa)\b/;
+const FILLER = new Set(['contame', 'conta', 'decime', 'todo', 'toda', 'sobre', 'info', 'informacion', 'datos', 'dato', 'ficha', 'resumen', 'quien', 'que', 'sabemos', 'sabes', 'hablame', 'hay', 'del', 'los', 'las', 'cliente', 'empresa', 'novedades', 'con', 'para', 'por', 'una', 'uno', 'sus', 'mas', 'tenemos', 'tiene', 'lo']);
 
 export const asksClient = (query) => ASK.test(plain(query));
 

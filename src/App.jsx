@@ -19,6 +19,7 @@ const CotizadorFrame = lazy(() => import("./CotizadorFrame").then((m) => ({ defa
 // otros (CommercialKnowledge, Coach, QuickReplies, Training) son internos,
 // consumidos solo por el propio <Academy> - así que separarla en su propio
 // chunk no arrastra nada que este archivo necesite.
+const ShopifyBoard = lazy(() => import("./ShopifyBoard").then((m) => ({ default: m.ShopifyBoard })));
 const MercadoLibreBoard = lazy(() => import("./MercadoLibreBoard").then((m) => ({ default: m.MercadoLibreBoard })));
 const Academy = lazy(() => import("./Academy").then((m) => ({ default: m.Academy })));
 import { LoginScreen } from "./Login";
@@ -104,7 +105,7 @@ function loadState() {
 }
 
 const VIEW_KEY = "poliplast-current-view";
-const SAVED_VIEWS = new Set(["dashboard", "conversations", "inbox", "tasks", "sales", "clients", "prospecting", "mercadolibre", "academy", "quoter", "map", "techdocs", "profile", "settings"]);
+const SAVED_VIEWS = new Set(["dashboard", "conversations", "inbox", "tasks", "sales", "clients", "prospecting", "mercadolibre", "shopify", "academy", "quoter", "map", "techdocs", "profile", "settings"]);
 function readSavedView() {
   try {
     const saved = sessionStorage.getItem(VIEW_KEY);
@@ -796,6 +797,11 @@ export default function App() {
         {view === "mercadolibre" && (
           <Suspense fallback={<Splash text="Cargando Mercado Libre…" />}>
             <MercadoLibreBoard supabase={supabase} session={session} isAdmin={isChannelAdmin(session?.user?.email)} canSeeAds={isFelipeTools} ads={data.mlAds || {}} onAdsChange={(next) => setData((current) => ({ ...current, mlAds: next }))} />
+          </Suspense>
+        )}
+        {view === "shopify" && (
+          <Suspense fallback={<Splash text="Cargando Shopify…" />}>
+            <ShopifyBoard supabase={supabase} session={session} isAdmin={isChannelAdmin(session?.user?.email)} />
           </Suspense>
         )}
         {view === "academy" && (

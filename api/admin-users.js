@@ -5,6 +5,7 @@ import { listClientErrors, logClientError } from '../lib/error-log.mjs';
 import { mercadoLibreAdmin, mercadoLibreCron } from '../lib/mercadolibre.mjs';
 import { contabiliumAdmin, contabiliumCron } from '../lib/contabilium.mjs';
 import { assistantAi } from '../lib/assistant-ai.mjs';
+import { shopifyAdmin, shopifyCron } from '../lib/shopify.mjs';
 
 // Una sola función para las tareas de administrador (el plan de Vercel limita la cantidad de funciones):
 // borrar un usuario, revisar/limpiar espacios con datos de Felipe copiados (action: 'cleanup') o
@@ -16,6 +17,10 @@ import { assistantAi } from '../lib/assistant-ai.mjs';
 export default async function handler(request, response) {
   if (request.method === 'GET' && request.query?.cron === 'mercadolibre') {
     const result = await mercadoLibreCron(request);
+    return response.status(result.status).json(result.body);
+  }
+  if (request.method === 'GET' && request.query?.cron === 'shopify') {
+    const result = await shopifyCron(request);
     return response.status(result.status).json(result.body);
   }
   if (request.method === 'GET' && request.query?.cron === 'contabilium') {
@@ -30,6 +35,7 @@ export default async function handler(request, response) {
     : action === 'listErrors' ? await listClientErrors(request)
     : action === 'mercadolibre' ? await mercadoLibreAdmin(request)
     : action === 'contabilium' ? await contabiliumAdmin(request)
+    : action === 'shopify' ? await shopifyAdmin(request)
     : action === 'assistant' ? await assistantAi(request)
     : await deleteUser(request);
   return response.status(result.status).json(result.body);

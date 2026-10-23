@@ -19,6 +19,18 @@ export function similarity(a, b) {
   return common / Math.min(left.size, right.size);
 }
 
+// ¿Terminan en lo mismo? Solo cuenta como "mismo producto" si el último tramo es equivalente: igual (ignorando signos y ceros)
+// o el mismo número en kg y en g (0.750 = 750). -1 y -3 (packs) o -12 y -1 NO son equivalentes.
+export function skuSuffixEquivalent(a, b) {
+  const last = (sku) => key(sku).split('-').pop() || '';
+  const x = last(a); const y = last(b);
+  if (!x || !y) return false;
+  const num = (v) => (/^\d+(?:\.\d+)?$/.test(v) ? Number(v) : null);
+  const nx = num(x); const ny = num(y);
+  if (nx !== null && ny !== null) return nx === ny || Math.abs(nx * 1000 - ny) < 1e-9 || Math.abs(ny * 1000 - nx) < 1e-9;
+  return x.replace(/[^A-Z0-9]/g, '').replace(/^0+/, '') === y.replace(/[^A-Z0-9]/g, '').replace(/^0+/, '');
+}
+
 // Familia del SKU: todo menos el último tramo (RE-608-750 → RE-608).
 export function skuStem(sku) {
   const parts = key(sku).split('-').filter(Boolean);
@@ -27,6 +39,7 @@ export function skuStem(sku) {
 
 export function cleanDescription(text = '') {
   return String(text || '')
+    .replace(/\r\n?/g, '\n')
     .replace(/https?:\/\/\S+|www\.\S+/gi, ' ')
     .replace(/\b[\w.+-]+@[\w-]+\.[\w.-]+\b/g, ' ')
     .replace(/(?:\+?\d[\d\s().-]{7,}\d)/g, ' ')
@@ -40,7 +53,7 @@ export function shortTitle(title = '', max = 70) {
   return cut.slice(0, cut.lastIndexOf(' ') > 30 ? cut.lastIndexOf(' ') : max).trim();
 }
 
-const SKIP_ATTRS = /gtin|ean|upc|motivo|sku|c[oó]digo|item condition|condici[oó]n/i;
+const SKIP_ATTRS = /gtin|ean|upc|motivo|sku|c[oó]digo|item condition|condici[oó]n|impuesto/i;
 export function metafieldsFrom(attributes) {
   const list = Array.isArray(attributes) ? attributes : [];
   return list
@@ -80,7 +93,7 @@ function perSku(mlItems) {
 
 export function missingFromShopify({ products = [], variants = [], mlItems = [], discount = DISCOUNT } = {}) {
   const live = new Map(products.filter((product) => product.status !== 'ARCHIVED').map((product) => [product.id, product]));
-  const shopifySkus = new Set(); const squashed = new Map(); const stems = new Map();
+  const shopifySkus = new Set(); const squashed = new Map(); const stems = new Map(); const stemSkus = new Map();
   for (const variant of variants) {
     const product = live.get(variant.product_id);
     if (!product || !variant.sku) continue;
@@ -88,6 +101,7 @@ export function missingFromShopify({ products = [], variants = [], mlItems = [],
     squashed.set(squash(variant.sku), product);
     const stem = skuStem(variant.sku);
     if (stem && !stems.has(stem)) stems.set(stem, product);
+    if (stem) { if (!stemSkus.has(stem)) stemSkus.set(stem, []); stemSkus.get(stem).push([key(variant.sku), product]); }
   }
   const catalog = [...live.values()];
   const missing = perSku(mlItems).filter((entry) => !shopifySkus.has(entry.sku)).map((entry) => {
@@ -96,7 +110,9 @@ export function missingFromShopify({ products = [], variants = [], mlItems = [],
     const description = cleanDescription(item.description);
     const title = shortTitle(item.title);
     const brand = brandOf(item.attributes);
-    const twin = squashed.get(squash(entry.sku)) || null;
+    // Mismo producto con otro formato de SKU (0.750 = 750): ya está en la tienda.
+    const sameStem = skuStem(entry.sku);
+    const twin = squashed.get(squash(entry.sku)) || ((stemSkus.get(sameStem) || []).find(([sku]) => skuSuffixEquivalent(sku, entry.sku)) || [])[1] || null;
     let lookalike = null; let best = 0;
     for (const product of catalog) { const score = similarity(item.title, product.title); if (score > best) { best = score; lookalike = product; } }
     const stem = skuStem(entry.sku);
@@ -112,7 +128,7 @@ export function missingFromShopify({ products = [], variants = [], mlItems = [],
       price: price > 0 ? Math.round(price * (1 - discount)) : 0, sold: entry.sold, visits: entry.visits, listings: entry.listings,
       stock: Number(item.available_quantity) || 0, pictures: Number(item.pictures_count) || 0, image: item.picture_url || item.thumbnail || '',
       description, seoTitle: `${shortTitle(title, 48)} | Poliplast`, seoDescription: firstSentences(seoSource, 155),
-      brand, tags: [...new Set([brand, 'mercado-libre'].filter(Boolean))], metafields: metafieldsFrom(item.attributes),
+      brand, tags: [...new Set([brand, 'crm-borrador'].filter(Boolean))], metafields: metafieldsFrom(item.attributes),
       stem, attrs: parseTitle(item.title).attrs, joinsProduct: stem ? stems.get(stem) || null : null, twin, lookalike: best >= 0.7 && !(stem && stems.has(stem)) ? lookalike : null, warnings,
     };
   });
@@ -127,19 +143,29 @@ export function missingFromShopify({ products = [], variants = [], mlItems = [],
     const seed = [...rows].sort((a, b) => b.sold - a.sold)[0];
     const kin = rows.filter((row) => row === seed || similarity(row.mlTitle, seed.mlTitle) >= 0.4);
     if (kin.length < 2) continue;
+    // Valor de cada opción según el título (sin pack = x1). Si el título no lo dice, queda vacío y esa fila no entra al grupo.
+    const valueOf = (row, name) => (name === 'Presentación' ? row.sku.split('-').pop() : row.attrs[name] ?? (name === 'Pack' ? 'x1' : null));
     const names = [...new Set(kin.flatMap((row) => Object.keys(row.attrs)))];
-    const varying = names.filter((name) => new Set(kin.map((row) => row.attrs[name] ?? '—')).size > 1).slice(0, 3);
-    const options = varying.length ? varying : ['Modelo'];
-    const groupId = seed.stem;
-    // Dos SKU para el mismo producto y tamaño (RE-608-0.750 y RE-608-750): se crea uno solo (el que más vendió) y se avisa.
-    const taken = new Map();
-    for (const row of [...kin].sort((a, b) => b.sold - a.sold)) {
-      const id = options.map((name) => (name === 'Modelo' ? row.sku : row.attrs[name] ?? '—')).join('|');
-      if (taken.has(id)) { row.dupOf = taken.get(id); row.warnings.push(`Mismo producto que ${taken.get(id)} con otro SKU: se crea solo uno. Unificá el SKU en Mercado Libre.`); } else taken.set(id, row.sku);
-    }
+    const varying = names.filter((name) => new Set(kin.map((row) => valueOf(row, name) ?? '—')).size > 1).slice(0, 3);
+    const options = varying.length ? varying : ['Presentación'];
+    // Todas las filas del grupo tienen que tener valor en todas las opciones; las que no, se crean aparte (no se inventan variantes).
+    const loose = new Set();
     for (const row of kin) {
-      row.group = { id: groupId, size: kin.length, options, values: options.map((name) => (name === 'Modelo' ? row.sku.split('-').pop() : row.attrs[name] ?? '—')) };
+      if (options.some((name) => valueOf(row, name) === null)) { loose.add(row); row.warnings.push(`No se agrupó con ${seed.sku}: el título no dice ${options.filter((name) => valueOf(row, name) === null).join(' ni ')}. Se crea aparte.`); }
     }
+    // Dos SKU para el mismo producto y tamaño (RE-608-0.750 y RE-608-750): se crea uno solo (el que más vendió) y se avisa.
+    // Si dos filas quedan con los mismos valores pero sus SKU NO son equivalentes (el título no distingue el tamaño), la segunda
+    // se crea aparte y se avisa.
+    const taken = new Map();
+    for (const row of [...kin].filter((item) => !loose.has(item)).sort((a, b) => b.sold - a.sold)) {
+      const id = options.map((name) => valueOf(row, name)).join('|');
+      if (!taken.has(id)) { taken.set(id, row.sku); continue; }
+      const first = taken.get(id);
+      if (skuSuffixEquivalent(first, row.sku)) { row.dupOf = first; row.warnings.push(`Mismo producto que ${first} con otro SKU: se crea solo uno. Unificá el SKU en Mercado Libre.`); } else { loose.add(row); row.warnings.push(`El título no distingue este producto de ${first} (SKU distinto): se crea aparte. Revisá si es otro tamaño o pack.`); }
+    }
+    const members = kin.filter((item) => !loose.has(item));
+    if (members.length < 2) continue;
+    for (const row of members) row.group = { id: seed.stem, size: members.length, options, values: options.map((name) => valueOf(row, name)) };
   }
   const sorted = missing.sort((a, b) => b.sold - a.sold || b.visits - a.visits || a.sku.localeCompare(b.sku));
   const noSku = mlItems.filter((item) => item.status === 'active' && !key(item.sku)).map((item) => {
@@ -152,7 +178,7 @@ export function missingFromShopify({ products = [], variants = [], mlItems = [],
     rows: sorted, noSku,
     summary: {
       missing: sorted.length, withSales: sorted.filter((row) => row.sold > 0).length, soldMissing: sorted.reduce((sum, row) => sum + row.sold, 0),
-      groups: groups.size, joinExisting: sorted.filter((row) => row.joinsProduct).length, doubtful: sorted.filter((row) => row.twin || row.lookalike).length, noSku: noSku.length,
+      groups: groups.size, joinExisting: sorted.filter((row) => row.joinsProduct && !(row.twin || row.lookalike)).length, doubtful: sorted.filter((row) => row.twin || row.lookalike).length, noSku: noSku.length,
     },
   };
 }
@@ -163,7 +189,7 @@ export function filterMissing(rows = [], { query = '', view = '' } = {}) {
     if (text && !plain(`${row.sku} ${row.mlTitle}`).includes(text)) return false;
     if (view === 'ventas') return row.sold > 0;
     if (view === 'grupos') return Boolean(row.group);
-    if (view === 'sumar') return Boolean(row.joinsProduct);
+    if (view === 'sumar') return Boolean(row.joinsProduct) && !(row.twin || row.lookalike);
     if (view === 'dudosos') return Boolean(row.twin || row.lookalike);
     return true;
   });
@@ -197,7 +223,9 @@ export function draftSpecs(rows = []) {
   return draftGroups(rows).map(({ list, lead, grouped }) => ({
     title: grouped ? groupTitle(lead) : lead.title,
     descriptionHtml: descriptionHtml(lead.description), tags: lead.tags, seoTitle: lead.seoTitle, seoDescription: lead.seoDescription,
-    images: lead.image ? [lead.image] : [], metafields: lead.metafields.map((field) => ({ key: field.key, value: field.value })),
+    images: lead.image ? [lead.image] : [],
+    // En un producto con variantes, lo que cambia entre variantes (color, peso…) no va como metacampo del producto.
+    metafields: lead.metafields.filter((field) => !grouped || !(field.key.startsWith('color') || ['peso', 'medida', 'tama_o', 'capacidad'].includes(field.key) || lead.group.options.some((name) => plain(name).replace(/[^a-z0-9]+/g, '_') === field.key))).map((field) => ({ key: field.key, value: field.value })),
     options: grouped ? lead.group.options.map((name, index) => ({ name, values: list.map((row) => row.group.values[index]) })) : [],
     variants: list.map((row) => ({ optionValues: grouped ? row.group.values : [], sku: row.sku, price: row.price, stock: row.stock > 0 })),
   }));

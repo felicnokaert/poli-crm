@@ -28,7 +28,7 @@ test('detecta lo que está en ML y no en Shopify, ignora archivados y sin SKU', 
   const [first] = out.rows;
   assert.equal(first.price, 9000); // ML − 10 %
   assert.ok(!first.description.includes('http'));
-  assert.deepEqual(first.tags, ['Poxiplast', 'mercado-libre']);
+  assert.deepEqual(first.tags, ['Poxiplast', 'crm-borrador']);
   assert.equal(first.group.size, 2);
   assert.deepEqual(first.group.options, ['Peso']);
 });
@@ -78,4 +78,23 @@ test('dos SKU del mismo producto y tamaño: se crea una sola variante y se avisa
   assert.equal(specs.length, 1);
   assert.deepEqual(specs[0].variants.map((variant) => variant.sku), ['RE-608-0.750', 'RE-608-1500']);
   assert.match(out.rows.find((row) => row.sku === 'RE-608-750').warnings.join(' '), /otro SKU/);
+});
+
+test('datos reales: saltos \\r\\n se normalizan y se arman párrafos', async () => {
+  const { descriptionHtml } = await import('../src/shopify-missing.mjs');
+  assert.equal(cleanDescription('Uno.\r\n\r\nDos.\r\n- a'), 'Uno.\n\nDos.\n- a');
+  assert.equal(descriptionHtml(cleanDescription('Uno.\r\n\r\nDos.\r\n- a')), '<p>Uno.</p><p>Dos.<br>- a</p>');
+});
+
+test('datos reales: packs distintos no se toman por el mismo SKU, y el color no es metacampo de un producto con variantes', async () => {
+  const { skuSuffixEquivalent, draftSpecs } = await import('../src/shopify-missing.mjs');
+  const { skuCleanup } = await import('../src/ml-sku-cleanup.mjs');
+  assert.equal(skuSuffixEquivalent('RE-608-0.750', 'RE-608-750'), true);
+  assert.equal(skuSuffixEquivalent('BLBL-20-1', 'BLBL-20-3'), false);
+  assert.equal(skuSuffixEquivalent('PS-PU47P-12', 'PS-PU47P-1'), false);
+  const out = skuCleanup([{ id: 'a', sku: 'BLBL-20-1', title: 'Balde Plastico 20 Litros Con Tapa', status: 'active', sold_quantity: 5 }, { id: 'b', sku: 'BLBL-20-3', title: 'Balde Plastico 20 Litros Con Tapa', status: 'active', sold_quantity: 4 }]);
+  assert.equal(out.similar.length, 0);
+  const specs = draftSpecs(missingFromShopify({ ...shop, mlItems: [ml('A', 'TIM-W-1-NG', 'Timbre wifi negro', { attributes: [{ name: 'Color', value: 'Negro' }, { name: 'Color principal', value: 'Negro' }, { name: 'Marca', value: 'Kement' }] }), ml('B', 'TIM-W-1-BL', 'Timbre wifi blanco')] }).rows);
+  assert.equal(specs.length, 1);
+  assert.deepEqual(specs[0].metafields.map((field) => field.key), ['marca']);
 });

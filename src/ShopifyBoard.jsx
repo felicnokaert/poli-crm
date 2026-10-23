@@ -392,7 +392,7 @@ function Missing({ supabase, products, variants, session }) {
 
 function FragmentRow({ row, open, toggle }) {
   const doubtful = Boolean(row.twin || row.lookalike);
-  const action = row.joinsProduct ? `Sumar como variante a «${row.joinsProduct.title}»` : doubtful ? "Revisar si ya está cargado" : row.group ? `Crear con ${row.group.size} variantes (${row.group.options.join(" / ")})` : "Crear producto nuevo";
+  const action = doubtful ? "Revisar si ya está cargado" : row.joinsProduct ? `Sumar como variante a «${row.joinsProduct.title}»` : row.group ? `Crear con ${row.group.size} variantes (${row.group.options.join(" / ")})` : "Crear producto nuevo";
   return (
     <>
       <tr>

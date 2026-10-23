@@ -1479,3 +1479,4 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .draft-results { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
 .draft-results .bad { color: var(--brand-red); }
 .draft-results .ok { color: #1f7a4d; }
+.decision-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }

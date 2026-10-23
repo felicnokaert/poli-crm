@@ -116,6 +116,8 @@ export function missingFromShopify({ products = [], variants = [], mlItems = [],
     let lookalike = null; let best = 0;
     for (const product of catalog) { const score = similarity(item.title, product.title); if (score > best) { best = score; lookalike = product; } }
     const stem = skuStem(entry.sku);
+    // Parecido más flojo (50 a 70 %): no frena la creación, pero se muestra para que Felipe decida (ej. Lámina PRFV vs Placa PRFV).
+    const hint = best >= 0.5 && best < 0.7 && !(stem && stems.has(stem)) ? lookalike : null;
     const warnings = [];
     if (twin) warnings.push(`SKU casi igual a uno de Shopify (${twin.title}): puede ser el mismo producto con otro formato de SKU.`);
     else if (lookalike && best >= 0.7 && !(stem && stems.has(stem))) warnings.push(`Título muy parecido a «${lookalike.title}»: revisá que no esté ya cargado con otro SKU.`);
@@ -129,7 +131,7 @@ export function missingFromShopify({ products = [], variants = [], mlItems = [],
       stock: Number(item.available_quantity) || 0, pictures: Number(item.pictures_count) || 0, image: item.picture_url || item.thumbnail || '',
       description, seoTitle: `${shortTitle(title, 48)} | Poliplast`, seoDescription: firstSentences(seoSource, 155),
       brand, tags: [...new Set([brand, 'crm-borrador'].filter(Boolean))], metafields: metafieldsFrom(item.attributes),
-      stem, attrs: parseTitle(item.title).attrs, joinsProduct: stem ? stems.get(stem) || null : null, twin, lookalike: best >= 0.7 && !(stem && stems.has(stem)) ? lookalike : null, warnings,
+      stem, attrs: parseTitle(item.title).attrs, joinsProduct: stem ? stems.get(stem) || null : null, twin, hint, lookalike: best >= 0.7 && !(stem && stems.has(stem)) ? lookalike : null, warnings,
     };
   });
   // Agrupar los que faltan por familia de SKU (si los títulos se parecen) para proponerlos como UN producto con variantes.
@@ -183,9 +185,14 @@ export function missingFromShopify({ products = [], variants = [], mlItems = [],
   };
 }
 
-export function filterMissing(rows = [], { query = '', view = '' } = {}) {
+// Decisiones guardadas ({ SKU: { state, note, by, at } }): lo decidido sale de la lista normal y queda en "Decididos".
+export const DECISION_LABEL = { existe: 'Ya existe en la tienda', no_subir: 'No lo vamos a subir', despues: 'Más tarde' };
+export function filterMissing(rows = [], { query = '', view = '', decisions = {} } = {}) {
   const text = plain(query);
   return rows.filter((row) => {
+    const decided = Boolean(decisions[row.sku]);
+    if (view === 'decididos') return decided;
+    if (decided) return false;
     if (text && !plain(`${row.sku} ${row.mlTitle}`).includes(text)) return false;
     if (view === 'ventas') return row.sold > 0;
     if (view === 'grupos') return Boolean(row.group);

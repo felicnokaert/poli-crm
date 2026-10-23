@@ -98,3 +98,16 @@ test('datos reales: packs distintos no se toman por el mismo SKU, y el color no 
   assert.equal(specs.length, 1);
   assert.deepEqual(specs[0].metafields.map((field) => field.key), ['marca']);
 });
+
+test('decisiones: lo decidido sale de la lista y vuelve con "Decididos"; el parecido flojo se avisa como pista', async () => {
+  const { applyDecision } = await import('../lib/shopify-decisions.mjs');
+  const out = missingFromShopify({ products: [{ id: 'p1', title: 'Placa PRFV Poliplast Plástico Reforzado', status: 'DRAFT' }], variants: [], mlItems: [ml('A', 'PRFV-2X2MM-1', 'Lamina Prfv 2 Mm X 1 M2'), ml('B', 'ZZ-1', 'Algo distinto')] });
+  const prfv = out.rows.find((row) => row.sku === 'PRFV-2X2MM-1');
+  assert.equal(prfv.hint?.id, 'p1');
+  const decisions = applyDecision({}, { skus: ['prfv-2x2mm-1'], state: 'existe', note: 'Placa PRFV' }, 'felipe');
+  assert.equal(decisions['PRFV-2X2MM-1'].state, 'existe');
+  assert.deepEqual(filterMissing(out.rows, { decisions }).map((row) => row.sku), ['ZZ-1']);
+  assert.deepEqual(filterMissing(out.rows, { view: 'decididos', decisions }).map((row) => row.sku), ['PRFV-2X2MM-1']);
+  assert.deepEqual(Object.keys(applyDecision(decisions, { skus: ['PRFV-2X2MM-1'], state: 'volver' })), []);
+  assert.throws(() => applyDecision({}, { skus: ['X'], state: 'borrar' }), /desconocida/);
+});

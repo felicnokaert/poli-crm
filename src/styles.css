@@ -1363,3 +1363,33 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
   .ic-table td:first-child { flex: 0 0 auto; }
   .ic-table td:last-child { margin-left: auto; }
 }
+
+/* Celular más compacto (Felipe, 24/10: "achicar los boxes, que no estén acumulados, no dan ganas de bajar tanto"):
+   las tarjetas de números van de a dos, con menos aire y letra más chica, y los paneles ocupan menos alto. */
+@media (max-width: 640px) {
+  main { padding-inline: 10px; }
+  .content-stack { gap: 8px; }
+  .panel { padding: 12px; border-radius: 14px; }
+  .panel-head { margin-bottom: 6px; }
+  .panel h2 { font-size: 1.05rem; }
+  .panel p { margin-block: 4px; }
+  .metric-grid, .sales-metric-grid, .metric-grid.metric-grid-week { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .metric-card { padding: 10px 12px; gap: 2px; border-radius: 12px; min-height: 0; }
+  .metric-card > svg { width: 16px; height: 16px; }
+  .metric-card span { font-size: 0.76rem; line-height: 1.2; }
+  .metric-card strong { font-size: 1.25rem; line-height: 1.15; }
+  .metric-card small { font-size: 0.72rem; line-height: 1.2; }
+  .ml-chart-layout { gap: 8px; }
+  .module-access-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .health-row { padding: 6px 8px; }
+}
+@media (max-width: 640px) {
+  .metric-card > svg { display: none; }
+  .metric-grid:has(> :nth-child(3):last-child), .ml-metric-grid:has(> :nth-child(3):last-child) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .metric-grid:has(> :nth-child(3):last-child) .metric-card span { font-size: 0.7rem; }
+  .metric-grid:has(> :nth-child(3):last-child) .metric-card strong { font-size: 1.1rem; }
+  .topbar { margin-bottom: 8px; }
+  .topbar h1 { font-size: 22px; margin-top: 0; }
+  .local-chip { font-size: 0.68rem; padding: 1px 6px; }
+  main { padding-top: 10px; }
+}

@@ -39,7 +39,8 @@ function fakeShopify() {
   const http = async (url, init) => {
     const { query, variables } = JSON.parse(init.body);
     calls.push(query.includes('orders(') ? 'orders' : query.includes('product(id') ? 'more' : 'products');
-    if (query.includes('orders(')) return { ok: true, status: 200, json: async () => ({ data: { orders: { pageInfo: { hasNextPage: false }, nodes: [{ createdAt: '2026-10-23T15:00:00Z', currentTotalPriceSet: { shopMoney: { amount: '100', currencyCode: 'ARS' } } }] } } }) };
+    if (query.includes('abandonedCheckouts(')) return { ok: true, status: 200, json: async () => ({ data: { abandonedCheckouts: { nodes: [{ id: 'c1', createdAt: '2026-10-23T10:00:00Z', totalPriceSet: { shopMoney: { amount: '50', currencyCode: 'ARS' } }, lineItems: { nodes: [{ title: 'X', quantity: 1 }] } }] } } }) };
+    if (query.includes('orders(')) return { ok: true, status: 200, json: async () => ({ data: { orders: { pageInfo: { hasNextPage: false }, nodes: [{ id: 'o1', createdAt: '2026-10-23T15:00:00Z', currentTotalPriceSet: { shopMoney: { amount: '100', currencyCode: 'ARS' } } }] } } }) };
     if (query.includes('product(id')) return { ok: true, status: 200, json: async () => ({ data: { product: { variants: { pageInfo: { hasNextPage: false }, nodes: [variantNode('v-extra')] } } } }) };
     const page = variables.after ? 2 : 1;
     const nodes = [{ id: `p${page}`, title: `P${page}`, status: 'ACTIVE', tags: [], mediaCount: { count: 0 }, variantsCount: { count: 26 }, variants: { pageInfo: { hasNextPage: page === 1, endCursor: 'c' }, nodes: [variantNode(`v${page}`)] } }];
@@ -58,8 +59,9 @@ test('syncShopify pagina productos, completa variantes de más, guarda pedidos y
   assert.equal(result.orders, 1);
   assert.equal(result.complete, true);
   assert.ok(calls.includes('more'));
-  assert.deepEqual(saved.map(([table]) => table), ['shopify_products', 'shopify_variants', 'shopify_products', 'shopify_variants', 'shopify_daily']);
-  assert.deepEqual(removed.map(([table]) => table), ['shopify_variants', 'shopify_products']);
+  assert.deepEqual(saved.map(([table]) => table), ['shopify_products', 'shopify_variants', 'shopify_products', 'shopify_variants', 'shopify_daily', 'shopify_orders', 'shopify_checkouts']);
+  assert.equal(result.checkouts, 1);
+  assert.deepEqual(removed.map(([table]) => table), ['shopify_variants', 'shopify_products', 'shopify_orders', 'shopify_checkouts']);
 });
 
 test('si faltan los permisos de pedidos, el catálogo igual queda guardado y se avisa', async () => {

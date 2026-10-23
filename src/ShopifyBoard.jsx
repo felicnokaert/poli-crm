@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, ExternalLink, Layers, PackageCheck, RefreshCw, ShoppingBag, TriangleAlert, Truck, Wallet } from "lucide-react";
 import { adminFetch } from "./admin-api.mjs";
-import { SHOPIFY_ISSUES, SHOPIFY_SORTS, SHOPIFY_STATUS, boardRows, facets, filterRows, issueLabel, periodTotals, productsCsv, statusLabel, summarize } from "./shopify-board.mjs";
+import { SHOPIFY_ISSUES, SHOPIFY_SORTS, SHOPIFY_STATUS, boardRows, facets, filterRows, issueLabel, dailySeries, periodTotals, productsCsv, statusLabel, summarize } from "./shopify-board.mjs";
 import { canSee } from "./module-access.mjs";
 import { Empty } from "./ui-primitives";
 import { groupProposals, proposalsCsv } from "./shopify-grouping.mjs";
+import { DailyChart } from "./DailyChart.jsx";
 import { PRICE_STATES, DISCOUNT, filterPriceRows, priceCross, priceProposalCsv, priceSummary } from "./shopify-prices.mjs";
 import { PICKUP_LIMIT_DAYS, SHIP_LIMIT_HOURS, operationSummary, pendingOrders, recoverList, weeklyFunnel } from "./shopify-operation.mjs";
 
@@ -174,7 +175,7 @@ function Organize({ products, variants }) {
   return (
     <div className="stack">
       <p className="muted small">Propuesta de solo lectura: {proposals.length} grupos que juntarían {proposals.reduce((total, item) => total + item.products.length, 0)} productos en {proposals.length} (quedan {saved} menos). No se cambia nada en la tienda: escribir en Shopify necesita tu aprobación y otro permiso. Revisá cada grupo: si dos productos distintos quedaron juntos, es un error de la propuesta.</p>
-      <p className="muted small"><strong>Orden para ejecutar:</strong> 1) corregir los SKU repetidos, 2) cargar el stock real (las fusiones heredan el 999 de relleno), 3) fusionar un grupo por vez, 4) crear redirecciones 301 de los productos que desaparecen y revisar qué links de Mercado Libre o Instagram apuntaban a ellos. Si hay más de 3 opciones, la propuesta ya parte el grupo en varios productos (por capacidad y por línea).</p>
+      <p className="muted small"><strong>Orden para ejecutar:</strong> 1) corregir los SKU repetidos, 2) fusionar un grupo por vez (el stock 999 es a propósito: se mantiene), 3) crear redirecciones 301 de los productos que desaparecen y revisar qué links de Mercado Libre o Instagram apuntaban a ellos. Si hay más de 3 opciones, la propuesta ya parte el grupo en varios productos (por capacidad y por línea).</p>
       <button type="button" className="ghost" onClick={() => downloadText(`shopify-agrupar-${argentinaToday()}.csv`, proposalsCsv(proposals))}>Descargar propuesta (CSV)</button>
       {proposals.map((item) => (
         <section key={item.key} className="panel">
@@ -319,8 +320,11 @@ export function ShopifyBoard({ supabase, session, isAdmin, hiddenTabs = null, em
   const rows = useMemo(() => boardRows(data.products, data.variants), [data.products, data.variants]);
   const stats = useMemo(() => summarize(rows), [rows]);
   const today = argentinaToday();
-  const week = useMemo(() => periodTotals(data.days, 7, today), [data.days, today]);
+  const [period, setPeriod] = useState(7);
+  const [metric, setMetric] = useState("amount");
+  const week = useMemo(() => periodTotals(data.days, period, today), [data.days, period, today]);
   const month = useMemo(() => periodTotals(data.days, 30, today), [data.days, today]);
+  const series = useMemo(() => dailySeries(data.days, period, today), [data.days, period, today]);
   const syncedAt = data.products.map((product) => product.synced_at).sort().at(-1);
 
   async function sync() {
@@ -358,8 +362,21 @@ export function ShopifyBoard({ supabase, session, isAdmin, hiddenTabs = null, em
               <article className="metric-card"><PackageCheck size={20} /><span>Productos activos</span><strong>{number(stats.active)}</strong><small className="muted">{number(stats.draft)} {stats.draft === 1 ? "borrador" : "borradores"} · {number(stats.other)} {stats.other === 1 ? "otro" : "otros"}</small></article>
               <article className="metric-card"><Layers size={20} /><span>Variantes</span><strong>{number(stats.variants)}</strong><small className="muted">{stats.total ? (stats.variants / stats.total).toLocaleString("es-AR", { maximumFractionDigits: 1 }) : "—"} por producto</small></article>
               <article className={`metric-card ${stats.withIssues ? "is-urgent" : ""}`}><TriangleAlert size={20} /><span>Con algo para mejorar</span><strong>{number(stats.withIssues)}</strong><small className="muted">de {number(stats.total)} productos</small></article>
-              <article className="metric-card"><ShoppingBag size={20} /><span>Pedidos (7 días)</span><strong>{number(week.current.orders)}</strong><Trend value={week.ordersChange} /></article>
-              <article className="metric-card"><Wallet size={20} /><span>Facturado (7 días)</span><strong>{money(week.current.amount)}</strong><Trend value={week.amountChange} /></article>
+              <article className="metric-card"><ShoppingBag size={20} /><span>Pedidos ({period} días)</span><strong>{number(week.current.orders)}</strong><Trend value={week.ordersChange} /></article>
+              <article className="metric-card"><Wallet size={20} /><span>Facturado ({period} días)</span><strong>{money(week.current.amount)}</strong><Trend value={week.amountChange} /></article>
+            </section>
+            <section className="panel">
+              <div className="panel-head">
+                <div><span className="eyebrow">Ventas de la tienda</span><h2>Día por día</h2></div>
+                <div className="segmented" role="tablist" aria-label="Período">
+                  {[[7, "7 días"], [14, "14 días"], [30, "30 días"], [60, "60 días"]].map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={period === key} className={period === key ? "selected" : ""} onClick={() => setPeriod(key)}>{label}</button>)}
+                </div>
+              </div>
+              <div className="segmented" role="tablist" aria-label="Qué mostrar">
+                {[["amount", "Facturado"], ["orders", "Pedidos"]].map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={metric === key} className={metric === key ? "selected" : ""} onClick={() => setMetric(key)}>{label}</button>)}
+              </div>
+              <DailyChart days={series} metric={metric} currency="ARS" />
+              <p className="muted small">Comparado con los {period} días anteriores. Los pedidos se guardan de los últimos 120 días.</p>
             </section>
             {data.days.length === 0 && <p className="muted small">Todavía no hay pedidos guardados: si la llave no tiene el permiso <code>read_orders</code>, aparecen en cero.</p>}
             <p className="muted small">Últimos 30 días: {number(month.current.orders)} pedidos · {money(month.current.amount)} (pedidos no cancelados, con IVA incluido tal cual los cobra Shopify).</p>

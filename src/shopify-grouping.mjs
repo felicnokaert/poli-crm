@@ -118,7 +118,6 @@ export function groupProposals(products = [], variants = []) {
     }
     for (const [shape, range] of byShape) if (range.max / range.min >= 1.4) warnings.push(`Precios muy distintos para lo mismo (${shape || 'todas'}): de $${Math.round(range.min).toLocaleString('es-AR')} a $${Math.round(range.max).toLocaleString('es-AR')}. La ficha mostraría "desde" el menor.`);
     if (proposed.length > 2048) warnings.push('Supera las 2.048 variantes que admite Shopify: dividirlo en dos productos.');
-    if (rows.some((row) => (row.variant?.inventory_quantity ?? 0) >= 900)) warnings.push('Hereda stock de relleno (900 o más): cargá el stock real al fusionar.');
     const survivor = [...members].sort((x, y) => (statusRank[x.product.status] ?? 9) - (statusRank[y.product.status] ?? 9) || (y.product.total_inventory ?? 0) - (x.product.total_inventory ?? 0))[0].product;
     proposals.push({
       key: `${base}|${parts.join('|')}`, name: titleCase(name), products: members.map((member) => member.product), survivor,

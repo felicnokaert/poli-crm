@@ -11,7 +11,7 @@ export const SHOPIFY_ISSUES = [
   ['sin_seo', 'Sin título ni descripción SEO', 'Google muestra lo que encuentre; conviene escribirlo.'],
   ['sin_foto', 'Sin fotos', 'Un producto sin foto casi no vende.'],
   ['stock_cero', 'Activo con stock 0', 'Se ve en la tienda pero no se puede comprar (o se vende sin tener).'],
-  ['stock_relleno', 'Stock de relleno (999)', 'Hay variantes con 900 o más unidades: parece un número puesto a mano, no el stock real.'],
+  ['stock_relleno', 'Stock constante (999)', 'Variantes con 900 o más unidades: es el stock constante que se mantiene a propósito. Solo informativo.'],
   ['sin_sku', 'Variantes sin SKU', 'Sin SKU no se puede cruzar con Mercado Libre ni con el catálogo.'],
   ['sku_repetido', 'SKU repetido', 'Dos variantes con el mismo SKU confunden la sincronización de stock y precios.'],
   ['sin_peso', 'Sin peso (no cotiza el envío)', 'Sin el peso de la variante Shopify no calcula el envío y los totales salen mal.'],
@@ -121,4 +121,16 @@ export function productsCsv(rows = []) {
     row.variants.map((variant) => variant.sku).filter(Boolean).join(' '), row.issues.map(issueLabel).join(' | '), row.product.online_url,
   ].map(cell).join(','));
   return `\uFEFF${[head.map(cell).join(','), ...lines].join('\n')}`;
+}
+
+// Serie por día de los últimos `length` días (fecha argentina), con ceros en los días sin pedidos, para el gráfico.
+export function dailySeries(days = [], length = 30, today) {
+  const byDay = new Map(days.map((entry) => [String(entry.day).slice(0, 10), entry]));
+  const out = [];
+  for (let back = length - 1; back >= 0; back -= 1) {
+    const day = new Date(Date.parse(today) - back * 86400000).toISOString().slice(0, 10);
+    const entry = byDay.get(day);
+    out.push({ day, orders: entry?.orders || 0, amount: Number(entry?.amount) || 0, currency: entry?.currency || 'ARS' });
+  }
+  return out;
 }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { MlImprove } from "./MlImprove.jsx";
 import { adminFetch } from "./admin-api.mjs";
 import { ArrowDownRight, ArrowUpRight, CircleAlert, Clapperboard, Eye, MessageCircleQuestion, PauseCircle, Percent, PlayCircle, RefreshCw, Search, ShoppingBag, Store, Wallet } from "lucide-react";
 import { ML_ISSUES, ML_SORTS, ML_STATUS, countQuestions, filterBoard, issuesOf, statusLabel, summarizeBoard } from "./ml-board.mjs";
@@ -414,7 +415,7 @@ export function MercadoLibreBoard({ supabase, session = null, isAdmin = false, c
     <div className="content-stack ml-board">
       <section className="panel ml-board-head">
         <div className="segmented" role="tablist" aria-label="Sección">
-          {[["resumen", "Resumen"], ["publicaciones", "Publicaciones"], ...(canSeeAds ? [["publicidad", "Publicidad"]] : [])].map(([key, label]) => (
+          {[["resumen", "Resumen"], ["mejorar", "Qué mejorar"], ["publicaciones", "Publicaciones"], ...(canSeeAds ? [["publicidad", "Publicidad"]] : [])].map(([key, label]) => (
             <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? "selected" : ""} onClick={() => setTab(key)}>{label}</button>
           ))}
         </div>
@@ -432,6 +433,7 @@ export function MercadoLibreBoard({ supabase, session = null, isAdmin = false, c
       {items && items.length > 0 && tab === "resumen" && (
         <Summary accounts={accounts} metricsBySeller={metricsBySeller} seller={seller} items={items} nickname={nickname} permalinks={permalinks} onIssue={showIssue} isAdmin={isAdmin} session={session} supabase={supabase} onReload={() => setReload((value) => value + 1)} />
       )}
+      {items && items.length > 0 && tab === "mejorar" && <MlImprove supabase={supabase} items={items} seller={seller} nickname={nickname} />}
       {items && items.length > 0 && tab === "publicaciones" && (
         <Listings items={items} accounts={accounts} nickname={nickname} questionCounts={questionCounts} seller={seller} issue={issue} setIssue={setIssue} canEdit={isAdmin && Boolean(session)} onClip={markClip} />
       )}

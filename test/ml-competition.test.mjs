@@ -52,4 +52,8 @@ test('competencia: precio y vendidas contra hace 7 y 30 días, y contra la nuest
   assert.ok(asksMlCompetition('cómo viene la competencia en mercado libre?'));
   assert.ok(asksMlCompetition('qué es lo más buscado'));
   assert.ok(!asksMlCompetition('cuanto rinde el easyspray'));
+  // La competencia de ventas directas (Academia) es otra: sin nombrar Mercado Libre no se usa esta.
+  assert.ok(!asksMlCompetition('como viene la competencia'));
+  assert.ok(!asksMlCompetition('competidores de espuma'));
+  assert.ok(asksMlCompetition('que vendedores de ml nos compiten'));
 });

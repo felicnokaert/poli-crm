@@ -408,7 +408,8 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
     Promise.resolve(supabase.from("assistant_knowledge").select("id,question,product,answer,updated_at")).then(({ data }) => setTaughtAll(data || []), () => {});
   }, [supabase]);
   const taught = typed ? matchTaught(taughtAll, typed) : [];
-  const rivals = typed ? rivalsFor(competitors || [], typed) : null;
+  // 23/10: si la pregunta es de la competencia en Mercado Libre, no se mezcla con la de ventas directas.
+  const rivals = typed && !asksMlCompetition(typed) ? rivalsFor(competitors || [], typed) : null;
   // Reglas de la empresa (Felipe las edita como "regla") y aplicadores de la red RAPYP (solo quien ve ese mapa).
   const rules = taughtAll.filter(isRule);
   const rapyp = typed && rapypClients ? rapypFor(rapypClients, typed, { competitors: competitors || [] }) : null;

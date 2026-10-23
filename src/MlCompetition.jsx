@@ -75,10 +75,10 @@ export function MlCompetition({ supabase, session, isAdmin, items = [], nickname
       {isAdmin && (
         <section className="panel">
           <div className="panel-head"><div><span className="eyebrow">Seguimiento diario</span><h2>Sumar publicaciones de la competencia</h2>
-            <p className="muted small">Pegá links de publicaciones (o códigos MLA…), uno o varios. Cada día se guarda su precio y cuántas vendieron. Opcional: de quién son y cuál es la nuestra que compite (link o MLA).</p></div></div>
+            <p className="muted small">Pegá links de publicaciones (o códigos MLA…), uno o varios. Cada día se guarda su precio y cuántas vendieron. Opcional: de quién son y cuál es la nuestra que compite (link o MLA). Es la competencia dentro de Mercado Libre; la de ventas directas sigue en Academia → Competencia.</p></div></div>
           <textarea rows={3} value={text} onChange={(event) => setText(event.target.value)} placeholder="https://articulo.mercadolibre.com.ar/MLA-…" aria-label="Links de la competencia" />
           <div className="ml-competition-form">
-            <input value={who} onChange={(event) => setWho(event.target.value)} placeholder="Competidor (ej. Alkanos)" aria-label="Competidor" />
+            <input value={who} onChange={(event) => setWho(event.target.value)} placeholder="Vendedor en ML (si lo dejás vacío, se usa su apodo)" aria-label="Vendedor competidor en Mercado Libre" />
             <input value={ourItem} onChange={(event) => setOurItem(event.target.value)} placeholder="Nuestra publicación (link o MLA, opcional)" aria-label="Nuestra publicación" />
           </div>
           <div className="panel-head-actions">

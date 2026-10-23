@@ -9,7 +9,7 @@ export const CHANNELS = { ml: 'Mercado Libre', shopify: 'Shopify' };
 
 // Qué cuenta para el "% limpio" de cada canal (lo accionable); el resto se muestra pero no pesa en el puntaje.
 const ML_CLEAN = new Set(['sin-clip', 'pocas-fotos', 'sin-descripcion', 'calidad-baja', 'sin-stock', 'calidad-ml', 'experiencia-compra']);
-const SHOPIFY_CLEAN = new Set(['sin_descripcion', 'sin_seo', 'sin_foto', 'stock_cero', 'sin_sku', 'sku_repetido', 'precio_cero']);
+const SHOPIFY_CLEAN = new Set(['sin_descripcion', 'sin_seo', 'sin_foto', 'stock_cero', 'sin_sku', 'sku_repetido', 'sin_peso', 'precio_cero']);
 
 const ML_WHY = {
   'sin-clip': 'Mercado Libre dice que los clips traen más visitas y ventas.',
@@ -45,7 +45,7 @@ export function mlEntries(items = [], health = []) {
 
 // Entradas de Shopify: sobre los productos que no están archivados.
 export function shopifyEntries(products = [], variants = []) {
-  const rows = boardRows(products, variants).filter((row) => row.product.status !== 'ARCHIVED');
+  const rows = boardRows(products, variants).filter((row) => row.product.status === 'ACTIVE');
   const entries = SHOPIFY_ISSUES.map(([key, label, why]) => ({ channel: 'shopify', key, label, count: rows.filter((row) => row.issues.includes(key)).length, total: rows.length, why, clean: SHOPIFY_CLEAN.has(key) }));
   return { entries, total: rows.length, clean: rows.filter((row) => !row.issues.some((key) => SHOPIFY_CLEAN.has(key))).length };
 }

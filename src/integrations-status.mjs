@@ -7,6 +7,7 @@ export const INTEGRATIONS = [
   { key: 'integration:contabilium', name: 'Contabilium: comprobantes y fichas de clientes', when: '07:00' },
   { key: 'integration:shopify', name: 'Shopify: productos y pedidos', when: '07:30' },
   { key: 'integration:alertas', name: 'Alertas de Qué atender hoy', when: '08:45' },
+  { key: 'integration:mercadolibre-publicidad', name: 'Mercado Libre: inversión en Publicidad (TACoS)', when: '08:30' },
   { key: 'integration:mercadolibre-mercado', name: 'Mercado Libre: competencia por catálogo y tendencias', when: '08:15' },
 ];
 // Vercel puede correr un cron hasta una hora tarde: se da por vencido a las 26 h.

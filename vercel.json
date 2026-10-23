@@ -6,6 +6,7 @@
     { "path": "/api/cron-daily-maintenance", "schedule": "0 6 * * *" },
     { "path": "/api/admin-users?cron=mercadolibre", "schedule": "30 9 * * *" },
     { "path": "/api/admin-users?cron=mercadolibre-mercado", "schedule": "15 11 * * *" },
+    { "path": "/api/admin-users?cron=mercadolibre-publicidad", "schedule": "30 11 * * *" },
     { "path": "/api/admin-users?cron=contabilium", "schedule": "0 10 * * *" },
     { "path": "/api/admin-users?cron=shopify", "schedule": "30 10 * * *" },
     { "path": "/api/admin-users?cron=alertas", "schedule": "45 11 * * *" },

@@ -3,6 +3,7 @@ import { ExternalLink, Layers, PackageCheck, RefreshCw, ShoppingBag, TriangleAle
 import { adminFetch } from "./admin-api.mjs";
 import { SHOPIFY_ISSUES, SHOPIFY_SORTS, SHOPIFY_STATUS, boardRows, facets, filterRows, issueLabel, periodTotals, productsCsv, statusLabel, summarize } from "./shopify-board.mjs";
 import { Empty } from "./ui-primitives";
+import { groupProposals, proposalsCsv } from "./shopify-grouping.mjs";
 
 // Ventas → Shopify (24/10, etapas 1 y 2): espejo de SOLO LECTURA de la tienda. Resumen, "Qué mejorar" (lo que le falta a cada
 // producto) y Productos. No cambia nada en Shopify; las propuestas de precios y de variantes vienen en otras etapas.
@@ -11,7 +12,7 @@ const number = (value) => (typeof value === "number" ? value.toLocaleString("es-
 const argentinaToday = () => new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
 const when = (iso) => (iso ? new Date(iso).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "nunca");
 const MISSING = /shopify_|does not exist|schema cache/i;
-const TABS = [["resumen", "Resumen"], ["mejorar", "Qué mejorar"], ["productos", "Productos"]];
+const TABS = [["resumen", "Resumen"], ["mejorar", "Qué mejorar"], ["productos", "Productos"], ["ordenar", "Ordenar catálogo"]];
 
 async function readAll(query) {
   const rows = [];
@@ -148,6 +149,43 @@ function Products({ rows, issue, setIssue }) {
   );
 }
 
+
+function downloadText(name, text) {
+  const url = URL.createObjectURL(new Blob([text], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url; link.download = name;
+  document.body.appendChild(link); link.click(); link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function Organize({ products, variants }) {
+  const proposals = useMemo(() => groupProposals(products, variants), [products, variants]);
+  const [open, setOpen] = useState("");
+  if (proposals.length === 0) return <Empty title="Nada para agrupar" text="No hay productos que parezcan el mismo con distinto tamaño, color o presentación." />;
+  const saved = proposals.reduce((total, item) => total + item.products.length - 1, 0);
+  return (
+    <div className="stack">
+      <p className="muted small">Propuesta de solo lectura: {proposals.length} grupos que juntarían {proposals.reduce((total, item) => total + item.products.length, 0)} productos en {proposals.length} (quedan {saved} menos). No se cambia nada en la tienda: escribir en Shopify necesita tu aprobación y otro permiso. Revisá cada grupo: si dos productos distintos quedaron juntos, es un error de la propuesta.</p>
+      <button type="button" className="ghost" onClick={() => downloadText(`shopify-agrupar-${argentinaToday()}.csv`, proposalsCsv(proposals))}>Descargar propuesta (CSV)</button>
+      {proposals.map((item) => (
+        <section key={item.key} className="panel">
+          <button type="button" className="ghost" aria-expanded={open === item.key} onClick={() => setOpen(open === item.key ? "" : item.key)}>
+            <strong>{item.name}</strong> · {item.products.length} productos → 1 · {item.variants.length} variantes · {item.options.map((option) => option.name).join(" / ") || "sin opciones"}
+            {item.warnings.length > 0 && <span> · <TriangleAlert size={14} aria-hidden="true" /> {item.warnings.length}</span>}
+          </button>
+          {open === item.key && (
+            <div>
+              {item.warnings.map((warning) => <p key={warning} className="muted small">⚠ {warning}</p>)}
+              <p className="muted small">Quedaría como base: {item.survivor.title}</p>
+              <ul>{item.variants.map((variant, index) => <li key={index}>{item.options.map((option) => variant.optionValues[option.name]).join(" / ")} — {variant.from.member.product.title}</li>)}</ul>
+            </div>
+          )}
+        </section>
+      ))}
+    </div>
+  );
+}
+
 export function ShopifyBoard({ supabase, session, isAdmin }) {
   // Desde el Centro de mejoras se abre directo en Productos con el problema elegido.
   const opened = useMemo(() => { try { const key = sessionStorage.getItem("poliplast-open-shopify"); sessionStorage.removeItem("poliplast-open-shopify"); return key || ""; } catch { return ""; } }, []);
@@ -209,6 +247,7 @@ export function ShopifyBoard({ supabase, session, isAdmin }) {
         )}
         {data.status === "ready" && data.products.length > 0 && tab === "mejorar" && <Issues rows={rows} onPick={pick} />}
         {data.status === "ready" && data.products.length > 0 && tab === "productos" && <Products rows={rows} issue={issue} setIssue={setIssue} />}
+        {data.status === "ready" && data.products.length > 0 && tab === "ordenar" && <Organize products={data.products} variants={data.variants} />}
       </div>
     </div>
   );

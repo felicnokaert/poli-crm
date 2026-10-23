@@ -11,6 +11,7 @@ import {
 import { onlineConfigured, supabase } from "./online";
 import { SharedDirectory } from "./SharedDirectory.jsx";
 import { AdminUsers } from "./AdminUsers.jsx";
+import { DataHealth } from "./DataHealth.jsx";
 import { ModuleAccessPanel } from "./ModuleAccessPanel.jsx";
 import { WorkspaceCleanup } from "./WorkspaceCleanup.jsx";
 import { ErrorLog } from "./ErrorLog.jsx";
@@ -45,7 +46,7 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
     ["respaldos", "Respaldos"],
     ...(onlineConfigured ? [["directorio", "Directorio"]] : []),
     ...(myChannels.length > 0 || (onlineConfigured && isAdmin) ? [["whatsapp", "WhatsApp"]] : []),
-    ...(onlineConfigured && isAdmin ? [["equipo", "Equipo y cuentas"], ["mercadolibre", "Mercado Libre"], ["contabilium", "Contabilium"], ["asistente", "Asistente"]] : []),
+    ...(onlineConfigured && isAdmin ? [["equipo", "Equipo y cuentas"], ["conexiones", "Conexiones"], ["mercadolibre", "Mercado Libre"], ["contabilium", "Contabilium"], ["asistente", "Asistente"]] : []),
     ...((onlineConfigured && isAdmin) || devPanel ? [["errores", "Errores y pruebas"]] : []),
   ];
   const [section, setSection] = useState(() => (mlCallbackParams() ? "mercadolibre" : "respaldos"));
@@ -442,6 +443,7 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
         <ModuleAccessPanel supabase={supabase} />
         <WorkspaceCleanup session={session} />
       </>)}
+      {shown === "conexiones" && onlineConfigured && isAdmin && <DataHealth supabase={supabase} />}
       {shown === "mercadolibre" && onlineConfigured && isAdmin && <MercadoLibreSync supabase={supabase} session={session} />}
       {shown === "contabilium" && onlineConfigured && isAdmin && <ContabiliumTest session={session} />}
       {shown === "asistente" && onlineConfigured && isAdmin && <AssistantTraining supabase={supabase} />}

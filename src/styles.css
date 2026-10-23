@@ -1253,3 +1253,12 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .ml-chart-bar { opacity: .92; }
 .ml-alerts a.secondary, .ml-alerts button.secondary { padding: 6px 12px; font-size: 0.86rem; white-space: nowrap; }
 .ml-chart-col { --i: 0; }
+
+/* 24/10: Ventas → Shopify (misma línea visual que Mercado Libre) */
+.shopify-setup { display: grid; gap: 10px; }
+.shopify-steps { margin: 0; padding-left: 20px; display: grid; gap: 8px; line-height: 1.5; }
+.shopify-steps code, .shopify-setup code { background: var(--color-bg-soft); padding: 1px 6px; border-radius: 6px; font-size: 0.85em; }
+.shopify-noimg { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 6px; background: var(--color-bg-soft); }
+.shopify-board .ml-filter-tabs { margin-bottom: 10px; }
+.shopify-board .ml-search input { min-width: 260px; }
+.shopify-board .ml-board-title a { color: inherit; }

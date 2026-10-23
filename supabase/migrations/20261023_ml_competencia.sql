@@ -41,6 +41,18 @@ create table if not exists public.ml_trends (
 alter table public.ml_competitor_items enable row level security;
 alter table public.ml_competitor_snapshots enable row level security;
 alter table public.ml_trends enable row level security;
-create policy ml_competitor_items_read on public.ml_competitor_items for select to authenticated using (public.is_poliplast_crm_user());
-create policy ml_competitor_snapshots_read on public.ml_competitor_snapshots for select to authenticated using (public.is_poliplast_crm_user());
-create policy ml_trends_read on public.ml_trends for select to authenticated using (public.is_poliplast_crm_user());
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'ml_competitor_items' and policyname = 'ml_competitor_items_read') then
+    create policy ml_competitor_items_read on public.ml_competitor_items for select to authenticated using (public.is_poliplast_crm_user());
+  end if;
+end $$;
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'ml_competitor_snapshots' and policyname = 'ml_competitor_snapshots_read') then
+    create policy ml_competitor_snapshots_read on public.ml_competitor_snapshots for select to authenticated using (public.is_poliplast_crm_user());
+  end if;
+end $$;
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'ml_trends' and policyname = 'ml_trends_read') then
+    create policy ml_trends_read on public.ml_trends for select to authenticated using (public.is_poliplast_crm_user());
+  end if;
+end $$;

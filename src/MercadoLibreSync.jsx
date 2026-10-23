@@ -69,42 +69,83 @@ export function MercadoLibreSync({ supabase, session }) {
     } catch (connectError) { setError(connectError.message); setBusy(""); }
   }
 
+  // Las etapas de una cuenta (publicaciones, preguntas, visitas, calidad); suma a `count` y anota problemas.
+  async function runStages(account, stages, count, problems) {
+    const name = account.nickname || "Cuenta";
+    for (const stage of stages) {
+      let offset = 0;
+      let scrollId = "";
+      let byItem = false;
+      for (let guard = 0; guard < 1000; guard += 1) {
+        const result = await callApi(session, { op: "sync", sellerId: account.seller_id, stage, offset, scrollId, byItem });
+        count[stage] = (count[stage] || 0) + (result.saved || 0);
+        (result.errors || []).forEach((problem) => problems.add(problem));
+        setProgress(`${name} · ` + (stage === "items" ? `Publicaciones: ${result.next} de ${result.total}…`
+          : stage === "extras" ? `Visitas de las activas: ${result.next} de ${result.total}…`
+          : stage === "health" ? `Calidad y experiencia de compra: ${result.next} de ${result.total}…`
+          : result.byItem && byItem ? `Preguntas, revisando publicación ${result.next} de ${result.total}…`
+            : result.byItem ? "Son más de 1000 preguntas: sigo de a una publicación…" : `Preguntas respondidas: ${result.next} de ${result.total}…`));
+        offset = result.next;
+        scrollId = result.scrollId || "";
+        byItem = Boolean(result.byItem);
+        if (guard % 4 === 3) loadCounts().catch(() => {});
+        if (result.done) break;
+      }
+    }
+  }
+  const missingSql = (text) => /ml_item_health|ml_competitor|ml_trends|ml_item_economics|team_shared_notes|does not exist|schema cache/i.test(String(text || ""));
+  const SQL_HINT = "falta pegar el SQL de docs/SQL_PENDIENTE_2026-10-23.md en Supabase";
+  // Corto (21/10, Felipe: "no me gusta que muestre todo este cartel"): hasta 2 problemas y cuántos más.
+  const shortList = (problems) => { const list = [...problems]; return list.length ? ` Faltó: ${list.slice(0, 2).join(" · ")}${list.length > 2 ? ` y ${list.length - 2} más` : ""}.` : ""; };
+
   async function sync(account, stages = ["items", "questions", "extras", "health"]) {
     setError(""); setMessage(""); setBusy(account.seller_id);
-    let items = 0;
-    let questions = 0;
-    let extras = 0;
-    let health = 0;
+    const count = {};
     const problems = new Set();
     try {
-      for (const stage of stages) {
-        let offset = 0;
-        let scrollId = "";
-        let byItem = false;
-        for (let guard = 0; guard < 1000; guard += 1) {
-          const result = await callApi(session, { op: "sync", sellerId: account.seller_id, stage, offset, scrollId, byItem });
-          if (stage === "items") items += result.saved; else if (stage === "questions") questions += result.saved; else if (stage === "health") health += result.saved; else extras += result.saved;
-          (result.errors || []).forEach((problem) => problems.add(problem));
-          setProgress(stage === "items" ? `Publicaciones: ${result.next} de ${result.total}…`
-            : stage === "extras" ? `Visitas de las activas: ${result.next} de ${result.total}…`
-            : stage === "health" ? `Calidad y experiencia de compra: ${result.next} de ${result.total}…`
-            : result.byItem && byItem ? `Preguntas, revisando publicación ${result.next} de ${result.total}…`
-              : result.byItem ? "Son más de 1000 preguntas: sigo de a una publicación…" : `Preguntas respondidas: ${result.next} de ${result.total}…`);
-          offset = result.next;
-          scrollId = result.scrollId || "";
-          byItem = Boolean(result.byItem);
-          if (guard % 4 === 3) loadCounts().catch(() => {});
-          if (result.done) break;
-        }
-      }
-      // Corto (21/10, Felipe: "no me gusta que muestre todo este cartel"): hasta 2 problemas y cuántos más.
-      const list = [...problems];
-      const extra = list.length > 2 ? ` y ${list.length - 2} más` : "";
-      setMessage(`${account.nickname || "Cuenta"}: listo. ${items} publicaciones, ${questions} preguntas, visitas de ${extras} activas y calidad de ${health}.${list.length ? ` Faltó: ${list.slice(0, 2).join(" · ")}${extra}.` : ""}`);
+      await runStages(account, stages, count, problems);
+      setMessage(`${account.nickname || "Cuenta"}: listo. ${count.items || 0} publicaciones, ${count.questions || 0} preguntas, visitas de ${count.extras || 0} activas y calidad de ${count.health || 0}.${shortList(problems)}`);
     } catch (syncError) {
-      const missingTable = /ml_item_health/.test(syncError.message);
-      setError(missingTable ? `Lo demás quedó al día; para la calidad falta pegar el SQL de docs/SQL_PENDIENTE_2026-10-23.md en Supabase.` : `${syncError.message} (quedó guardado lo que se llegó a traer: ${items} publicaciones, ${questions} preguntas).`);
+      setError(missingSql(syncError.message) ? `Lo demás quedó al día; para la calidad ${SQL_HINT}.` : `${syncError.message} (quedó guardado lo que se llegó a traer: ${count.items || 0} publicaciones, ${count.questions || 0} preguntas).`);
     }
+    setProgress(""); setBusy("");
+    await loadAccounts();
+    await loadCounts();
+  }
+
+  // 23/10 (Felipe: "un botón que actualice todo"): las 3 cuentas (publicaciones, preguntas, visitas, calidad y
+  // el resumen con ventas, comisiones y envíos) y después la competencia y las tendencias. Cada paso es un
+  // pedido aparte, así ninguno pasa el minuto que permite el servidor; si uno falla, siguen los demás.
+  async function syncEverything() {
+    setError(""); setMessage(""); setBusy("all");
+    const done = [];
+    const failed = [];
+    const problems = new Set();
+    let sqlMissing = false;
+    for (const account of accounts || []) {
+      const name = account.nickname || account.seller_id;
+      const count = {};
+      try {
+        await runStages(account, ["items", "questions", "extras", "health"], count, problems);
+      } catch (stageError) {
+        if (missingSql(stageError.message)) sqlMissing = true; else failed.push(`${name}: ${stageError.message}`);
+      }
+      setProgress(`${name} · Resumen: ventas, comisiones y envíos…`);
+      try {
+        const result = await callApi(session, { op: "metrics", sellerId: account.seller_id });
+        (result.errors || []).forEach((problem) => { if (missingSql(problem)) sqlMissing = true; else problems.add(problem); });
+      } catch (metricsError) { failed.push(`${name} (resumen): ${metricsError.message}`); }
+      done.push(`${name} ${count.items || 0} publicaciones`);
+    }
+    setProgress("Competencia en Mercado Libre…");
+    try { await callApi(session, { op: "competitors-refresh" }); } catch (competitionError) { if (missingSql(competitionError.message)) sqlMissing = true; else failed.push(`competencia: ${competitionError.message}`); }
+    setProgress("Tendencias de búsqueda…");
+    try {
+      const result = await callApi(session, { op: "trends-refresh" });
+      (result.errors || []).forEach((problem) => problems.add(`tendencias ${problem}`));
+    } catch (trendsError) { if (missingSql(trendsError.message)) sqlMissing = true; else failed.push(`tendencias: ${trendsError.message}`); }
+    setMessage(`Listo: ${done.join(", ")}, resumen, competencia y tendencias.${sqlMissing ? ` Para calidad, competencia y ganancia ${SQL_HINT}.` : ""}${shortList(problems)}`);
+    if (failed.length) setError(failed.slice(0, 3).join(" · "));
     setProgress(""); setBusy("");
     await loadAccounts();
     await loadCounts();
@@ -164,9 +205,11 @@ export function MercadoLibreSync({ supabase, session }) {
           <p>Trae las publicaciones (título, características y descripción) y las preguntas que ya respondieron, para que Academia y el asistente aprendan de ellas. Solo lee: nunca publica ni responde nada en Mercado Libre. No se guarda quién preguntó.</p>
         </div>
         <div className="panel-head-actions">
-          <button type="button" className="primary" disabled={Boolean(busy)} onClick={connect}>{busy === "connect" ? "Conectando…" : "Conectar una cuenta"}</button>
+          {accounts?.length > 0 && <button type="button" className="primary" disabled={Boolean(busy)} onClick={syncEverything}><RefreshCw size={14} /> {busy === "all" ? "Actualizando todo…" : `Actualizar todo (las ${accounts.length} cuentas)`}</button>}
+          <button type="button" className="secondary" disabled={Boolean(busy)} onClick={connect}>{busy === "connect" ? "Conectando…" : "Conectar una cuenta"}</button>
         </div>
       </div>
+      <p className="muted small">"Actualizar todo" hace, para cada cuenta, publicaciones, preguntas, visitas, calidad y el resumen (ventas, comisiones y envíos), y después la competencia y las tendencias. Tarda varios minutos: dejá la pestaña abierta. Todos los días a la mañana se hace solo una versión más corta.</p>
       <p className="muted small">Para conectar otra cuenta (por ejemplo FOAM), primero cerrá sesión en Mercado Libre o entrá con esa cuenta; Mercado Libre conecta la que esté abierta.</p>
       <div className="ml-clips">
         <button type="button" className="link-button" onClick={() => setClipOpen(!clipOpen)}>{clipOpen ? "Cerrar clips" : "Cargar qué publicaciones tienen clip"}</button>

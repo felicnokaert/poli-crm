@@ -46,7 +46,7 @@ export function MlEconomics({ supabase, session, isAdmin, items = [], seller = "
   function onSaved(id, cost) { setState((current) => ({ ...current, economics: current.economics.some((row) => row.id === id) ? current.economics.map((row) => (row.id === id ? { ...row, unit_cost: cost } : row)) : [...current.economics, { id, unit_cost: cost }] })); }
 
   if (state.status === "loading") return <p className="muted" role="status">Calculando stock y ganancia…</p>;
-  if (state.status === "missing") return <p className="muted">Falta un paso: pegar en Supabase el SQL de docs/SQL_PENDIENTE_ML_GANANCIA_2026-10-23.md. Después tocá "Actualizar métricas" en el Resumen.</p>;
+  if (state.status === "missing") return <p className="muted">Falta un paso: pegar en Supabase el SQL de docs/SQL_PENDIENTE_2026-10-23.md. Después tocá "Actualizar todo" en Más → Datos → Mercado Libre.</p>;
   if (state.status === "error") return <p className="muted">No se pudo leer stock y ganancia.</p>;
   const { totals } = view;
   return (
@@ -55,9 +55,9 @@ export function MlEconomics({ supabase, session, isAdmin, items = [], seller = "
         <div className="panel-head"><div>
           <span className="eyebrow">Últimos 30 días · precios finales con IVA</span>
           <h2>Cuánto queda de cada venta</h2>
-          <p className="muted small">Facturado {money(totals.revenue)} · comisiones de Mercado Libre {money(totals.fees)} · envíos {money(totals.shipping)} ({totals.withShipping} de {totals.selling} publicaciones con envío medido) · <strong>queda {money(totals.net)}</strong>. La comisión es la real de cada venta; el envío sale de una venta de muestra. Se actualiza con las métricas (cada día o con "Actualizar métricas" en el Resumen).</p>
+          <p className="muted small">Facturado {money(totals.revenue)} · comisiones de Mercado Libre {money(totals.fees)} · envíos {money(totals.shipping)} ({totals.withShipping} de {totals.selling} publicaciones con envío medido) · <strong>queda {money(totals.net)}</strong>. La comisión es la real de cada venta; el envío sale de una venta de muestra. Se actualiza con las métricas (cada día, con "Actualizar resumen" en el Resumen o con "Actualizar todo" en Más → Datos → Mercado Libre).</p>
         </div></div>
-        {totals.selling === 0 && <p className="muted">Todavía no hay ventas calculadas: tocá "Actualizar métricas" en el Resumen. Si dice que falta permiso de ventas, hay que reconectar la cuenta.</p>}
+        {totals.selling === 0 && <p className="muted">Todavía no hay ventas calculadas: tocá "Actualizar todo" en Más → Datos → Mercado Libre. Si dice que falta permiso de ventas, hay que reconectar la cuenta.</p>}
       </section>
 
       <section className="panel">

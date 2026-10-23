@@ -45,7 +45,7 @@ export function MlImprove({ supabase, items = [], seller = "", nickname = {} }) 
   const plan = useMemo(() => improvePlan({ items, health: state.health, seller }), [items, state.health, seller]);
 
   if (state.status === "loading") return <p className="muted" role="status">Leyendo la calidad de las publicaciones…</p>;
-  if (state.status === "missing") return <p className="muted">Falta un paso: pegar el SQL de docs/SQL_PENDIENTE_2026-10-23.md en Supabase. Después tocá "Actualizar" en Más → Datos → Mercado Libre.</p>;
+  if (state.status === "missing") return <p className="muted">Falta un paso: pegar el SQL de docs/SQL_PENDIENTE_2026-10-23.md en Supabase. Después tocá "Actualizar todo" en Más → Datos → Mercado Libre.</p>;
   if (state.status === "error") return <p className="muted">No se pudo leer la calidad de las publicaciones.</p>;
   const { summary } = plan;
   return (
@@ -58,11 +58,11 @@ export function MlImprove({ supabase, items = [], seller = "", nickname = {} }) 
             <p className="muted small">
               Revisadas {summary.checked} de {summary.active} activas{summary.averageScore != null ? ` · calidad promedio ${summary.averageScore}/100` : ""}
               {Object.keys(summary.levels).length ? ` · ${Object.entries(summary.levels).map(([level, count]) => `${count} ${level}`).join(", ")}` : ""}.
-              {" "}Ordenado por impacto: primero lo que más se ve y más vende. Se completa solo cada día (unas 15 por cuenta) o con "Actualizar" en Más → Datos → Mercado Libre.
+              {" "}Ordenado por impacto: primero lo que más se ve y más vende. Se completa solo cada día (unas 15 por cuenta) o con "Actualizar todo" en Más → Datos → Mercado Libre.
             </p>
           </div>
         </div>
-        {summary.checked === 0 && <p className="muted">Todavía no hay publicaciones revisadas: tocá "Actualizar" en Más → Datos → Mercado Libre. Si Mercado Libre no da permiso, el aviso lo dice ahí.</p>}
+        {summary.checked === 0 && <p className="muted">Todavía no hay publicaciones revisadas: tocá "Actualizar todo" en Más → Datos → Mercado Libre. Si Mercado Libre no da permiso, el aviso lo dice ahí.</p>}
       </section>
       <Section
         title={`Calidad por debajo de Profesional (${summary.lowQuality})`}

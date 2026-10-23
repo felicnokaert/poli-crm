@@ -16,12 +16,28 @@ create table if not exists public.team_shared_notes (
 create index if not exists team_shared_notes_noted on public.team_shared_notes (noted_at desc);
 create index if not exists team_shared_notes_author on public.team_shared_notes (author_email, synced_at);
 alter table public.team_shared_notes enable row level security;
-create policy team_shared_notes_read on public.team_shared_notes for select to authenticated
-  using (public.is_poliplast_crm_user());
-create policy team_shared_notes_insert on public.team_shared_notes for insert to authenticated
-  with check (public.is_poliplast_crm_user() and author_email = lower(auth.jwt() ->> 'email'));
-create policy team_shared_notes_update on public.team_shared_notes for update to authenticated
-  using (author_email = lower(auth.jwt() ->> 'email'))
-  with check (author_email = lower(auth.jwt() ->> 'email'));
-create policy team_shared_notes_delete on public.team_shared_notes for delete to authenticated
-  using (author_email = lower(auth.jwt() ->> 'email'));
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'team_shared_notes' and policyname = 'team_shared_notes_read') then
+    create policy team_shared_notes_read on public.team_shared_notes for select to authenticated
+      using (public.is_poliplast_crm_user());
+  end if;
+end $$;
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'team_shared_notes' and policyname = 'team_shared_notes_insert') then
+    create policy team_shared_notes_insert on public.team_shared_notes for insert to authenticated
+      with check (public.is_poliplast_crm_user() and author_email = lower(auth.jwt() ->> 'email'));
+  end if;
+end $$;
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'team_shared_notes' and policyname = 'team_shared_notes_update') then
+    create policy team_shared_notes_update on public.team_shared_notes for update to authenticated
+      using (author_email = lower(auth.jwt() ->> 'email'))
+      with check (author_email = lower(auth.jwt() ->> 'email'));
+  end if;
+end $$;
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'team_shared_notes' and policyname = 'team_shared_notes_delete') then
+    create policy team_shared_notes_delete on public.team_shared_notes for delete to authenticated
+      using (author_email = lower(auth.jwt() ->> 'email'));
+  end if;
+end $$;

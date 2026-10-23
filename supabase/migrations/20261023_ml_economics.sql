@@ -17,4 +17,8 @@ create table if not exists public.ml_item_economics (
 );
 create index if not exists ml_item_economics_seller on public.ml_item_economics (seller_id);
 alter table public.ml_item_economics enable row level security;
-create policy ml_item_economics_read on public.ml_item_economics for select to authenticated using (public.is_poliplast_crm_user());
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'ml_item_economics' and policyname = 'ml_item_economics_read') then
+    create policy ml_item_economics_read on public.ml_item_economics for select to authenticated using (public.is_poliplast_crm_user());
+  end if;
+end $$;

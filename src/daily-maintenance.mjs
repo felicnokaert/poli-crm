@@ -87,18 +87,28 @@ function expiredQuoteAutoKey(expiredQuote) {
 // decidir qué tareas cerrar, pero guarda el cutoff completo en
 // `tasksClosedThrough` - así, al comparar con `>=` la próxima corrida (con un
 // ISO de otro día, lexicográficamente mayor) vuelve a disparar el cierre.
+// Último día cuyas tareas ya se pueden cerrar: ayer en la Argentina (UTC-3), con hora para que el corte crezca cada día.
+export function lastClosableDay(nowISO = new Date().toISOString()) {
+  const argentinaDay = new Date(Date.parse(nowISO) - 3 * 3600000).toISOString().slice(0, 10);
+  const yesterday = new Date(Date.parse(`${argentinaDay}T12:00:00Z`) - 86400000).toISOString().slice(0, 10);
+  return `${yesterday}T23:59:59.999Z`;
+}
+
 export function buildDailyMaintenanceUpdate(state = EMPTY_STATE, nowISO = new Date().toISOString()) {
   const before = Array.isArray(state.tasks) ? state.tasks : [];
   const beforeDoneIds = new Set(before.filter((task) => task.done).map((task) => task.id));
-  const nextState = completeTasksThrough(state, nowISO);
+  // 23/10: el cron corre a las 03:00 argentinas; con nowISO como corte cerraba también las tareas de HOY antes de que
+  // nadie las viera (Inicio y Rutina quedaban vacías). Solo se cierran las vencidas: hasta AYER en horario argentino.
+  const cutoff = lastClosableDay(nowISO);
+  const nextState = completeTasksThrough(state, cutoff);
   if (nextState === state) {
-    return { changed: false, nextState: state, summary: { tasksClosed: 0, cutoff: nowISO } };
+    return { changed: false, nextState: state, summary: { tasksClosed: 0, cutoff } };
   }
   const tasksClosed = (nextState.tasks || []).filter((task) => task.done && !beforeDoneIds.has(task.id)).length;
   return {
     changed: true,
     nextState,
-    summary: { tasksClosed, cutoff: nowISO },
+    summary: { tasksClosed, cutoff },
   };
 }
 

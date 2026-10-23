@@ -172,6 +172,7 @@ function Organize({ products, variants }) {
   return (
     <div className="stack">
       <p className="muted small">Propuesta de solo lectura: {proposals.length} grupos que juntarían {proposals.reduce((total, item) => total + item.products.length, 0)} productos en {proposals.length} (quedan {saved} menos). No se cambia nada en la tienda: escribir en Shopify necesita tu aprobación y otro permiso. Revisá cada grupo: si dos productos distintos quedaron juntos, es un error de la propuesta.</p>
+      <p className="muted small"><strong>Orden para ejecutar:</strong> 1) corregir los SKU repetidos, 2) cargar el stock real (las fusiones heredan el 999 de relleno), 3) fusionar un grupo por vez, 4) crear redirecciones 301 de los productos que desaparecen y revisar qué links de Mercado Libre o Instagram apuntaban a ellos. Si hay más de 3 opciones, la propuesta ya parte el grupo en varios productos (por capacidad y por línea).</p>
       <button type="button" className="ghost" onClick={() => downloadText(`shopify-agrupar-${argentinaToday()}.csv`, proposalsCsv(proposals))}>Descargar propuesta (CSV)</button>
       {proposals.map((item) => (
         <section key={item.key} className="panel">

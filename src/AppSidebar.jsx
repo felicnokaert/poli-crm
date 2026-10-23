@@ -1,6 +1,7 @@
 import { Building2, Calculator, ChevronRight, ClipboardList, Database, FileCheck2, GraduationCap, Inbox, LayoutDashboard, ListChecks, MapPin, MessageCircle, ReceiptText, Search, ShoppingBag, Store, UserCog } from "lucide-react";
 import { useEffect } from "react";
 import { onlineConfigured } from "./online";
+import { filterNav } from "./module-access.mjs";
 
 // Menú lateral: 6 grupos (Hoy, Ventas, Canales online, Cartera, Aprender, Más). Salió de App.jsx (QA 16/10).
 export const NAV_GROUPS = [
@@ -36,7 +37,8 @@ export const NAV_GROUPS = [
 
 export const NAV_ITEMS = NAV_GROUPS.flatMap(([, items]) => items);
 
-export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNavGroups, narrowScreen, overdueTaskCount, inboxSignalCount }) {
+export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNavGroups, narrowScreen, overdueTaskCount, inboxSignalCount, email = "", denied = null }) {
+  const groups = filterNav(NAV_GROUPS, email, denied);
   // Al entrar a una pantalla se abre su sección; después se puede cerrar igual (23/10, Felipe: "Canales online
   // no deja minimizarlo": antes la sección donde estabas parado quedaba siempre abierta y el botón no hacía nada).
   useEffect(() => {
@@ -53,7 +55,7 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
       />
     </div>
     <nav>
-      {NAV_GROUPS.map(([group, items]) => {
+      {groups.map(([group, items]) => {
         // En el celular los títulos de sección no se muestran, así que nunca se colapsa.
         const collapsed = collapsedNavGroups.includes(group) && !narrowScreen;
         return (

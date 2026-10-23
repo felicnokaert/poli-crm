@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { CircleAlert, CircleCheck, Clock } from "lucide-react";
 import { integrationsStatus, needsAttention } from "./integrations-status.mjs";
 
-// Más → Datos → "Actualizaciones automáticas" y aviso en Inicio (23/10, Felipe: "que todo se actualice solo una
+// Más → Datos → Conexiones ("Actualizaciones automáticas") y aviso en Inicio (23/10, Felipe: "que todo se actualice solo una
 // vez por día; si falla, es porque algo pasa"). Lee lo que deja el servidor en crm_system_status.
 export const DATA_SECTION_KEY = "poliplast-data-section";
 
@@ -57,7 +57,7 @@ export function IntegrationsAlert({ supabase, onNavigate }) {
   const { status, list } = useIntegrations(supabase);
   const bad = status === "ready" ? needsAttention(list) : [];
   if (!bad.length) return null;
-  const open = () => { try { sessionStorage.setItem(DATA_SECTION_KEY, "automaticas"); } catch { /* sin almacenamiento */ } onNavigate?.("settings"); };
+  const open = () => { try { sessionStorage.setItem(DATA_SECTION_KEY, "conexiones"); } catch { /* sin almacenamiento */ } onNavigate?.("settings"); };
   return (
     <div className="automation-note is-warning">
       <CircleAlert size={15} />

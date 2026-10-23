@@ -1299,6 +1299,23 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .ic-table .secondary { padding: 6px 12px; font-size: 0.85rem; white-space: nowrap; }
 .ic-spark { display: block; margin-top: 2px; }
 
+/* Permisos por módulo (Más → Datos → Equipo) */
+.module-access-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px 20px; margin-top: 12px; }
+.module-access-item { display: grid; gap: 4px; align-content: start; }
+.module-access-children { display: grid; gap: 2px; padding-left: 22px; }
+.module-access-grid .check-row { display: flex; align-items: center; gap: 8px; font-size: 0.92rem; }
+
+/* Conexiones y salud de los datos (Más → Datos → Conexiones) */
+.health-group h3 { margin: 16px 0 6px; font-size: 0.95rem; }
+.health-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.health-row { display: grid; grid-template-columns: 20px minmax(0, 1.6fr) auto minmax(0, 1.6fr); gap: 10px; align-items: center; padding: 8px 10px; border-radius: 8px; background: rgba(127, 127, 127, 0.08); font-size: 0.9rem; }
+.health-ok svg { color: #15803d; }
+.health-late svg, .health-idle svg, .health-empty svg { color: #d97706; }
+.health-old svg, .health-error svg { color: #dc2626; }
+.health-count { color: var(--color-text-muted); font-size: 0.82rem; white-space: nowrap; }
+.health-state { text-align: right; }
+@media (max-width: 640px) { .health-row { grid-template-columns: 20px 1fr; } .health-count, .health-state { grid-column: 2; text-align: left; } }
+
 /* 23/10: competencia por catálogo (Ventas → Mercado Libre → Competencia). */
 .ml-board .badge.bad { background: #fde2e2; color: #9b1c1c; }
 .ml-board .badge.ok { background: #dcf3e1; color: #1d6b32; }

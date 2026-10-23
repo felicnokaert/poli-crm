@@ -11,6 +11,8 @@ import {
 import { onlineConfigured, supabase } from "./online";
 import { SharedDirectory } from "./SharedDirectory.jsx";
 import { AdminUsers } from "./AdminUsers.jsx";
+import { DataHealth } from "./DataHealth.jsx";
+import { ModuleAccessPanel } from "./ModuleAccessPanel.jsx";
 import { WorkspaceCleanup } from "./WorkspaceCleanup.jsx";
 import { ErrorLog } from "./ErrorLog.jsx";
 import { MercadoLibreSync } from "./MercadoLibreSync.jsx";
@@ -43,10 +45,9 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
   // Pestañas (QA 16/10: para Felipe eran ~10 paneles apilados). Cada uno ve solo las que puede usar.
   const sections = [
     ["respaldos", "Respaldos"],
-    ...(onlineConfigured && isAdmin ? [["automaticas", "Actualizaciones automáticas"]] : []),
     ...(onlineConfigured ? [["directorio", "Directorio"]] : []),
     ...(myChannels.length > 0 || (onlineConfigured && isAdmin) ? [["whatsapp", "WhatsApp"]] : []),
-    ...(onlineConfigured && isAdmin ? [["equipo", "Equipo y cuentas"], ["mercadolibre", "Mercado Libre"], ["contabilium", "Contabilium"], ["asistente", "Asistente"]] : []),
+    ...(onlineConfigured && isAdmin ? [["equipo", "Equipo y cuentas"], ["conexiones", "Conexiones"], ["mercadolibre", "Mercado Libre"], ["contabilium", "Contabilium"], ["asistente", "Asistente"]] : []),
     ...((onlineConfigured && isAdmin) || devPanel ? [["errores", "Errores y pruebas"]] : []),
   ];
   const [section, setSection] = useState(() => {
@@ -445,9 +446,13 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
       </>)}
       {shown === "equipo" && onlineConfigured && isAdmin && (<>
         <AdminUsers supabase={supabase} session={session} adminEmails={CHANNEL_ADMINS} />
+        <ModuleAccessPanel supabase={supabase} />
         <WorkspaceCleanup session={session} />
       </>)}
-      {shown === "automaticas" && onlineConfigured && isAdmin && <IntegrationsStatus supabase={supabase} />}
+      {shown === "conexiones" && onlineConfigured && isAdmin && (<>
+        <IntegrationsStatus supabase={supabase} />
+        <DataHealth supabase={supabase} />
+      </>)}
       {shown === "mercadolibre" && onlineConfigured && isAdmin && <MercadoLibreSync supabase={supabase} session={session} />}
       {shown === "contabilium" && onlineConfigured && isAdmin && <ContabiliumTest session={session} />}
       {shown === "asistente" && onlineConfigured && isAdmin && <AssistantTraining supabase={supabase} />}

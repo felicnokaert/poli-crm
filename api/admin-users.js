@@ -16,7 +16,7 @@ import { shopifyAdmin, shopifyCron } from '../lib/shopify.mjs';
 // ?cron=contabilium son las actualizaciones diarias. action 'assistant': la IA del asistente (todo el
 // equipo, no solo administradores).
 // Actualizaciones diarias (vercel.json → crons): cada una deja constancia de cómo terminó (lib/integration-crons.mjs)
-// y Más → Datos → "Actualizaciones automáticas" lo muestra.
+// y Más → Datos → Conexiones ("Actualizaciones automáticas") lo muestra.
 const CRONS = {
   mercadolibre: mercadoLibreCron,
   'mercadolibre-mercado': mercadoLibreMarketCron,

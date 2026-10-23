@@ -123,8 +123,8 @@ export function ImprovementCenter({ supabase, isAdmin, onOpen }) {
                   <tr key={`${entry.channel}-${entry.key}`} className={entry.clean ? "" : "ic-info"}>
                     <td><span className={`chan-tag chan-${entry.channel}`}>{CHANNELS[entry.channel]}</span></td>
                     <td><strong>{entry.label}</strong>{!entry.clean && <span className="badge"> informativo</span>}{entry.partial && <span className="badge warn"> parcial</span>}<div className="muted small">{entry.why}</div></td>
-                    <td><strong>{entry.count.toLocaleString("es-AR")}</strong><span className="muted small"> de {entry.total.toLocaleString("es-AR")}</span><div className="ic-bar thin" aria-hidden="true"><i style={{ width: `${Math.round((entry.count / Math.max(entry.total, 1)) * 100)}%` }} /></div></td>
-                    <td><div className={`ic-trend ${trend.delta < 0 ? "good" : trend.delta > 0 ? "bad" : ""}`}><span><Icon size={14} /> {trend.delta == null ? "sin historial" : trend.delta === 0 ? "sin cambios" : `${trend.delta > 0 ? "+" : ""}${trend.delta} en 7 días`}</span><Spark series={trend.series} /></div></td>
+                    <td data-label="Cuántos"><strong>{entry.count.toLocaleString("es-AR")}</strong><span className="muted small"> de {entry.total.toLocaleString("es-AR")}</span><div className="ic-bar thin" aria-hidden="true"><i style={{ width: `${Math.round((entry.count / Math.max(entry.total, 1)) * 100)}%` }} /></div></td>
+                    <td data-label="Avance"><div className={`ic-trend ${trend.delta < 0 ? "good" : trend.delta > 0 ? "bad" : ""}`}><span><Icon size={14} /> {trend.delta == null ? "sin historial" : trend.delta === 0 ? "sin cambios" : `${trend.delta > 0 ? "+" : ""}${trend.delta} en 7 días`}</span><Spark series={trend.series} /></div></td>
                     <td><button type="button" className="secondary" onClick={() => { openIssue(entry.channel, entry.key); onOpen(entry.channel === "ml" ? "mercadolibre" : "shopify"); }}>Ver cuáles</button></td>
                   </tr>
                 );

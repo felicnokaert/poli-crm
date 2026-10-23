@@ -88,7 +88,7 @@ export function MlCompetition({ supabase, session, isAdmin, items = [], nickname
   return (
     <div className="content-stack">
       {isAdmin && (
-        <section className="panel">
+        <section className="panel ml-competition-add">
           <div className="panel-head"><div><span className="eyebrow">Seguimiento diario</span><h2>Sumar publicaciones de la competencia</h2>
             <p className="muted small">Pegá links de publicaciones (o códigos MLA…), uno o varios. Cada día se guarda su precio y cuántas vendieron. Opcional: de quién son y cuál es la nuestra que compite (link o MLA). Es la competencia dentro de Mercado Libre; la de ventas directas sigue en Academia → Competencia.</p></div></div>
           <textarea rows={3} value={text} onChange={(event) => setText(event.target.value)} placeholder="https://articulo.mercadolibre.com.ar/MLA-…" aria-label="Links de la competencia" />

@@ -7,6 +7,7 @@ import { ML_ISSUES, ML_SORTS, ML_STATUS, countQuestions, filterBoard, issuesOf, 
 import { MEDAL, PERIODS, REPUTATION, buildAlerts, change, combineMetrics, latestBySeller, periodStats } from "./ml-summary.mjs";
 import { Empty } from "./ui-primitives";
 import { descriptionGaps, faqText } from "./ml-faq.mjs";
+import { MlAds } from "./MlAds.jsx";
 
 // Ventas → Mercado Libre (21/10): Resumen (como el de Mercado Libre: ventas, visitas, conversión, preguntas,
 // reputación y qué atender, en 7/14/30 días contra el período anterior) y Publicaciones de las 3 cuentas.
@@ -363,7 +364,7 @@ function Listings({ items, accounts, nickname, questionCounts, seller, issue, se
   </>);
 }
 
-export function MercadoLibreBoard({ supabase, session = null, isAdmin = false }) {
+export function MercadoLibreBoard({ supabase, session = null, isAdmin = false, canSeeAds = false, ads = {}, onAdsChange = () => {} }) {
   const [accounts, setAccounts] = useState([]);
   const [items, setItems] = useState(null);
   const [metricRows, setMetricRows] = useState([]);
@@ -415,7 +416,7 @@ export function MercadoLibreBoard({ supabase, session = null, isAdmin = false })
     <div className="content-stack ml-board">
       <section className="panel ml-board-head">
         <div className="segmented" role="tablist" aria-label="Sección">
-          {[["resumen", "Resumen"], ["mejorar", "Qué mejorar"], ["competencia", "Competencia"], ["tendencias", "Tendencias"], ["publicaciones", "Publicaciones"]].map(([key, label]) => (
+          {[["resumen", "Resumen"], ["mejorar", "Qué mejorar"], ["competencia", "Competencia"], ["tendencias", "Tendencias"], ["publicaciones", "Publicaciones"], ...(canSeeAds ? [["publicidad", "Publicidad"]] : [])].map(([key, label]) => (
             <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? "selected" : ""} onClick={() => setTab(key)}>{label}</button>
           ))}
         </div>
@@ -426,8 +427,10 @@ export function MercadoLibreBoard({ supabase, session = null, isAdmin = false })
         </div>
       </section>
       {error && <div className="system-message error">{error}</div>}
-      {items === null && <p className="muted">Cargando…</p>}
-      {items && items.length === 0 && !error && <Empty text={supabase ? "Todavía no hay datos: conectá las cuentas en Más → Datos → Mercado Libre." : "Mercado Libre está en la versión en línea."} />}
+      {tab === "publicidad" && canSeeAds && <MlAds ads={ads} onSave={onAdsChange} accounts={accounts} />}
+      {tab === "publicidad" && !canSeeAds && null}
+      {tab !== "publicidad" && items === null && <p className="muted">Cargando…</p>}
+      {tab !== "publicidad" && items && items.length === 0 && !error && <Empty text={supabase ? "Todavía no hay datos: conectá las cuentas en Más → Datos → Mercado Libre." : "Mercado Libre está en la versión en línea."} />}
       {items && items.length > 0 && tab === "resumen" && (
         <Summary accounts={accounts} metricsBySeller={metricsBySeller} seller={seller} items={items} nickname={nickname} permalinks={permalinks} onIssue={showIssue} isAdmin={isAdmin} session={session} supabase={supabase} onReload={() => setReload((value) => value + 1)} />
       )}

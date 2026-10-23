@@ -147,6 +147,8 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
     tasksClosedThrough: [local.tasksClosedThrough || '', remote.tasksClosedThrough || ''].sort().at(-1) || '',
     primaryChannel: local.primaryChannel || remote.primaryChannel || 'general',
     profileName: local.profileName || remote.profileName || '',
+    // Publicidad de Mercado Libre (tablas pegadas por Felipe, una por cuenta): gana la pegada más reciente de cada cuenta.
+    ...(local.mlAds || remote.mlAds ? { mlAds: newerByAccount(local.mlAds, remote.mlAds) } : {}),
     ...(local.weeklyTargets || remote.weeklyTargets ? { weeklyTargets: local.weeklyTargets || remote.weeklyTargets } : {}),
     ...(local.welcomeDismissed || remote.welcomeDismissed ? { welcomeDismissed: true } : {}),
     mergeLogs: mergeRecords(local.mergeLogs, remote.mergeLogs),
@@ -159,6 +161,16 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
     // navegador lo borraba de la base).
     ...newerDailySignals(local.dailySignals, remote.dailySignals),
   };
+}
+
+function newerByAccount(local = {}, remote = {}) {
+  const result = {};
+  for (const key of new Set([...Object.keys(remote || {}), ...Object.keys(local || {})])) {
+    const a = local?.[key];
+    const b = remote?.[key];
+    result[key] = !b || String(a?.savedAt || '') >= String(b?.savedAt || '') ? a : b;
+  }
+  return result;
 }
 
 function newerDailySignals(local, remote) {

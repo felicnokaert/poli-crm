@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, Layers, PackageCheck, RefreshCw, ShoppingBag, TriangleAlert, Wallet } from "lucide-react";
+import { ExternalLink, Layers, PackageCheck, RefreshCw, ShoppingBag, TriangleAlert, Truck, Wallet } from "lucide-react";
 import { adminFetch } from "./admin-api.mjs";
 import { SHOPIFY_ISSUES, SHOPIFY_SORTS, SHOPIFY_STATUS, boardRows, facets, filterRows, issueLabel, periodTotals, productsCsv, statusLabel, summarize } from "./shopify-board.mjs";
 import { canSee } from "./module-access.mjs";
 import { Empty } from "./ui-primitives";
 import { groupProposals, proposalsCsv } from "./shopify-grouping.mjs";
+import { PICKUP_LIMIT_DAYS, SHIP_LIMIT_HOURS, operationSummary, pendingOrders, recoverList, weeklyFunnel } from "./shopify-operation.mjs";
 
 // Ventas → Shopify (24/10, etapas 1 y 2): espejo de SOLO LECTURA de la tienda. Resumen, "Qué mejorar" (lo que le falta a cada
 // producto) y Productos. No cambia nada en Shopify; las propuestas de precios y de variantes vienen en otras etapas.
@@ -13,7 +14,7 @@ const number = (value) => (typeof value === "number" ? value.toLocaleString("es-
 const argentinaToday = () => new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
 const when = (iso) => (iso ? new Date(iso).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "nunca");
 const MISSING = /shopify_|does not exist|schema cache/i;
-const TABS = [["resumen", "Resumen"], ["mejorar", "Qué mejorar"], ["productos", "Productos"], ["ordenar", "Ordenar catálogo"]];
+const TABS = [["resumen", "Resumen"], ["mejorar", "Qué mejorar"], ["productos", "Productos"], ["operacion", "Operación"], ["ordenar", "Ordenar catálogo"]];
 
 async function readAll(query) {
   const rows = [];
@@ -41,16 +42,20 @@ async function callShopify(body, session) {
 }
 
 function useShopifyData(supabase, reload) {
-  const [state, setState] = useState({ status: "loading", products: [], variants: [], days: [] });
+  const [state, setState] = useState({ status: "loading", products: [], variants: [], days: [], orders: [], checkouts: [] });
   useEffect(() => {
     if (!supabase?.from) { setState({ status: "offline", products: [], variants: [], days: [] }); return undefined; }
     let alive = true;
+    // Pedidos y carritos son opcionales: si la tabla todavía no existe, el resto del panel funciona igual.
+    const optional = (promise) => Promise.resolve(promise).catch(() => []);
     Promise.all([
       readAll(() => supabase.from("shopify_products").select("*").order("id")),
       readAll(() => supabase.from("shopify_variants").select("*").order("id")),
       readAll(() => supabase.from("shopify_daily").select("day,orders,amount,currency,synced_at").order("day")),
+      optional(readAll(() => supabase.from("shopify_orders").select("*").order("id"))),
+      optional(readAll(() => supabase.from("shopify_checkouts").select("*").order("id"))),
     ])
-      .then(([products, variants, days]) => { if (alive) setState({ status: "ready", products, variants, days }); })
+      .then(([products, variants, days, orders, checkouts]) => { if (alive) setState({ status: "ready", products, variants, days, orders, checkouts }); })
       .catch((error) => { if (alive) setState({ status: MISSING.test(String(error?.message || "")) ? "missing" : "error", products: [], variants: [], days: [] }); });
     return () => { alive = false; };
   }, [supabase, reload]);
@@ -94,7 +99,7 @@ function Issues({ rows, onPick }) {
           </li>
         ))}
       </ul>
-      <p className="muted small">Se cuentan los productos activos, en borrador y no listados (no los archivados).</p>
+      <p className="muted small">Se cuentan solo los productos activos (los borradores y archivados no entran). \"Activo con stock 0\" no cuenta los que siguen vendiendo sin stock.</p>
     </section>
   );
 }
@@ -167,6 +172,7 @@ function Organize({ products, variants }) {
   return (
     <div className="stack">
       <p className="muted small">Propuesta de solo lectura: {proposals.length} grupos que juntarían {proposals.reduce((total, item) => total + item.products.length, 0)} productos en {proposals.length} (quedan {saved} menos). No se cambia nada en la tienda: escribir en Shopify necesita tu aprobación y otro permiso. Revisá cada grupo: si dos productos distintos quedaron juntos, es un error de la propuesta.</p>
+      <p className="muted small"><strong>Orden para ejecutar:</strong> 1) corregir los SKU repetidos, 2) cargar el stock real (las fusiones heredan el 999 de relleno), 3) fusionar un grupo por vez, 4) crear redirecciones 301 de los productos que desaparecen y revisar qué links de Mercado Libre o Instagram apuntaban a ellos. Si hay más de 3 opciones, la propuesta ya parte el grupo en varios productos (por capacidad y por línea).</p>
       <button type="button" className="ghost" onClick={() => downloadText(`shopify-agrupar-${argentinaToday()}.csv`, proposalsCsv(proposals))}>Descargar propuesta (CSV)</button>
       {proposals.map((item) => (
         <section key={item.key} className="panel">
@@ -183,6 +189,57 @@ function Organize({ products, variants }) {
           )}
         </section>
       ))}
+    </div>
+  );
+}
+
+const pct = (value) => (value == null ? "—" : `${Math.round(value * 100)} %`);
+const shortDay = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString("es-AR", { day: "numeric", month: "short" });
+
+function Operation({ orders, checkouts }) {
+  const now = Date.now();
+  const pending = useMemo(() => pendingOrders(orders, now), [orders]);
+  const recover = useMemo(() => recoverList(checkouts), [checkouts]);
+  const funnel = useMemo(() => weeklyFunnel(orders, checkouts), [orders, checkouts]);
+  const summary = operationSummary(orders, checkouts, now);
+  const totalRecover = recover.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+  if (orders.length === 0 && checkouts.length === 0) return <Empty title="Todavía no hay pedidos ni carritos" text="Se copian en la próxima actualización de Shopify (Actualizar ahora). Si la llave no tiene permiso para leer pedidos, aparecen vacíos." />;
+  return (
+    <div className="content-stack">
+      <section className="metric-grid ml-metric-grid">
+        <article className={`metric-card ${summary.shipping ? "is-urgent" : ""}`}><Truck size={20} /><span>Envíos sin despachar</span><strong>{summary.shipping}</strong><small className="muted">pagos hace más de {SHIP_LIMIT_HOURS} h</small></article>
+        <article className={`metric-card ${summary.pickups ? "is-urgent" : ""}`}><PackageCheck size={20} /><span>Retiros sin retirar</span><strong>{summary.pickups}</strong><small className="muted">hace más de {PICKUP_LIMIT_DAYS} días</small></article>
+        <article className="metric-card"><ShoppingBag size={20} /><span>Carritos para recuperar</span><strong>{summary.abandoned}</strong><small className="muted">{money(totalRecover)}</small></article>
+      </section>
+      <section className="panel">
+        <div className="panel-head"><div><span className="eyebrow">Plata parada · reputación</span><h2>Pedidos para atender</h2></div></div>
+        {pending.length === 0 ? <p className="muted small">Nada atrasado: todo lo pago se entregó o está dentro del plazo.</p> : (
+          <ul className="ml-alerts">
+            {pending.map((item) => (
+              <li key={item.id} className="is-urgent"><TriangleAlert size={16} /><span><strong>{item.name} · {item.kind === "retiro" ? "retiro sin retirar" : "sin despachar"} hace {item.days >= 2 ? `${item.days} días` : `${item.hours} h`}</strong><small className="muted"> · {money(item.total)}</small></span></li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section className="panel">
+        <div className="panel-head"><div><span className="eyebrow">Dónde se cae la compra</span><h2>Pagos iniciados contra compras, por semana</h2></div></div>
+        <div className="table-scroll"><table className="sales-history-table">
+          <thead><tr><th>Semana del</th><th>Iniciaron el pago</th><th>Compraron</th><th>Se cayeron</th><th>Compra</th><th>Facturado</th></tr></thead>
+          <tbody>{funnel.map((row) => <tr key={row.week}><td data-label="Semana del">{shortDay(row.week)}{row.partial ? <small className="muted"> (en curso)</small> : null}</td><td data-label="Iniciaron">{row.started}</td><td data-label="Compraron">{row.orders}</td><td data-label="Se cayeron">{row.abandoned}</td><td data-label="Compra"><strong>{pct(row.rate)}</strong></td><td data-label="Facturado">{money(row.amount)}</td></tr>)}</tbody>
+        </table></div>
+        <p className="muted small">Shopify no entrega por API las visitas ni los "agregó al carrito": el embudo arranca cuando la persona empieza a pagar (carritos abandonados + pedidos pagos). Los carritos repetidos por robots o recargas se cuentan una vez.</p>
+      </section>
+      <section className="panel">
+        <div className="panel-head"><div><span className="eyebrow">Recupero diario</span><h2>Carritos abandonados</h2></div></div>
+        {recover.length === 0 ? <p className="muted small">No hay carritos con monto para recuperar.</p> : (
+          <ul className="ml-alerts">
+            {recover.map((item) => (
+              <li key={item.id}><ShoppingBag size={16} /><span><strong>{money(item.total)} · {(item.items || []).map((line) => `${line.title}${line.quantity > 1 ? ` ×${line.quantity}` : ""}`).join(", ") || "sin detalle"}</strong><small className="muted"> · {shortDay(item.created_at.slice(0, 10))}</small></span></li>
+            ))}
+          </ul>
+        )}
+        <p className="muted small">No se guardan datos del comprador: para contactar a alguien, buscá el carrito en el administrador de Shopify (Pedidos → Carritos abandonados).</p>
+      </section>
     </div>
   );
 }
@@ -250,6 +307,7 @@ export function ShopifyBoard({ supabase, session, isAdmin, hiddenTabs = null, em
         )}
         {data.status === "ready" && data.products.length > 0 && tab === "mejorar" && <Issues rows={rows} onPick={pick} />}
         {data.status === "ready" && data.products.length > 0 && tab === "productos" && <Products rows={rows} issue={issue} setIssue={setIssue} />}
+        {data.status === "ready" && data.products.length > 0 && tab === "operacion" && <Operation orders={data.orders || []} checkouts={data.checkouts || []} />}
         {data.status === "ready" && data.products.length > 0 && tab === "ordenar" && <Organize products={data.products} variants={data.variants} />}
       </div>
     </div>

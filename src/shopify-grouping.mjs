@@ -65,6 +65,68 @@ export function groupProposals(products = [], variants = []) {
     groups.get(key).members.push({ product, attrs: parsed.attrs, variants: byProduct.get(product.id) || [] });
   }
   const proposals = [];
+  const defaults = { Tapa: 'Con tapa', Pack: 'x1', 'Línea': 'Estándar' };
+  const valueOf = (row, name) => row.values[name] ?? defaults[name] ?? '—';
+  const rank = (name) => (PRIORITY.indexOf(name) === -1 ? 99 : PRIORITY.indexOf(name));
+  // Si hay más de 3 opciones que varían, se parte en varios productos por la dimensión que más separa
+  // (capacidad, peso o medida; después la línea) en vez de apretar todo en una opción "Modelo".
+  const SPLIT_BY = ['Capacidad', 'Peso', 'Medida', 'Superficie', 'Línea'];
+  const build = (name, base, rows, parts = []) => {
+    const members = [...new Set(rows.map((row) => row.member))];
+    if (members.length < 2) return; // un solo producto no se fusiona con nada
+    const names = [...new Set(rows.flatMap((row) => Object.keys(row.values)))];
+    const varying = names.filter((key) => new Set(rows.map((row) => valueOf(row, key))).size > 1);
+    if (!varying.length && !parts.length) return;
+    const ordered = [...varying].sort((x, y) => rank(x) - rank(y));
+    const splitter = ordered.length > 3 ? SPLIT_BY.find((key) => ordered.includes(key)) : null;
+    if (splitter) {
+      const byValue = new Map();
+      for (const row of rows) { const value = valueOf(row, splitter); if (!byValue.has(value)) byValue.set(value, []); byValue.get(value).push(row); }
+      for (const [value, subset] of byValue) build(`${name} · ${splitter === 'Línea' ? `línea ${value}` : value}`, base, subset, [...parts, value]);
+      return;
+    }
+    if (!ordered.length) return;
+    const warnings = [];
+    let options = ordered;
+    if (ordered.length > 3) {
+      options = [...ordered.slice(0, 2), 'Modelo'];
+      warnings.push(`Hay ${ordered.length} opciones (${ordered.join(', ')}) y Shopify admite 3: ${ordered.slice(2).join(' + ')} se juntan en "Modelo".`);
+    }
+    const proposed = rows.map((row) => {
+      const picked = Object.fromEntries(options.map((key) => [key, key === 'Modelo' ? ordered.slice(2).map((part) => valueOf(row, part)).join(' · ') : valueOf(row, key)]));
+      return { from: row, optionValues: picked };
+    });
+    const seen = new Map();
+    for (const item of proposed) {
+      const key = options.map((key2) => item.optionValues[key2]).join('|');
+      if (seen.has(key)) warnings.push(`Dos variantes quedarían iguales (${options.map((key2) => item.optionValues[key2]).join(' / ')}): ${seen.get(key)} y ${item.from.member.product.title}.`);
+      else seen.set(key, item.from.member.product.title);
+    }
+    // SKU repetidos: hay que corregirlos antes de fusionar (si no, se mezclan stock y precio).
+    const bySku = new Map();
+    for (const item of proposed) { const sku = item.from.variant?.sku; if (sku) { if (!bySku.has(sku)) bySku.set(sku, []); bySku.get(sku).push(options.map((key) => item.optionValues[key]).join(' / ')); } }
+    for (const [sku, where] of bySku) if (where.length > 1) warnings.push(`SKU repetido ${sku}: ${where.join(' y ')}. Corregilo antes de fusionar.`);
+    // Mismo tamaño y presentación con precios muy distintos según el color: puede ser un error de carga o una línea aparte.
+    const byShape = new Map();
+    for (const item of proposed) {
+      const price = Number(item.from.variant?.price);
+      if (!(price > 0)) continue;
+      const key = options.filter((key2) => key2 !== 'Color').map((key2) => item.optionValues[key2]).join(' / ');
+      const entry = byShape.get(key) || { min: Infinity, max: 0 };
+      entry.min = Math.min(entry.min, price); entry.max = Math.max(entry.max, price);
+      byShape.set(key, entry);
+    }
+    for (const [shape, range] of byShape) if (range.max / range.min >= 1.4) warnings.push(`Precios muy distintos para lo mismo (${shape || 'todas'}): de $${Math.round(range.min).toLocaleString('es-AR')} a $${Math.round(range.max).toLocaleString('es-AR')}. La ficha mostraría "desde" el menor.`);
+    if (proposed.length > 2048) warnings.push('Supera las 2.048 variantes que admite Shopify: dividirlo en dos productos.');
+    if (rows.some((row) => (row.variant?.inventory_quantity ?? 0) >= 900)) warnings.push('Hereda stock de relleno (900 o más): cargá el stock real al fusionar.');
+    const survivor = [...members].sort((x, y) => (statusRank[x.product.status] ?? 9) - (statusRank[y.product.status] ?? 9) || (y.product.total_inventory ?? 0) - (x.product.total_inventory ?? 0))[0].product;
+    proposals.push({
+      key: `${base}|${parts.join('|')}`, name: titleCase(name), products: members.map((member) => member.product), survivor,
+      options: options.map((key) => ({ name: key, values: [...new Set(proposed.map((item) => item.optionValues[key]))] })),
+      variants: proposed, warnings,
+      activeProducts: members.filter((member) => member.product.status === 'ACTIVE').length,
+    });
+  };
   for (const { base, members } of groups.values()) {
     if (members.length < 2) continue;
     // Cada variante existente con sus valores: los del título del producto + sus propias opciones (ej. color).
@@ -74,37 +136,7 @@ export function groupProposals(products = [], variants = []) {
       for (const [name, value] of Object.entries(own)) if (!(name in values) || !values[name]) values[name] = value;
       return { member, variant, values };
     }));
-    // Opciones que realmente varían; si falta el valor en alguna fila se completa con el valor por defecto del atributo.
-    const names = [...new Set(rows.flatMap((row) => Object.keys(row.values)))];
-    const defaults = { Tapa: 'Con tapa', Pack: 'x1', 'Línea': 'Estándar' };
-    const varying = names.filter((name) => new Set(rows.map((row) => row.values[name] ?? defaults[name] ?? '—')).size > 1);
-    if (!varying.length) continue;
-    const ordered = [...varying].sort((a, b) => (PRIORITY.indexOf(a) === -1 ? 99 : PRIORITY.indexOf(a)) - (PRIORITY.indexOf(b) === -1 ? 99 : PRIORITY.indexOf(b)));
-    const warnings = [];
-    let options = ordered;
-    if (ordered.length > 3) {
-      options = [...ordered.slice(0, 2), 'Modelo'];
-      warnings.push(`Hay ${ordered.length} opciones (${ordered.join(', ')}) y Shopify admite 3: ${ordered.slice(2).join(' + ')} se juntan en "Modelo".`);
-    }
-    const valueOf = (row, name) => row.values[name] ?? defaults[name] ?? '—';
-    const proposed = rows.map((row) => {
-      const picked = Object.fromEntries(options.map((name) => [name, name === 'Modelo' ? ordered.slice(2).map((part) => valueOf(row, part)).join(' · ') : valueOf(row, name)]));
-      return { from: row, optionValues: picked };
-    });
-    const seen = new Map();
-    for (const item of proposed) {
-      const key = options.map((name) => item.optionValues[name]).join('|');
-      if (seen.has(key)) warnings.push(`Dos variantes quedarían iguales (${options.map((name) => item.optionValues[name]).join(' / ')}): ${seen.get(key)} y ${item.from.member.product.title}.`);
-      else seen.set(key, item.from.member.product.title);
-    }
-    if (proposed.length > 2048) warnings.push('Supera las 2.048 variantes que admite Shopify: dividirlo en dos productos.');
-    const survivor = [...members].sort((a, b) => (statusRank[a.product.status] ?? 9) - (statusRank[b.product.status] ?? 9) || (b.product.total_inventory ?? 0) - (a.product.total_inventory ?? 0))[0].product;
-    proposals.push({
-      key: `${base}`, name: titleCase(base), products: members.map((member) => member.product), survivor,
-      options: options.map((name) => ({ name, values: [...new Set(proposed.map((item) => item.optionValues[name]))] })),
-      variants: proposed, warnings,
-      activeProducts: members.filter((member) => member.product.status === 'ACTIVE').length,
-    });
+    build(titleCase(base), base, rows);
   }
   return proposals.sort((a, b) => b.products.length - a.products.length || a.name.localeCompare(b.name, 'es'));
 }

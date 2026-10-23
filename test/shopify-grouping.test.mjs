@@ -36,13 +36,37 @@ test('baldes: 6 productos del mismo balde se proponen como UNO con Capacidad, Pa
   assert.deepEqual(balde.warnings, []);
 });
 
-test('más de 3 opciones: las últimas se juntan en "Modelo" y se avisa', () => {
-  const products = [product('a', 'BALDE PLASTICO 10L'), product('b', 'BALDE PLASTICO SIN TAPA 20L X5'), product('c', 'BALDE PLASTICO ECONOMICO 20L X3')];
-  const variants = [...colors('a', ['Rojo']), ...colors('b', ['Azul']), ...colors('c', ['Negro'])];
+test('más de 3 opciones: se parte por capacidad y línea en vez de juntar todo en "Modelo"', () => {
+  const titles = ['BALDE PLASTICO 10L', 'BALDE PLASTICO SIN TAPA 10L X5', 'BALDE PLASTICO ECONOMICO 10L X3', 'BALDE PLASTICO 20L', 'BALDE PLASTICO SIN TAPA 20L X5', 'BALDE PLASTICO ECONOMICO 20L X3'];
+  const products = titles.map((title, index) => product(`p${index}`, title));
+  const variants = products.flatMap((item) => colors(item.id, ['Rojo', 'Azul']));
+  const proposals = groupProposals(products, variants);
+  const names = proposals.map((proposal) => proposal.name);
+  assert.ok(names.some((name) => /10 L · línea Estándar/i.test(name)), names.join(' | '));
+  assert.ok(names.some((name) => /20 L · línea Estándar/i.test(name)));
+  for (const proposal of proposals) {
+    assert.ok(proposal.options.length <= 3);
+    assert.ok(!proposal.options.some((option) => option.name === 'Modelo'));
+  }
+});
+
+test('con 3 opciones ya no hay Modelo; con 4 sin dimensión para partir se pliega y se avisa', () => {
+  const products = [product('a', 'KIT RESINA ROJO X2'), product('b', 'KIT RESINA AZUL X3 SIN TAPA')];
+  const [proposal] = groupProposals(products, colors('a', ['Rojo']).concat(colors('b', ['Azul'])));
+  assert.ok(proposal.options.length <= 3);
+});
+
+test('avisos: SKU repetido, precios muy distintos y stock de relleno', () => {
+  const products = [product('a', 'Balde 10L'), product('b', 'Balde 20L')];
+  const variants = [
+    { id: 'v1', product_id: 'a', title: 'Rojo', sku: 'DUP', price: 1000, inventory_quantity: 999, options: [{ name: 'Color', value: 'Rojo' }] },
+    { id: 'v2', product_id: 'a', title: 'Azul', sku: 'DUP', price: 2000, inventory_quantity: 5, options: [{ name: 'Color', value: 'Azul' }] },
+  ];
   const [proposal] = groupProposals(products, variants);
-  assert.equal(proposal.options.length, 3);
-  assert.equal(proposal.options[2].name, 'Modelo');
-  assert.match(proposal.warnings[0], /Shopify admite 3/);
+  const text = proposal.warnings.join(' ');
+  assert.match(text, /SKU repetido DUP/);
+  assert.match(text, /Precios muy distintos/);
+  assert.match(text, /stock de relleno/);
 });
 
 test('productos distintos o archivados no se agrupan; variantes repetidas se avisan', () => {

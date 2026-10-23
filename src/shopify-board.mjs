@@ -14,6 +14,7 @@ export const SHOPIFY_ISSUES = [
   ['stock_relleno', 'Stock de relleno (999)', 'Hay variantes con 900 o más unidades: parece un número puesto a mano, no el stock real.'],
   ['sin_sku', 'Variantes sin SKU', 'Sin SKU no se puede cruzar con Mercado Libre ni con el catálogo.'],
   ['sku_repetido', 'SKU repetido', 'Dos variantes con el mismo SKU confunden la sincronización de stock y precios.'],
+  ['sin_peso', 'Sin peso (no cotiza el envío)', 'Sin el peso de la variante Shopify no calcula el envío y los totales salen mal.'],
   ['precio_cero', 'Precio en $0', 'Algo quedó sin cargar.'],
 ];
 export const issueLabel = (key) => SHOPIFY_ISSUES.find(([id]) => id === key)?.[1] || key;
@@ -25,7 +26,10 @@ export function issuesOf(product, variants = [], skuCounts = new Map()) {
   if ((product.description_length || 0) < 20) issues.push('sin_descripcion');
   if (!product.seo_title && !product.seo_description) issues.push('sin_seo');
   if (!(product.media_count > 0)) issues.push('sin_foto');
-  if (active && !(product.total_inventory > 0)) issues.push('stock_cero');
+  // Las variantes con "seguir vendiendo sin stock" no cuentan: se pueden comprar igual.
+  const sellsWithoutStock = variants.some((variant) => variant.inventory_policy === 'CONTINUE');
+  if (active && !(product.total_inventory > 0) && !sellsWithoutStock) issues.push('stock_cero');
+  if (active && variants.some((variant) => variant.weight_grams === 0)) issues.push('sin_peso');
   if (variants.some((variant) => (variant.inventory_quantity || 0) >= 900)) issues.push('stock_relleno');
   if (variants.some((variant) => !variant.sku)) issues.push('sin_sku');
   if (variants.some((variant) => variant.sku && (skuCounts.get(variant.sku) || 0) > 1)) issues.push('sku_repetido');
@@ -54,14 +58,14 @@ export function boardRows(products = [], variants = []) {
 
 export function summarize(rows = []) {
   const count = (predicate) => rows.filter(predicate).length;
-  const issueCounts = Object.fromEntries(SHOPIFY_ISSUES.map(([key]) => [key, rows.filter((row) => row.issues.includes(key) && row.product.status !== 'ARCHIVED').length]));
+  const issueCounts = Object.fromEntries(SHOPIFY_ISSUES.map(([key]) => [key, rows.filter((row) => row.issues.includes(key) && row.product.status === 'ACTIVE').length]));
   return {
     total: rows.length,
     active: count((row) => row.product.status === 'ACTIVE'),
     draft: count((row) => row.product.status === 'DRAFT'),
     other: count((row) => !['ACTIVE', 'DRAFT'].includes(row.product.status)),
     variants: rows.reduce((sum, row) => sum + row.variants.length, 0),
-    withIssues: count((row) => row.product.status !== 'ARCHIVED' && row.issues.length > 0),
+    withIssues: count((row) => row.product.status === 'ACTIVE' && row.issues.length > 0),
     issueCounts,
   };
 }

@@ -1,3 +1,4 @@
+import { AttentionPanel } from "./AttentionPanel.jsx";
 import { memo, useEffect, useMemo, useState } from "react";
 import { resolveWeeklyTargets } from "./weekly-targets.mjs";
 import {
@@ -476,6 +477,7 @@ function MyDay({ planChecks, tasks, onNavigate }) {
 }
 
 function DashboardBase({
+  session = null,
   metrics,
   tasks,
   interactions,
@@ -597,6 +599,7 @@ function DashboardBase({
         </section>
       )}
       {supabase && showWeekly && <WeeklySummaryCard supabase={supabase} clients={clients} prospects={prospects} tasks={tasks} isAdmin={isAdmin} />}
+      {supabase && isAdmin && <AttentionPanel supabase={supabase} session={session} isAdmin={isAdmin} onNavigate={onNavigate} compact />}
       {supabase && <OverdueCard supabase={supabase} clients={clients} onNavigate={onNavigate} />}
       <AlertsPanel hotLeads={hotLeads} coldQuotes={coldQuotes} expiredQuotes={expiredQuotes} staleClients={staleClients} repurchaseRadar={repurchaseRadar} onNavigate={onNavigate} />
       <AutomationSummary tasks={tasks} cronStatus={cronStatus} />

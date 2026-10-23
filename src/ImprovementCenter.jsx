@@ -1,3 +1,4 @@
+import { AttentionPanel } from "./AttentionPanel.jsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { CHANNELS, mlEntries, percentClean, shopifyEntries, snapshotRows, trendOf, workList } from "./improvement-center.mjs";
@@ -52,7 +53,7 @@ function Health({ channel, data, history, today }) {
   );
 }
 
-export function ImprovementCenter({ supabase, isAdmin, onOpen }) {
+export function ImprovementCenter({ supabase, session = null, isAdmin, onOpen }) {
   const [state, setState] = useState({ status: "loading" });
   const [channel, setChannel] = useState("");
   const saved = useRef(false);
@@ -97,6 +98,7 @@ export function ImprovementCenter({ supabase, isAdmin, onOpen }) {
 
   return (
     <div className="content-stack ml-board improvement-center">
+      <AttentionPanel supabase={supabase} session={session} isAdmin={isAdmin} onNavigate={onOpen} />
       <div className="ml-pane">
         <section className="panel">
           <div className="panel-head"><div><span className="eyebrow">Para vender más</span><h2>Centro de mejoras</h2>

@@ -247,13 +247,14 @@ function Operation({ orders, checkouts }) {
 export function ShopifyBoard({ supabase, session, isAdmin, hiddenTabs = null, email = "" }) {
   // Desde el Centro de mejoras se abre directo en Productos con el problema elegido.
   const opened = useMemo(() => { try { const key = sessionStorage.getItem("poliplast-open-shopify"); sessionStorage.removeItem("poliplast-open-shopify"); return key || ""; } catch { return ""; } }, []);
-  const [pickedTab, setTab] = useState(opened ? "productos" : "resumen");
+  const openedTab = opened.startsWith("tab:") ? opened.slice(4) : "";
+  const [pickedTab, setTab] = useState(openedTab || (opened ? "productos" : "resumen"));
   const allowedTabs = TABS.filter(([key]) => canSee(email, hiddenTabs, "shopify", key));
   const tab = allowedTabs.some(([key]) => key === pickedTab) ? pickedTab : allowedTabs[0]?.[0] || "";
   const [reload, setReload] = useState(0);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-  const [issue, setIssue] = useState(opened);
+  const [issue, setIssue] = useState(openedTab ? "" : opened);
   const data = useShopifyData(supabase, reload);
   const rows = useMemo(() => boardRows(data.products, data.variants), [data.products, data.variants]);
   const stats = useMemo(() => summarize(rows), [rows]);

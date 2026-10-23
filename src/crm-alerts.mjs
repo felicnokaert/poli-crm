@@ -6,6 +6,7 @@ import { boardRows, periodTotals, summarize, issueLabel } from './shopify-board.
 import { pendingOrders, recoverList } from './shopify-operation.mjs';
 import { priceCross, priceSummary } from './shopify-prices.mjs';
 import { integrationsStatus, needsAttention } from './integrations-status.mjs';
+import { evaluate, HEALTH_SOURCES, ageText } from './data-health.mjs';
 import { recentShippingChanges } from './ml-shipping-change.mjs';
 
 export const SEVERITY = { alta: 0, media: 1, baja: 2 };
@@ -93,10 +94,42 @@ function integrationAlerts(statusRows, now) {
   }));
 }
 
+// Datos viejos (24/10): la última fecha de cada fuente contra su plazo (mismo criterio que Más → Datos → Conexiones).
+// `latest` = { [id de fuente]: última fecha guardada }. Atrasada = media; muy atrasada = alta. Sin datos no se avisa (puede no estar configurada).
+export function staleAlerts(latest = {}, now = Date.now()) {
+  return HEALTH_SOURCES.flatMap((source) => {
+    const result = evaluate({ at: latest[source.id] || null, maxHours: source.maxHours, dateOnly: source.dateOnly, optional: source.optional }, now);
+    if (result.status !== 'late' && result.status !== 'old') return [];
+    return [{
+      type: 'datos-atrasados', entity_id: source.id, source: 'sistema', severity: result.status === 'old' ? 'alta' : 'media',
+      title: `${source.group} · ${source.label}: sin actualizar hace ${ageText(result.ageHours)}`,
+      detail: 'Los números de esta fuente pueden estar viejos. Revisá Más → Datos → Conexiones y apretá su botón de actualizar.', link: { view: 'settings', section: 'conexiones' },
+    }];
+  });
+}
+
+// Cuentas de Mercado Libre que dejaron de renovar el acceso: si hace más de 3 días que no se sincroniza, el permiso venció o se
+// revocó y hay que reconectarla (Más → Datos → Mercado Libre). El token dura 6 horas pero se renueva solo mientras la cuenta anda.
+export function tokenAlerts(accounts = [], now = Date.now()) {
+  return accounts.flatMap((account) => {
+    const last = Math.max(Date.parse(account.last_sync_at || '') || 0, Date.parse(account.last_refresh_at || '') || 0);
+    const stale = !last || now - last > 3 * 24 * 3600 * 1000;
+    const expired = Date.parse(account.expires_at || '') < now - 24 * 3600 * 1000;
+    if (!(stale && expired)) return [];
+    return [{
+      type: 'ml-token', entity_id: String(account.seller_id), source: 'mercadolibre', severity: 'alta',
+      title: `Mercado Libre · ${account.nickname || account.seller_id}: hay que reconectar la cuenta`,
+      detail: 'El acceso venció y no se pudo renovar. Más → Datos → Mercado Libre → Conectar de nuevo (si no, se deja de actualizar).', link: { view: 'settings', section: 'mercadolibre' },
+    }];
+  });
+}
+
 // Todas las alertas de hoy, ordenadas por gravedad. `data` trae lo leído de la base (ver lib/crm-alerts.mjs).
 export function buildCrmAlerts(data = {}, now = Date.now()) {
   const list = [
     ...integrationAlerts(data.statusRows || [], now),
+    ...staleAlerts(data.latest || {}, now),
+    ...tokenAlerts(data.accounts || [], now),
     ...mlAlerts({ mlItems: data.mlItems || [], mlMetrics: data.mlMetrics || [], mlNames: data.mlNames }),
     ...competitorShippingAlerts(data.competitors || [], now),
     ...shopifyAlerts({ products: data.products || [], variants: data.variants || [], orders: data.orders || [], checkouts: data.checkouts || [], days: data.days || [], now, mlItems: data.mlItems || [] }),

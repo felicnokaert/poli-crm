@@ -157,6 +157,26 @@ export function groupProposals(products = [], variants = []) {
   return proposals.sort((a, b) => b.products.length - a.products.length || a.name.localeCompare(b.name, 'es'));
 }
 
+// Pedido para crear el producto unificado como BORRADOR (lib/shopify-write.mjs): copia descripción, fotos y SEO del producto base y
+// no toca los originales. Los SKU repetidos son a propósito: los originales siguen activos hasta que se los archive a mano.
+export function proposalSpec(proposal) {
+  const seen = new Set();
+  const variants = [];
+  for (const item of proposal.variants) {
+    const variant = item.from.variant;
+    if (!variant) continue;
+    const optionValues = proposal.options.map((option) => item.optionValues[option.name]);
+    const id = optionValues.join('|');
+    if (seen.has(id)) continue; // dos variantes iguales: Shopify las rechaza; la propuesta ya avisa
+    seen.add(id);
+    variants.push({ optionValues, sku: variant.sku || '', price: variant.price, compareAtPrice: variant.compare_at_price, stock: Number(variant.inventory_quantity) > 0 });
+  }
+  return {
+    title: proposal.name, copyFrom: proposal.survivor.id, allowExistingSku: true, tags: ['agrupado-por-crm'],
+    options: proposal.options.map((option) => ({ name: option.name, values: option.values })), variants: variants.slice(0, 100),
+  };
+}
+
 const cell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
 // CSV de la propuesta: una fila por variante, para revisarla en una planilla antes de decidir.
 export function proposalsCsv(proposals = []) {

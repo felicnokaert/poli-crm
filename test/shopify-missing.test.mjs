@@ -55,3 +55,27 @@ test('CSV de importación: borrador, agrupado en un producto con variantes y sin
   assert.match(lines[1], /"Peso"/);
   assert.match(missingReviewCsv(out.rows), /RE-608-750/);
 });
+
+test('borradores: un producto por familia con título sin tamaño y opciones; el resto suelto', async () => {
+  const { draftSpecs, groupTitle } = await import('../src/shopify-missing.mjs');
+  const out = missingFromShopify({ ...shop, mlItems: [ml('B', 'RE-608-750', 'Resina epoxi cristal 750 gr vidrio liquido', { sold_quantity: 9 }), ml('C', 'RE-608-1500', 'Resina epoxi cristal 1500 gr vidrio liquido'), ml('D', 'ZZ-9', 'Pigmento rojo', { available_quantity: 0 })] });
+  const specs = draftSpecs(out.rows);
+  assert.equal(specs.length, 2);
+  const resina = specs.find((spec) => spec.options.length);
+  assert.equal(resina.title, 'Resina epoxi cristal vidrio liquido');
+  assert.deepEqual(resina.options, [{ name: 'Peso', values: ['750 g', '1500 g'] }]);
+  assert.equal(resina.variants.length, 2);
+  assert.equal(resina.variants[0].stock, true);
+  const suelto = specs.find((spec) => !spec.options.length);
+  assert.equal(suelto.variants[0].stock, false);
+  assert.equal(groupTitle({ mlTitle: 'Balde 10 L x5' }), 'Balde');
+});
+
+test('dos SKU del mismo producto y tamaño: se crea una sola variante y se avisa', async () => {
+  const { draftSpecs } = await import('../src/shopify-missing.mjs');
+  const out = missingFromShopify({ ...shop, mlItems: [ml('A', 'RE-608-0.750', 'Resina epoxi cristal 750gr vidrio', { sold_quantity: 90 }), ml('B', 'RE-608-750', 'Resina epoxi cristal 750gr vidrio', { sold_quantity: 10 }), ml('C', 'RE-608-1500', 'Resina epoxi cristal 1500gr vidrio')] });
+  const specs = draftSpecs(out.rows);
+  assert.equal(specs.length, 1);
+  assert.deepEqual(specs[0].variants.map((variant) => variant.sku), ['RE-608-0.750', 'RE-608-1500']);
+  assert.match(out.rows.find((row) => row.sku === 'RE-608-750').warnings.join(' '), /otro SKU/);
+});

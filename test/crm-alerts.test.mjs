@@ -85,3 +85,18 @@ test('refreshAlerts lee, compara y guarda sin tocar nada más', async () => {
   assert.deepEqual(saved.map(([table]) => table), ['crm_alerts']);
   assert.match(patched[0][1], /type=eq.viejo/);
 });
+
+test('alertas de datos viejos y de cuentas de ML que no renuevan el acceso', async () => {
+  const { staleAlerts, tokenAlerts } = await import('../src/crm-alerts.mjs');
+  const now = Date.parse('2026-10-24T12:00:00Z');
+  const stale = staleAlerts({ 'ml-items': '2026-10-24T08:00:00Z', 'shopify-products': '2026-10-21T08:00:00Z', 'ml-trends': null }, now);
+  assert.deepEqual(stale.map((alert) => alert.entity_id), ['shopify-products']);
+  assert.equal(stale[0].severity, 'media');
+  assert.equal(staleAlerts({ 'ml-items': '2026-10-01T00:00:00Z' }, now)[0].severity, 'alta');
+  const tokens = tokenAlerts([
+    { seller_id: 1, nickname: 'POLIPLAST', expires_at: '2026-10-24T14:00:00Z', last_sync_at: '2026-10-24T09:30:00Z' },
+    { seller_id: 2, nickname: 'COMARG', expires_at: '2026-10-15T14:00:00Z', last_sync_at: '2026-10-15T09:30:00Z' },
+  ], now);
+  assert.deepEqual(tokens.map((alert) => alert.entity_id), ['2']);
+  assert.match(tokens[0].title, /reconectar/);
+});

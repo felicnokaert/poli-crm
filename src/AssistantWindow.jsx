@@ -5,6 +5,8 @@ import { asksBusiness, businessContext, businessFacts, businessLines } from "./a
 import { argentinaToday, useComprobantes } from "./CustomerBasePanel.jsx";
 import { asksPrice, currentListPrices, priceLine, priceWords, pricesContext } from "./assistant-prices.mjs";
 import { useTeamSharedNotes } from "./hooks/useSharedNotesSync";
+import { asksMlImprove, improveContext, improvePlan } from "./ml-improve.mjs";
+import { loadActiveItems, loadHealth } from "./ml-improve-data.js";
 import { asksLearning, learningContext, prospectLearning, routeFor, routesContext, teamNotes, teamNotesContext } from "./assistant-team.mjs";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { adminFetch } from "./admin-api.mjs";
@@ -135,6 +137,21 @@ export async function loadListPrices(supabase, words, today) {
   return currentListPrices({ variants: named, prices, lists, today });
 }
 const plainText = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+// 23/10: calidad y experiencia de compra de Mercado Libre para "¿qué publicación mejoro primero?".
+function useMlImproveData(supabase) {
+  const [state, setState] = useState({ status: "idle", items: [], health: [], nickname: {} });
+  useEffect(() => {
+    if (!supabase?.from) return undefined;
+    let alive = true;
+    setState((current) => ({ ...current, status: "loading" }));
+    Promise.all([loadActiveItems(supabase), loadHealth(supabase), supabase.rpc("ml_account_names")])
+      .then(([items, health, names]) => { if (alive) setState({ status: "ready", items, health, nickname: Object.fromEntries((names?.data || []).map((row) => [row.seller_id, row.nickname])) }); })
+      .catch(() => { if (alive) setState({ status: "error", items: [], health: [], nickname: {} }); });
+    return () => { alive = false; };
+  }, [supabase]);
+  return state;
+}
 
 function useListPrices(supabase, query) {
   // 23/10: "cuántas cotizaciones cerramos" es una pregunta de números, no de precios.
@@ -408,7 +425,13 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   const business = useMemo(() => (businessOn && billing.status === "ready" ? businessFacts(billing.rows, clients, argentinaToday()) : null), [businessOn, billing.status, billing.rows, clients]);
   const businessShown = wantsBusiness && business ? businessLines(business) : [];
   // Si se pregunta antes de que llegue la facturación, se espera y se pregunta solo (así no dice "no tengo el dato").
-  const waitingBusiness = wantsBusiness && !business && billing.status !== "error" && Boolean(supabase?.from);
+  // 23/10: qué mejorar en Mercado Libre (calidad y experiencia de compra), se lee la primera vez que se pregunta.
+  const wantsMl = Boolean(typed && asksMlImprove(typed));
+  const [mlOn, setMlOn] = useState(false);
+  useEffect(() => { if (wantsMl) setMlOn(true); }, [wantsMl]);
+  const mlData = useMlImproveData(mlOn ? supabase : null);
+  const mlText = useMemo(() => (wantsMl && mlData.status === "ready" ? improveContext(improvePlan({ items: mlData.items, health: mlData.health }), mlData.nickname) : ""), [wantsMl, mlData]);
+  const waitingBusiness = (wantsBusiness && !business && billing.status !== "error" && Boolean(supabase?.from)) || (wantsMl && mlData.status !== "ready" && mlData.status !== "error" && Boolean(supabase?.from));
   // 22/10: lo que anotó el equipo sobre el tema, a quién derivar y qué aprendimos en la Cola del día.
   const notes = typed && !clientsFound.length ? teamNotes(typed, { interactions: workspace.interactions || [], clients, prospects: workspace.prospects || [], shared: sharedNotes }) : [];
   const routes = typed ? routeFor(typed) : [];
@@ -474,7 +497,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
     }
     const teamNow = mlNow === teamRows ? team : intent ? teamAnswer(mlNow, intent) : null;
     const pricesNow = listPrices.key && !listPrices.ready ? await loadListPrices(supabase, listPrices.words, isoToday()).catch(() => []) : listPrices.entries;
-    const context = [rulesContext({ rules, competitors: competitors || [], rapyp }), routesContext(), wantsBusiness ? businessContext(business) : "", pricesContext(pricesNow), teamNotesContext(notes), learningText, clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases }), buildAiContext({ intent, facts, team: teamNow, result, mlRows: mlNow, taught: withEarlier(taught) })].filter(Boolean).join("\n");
+    const context = [rulesContext({ rules, competitors: competitors || [], rapyp }), routesContext(), wantsBusiness ? businessContext(business) : "", mlText, pricesContext(pricesNow), teamNotesContext(notes), learningText, clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases }), buildAiContext({ intent, facts, team: teamNow, result, mlRows: mlNow, taught: withEarlier(taught) })].filter(Boolean).join("\n");
     const reply = await askAi(supabase, { question: asked, context, history, today: isoToday(), userName: firstName }).catch(() => ({ ok: false, reason: "red" }));
     setThinking(false);
     if (reply.ok) {
@@ -558,7 +581,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
             <ul className="assistant-rivals">{block.lines.map((line) => <li key={line}>{line}</li>)}</ul>
           </section>
         ))}
-        {waitingBusiness && <p className="muted small" role="status">Leyendo la facturación de Contabilium…</p>}
+        {waitingBusiness && <p className="muted small" role="status">{wantsMl ? "Leyendo Mercado Libre…" : "Leyendo la facturación de Contabilium…"}</p>}
         {businessShown.length > 0 && (
           <section className="assistant-answer" aria-label="Números del negocio">
             <span className="assistant-group-label">Números del negocio</span>

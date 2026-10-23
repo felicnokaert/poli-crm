@@ -69,11 +69,12 @@ export function MercadoLibreSync({ supabase, session }) {
     } catch (connectError) { setError(connectError.message); setBusy(""); }
   }
 
-  async function sync(account, stages = ["items", "questions", "extras"]) {
+  async function sync(account, stages = ["items", "questions", "extras", "health"]) {
     setError(""); setMessage(""); setBusy(account.seller_id);
     let items = 0;
     let questions = 0;
     let extras = 0;
+    let health = 0;
     const problems = new Set();
     try {
       for (const stage of stages) {
@@ -82,10 +83,11 @@ export function MercadoLibreSync({ supabase, session }) {
         let byItem = false;
         for (let guard = 0; guard < 1000; guard += 1) {
           const result = await callApi(session, { op: "sync", sellerId: account.seller_id, stage, offset, scrollId, byItem });
-          if (stage === "items") items += result.saved; else if (stage === "questions") questions += result.saved; else extras += result.saved;
+          if (stage === "items") items += result.saved; else if (stage === "questions") questions += result.saved; else if (stage === "health") health += result.saved; else extras += result.saved;
           (result.errors || []).forEach((problem) => problems.add(problem));
           setProgress(stage === "items" ? `Publicaciones: ${result.next} de ${result.total}…`
             : stage === "extras" ? `Visitas de las activas: ${result.next} de ${result.total}…`
+            : stage === "health" ? `Calidad y experiencia de compra: ${result.next} de ${result.total}…`
             : result.byItem && byItem ? `Preguntas, revisando publicación ${result.next} de ${result.total}…`
               : result.byItem ? "Son más de 1000 preguntas: sigo de a una publicación…" : `Preguntas respondidas: ${result.next} de ${result.total}…`);
           offset = result.next;
@@ -98,9 +100,10 @@ export function MercadoLibreSync({ supabase, session }) {
       // Corto (21/10, Felipe: "no me gusta que muestre todo este cartel"): hasta 2 problemas y cuántos más.
       const list = [...problems];
       const extra = list.length > 2 ? ` y ${list.length - 2} más` : "";
-      setMessage(`${account.nickname || "Cuenta"}: listo. ${items} publicaciones, ${questions} preguntas y visitas de ${extras} activas.${list.length ? ` Faltó: ${list.slice(0, 2).join(" · ")}${extra}.` : ""}`);
+      setMessage(`${account.nickname || "Cuenta"}: listo. ${items} publicaciones, ${questions} preguntas, visitas de ${extras} activas y calidad de ${health}.${list.length ? ` Faltó: ${list.slice(0, 2).join(" · ")}${extra}.` : ""}`);
     } catch (syncError) {
-      setError(`${syncError.message} (quedó guardado lo que se llegó a traer: ${items} publicaciones, ${questions} preguntas).`);
+      const missingTable = /ml_item_health/.test(syncError.message);
+      setError(missingTable ? `Lo demás quedó al día; para la calidad falta pegar el SQL de docs/SQL_PENDIENTE_2026-10-23.md en Supabase.` : `${syncError.message} (quedó guardado lo que se llegó a traer: ${items} publicaciones, ${questions} preguntas).`);
     }
     setProgress(""); setBusy("");
     await loadAccounts();

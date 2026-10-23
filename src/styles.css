@@ -1262,3 +1262,9 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .shopify-board .ml-filter-tabs { margin-bottom: 10px; }
 .shopify-board .ml-search input { min-width: 260px; }
 .shopify-board .ml-board-title a { color: inherit; }
+
+/* 24/10: pestañas de Mercado Libre agrupadas en 4, con subpestañas */
+.ml-subtabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.ml-subtabs button { appearance: none; font: inherit; font-size: 0.84rem; font-weight: 600; padding: 5px 14px; border-radius: var(--radius-pill); border: 1px solid var(--color-border-soft); background: var(--color-white); color: var(--brand-gray); cursor: pointer; transition: background .15s ease, color .15s ease, border-color .15s ease; }
+.ml-subtabs button:hover { color: var(--brand-charcoal); }
+.ml-subtabs button.selected { background: var(--brand-charcoal); border-color: var(--brand-charcoal); color: #fff; }

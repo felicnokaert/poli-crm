@@ -70,3 +70,43 @@ test('si faltan los permisos de pedidos, el catálogo igual queda guardado y se 
   assert.equal(result.products, 2);
   assert.match(result.errors.join(' '), /pedidos: .*Access denied/);
 });
+
+test('con ID y secreto del cliente canjea el token, lo guarda y lo renueva si vence', async () => {
+  const { clearShopifyTokenCache, shopifyGraphql } = await import('../lib/shopify.mjs');
+  clearShopifyTokenCache();
+  const env = { SHOPIFY_STORE_DOMAIN: 'poliplastarg', SHOPIFY_CLIENT_ID: 'id1', SHOPIFY_CLIENT_SECRET: 'sec1' };
+  assert.equal(shopifyConfigured(env), true);
+  const log = [];
+  let tokens = 0;
+  let expireNext = false;
+  const http = async (url, init) => {
+    if (url.endsWith('/admin/oauth/access_token')) {
+      tokens += 1;
+      log.push(['token', String(init.body)]);
+      return { ok: true, status: 200, json: async () => ({ access_token: `tok${tokens}`, expires_in: 86399 }) };
+    }
+    log.push(['graphql', init.headers['X-Shopify-Access-Token']]);
+    if (expireNext && init.headers['X-Shopify-Access-Token'] === 'tok1') return { ok: false, status: 401, text: async () => 'expired' };
+    return { ok: true, status: 200, json: async () => ({ data: { ok: true } }) };
+  };
+  await shopifyGraphql(env, http, 'query { shop { name } }');
+  await shopifyGraphql(env, http, 'query { shop { name } }');
+  assert.equal(tokens, 1); // el segundo pedido reutiliza el token
+  assert.match(log[0][1], /grant_type=client_credentials/);
+  assert.match(log[0][1], /client_id=id1/);
+  expireNext = true;
+  const data = await shopifyGraphql(env, http, 'query { shop { name } }');
+  assert.deepEqual(data, { ok: true });
+  assert.equal(tokens, 2); // el 401 pidió un token nuevo
+  assert.equal(log.at(-1)[1], 'tok2');
+  clearShopifyTokenCache();
+});
+
+test('el token fijo (forma vieja) tiene prioridad y no se canjea nada', async () => {
+  const { shopifyGraphql } = await import('../lib/shopify.mjs');
+  let exchanged = false;
+  const http = async (url, init) => { if (url.endsWith('/admin/oauth/access_token')) exchanged = true; return { ok: true, status: 200, json: async () => ({ data: { used: init.headers['X-Shopify-Access-Token'] } }) }; };
+  const data = await shopifyGraphql({ SHOPIFY_STORE_DOMAIN: 'x', SHOPIFY_ADMIN_TOKEN: 'fijo', SHOPIFY_CLIENT_ID: 'a', SHOPIFY_CLIENT_SECRET: 'b' }, http, 'query { shop { name } }');
+  assert.equal(data.used, 'fijo');
+  assert.equal(exchanged, false);
+});

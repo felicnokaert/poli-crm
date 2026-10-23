@@ -1,5 +1,6 @@
 import { Building2, Calculator, ChevronRight, ClipboardList, Database, FileCheck2, GraduationCap, Inbox, LayoutDashboard, ListChecks, MapPin, MessageCircle, ReceiptText, Search, ShoppingBag, Store, UserCog } from "lucide-react";
 import { onlineConfigured } from "./online";
+import { filterNav } from "./module-access.mjs";
 
 // Menú lateral: 6 grupos (Hoy, Ventas, Canales online, Cartera, Aprender, Más). Salió de App.jsx (QA 16/10).
 export const NAV_GROUPS = [
@@ -35,7 +36,8 @@ export const NAV_GROUPS = [
 
 export const NAV_ITEMS = NAV_GROUPS.flatMap(([, items]) => items);
 
-export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNavGroups, narrowScreen, overdueTaskCount, inboxSignalCount }) {
+export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNavGroups, narrowScreen, overdueTaskCount, inboxSignalCount, email = "", denied = null }) {
+  const groups = filterNav(NAV_GROUPS, email, denied);
   return (
   <aside className="sidebar">
     <div className="brand">
@@ -46,7 +48,7 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
       />
     </div>
     <nav>
-      {NAV_GROUPS.map(([group, items]) => {
+      {groups.map(([group, items]) => {
         // La sección donde estás parado se ve abierta sola, sin importar
         // si la habías colapsado antes - así nunca "desaparece" de
         // adentro tuyo la pantalla en la que estás. El resto respeta lo

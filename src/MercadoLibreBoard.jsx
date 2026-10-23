@@ -1,3 +1,4 @@
+import { canSee } from "./module-access.mjs";
 import { useEffect, useMemo, useState } from "react";
 import { MlImprove } from "./MlImprove.jsx";
 import { MlCompetition, MlTrends } from "./MlCompetition.jsx";
@@ -403,7 +404,7 @@ function Listings({ items, accounts, nickname, questionCounts, seller, issue, se
   </>);
 }
 
-export function MercadoLibreBoard({ supabase, session = null, isAdmin = false, canSeeAds = false, ads = {}, onAdsChange = () => {} }) {
+export function MercadoLibreBoard({ supabase, session = null, isAdmin = false, canSeeAds = false, hiddenTabs = null, email = "", ads = {}, onAdsChange = () => {} }) {
   const [accounts, setAccounts] = useState([]);
   const [items, setItems] = useState(null);
   const [metricRows, setMetricRows] = useState([]);
@@ -412,7 +413,7 @@ export function MercadoLibreBoard({ supabase, session = null, isAdmin = false, c
   // Desde el Centro de mejoras se abre directo en Publicaciones filtradas (o en "Qué mejorar").
   const opened = useMemo(() => { try { const key = sessionStorage.getItem("poliplast-open-ml"); sessionStorage.removeItem("poliplast-open-ml"); return key || ""; } catch { return ""; } }, []);
   const toMejorar = opened === "calidad-ml" || opened === "experiencia-compra";
-  const [tab, setTab] = useState(opened ? (toMejorar ? "mejorar" : "publicaciones") : "resumen");
+  const [pickedTab, setTab] = useState(opened ? (toMejorar ? "mejorar" : "publicaciones") : "resumen");
   const [seller, setSeller] = useState("");
   const [issue, setIssue] = useState(opened && !toMejorar ? opened : "");
   const [reload, setReload] = useState(0);
@@ -458,8 +459,10 @@ export function MercadoLibreBoard({ supabase, session = null, isAdmin = false, c
     ["publicaciones", "Publicaciones", ["publicaciones", "mejorar"]],
     ["mercado", "Mercado", ["competencia", "tendencias"]],
     ["dinero", "Dinero", ["stock", ...(canSeeAds ? ["publicidad"] : [])]],
-  ];
-  const currentGroup = tabGroups.find(([, , leaves]) => leaves.includes(tab)) || tabGroups[0];
+  ].filter(([key]) => canSee(email, hiddenTabs, "mercadolibre", key));
+  const currentGroup = tabGroups.find(([, , leaves]) => leaves.includes(pickedTab)) || tabGroups[0] || ["", "", []];
+  // Si la pestaña elegida no está permitida para esta cuenta, se muestra la primera que sí.
+  const tab = currentGroup[2].includes(pickedTab) ? pickedTab : currentGroup[2][0] || "";
 
   function showIssue(key) { setIssue(key); setTab("publicaciones"); }
 

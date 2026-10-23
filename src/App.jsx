@@ -75,6 +75,8 @@ import { useInboxActions } from "./hooks/useInboxActions";
 import { useRapypClients } from "./hooks/useRapypClients";
 import { useClientActions } from "./hooks/useClientActions";
 import { AppSidebar, NAV_ITEMS } from "./AppSidebar.jsx";
+import { canSee as canSeeModule, firstAllowedView } from "./module-access.mjs";
+import { useModuleAccess } from "./hooks/useModuleAccess.js";
 import { AppTopbar } from "./AppTopbar.jsx";
 import { AssistantButton } from "./AssistantButton.jsx";
 
@@ -144,7 +146,10 @@ export default function App() {
   // Al volver de autorizar Mercado Libre se abre Más → Datos → Mercado Libre para terminar la conexión.
   // Al recargar (F5) se queda en el módulo donde estaba (21/10, pedido de Felipe). Se guarda por pestaña:
   // una pestaña nueva arranca en Inicio.
-  const [view, setView] = useState(() => (mlCallbackParams() ? "settings" : readSavedView()));
+  const [pickedView, setView] = useState(() => (mlCallbackParams() ? "settings" : readSavedView()));
+  const deniedModules = useModuleAccess(supabase, session?.user?.email, Boolean(onlineConfigured && session));
+  // Si a esta cuenta le quitaron la pantalla (guardada o abierta desde un atajo), cae en la primera que sí puede ver.
+  const view = canSeeModule(session?.user?.email, deniedModules, pickedView) ? pickedView : firstAllowedView(session?.user?.email, deniedModules);
   useEffect(() => { try { sessionStorage.setItem(VIEW_KEY, view); } catch { /* sin almacenamiento */ } }, [view]);
   const [mapTab, setMapTab] = useState("aplicadores");
   // Empresa con la que se abre el cotizador (desde "Cotizar" en la ficha); null = cotización libre.
@@ -638,6 +643,8 @@ export default function App() {
         narrowScreen={narrowScreen}
         overdueTaskCount={overdueTaskCount}
         inboxSignalCount={inboxSignalCount}
+        email={session?.user?.email}
+        denied={deniedModules}
       />
 
       <main>
@@ -797,7 +804,7 @@ export default function App() {
         )}
         {view === "mercadolibre" && (
           <Suspense fallback={<Splash text="Cargando Mercado Libre…" />}>
-            <MercadoLibreBoard supabase={supabase} session={session} isAdmin={isChannelAdmin(session?.user?.email)} canSeeAds={isFelipeTools} ads={data.mlAds || {}} onAdsChange={(next) => setData((current) => ({ ...current, mlAds: next }))} />
+            <MercadoLibreBoard hiddenTabs={deniedModules} email={session?.user?.email} supabase={supabase} session={session} isAdmin={isChannelAdmin(session?.user?.email)} canSeeAds={isFelipeTools} ads={data.mlAds || {}} onAdsChange={(next) => setData((current) => ({ ...current, mlAds: next }))} />
           </Suspense>
         )}
         {view === "mejoras" && (
@@ -807,7 +814,7 @@ export default function App() {
         )}
         {view === "shopify" && (
           <Suspense fallback={<Splash text="Cargando Shopify…" />}>
-            <ShopifyBoard supabase={supabase} session={session} isAdmin={isChannelAdmin(session?.user?.email)} />
+            <ShopifyBoard hiddenTabs={deniedModules} email={session?.user?.email} supabase={supabase} session={session} isAdmin={isChannelAdmin(session?.user?.email)} />
           </Suspense>
         )}
         {view === "academy" && (

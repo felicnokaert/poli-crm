@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ExternalLink, Layers, PackageCheck, RefreshCw, ShoppingBag, TriangleAlert, Wallet } from "lucide-react";
 import { adminFetch } from "./admin-api.mjs";
 import { SHOPIFY_ISSUES, SHOPIFY_SORTS, SHOPIFY_STATUS, boardRows, facets, filterRows, issueLabel, periodTotals, productsCsv, statusLabel, summarize } from "./shopify-board.mjs";
+import { canSee } from "./module-access.mjs";
 import { Empty } from "./ui-primitives";
 import { groupProposals, proposalsCsv } from "./shopify-grouping.mjs";
 
@@ -186,10 +187,12 @@ function Organize({ products, variants }) {
   );
 }
 
-export function ShopifyBoard({ supabase, session, isAdmin }) {
+export function ShopifyBoard({ supabase, session, isAdmin, hiddenTabs = null, email = "" }) {
   // Desde el Centro de mejoras se abre directo en Productos con el problema elegido.
   const opened = useMemo(() => { try { const key = sessionStorage.getItem("poliplast-open-shopify"); sessionStorage.removeItem("poliplast-open-shopify"); return key || ""; } catch { return ""; } }, []);
-  const [tab, setTab] = useState(opened ? "productos" : "resumen");
+  const [pickedTab, setTab] = useState(opened ? "productos" : "resumen");
+  const allowedTabs = TABS.filter(([key]) => canSee(email, hiddenTabs, "shopify", key));
+  const tab = allowedTabs.some(([key]) => key === pickedTab) ? pickedTab : allowedTabs[0]?.[0] || "";
   const [reload, setReload] = useState(0);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -218,7 +221,7 @@ export function ShopifyBoard({ supabase, session, isAdmin }) {
     <div className="content-stack ml-board shopify-board">
       <section className="panel ml-board-head">
         <div className="ml-tabs" role="tablist" aria-label="Sección">
-          {TABS.map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? "selected" : ""} onClick={() => setTab(key)}>{label}</button>)}
+          {allowedTabs.map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? "selected" : ""} onClick={() => setTab(key)}>{label}</button>)}
         </div>
         <div className="ml-toolbar">
           <span className="muted small">{data.status === "ready" ? `Última actualización: ${when(syncedAt)} · se actualiza solo cada mañana` : "Tienda Shopify, solo lectura"}</span>

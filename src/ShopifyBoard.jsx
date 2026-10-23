@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, Layers, PackageCheck, RefreshCw, ShoppingBag, TriangleAlert, Truck, Wallet } from "lucide-react";
+import { ChevronDown, ChevronRight, ExternalLink, Layers, PackageCheck, RefreshCw, ShoppingBag, TriangleAlert, Truck, Wallet } from "lucide-react";
 import { adminFetch } from "./admin-api.mjs";
 import { SHOPIFY_ISSUES, SHOPIFY_SORTS, SHOPIFY_STATUS, boardRows, facets, filterRows, issueLabel, periodTotals, productsCsv, statusLabel, summarize } from "./shopify-board.mjs";
 import { canSee } from "./module-access.mjs";
 import { Empty } from "./ui-primitives";
 import { groupProposals, proposalsCsv } from "./shopify-grouping.mjs";
+import { PRICE_STATES, DISCOUNT, filterPriceRows, priceCross, priceProposalCsv, priceSummary } from "./shopify-prices.mjs";
 import { PICKUP_LIMIT_DAYS, SHIP_LIMIT_HOURS, operationSummary, pendingOrders, recoverList, weeklyFunnel } from "./shopify-operation.mjs";
 
 // Ventas → Shopify (24/10, etapas 1 y 2): espejo de SOLO LECTURA de la tienda. Resumen, "Qué mejorar" (lo que le falta a cada
@@ -14,7 +15,7 @@ const number = (value) => (typeof value === "number" ? value.toLocaleString("es-
 const argentinaToday = () => new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
 const when = (iso) => (iso ? new Date(iso).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "nunca");
 const MISSING = /shopify_|does not exist|schema cache/i;
-const TABS = [["resumen", "Resumen"], ["mejorar", "Qué mejorar"], ["productos", "Productos"], ["operacion", "Operación"], ["ordenar", "Ordenar catálogo"]];
+const TABS = [["resumen", "Resumen"], ["mejorar", "Qué mejorar"], ["productos", "Productos"], ["precios", "Precios vs ML"], ["operacion", "Operación"], ["ordenar", "Ordenar catálogo"]];
 
 async function readAll(query) {
   const rows = [];
@@ -54,8 +55,9 @@ function useShopifyData(supabase, reload) {
       readAll(() => supabase.from("shopify_daily").select("day,orders,amount,currency,synced_at").order("day")),
       optional(readAll(() => supabase.from("shopify_orders").select("*").order("id"))),
       optional(readAll(() => supabase.from("shopify_checkouts").select("*").order("id"))),
+      optional(readAll(() => supabase.from("ml_items").select("id,sku,price,status,sold_quantity,title,permalink").order("id"))),
     ])
-      .then(([products, variants, days, orders, checkouts]) => { if (alive) setState({ status: "ready", products, variants, days, orders, checkouts }); })
+      .then(([products, variants, days, orders, checkouts, mlItems]) => { if (alive) setState({ status: "ready", products, variants, days, orders, checkouts, mlItems }); })
       .catch((error) => { if (alive) setState({ status: MISSING.test(String(error?.message || "")) ? "missing" : "error", products: [], variants: [], days: [] }); });
     return () => { alive = false; };
   }, [supabase, reload]);
@@ -176,9 +178,11 @@ function Organize({ products, variants }) {
       <button type="button" className="ghost" onClick={() => downloadText(`shopify-agrupar-${argentinaToday()}.csv`, proposalsCsv(proposals))}>Descargar propuesta (CSV)</button>
       {proposals.map((item) => (
         <section key={item.key} className="panel">
-          <button type="button" className="ghost" aria-expanded={open === item.key} onClick={() => setOpen(open === item.key ? "" : item.key)}>
-            <strong>{item.name}</strong> · {item.products.length} productos → 1 · {item.variants.length} variantes · {item.options.map((option) => option.name).join(" / ") || "sin opciones"}
-            {item.warnings.length > 0 && <span> · <TriangleAlert size={14} aria-hidden="true" /> {item.warnings.length}</span>}
+          <button type="button" className="proposal-head" aria-expanded={open === item.key} onClick={() => setOpen(open === item.key ? "" : item.key)}>
+            {open === item.key ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" />}
+            <span className="proposal-name">{item.name}</span>
+            <span className="proposal-meta">{item.products.length} productos → 1 · {item.variants.length} variantes · {item.options.map((option) => option.name).join(" / ") || "sin opciones"}</span>
+            {item.warnings.length > 0 && <span className="badge warn"><TriangleAlert size={12} aria-hidden="true" /> {item.warnings.length} {item.warnings.length === 1 ? "aviso" : "avisos"}</span>}
           </button>
           {open === item.key && (
             <div>
@@ -239,6 +243,62 @@ function Operation({ orders, checkouts }) {
           </ul>
         )}
         <p className="muted small">No se guardan datos del comprador: para contactar a alguien, buscá el carrito en el administrador de Shopify (Pedidos → Carritos abandonados).</p>
+      </section>
+    </div>
+  );
+}
+
+function Prices({ products, variants, mlItems }) {
+  const rows = useMemo(() => priceCross({ products, variants, mlItems }), [products, variants, mlItems]);
+  const summary = useMemo(() => priceSummary(rows), [rows]);
+  const [state, setState] = useState("");
+  const [query, setQuery] = useState("");
+  const [activeOnly, setActiveOnly] = useState(true);
+  const shown = useMemo(() => filterPriceRows(rows, { state, query, activeOnly }), [rows, state, query, activeOnly]);
+  if (!mlItems.length) return <Empty title="Faltan las publicaciones de Mercado Libre" text="Para cruzar precios hace falta tener copiadas las publicaciones de Mercado Libre (Más → Datos → Mercado Libre → Actualizar todo)." />;
+  const pct = (value) => (value == null ? "—" : `${value > 0 ? "+" : ""}${Math.round(value * 100)} %`);
+  const chips = [["", "Todas"], ["alinear_bajar", "Para bajar"], ["alinear_subir", "Para subir"], ["ok", "Dentro de la regla"], ["revisar", "Revisar"], ["ml_inactiva", "ML inactiva"], ["sin_ml", "Sin ML"], ["sin_sku", "Sin SKU"], ["sin_precio", "Sin precio"]];
+  const countOf = (key) => rows.filter((row) => (!activeOnly || row.status === "ACTIVE") && (!key || row.state === key)).length;
+  return (
+    <div className="content-stack">
+      <section className="metric-grid ml-metric-grid">
+        <article className="metric-card"><Wallet size={20} /><span>Con precio de ML</span><strong>{number(summary.matched)}</strong><small className="muted">de {number(summary.total)} variantes</small></article>
+        <article className={`metric-card ${summary.toChangeActive ? "is-urgent" : ""}`}><TriangleAlert size={20} /><span>Para ajustar (activos)</span><strong>{number(summary.toChangeActive)}</strong><small className="muted">{summary.lower} bajar · {summary.raise} subir</small></article>
+        <article className="metric-card"><PackageCheck size={20} /><span>Dentro de la regla</span><strong>{number(summary.ok)}</strong><small className="muted">±2 % del objetivo</small></article>
+      </section>
+      <section className="panel">
+        <div className="panel-head">
+          <div><span className="eyebrow">Regla: precio de Shopify = precio de Mercado Libre − {Math.round(DISCOUNT * 100)} %</span><h2>Precios contra Mercado Libre</h2></div>
+          <label className="ml-search"><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por producto o SKU…" aria-label="Buscar" /></label>
+        </div>
+        <p className="muted small">Se cruza por SKU con la publicación activa que más vendió. Es solo una propuesta: no se cambia ningún precio en la tienda. Revisá el CSV y decidime cuáles aplicar (escribir en Shopify necesita tu aprobación y otro permiso).</p>
+        <div className="ml-tabs ml-filter-tabs" role="tablist" aria-label="Estado del precio">
+          {chips.map(([key, label]) => <button key={key || "todas"} type="button" role="tab" aria-selected={state === key} className={state === key ? "selected" : ""} onClick={() => setState(key)}>{label} ({countOf(key)})</button>)}
+        </div>
+        <div className="ml-toolbar">
+          <label className="small check-row"><input type="checkbox" checked={activeOnly} onChange={(event) => setActiveOnly(event.target.checked)} /> Solo productos activos</label>
+          <button type="button" className="ghost" onClick={() => downloadText(`shopify-precios-vs-ml-${argentinaToday()}.csv`, priceProposalCsv(shown))}>Descargar propuesta ({shown.filter((row) => row.proposal != null).length})</button>
+        </div>
+        {shown.length === 0 ? <Empty title="Nada para mostrar" text="Probá con otro filtro." /> : (
+          <div className="table-scroll"><table className="sales-history-table ml-board-table">
+            <thead><tr><th>Producto</th><th>Estado</th><th>Shopify</th><th>ML</th><th>Objetivo</th><th>Dif.</th><th>Propuesta</th></tr></thead>
+            <tbody>{shown.slice(0, 300).map((row) => {
+              const [label, tone] = PRICE_STATES[row.state];
+              return (
+                <tr key={row.variantId}>
+                  <td><strong>{row.title}</strong>{row.variantTitle ? <small className="muted"> · {row.variantTitle}</small> : null}<div className="muted small">{row.sku || "sin SKU"}{row.status !== "ACTIVE" ? ` · ${statusLabel(row.status)}` : ""}</div></td>
+                  <td data-label="Estado"><span className={`badge ${tone}`}>{label}</span></td>
+                  <td data-label="Shopify">{row.shopify > 0 ? money(row.shopify) : "—"}</td>
+                  <td data-label="ML">{row.ml && row.ml.price > 0 ? (row.ml.permalink ? <a href={row.ml.permalink} target="_blank" rel="noreferrer">{money(row.ml.price)}</a> : money(row.ml.price)) : "—"}{row.ml?.listings > 1 ? <small className="muted"> ({row.ml.listings} publicaciones)</small> : null}</td>
+                  <td data-label="Objetivo">{row.target != null ? money(row.target) : "—"}</td>
+                  <td data-label="Dif.">{pct(row.diff)}</td>
+                  <td data-label="Propuesta">{row.proposal != null ? <strong>{row.state === "alinear_bajar" ? "Bajar a " : "Subir a "}{money(row.proposal)}</strong> : "—"}</td>
+                </tr>
+              );
+            })}</tbody>
+          </table></div>
+        )}
+        {shown.length > 300 && <p className="muted small">Se muestran las primeras 300; usá los filtros o descargá el CSV.</p>}
       </section>
     </div>
   );
@@ -308,6 +368,7 @@ export function ShopifyBoard({ supabase, session, isAdmin, hiddenTabs = null, em
         )}
         {data.status === "ready" && data.products.length > 0 && tab === "mejorar" && <Issues rows={rows} onPick={pick} />}
         {data.status === "ready" && data.products.length > 0 && tab === "productos" && <Products rows={rows} issue={issue} setIssue={setIssue} />}
+        {data.status === "ready" && data.products.length > 0 && tab === "precios" && <Prices products={data.products} variants={data.variants} mlItems={data.mlItems || []} />}
         {data.status === "ready" && data.products.length > 0 && tab === "operacion" && <Operation orders={data.orders || []} checkouts={data.checkouts || []} />}
         {data.status === "ready" && data.products.length > 0 && tab === "ordenar" && <Organize products={data.products} variants={data.variants} />}
       </div>

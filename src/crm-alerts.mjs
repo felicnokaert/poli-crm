@@ -4,6 +4,7 @@
 import { buildAlerts as mlSummaryAlerts, latestBySeller } from './ml-summary.mjs';
 import { boardRows, periodTotals, summarize, issueLabel } from './shopify-board.mjs';
 import { pendingOrders, recoverList } from './shopify-operation.mjs';
+import { priceCross, priceSummary } from './shopify-prices.mjs';
 import { integrationsStatus, needsAttention } from './integrations-status.mjs';
 import { recentShippingChanges } from './ml-shipping-change.mjs';
 
@@ -34,8 +35,17 @@ function competitorShippingAlerts(rows, now) {
   }));
 }
 
-function shopifyAlerts({ products, variants, orders, checkouts, days, now }) {
+function shopifyAlerts({ products, variants, orders, checkouts, days, now, mlItems = [] }) {
   const out = [];
+  // Regla de precios: Shopify = Mercado Libre − 10 % (solo avisa cuántos productos activos se salieron).
+  const prices = priceSummary(priceCross({ products, variants, mlItems }));
+  if (prices.toChangeActive > 0) {
+    out.push({
+      type: 'shopify-precio-ml', entity_id: '', source: 'shopify', severity: prices.toChangeActive >= 10 ? 'media' : 'baja',
+      title: `${prices.toChangeActive} variantes activas de Shopify fuera de la regla de precio (ML −10 %)`,
+      detail: `${prices.lower} para bajar y ${prices.raise} para subir. La propuesta está en Shopify → Precios vs ML.`, link: { view: 'shopify', tab: 'precios' },
+    });
+  }
   for (const order of pendingOrders(orders, now)) {
     const late = order.kind === 'retiro' ? `retiro sin retirar hace ${order.days} días` : order.hours >= 48 ? `sin despachar hace ${order.days} días` : `sin despachar hace ${order.hours} h`;
     out.push({
@@ -89,7 +99,7 @@ export function buildCrmAlerts(data = {}, now = Date.now()) {
     ...integrationAlerts(data.statusRows || [], now),
     ...mlAlerts({ mlItems: data.mlItems || [], mlMetrics: data.mlMetrics || [], mlNames: data.mlNames }),
     ...competitorShippingAlerts(data.competitors || [], now),
-    ...shopifyAlerts({ products: data.products || [], variants: data.variants || [], orders: data.orders || [], checkouts: data.checkouts || [], days: data.days || [], now }),
+    ...shopifyAlerts({ products: data.products || [], variants: data.variants || [], orders: data.orders || [], checkouts: data.checkouts || [], days: data.days || [], now, mlItems: data.mlItems || [] }),
   ];
   return list.sort((a, b) => SEVERITY[a.severity] - SEVERITY[b.severity]);
 }

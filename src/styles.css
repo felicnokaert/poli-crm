@@ -1410,3 +1410,8 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .attention-baja h3 { color: var(--color-text-muted); }
 .attention-panel .ml-alerts { margin: 0; }
 .attention-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.admin-user-card { display: grid; gap: 0; border: 1px solid var(--color-border); border-radius: 12px; }
+.admin-user-card .admin-user-row { border: 0; }
+.admin-user-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.admin-user-access { padding: 4px 12px 12px; border-top: 1px solid var(--color-border-light); }
+@media (max-width: 640px) { .admin-user-card .admin-user-row { flex-wrap: wrap; } .admin-user-actions { justify-content: flex-start; } }

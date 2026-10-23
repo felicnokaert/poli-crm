@@ -12,7 +12,6 @@ import { onlineConfigured, supabase } from "./online";
 import { SharedDirectory } from "./SharedDirectory.jsx";
 import { AdminUsers } from "./AdminUsers.jsx";
 import { DataHealth } from "./DataHealth.jsx";
-import { ModuleAccessPanel } from "./ModuleAccessPanel.jsx";
 import { WorkspaceCleanup } from "./WorkspaceCleanup.jsx";
 import { ErrorLog } from "./ErrorLog.jsx";
 import { MercadoLibreSync } from "./MercadoLibreSync.jsx";
@@ -446,7 +445,6 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
       </>)}
       {shown === "equipo" && onlineConfigured && isAdmin && (<>
         <AdminUsers supabase={supabase} session={session} adminEmails={CHANNEL_ADMINS} />
-        <ModuleAccessPanel supabase={supabase} />
         <WorkspaceCleanup session={session} />
       </>)}
       {shown === "conexiones" && onlineConfigured && isAdmin && (<>

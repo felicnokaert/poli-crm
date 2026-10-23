@@ -5,6 +5,7 @@ import { buildAlerts as mlSummaryAlerts, latestBySeller } from './ml-summary.mjs
 import { boardRows, periodTotals, summarize, issueLabel } from './shopify-board.mjs';
 import { pendingOrders, recoverList } from './shopify-operation.mjs';
 import { integrationsStatus, needsAttention } from './integrations-status.mjs';
+import { recentShippingChanges } from './ml-shipping-change.mjs';
 
 export const SEVERITY = { alta: 0, media: 1, baja: 2 };
 export const SEVERITY_LABEL = { alta: 'Urgente', media: 'Importante', baja: 'Para mejorar' };
@@ -21,6 +22,15 @@ function mlAlerts({ mlItems, mlMetrics, mlNames }) {
     severity: alert.level === 'urgent' ? 'alta' : 'baja',
     title: alert.text, detail: alert.detail || '',
     link: { view: 'mercadolibre', issue: alert.issue || '' },
+  }));
+}
+
+// Un competidor cambió de envío en los últimos 7 días (pasó a Full o a envío gratis): puede afectar nuestra posición.
+function competitorShippingAlerts(rows, now) {
+  return recentShippingChanges(rows, now).map((row) => ({
+    type: 'ml-envio-competidor', entity_id: row.id, source: 'ml', severity: 'media',
+    title: `${row.seller_nickname || 'Un competidor'} ${row.shipping_change}${row.title ? `: ${String(row.title).slice(0, 60)}` : ''}`,
+    detail: 'Un envío mejor suele mejorar su posición y sus ventas. Mirá si conviene igualarlo.', link: { view: 'mercadolibre' },
   }));
 }
 
@@ -78,6 +88,7 @@ export function buildCrmAlerts(data = {}, now = Date.now()) {
   const list = [
     ...integrationAlerts(data.statusRows || [], now),
     ...mlAlerts({ mlItems: data.mlItems || [], mlMetrics: data.mlMetrics || [], mlNames: data.mlNames }),
+    ...competitorShippingAlerts(data.competitors || [], now),
     ...shopifyAlerts({ products: data.products || [], variants: data.variants || [], orders: data.orders || [], checkouts: data.checkouts || [], days: data.days || [], now }),
   ];
   return list.sort((a, b) => SEVERITY[a.severity] - SEVERITY[b.severity]);

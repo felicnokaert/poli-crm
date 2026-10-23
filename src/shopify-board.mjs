@@ -68,11 +68,15 @@ export function summarize(rows = []) {
 
 export const SHOPIFY_SORTS = [['titulo', 'Nombre'], ['problemas', 'Más problemas'], ['stock', 'Menos stock'], ['precio', 'Mayor precio'], ['recientes', 'Cambiados hace poco']];
 
-export function filterRows(rows = [], { status = '', issue = '', query = '', sort = 'titulo' } = {}) {
+export function filterRows(rows = [], { status = '', issue = '', query = '', sort = 'titulo', vendor = '', type = '', stock = '' } = {}) {
   const words = plain(query).split(/\s+/).filter(Boolean);
   const out = rows.filter((row) => {
     if (status && row.product.status !== status) return false;
     if (issue && !row.issues.includes(issue)) return false;
+    if (vendor && row.product.vendor !== vendor) return false;
+    if (type && row.product.product_type !== type) return false;
+    if (stock === 'cero' && (row.product.total_inventory ?? 0) > 0) return false;
+    if (stock === 'con' && !((row.product.total_inventory ?? 0) > 0)) return false;
     if (!words.length) return true;
     const haystack = plain(`${row.product.title} ${row.product.vendor} ${row.product.product_type} ${row.product.tags} ${row.variants.map((variant) => variant.sku).join(' ')}`);
     return words.every((word) => haystack.includes(word));
@@ -96,4 +100,21 @@ export function periodTotals(days = [], length = 7, today) {
   const before = sum(within(length, length * 2));
   const change = (a, b) => (b > 0 ? (a - b) / b : null);
   return { current: now, previous: before, ordersChange: change(now.orders, before.orders), amountChange: change(now.amount, before.amount) };
+}
+
+// Marcas y tipos que existen, para los filtros.
+export function facets(rows = []) {
+  const list = (key) => [...new Set(rows.map((row) => row.product[key]).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+  return { vendors: list('vendor'), types: list('product_type') };
+}
+
+// CSV de lo que se ve (una fila por producto).
+const cell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+export function productsCsv(rows = []) {
+  const head = ['Producto', 'Estado', 'Marca', 'Tipo', 'Variantes', 'Precio mínimo', 'Precio máximo', 'Stock', 'SKUs', 'Le falta', 'Link'];
+  const lines = rows.map((row) => [
+    row.product.title, statusLabel(row.product.status), row.product.vendor, row.product.product_type, row.variants.length, row.minPrice, row.maxPrice, row.product.total_inventory,
+    row.variants.map((variant) => variant.sku).filter(Boolean).join(' '), row.issues.map(issueLabel).join(' | '), row.product.online_url,
+  ].map(cell).join(','));
+  return `\uFEFF${[head.map(cell).join(','), ...lines].join('\n')}`;
 }

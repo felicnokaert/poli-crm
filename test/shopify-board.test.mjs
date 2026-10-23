@@ -45,3 +45,16 @@ test('pedidos de 7 días contra los 7 anteriores', () => {
   assert.equal(result.previous.orders, 3);
   assert.equal(result.ordersChange, 1);
 });
+
+test('filtros por marca, tipo y stock; y CSV de lo que se ve', async () => {
+  const { facets, productsCsv } = await import('../src/shopify-board.mjs');
+  const rows = boardRows(products, variants);
+  assert.deepEqual(filterRows(rows, { vendor: 'Resinplast' }).map((row) => row.product.id), ['p2']);
+  assert.deepEqual(filterRows(rows, { type: 'Baldes' }).map((row) => row.product.id), ['p1']);
+  assert.deepEqual(filterRows(rows, { stock: 'cero', status: 'ACTIVE' }).map((row) => row.product.id), ['p2']);
+  assert.deepEqual(facets(rows).vendors, ['Grupo Poliplast', 'Resinplast']);
+  const csv = productsCsv(filterRows(rows, { status: 'ACTIVE' }));
+  assert.ok(csv.startsWith('﻿"Producto"'));
+  assert.match(csv, /"Balde plástico 20 L","Activo","Grupo Poliplast","Baldes","2"/);
+  assert.match(csv, /Sin descripción \| Sin título ni descripción SEO/);
+});

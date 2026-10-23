@@ -8,7 +8,7 @@ import { groupProposals, proposalSpec, proposalsCsv } from "./shopify-grouping.m
 import { DailyChart } from "./DailyChart.jsx";
 import { skuCleanup, skuCleanupCsv } from "./ml-sku-cleanup.mjs";
 import { DraftButton } from "./ShopifyDrafts.jsx";
-import { filterMissing, draftSpecs, missingFromShopify, missingReviewCsv, shopifyImportCsv } from "./shopify-missing.mjs";
+import { DECISION_LABEL, filterMissing, draftSpecs, missingFromShopify, missingReviewCsv, shopifyImportCsv } from "./shopify-missing.mjs";
 import { PRICE_STATES, DISCOUNT, filterPriceRows, priceCross, priceProposalCsv, priceSummary } from "./shopify-prices.mjs";
 import { PICKUP_LIMIT_DAYS, SHIP_LIMIT_HOURS, operationSummary, pendingOrders, recoverList, weeklyFunnel } from "./shopify-operation.mjs";
 
@@ -315,6 +315,22 @@ function Missing({ supabase, products, variants, session }) {
   const [query, setQuery] = useState("");
   const [view, setView] = useState("");
   const [open, setOpen] = useState("");
+  const [decisions, setDecisions] = useState({});
+  const [decideError, setDecideError] = useState("");
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(supabase.from("crm_system_status").select("detail").eq("key", "shopify-missing-decisions").maybeSingle())
+      .then(({ data }) => { if (alive && data?.detail && typeof data.detail === "object") setDecisions(data.detail); }).catch(() => {});
+    return () => { alive = false; };
+  }, [supabase]);
+  // Decidir sobre un producto: se ve al instante y se guarda en el servidor (vuelve atrás si falla).
+  const decide = async (sku, state, note = "") => {
+    const before = decisions;
+    setDecideError("");
+    setDecisions((current) => { const next = { ...current }; if (state === "volver") delete next[sku]; else next[sku] = { state, note, at: new Date().toISOString() }; return next; });
+    try { await callShopify({ op: "missing-decision", skus: [sku], state, note }, session); }
+    catch (error) { setDecisions(before); setDecideError(error.message); }
+  };
   useEffect(() => {
     let alive = true;
     readAll(() => supabase.from("ml_items").select("id,sku,title,status,price,sold_quantity,visits_30d,pictures_count,available_quantity,description,attributes,picture_url,thumbnail,permalink").eq("status", "active").order("id"))
@@ -323,13 +339,14 @@ function Missing({ supabase, products, variants, session }) {
     return () => { alive = false; };
   }, [supabase]);
   const result = useMemo(() => missingFromShopify({ products, variants, mlItems: full.items }), [products, variants, full.items]);
-  const shown = useMemo(() => filterMissing(result.rows, { query, view }), [result.rows, query, view]);
+  const shown = useMemo(() => filterMissing(result.rows, { query, view, decisions }), [result.rows, query, view, decisions]);
   const cleanup = useMemo(() => skuCleanup(full.items), [full.items]);
   if (full.status === "loading") return <div className="ml-skeleton" aria-busy="true"><i /><i /><i /></div>;
   if (full.status === "error") return <Empty title="No se pudieron leer las publicaciones de Mercado Libre" text={full.error} />;
   if (!full.items.length) return <Empty title="Faltan las publicaciones de Mercado Libre" text="Más → Datos → Mercado Libre → Actualizar todo." />;
   const { summary } = result;
-  const chips = [["", "Todos", result.rows.length], ["ventas", "Con ventas", summary.withSales], ["grupos", "Se agrupan", result.rows.filter((row) => row.group).length], ["sumar", "Se suman a uno existente", summary.joinExisting], ["dudosos", "Posible duplicado", summary.doubtful]];
+  const countOf = (key) => filterMissing(result.rows, { view: key, decisions }).length;
+  const chips = [["", "Pendientes"], ["ventas", "Con ventas"], ["grupos", "Se agrupan"], ["sumar", "Se suman a uno existente"], ["dudosos", "Posible duplicado"], ["decididos", "Decididos"]].map(([key, label]) => [key, label, countOf(key)]);
   return (
     <div className="content-stack">
       <section className="metric-grid ml-metric-grid">
@@ -347,15 +364,16 @@ function Missing({ supabase, products, variants, session }) {
           {chips.map(([key, label, count]) => <button key={key || "todos"} type="button" role="tab" aria-selected={view === key} className={view === key ? "selected" : ""} onClick={() => setView(key)}>{label} ({count})</button>)}
         </div>
         <div className="ml-toolbar">
-          <DraftButton session={session} className="primary" build={() => draftSpecs(shown).slice(0, 40)} label={`Crear en Shopify como borrador (${Math.min(draftSpecs(shown).length, 40)})`} confirmText={(count) => `Se van a crear ${count} producto(s) como BORRADOR en Shopify (con precio ML − 10 %, descripción, SEO y metacampos). No se publica nada ni se toca lo que ya existe. ¿Seguimos?`} />
+          <DraftButton session={session} className="primary" build={() => draftSpecs(shown.filter((row) => !decisions[row.sku])).slice(0, 40)} label={`Crear en Shopify como borrador (${Math.min(draftSpecs(shown.filter((row) => !decisions[row.sku])).length, 40)})`} confirmText={(count) => `Se van a crear ${count} producto(s) como BORRADOR en Shopify (con precio ML − 10 %, descripción, SEO y metacampos). No se publica nada ni se toca lo que ya existe. ¿Seguimos?`} />
           <button type="button" className="ghost" onClick={() => downloadText(`shopify-borradores-${argentinaToday()}.csv`, shopifyImportCsv(shown))}>CSV para importar como borrador</button>
           <button type="button" className="ghost" onClick={() => downloadText(`faltan-en-shopify-${argentinaToday()}.csv`, missingReviewCsv(shown))}>Hoja de revisión (todo lo sugerido)</button>
         </div>
+        {decideError && <p className="system-message" role="alert">No se pudo guardar la decisión: {decideError}</p>}
         {shown.length === 0 ? <Empty title="Nada para mostrar" text="Probá con otro filtro." /> : (
           <div className="table-scroll"><table className="sales-history-table ml-board-table">
             <thead><tr><th>Producto en ML</th><th>Vendidas</th><th>Visitas 30 d</th><th>Precio ML</th><th>Shopify sugerido</th><th>Qué hacer</th></tr></thead>
             <tbody>{shown.slice(0, 200).map((row) => (
-              <FragmentRow key={row.sku} row={row} open={open === row.sku} toggle={() => setOpen(open === row.sku ? "" : row.sku)} />
+              <FragmentRow key={row.sku} row={row} decision={decisions[row.sku]} onDecide={(state, note) => decide(row.sku, state, note)} open={open === row.sku} toggle={() => setOpen(open === row.sku ? "" : row.sku)} />
             ))}</tbody>
           </table></div>
         )}
@@ -390,9 +408,9 @@ function Missing({ supabase, products, variants, session }) {
   );
 }
 
-function FragmentRow({ row, open, toggle }) {
+function FragmentRow({ row, decision, onDecide, open, toggle }) {
   const doubtful = Boolean(row.twin || row.lookalike);
-  const action = doubtful ? "Revisar si ya está cargado" : row.joinsProduct ? `Sumar como variante a «${row.joinsProduct.title}»` : row.group ? `Crear con ${row.group.size} variantes (${row.group.options.join(" / ")})` : "Crear producto nuevo";
+  const action = decision ? DECISION_LABEL[decision.state] : doubtful ? "Revisar si ya está cargado" : row.joinsProduct ? `Sumar como variante a «${row.joinsProduct.title}»` : row.group ? `Crear con ${row.group.size} variantes (${row.group.options.join(" / ")})` : "Crear producto nuevo";
   return (
     <>
       <tr>
@@ -401,11 +419,23 @@ function FragmentRow({ row, open, toggle }) {
         <td data-label="Visitas 30 d">{number(row.visits)}</td>
         <td data-label="Precio ML">{row.permalink ? <a href={row.permalink} target="_blank" rel="noreferrer">{money(row.mlPrice)}</a> : money(row.mlPrice)}</td>
         <td data-label="Shopify sugerido">{row.price > 0 ? <strong>{money(row.price)}</strong> : "—"}</td>
-        <td data-label="Qué hacer"><span className={`badge ${doubtful ? "warn" : row.joinsProduct ? "" : "ok"}`}>{action}</span> <button type="button" className="ghost" onClick={toggle} aria-expanded={open}>{open ? "Ocultar" : "Ver propuesta"}</button></td>
+        <td data-label="Qué hacer"><span className={`badge ${decision ? "" : doubtful ? "warn" : row.joinsProduct ? "" : "ok"}`}>{action}</span> <button type="button" className="ghost" onClick={toggle} aria-expanded={open}>{open ? "Ocultar" : "Ver propuesta"}</button></td>
       </tr>
       {open && (
         <tr className="proposal-detail"><td colSpan={6}>
           <div className="small">
+            <div className="decision-row" role="group" aria-label="Qué hacemos con este producto">
+              {decision ? (
+                <><span>Decidido: <strong>{DECISION_LABEL[decision.state]}</strong>{decision.note ? ` (${decision.note})` : ""}</span> <button type="button" className="ghost" onClick={() => onDecide("volver")}>Volver a mostrar</button></>
+              ) : (
+                <>
+                  <button type="button" className="ghost" onClick={() => onDecide("existe", row.hint?.title || row.lookalike?.title || row.twin?.title || "")}>Ya existe en la tienda</button>
+                  <button type="button" className="ghost" onClick={() => onDecide("no_subir")}>No lo vamos a subir</button>
+                  <button type="button" className="ghost" onClick={() => onDecide("despues")}>Más tarde</button>
+                </>
+              )}
+            </div>
+            {row.hint && !decision && <p className="warn-line">¿Será «{row.hint.title}»{row.hint.status !== "ACTIVE" ? ` (${statusLabel(row.hint.status)})` : ""}? Se parece en el nombre. Si es el mismo, tocá "Ya existe en la tienda".</p>}
             {row.warnings.map((warning) => <p key={warning} className="warn-line">⚠ {warning}</p>)}
             <p><strong>Título sugerido:</strong> {row.title}</p>
             <p><strong>SEO:</strong> {row.seoTitle} — {row.seoDescription || "(sin texto)"}</p>

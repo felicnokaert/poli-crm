@@ -8,6 +8,7 @@ import { useTeamSharedNotes } from "./hooks/useSharedNotesSync";
 import { asksMlImprove, improveContext, improvePlan } from "./ml-improve.mjs";
 import { loadActiveItems, loadCompetition, loadHealth } from "./ml-improve-data.js";
 import { asksMlCompetition, competitionContext, competitionRows, trendsView } from "./ml-competition-view.mjs";
+import { catalogContext, catalogView } from "./ml-catalog-view.mjs";
 import { asksMlEconomics, economicsContext, economicsView } from "./ml-economics-view.mjs";
 import { loadEconomics } from "./ml-economics-data.js";
 import { asksLearning, learningContext, prospectLearning, routeFor, routesContext, teamNotes, teamNotesContext } from "./assistant-team.mjs";
@@ -451,6 +452,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
     if (wantsCompetition && mlData.competition) {
       const today = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
       parts.push(competitionContext(competitionRows({ ...mlData.competition, ours: mlData.items, today }), trendsView(mlData.competition.trends, mlData.items.map((item) => item.title))));
+      parts.push(catalogContext(catalogView(mlData.competition.catalog || [], { nickname: mlData.nickname })));
     }
     if (wantsEconomics && mlData.economics) parts.push(economicsContext(economicsView({ items: mlData.items, ...mlData.economics }), mlData.nickname));
     return parts.filter(Boolean).join("\n");

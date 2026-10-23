@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { adminFetch } from "./admin-api.mjs";
 import { competitionCsv, competitionRows, competitorSummary, trendsView } from "./ml-competition-view.mjs";
+import { catalogView } from "./ml-catalog-view.mjs";
 
 // Ventas → Mercado Libre → "Competencia" y "Tendencias" (23/10). Felipe pega links de publicaciones de la
 // competencia; cada día se guarda su precio y vendidas para ver cuánto venden y cómo mueven el precio, contra
@@ -10,7 +11,7 @@ import { competitionCsv, competitionRows, competitorSummary, trendsView } from "
 const money = (value) => (typeof value === "number" ? `$ ${Math.round(value).toLocaleString("es-AR")}` : "—");
 const signed = (value) => (value == null ? "—" : `${value > 0 ? "+" : ""}${value.toLocaleString("es-AR")} %`);
 const argentinaToday = () => new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
-const MISSING = /ml_competitor|ml_trends|does not exist|schema cache/i;
+const MISSING = /ml_competitor|ml_trends|ml_catalog_status|does not exist|schema cache/i;
 
 async function readAll(query) {
   const rows = [];
@@ -47,8 +48,10 @@ function useCompetitionData(supabase, reload) {
       readAll(() => supabase.from("ml_competitor_items").select("*").order("id")),
       readAll(() => supabase.from("ml_competitor_snapshots").select("item_id,taken_on,price,sold_quantity").gte("taken_on", since).order("item_id")),
       readAll(() => supabase.from("ml_trends").select("category_id,taken_on,category_name,path,keywords").gte("taken_on", since).order("category_id")),
+      // Sin la tabla nueva (SQL de docs/SQL_PENDIENTE_CATALOGO_2026-10-23.md) lo demás sigue andando.
+      readAll(() => supabase.from("ml_catalog_status").select("*").order("item_id")).catch((error) => (MISSING.test(String(error?.message || "")) ? null : [])),
     ])
-      .then(([competitors, snapshots, trends]) => { if (alive) setState({ status: "ready", competitors, snapshots, trends }); })
+      .then(([competitors, snapshots, trends, catalog]) => { if (alive) setState({ status: "ready", competitors, snapshots, trends, catalog }); })
       .catch((error) => { if (alive) setState({ status: MISSING.test(String(error?.message || "")) ? "missing" : "error", competitors: [], snapshots: [], trends: [] }); });
     return () => { alive = false; };
   }, [supabase, reload]);
@@ -70,11 +73,32 @@ export function MlCompetition({ supabase, session, isAdmin, items = [], nickname
   const ours = useMemo(() => items.filter((item) => item.status === "active"), [items]);
   const rows = useMemo(() => competitionRows({ competitors: data.competitors, snapshots: data.snapshots, ours, today }), [data, ours, today]);
   const summary = useMemo(() => competitorSummary(rows), [rows]);
+  const catalog = useMemo(() => catalogView(data.catalog || [], { nickname }), [data.catalog, nickname]);
+  const sellers = useMemo(() => [...new Set(items.map((item) => String(item.seller_id || "")).filter(Boolean))], [items]);
 
-  function discoverMessage(result) {
-    if (result.blocked) return `Mercado Libre no deja buscar a nuestra app: ${result.blocked}. No es un error del CRM: los socios de Mercado Libre (Administrado, Real Trends) tienen permisos que nuestra app no. Usá los reportes de Métricas → Competencia (Más → Datos → Mercado Libre).`;
-    const base = `Busqué en ${result.searched} categorías y sumé ${result.saved} publicaciones de otros vendedores (están vinculadas a la nuestra que más vende en cada categoría).`;
-    return result.errors?.length ? `${base} Sin resultado: ${result.errors.slice(0, 3).join("; ")}.` : base;
+  // Recorre las cuentas por tandas (cada pedido menos de 60 s) hasta revisar todas las publicaciones de catálogo.
+  async function refreshCatalog() {
+    setBusy(true); setMessage("");
+    const parts = [];
+    try {
+      for (const sellerId of sellers) {
+        const name = nickname[sellerId] || sellerId;
+        let offset = 0;
+        let last = null;
+        for (let guard = 0; guard < 60; guard += 1) {
+          setMessage(`${name}: revisando publicaciones de catálogo${last ? ` ${last.next} de ${last.total}` : ""}…`);
+          last = await callMl({ op: "catalog-refresh", sellerId, offset }, session);
+          offset = last.next;
+          if (last.done || !last.total) break;
+        }
+        parts.push(`${name} ${last?.total || 0}`);
+      }
+      setMessage(`Listo: publicaciones de catálogo revisadas (${parts.join(", ")}).`);
+    } catch (error) {
+      setMessage(MISSING.test(error.message) ? "Falta un paso: pegar el SQL de docs/SQL_PENDIENTE_CATALOGO_2026-10-23.md en Supabase (SQL Editor → Run)." : error.message);
+    }
+    setReload((value) => value + 1);
+    setBusy(false);
   }
 
   async function run(body, done) {
@@ -90,20 +114,24 @@ export function MlCompetition({ supabase, session, isAdmin, items = [], nickname
     <div className="content-stack">
       {isAdmin && (
         <section className="panel ml-competition-add">
-          <div className="panel-head"><div><span className="eyebrow">Seguimiento diario</span><h2>Sumar publicaciones de la competencia</h2>
-            <p className="muted small">Pegá links de publicaciones (o códigos MLA…), uno o varios. Cada día se guarda su precio y cuántas vendieron. Opcional: de quién son y cuál es la nuestra que compite (link o MLA). Es la competencia dentro de Mercado Libre; la de ventas directas sigue en Academia → Competencia.</p></div></div>
+          <div className="panel-head"><div><span className="eyebrow">Seguimiento diario</span><h2>Competencia en Mercado Libre</h2>
+            <p className="muted small">Mercado Libre no deja a nuestra app buscar ni leer publicaciones de otros vendedores (lo confirmó el diagnóstico: responde 403). Lo que sí deja es ver, en nuestras publicaciones de catálogo, quién más vende el mismo producto, a qué precio, quién gana y cuánto habría que bajar para ganar. Se revisa solo todos los días; con el botón, ahora. Es la competencia dentro de Mercado Libre; la de ventas directas sigue en Academia → Competencia.</p></div></div>
+          <div className="panel-head-actions">
+            <button type="button" className="primary" disabled={busy || !sellers.length} onClick={refreshCatalog}>Traer competencia del catálogo</button>
+            <button type="button" className="secondary" disabled={busy} title="Prueba qué deja leer Mercado Libre a nuestra app y muestra el resultado de cada prueba" onClick={() => run({ op: "competitors-probe" }, (result) => { setProbe(result.results || []); return "Diagnóstico listo (abajo)."; })}>Probar qué deja Mercado Libre</button>
+            <button type="button" className="secondary" disabled={!rows.length} onClick={() => downloadCsv(rows)}>Descargar CSV</button>
+          </div>
+          <details className="small">
+            <summary>Pegar links de publicaciones (Mercado Libre hoy lo bloquea)</summary>
           <textarea rows={3} value={text} onChange={(event) => setText(event.target.value)} placeholder="https://articulo.mercadolibre.com.ar/MLA-…" aria-label="Links de la competencia" />
           <div className="ml-competition-form">
             <input value={who} onChange={(event) => setWho(event.target.value)} placeholder="Vendedor en ML (si lo dejás vacío, se usa su apodo)" aria-label="Vendedor competidor en Mercado Libre" />
             <input value={ourItem} onChange={(event) => setOurItem(event.target.value)} placeholder="Nuestra publicación (link o MLA, opcional)" aria-label="Nuestra publicación" />
           </div>
           <div className="panel-head-actions">
-            <button type="button" className="primary" disabled={busy || !text.trim()} onClick={() => run({ op: "competitors-add", text, competitorName: who, ourItemId: ourItem }, (result) => { setText(""); if (result.blocked && !result.saved) return "Mercado Libre no deja a nuestra app leer publicaciones de otros vendedores (respondió 403). No es un error del CRM: usá los reportes de Métricas → Competencia (Más → Datos → Mercado Libre)."; return `Listo: ${result.saved} publicaciones en seguimiento${result.missing?.length ? `; no se encontraron ${result.missing.length}` : ""}${result.products ? `; ${result.products} links de catálogo no sirven (pegá el de la publicación)` : ""}.`; })}>Sumar</button>
-            <button type="button" className="secondary" disabled={busy} title="Prueba la búsqueda de Mercado Libre de varias formas y muestra qué deja hacer a nuestra app" onClick={() => run({ op: "competitors-probe" }, (result) => { setProbe(result.results || []); return "Diagnóstico listo (abajo)."; })}>Probar qué deja Mercado Libre</button>
-            <button type="button" className="secondary" disabled={busy} title="Busca en Mercado Libre, por cada una de tus categorías que más venden, qué publican otros vendedores y los sigue solos" onClick={() => run({ op: "competitors-discover" }, discoverMessage)}>Descubrir competencia</button>
-            <button type="button" className="secondary" disabled={!rows.length} onClick={() => downloadCsv(rows)}>Descargar CSV</button>
-            <button type="button" className="secondary" disabled={busy || !rows.length} onClick={() => run({ op: "competitors-refresh" }, (result) => `Precios al día: ${result.saved} publicaciones.`)}>Actualizar ahora</button>
+            <button type="button" className="secondary" disabled={busy || !text.trim()} onClick={() => run({ op: "competitors-add", text, competitorName: who, ourItemId: ourItem }, (result) => { setText(""); if (result.blocked && !result.saved) return "Mercado Libre no deja a nuestra app leer publicaciones de otros vendedores (respondió 403). No es un error del CRM: usá los reportes de Métricas → Competencia (Más → Datos → Mercado Libre)."; return `Listo: ${result.saved} publicaciones en seguimiento${result.missing?.length ? `; no se encontraron ${result.missing.length}` : ""}${result.products ? `; ${result.products} links de catálogo no sirven (pegá el de la publicación)` : ""}.`; })}>Sumar</button>
           </div>
+          </details>
           {message && <p className="muted small" role="status">{message}</p>}
           {probe && (
             <div className="table-scroll"><table className="sales-history-table" aria-label="Diagnóstico de la búsqueda">
@@ -113,6 +141,7 @@ export function MlCompetition({ supabase, session, isAdmin, items = [], nickname
           )}
         </section>
       )}
+      <CatalogPanel catalog={catalog} missing={data.catalog === null} isAdmin={isAdmin} />
       {summary.length > 0 && (
         <section className="panel">
           <div className="panel-head"><div><h2>Por competidor</h2><p className="muted small">Vendidas en 30 días = diferencia entre la foto de hoy y la de hace 30 días (se completa con los días de seguimiento; Mercado Libre puede redondear las vendidas de otros).</p></div></div>
@@ -143,6 +172,49 @@ export function MlCompetition({ supabase, session, isAdmin, items = [], nickname
         )}
       </section>
     </div>
+  );
+}
+
+const STATE_CLASS = { bad: "badge bad", warn: "badge warn", good: "badge ok", muted: "badge" };
+
+function CatalogPanel({ catalog, missing, isAdmin }) {
+  const [onlyLosing, setOnlyLosing] = useState(true);
+  if (missing) return isAdmin ? <section className="panel"><h2>Catálogo: quién gana</h2><p className="muted">Falta un paso: pegar el SQL de docs/SQL_PENDIENTE_CATALOGO_2026-10-23.md en Supabase (SQL Editor → Run).</p></section> : null;
+  const { rows, counts } = catalog;
+  const shown = onlyLosing ? rows.filter((row) => row.state.order <= 1) : rows;
+  return (
+    <section className="panel">
+      <div className="panel-head"><div><span className="eyebrow">Publicaciones de catálogo</span><h2>Catálogo: quién gana</h2>
+        <p className="muted small">En el catálogo varios vendedores compiten en la misma página de producto y Mercado Libre muestra a uno solo arriba (el que "gana"). Dato de Mercado Libre, se revisa una vez por día.</p></div></div>
+      {counts.total === 0 ? <p className="muted">Todavía no hay datos{isAdmin ? ': tocá "Traer competencia del catálogo".' : "."}</p> : (
+        <>
+          <div className="ml-catalog-counts">
+            <div><strong>{counts.total}</strong><span>en catálogo</span></div>
+            <div className="bad"><strong>{counts.losing}</strong><span>perdemos</span></div>
+            <div className="warn"><strong>{counts.sharing}</strong><span>compartimos</span></div>
+            <div className="good"><strong>{counts.winning}</strong><span>ganamos</span></div>
+            {counts.alone > 0 && <div><strong>{counts.alone}</strong><span>sin competencia</span></div>}
+          </div>
+          <label className="small"><input type="checkbox" checked={onlyLosing} onChange={(event) => setOnlyLosing(event.target.checked)} /> Solo las que perdemos o compartimos</label>
+          {shown.length === 0 ? <p className="muted small">Ganamos en todas. 🎉</p> : (
+            <div className="table-scroll"><table className="sales-history-table">
+              <thead><tr><th>Producto</th><th>Estado</th><th>Nuestro precio</th><th>Precio para ganar</th><th>Quién gana</th><th>Más barato de otro</th><th>Otros vendedores</th></tr></thead>
+              <tbody>{shown.map((row) => (
+                <tr key={row.item_id}>
+                  <td><a href={row.permalink} target="_blank" rel="noreferrer">{String(row.product_name).slice(0, 60)} <ExternalLink size={11} /></a><div className="muted small">{row.account ? <AccountTag name={row.account} /> : null} {row.item_id}</div></td>
+                  <td><span className={STATE_CLASS[row.state.tone]}>{row.state.label}</span></td>
+                  <td>{money(row.our_price == null ? null : Number(row.our_price))}</td>
+                  <td>{money(row.price_to_win == null ? null : Number(row.price_to_win))}{row.cut ? <div className="muted small">bajar {money(row.cut.amount)} ({Math.abs(row.cut.pct).toLocaleString("es-AR")} %)</div> : null}</td>
+                  <td>{row.winner || "—"}{row.winner_price != null ? <div className="muted small">{money(Number(row.winner_price))}</div> : null}</td>
+                  <td>{money(row.cheapest_price == null ? null : Number(row.cheapest_price))}{row.vsCheapest != null && row.vsCheapest !== 0 ? <div className="muted small">{row.vsCheapest > 0 ? `estamos ${row.vsCheapest.toLocaleString("es-AR")} % arriba` : `estamos ${Math.abs(row.vsCheapest).toLocaleString("es-AR")} % abajo`}</div> : null}</td>
+                  <td>{row.others_count ?? "—"}</td>
+                </tr>
+              ))}</tbody>
+            </table></div>
+          )}
+        </>
+      )}
+    </section>
   );
 }
 

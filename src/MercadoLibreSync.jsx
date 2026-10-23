@@ -93,8 +93,8 @@ export function MercadoLibreSync({ supabase, session }) {
       }
     }
   }
-  const missingSql = (text) => /ml_item_health|ml_competitor|ml_trends|ml_item_economics|team_shared_notes|does not exist|schema cache/i.test(String(text || ""));
-  const SQL_HINT = "falta pegar el SQL de docs/SQL_PENDIENTE_2026-10-23.md en Supabase";
+  const missingSql = (text) => /ml_item_health|ml_competitor|ml_catalog_status|ml_trends|ml_item_economics|team_shared_notes|does not exist|schema cache/i.test(String(text || ""));
+  const SQL_HINT = "falta pegar el SQL de docs/SQL_PENDIENTE_CATALOGO_2026-10-23.md en Supabase";
   // Corto (21/10, Felipe: "no me gusta que muestre todo este cartel"): hasta 2 problemas y cuántos más.
   const shortList = (problems) => { const list = [...problems]; return list.length ? ` Faltó: ${list.slice(0, 2).join(" · ")}${list.length > 2 ? ` y ${list.length - 2} más` : ""}.` : ""; };
 
@@ -138,7 +138,18 @@ export function MercadoLibreSync({ supabase, session }) {
       done.push(`${name} ${count.items || 0} publicaciones`);
     }
     setProgress("Competencia en Mercado Libre…");
-    try { await callApi(session, { op: "competitors-refresh" }); } catch (competitionError) { if (missingSql(competitionError.message)) sqlMissing = true; else failed.push(`competencia: ${competitionError.message}`); }
+    // 23/10: la competencia que deja ver Mercado Libre es la del catálogo (otros vendedores del mismo producto).
+    for (const account of accounts || []) {
+      try {
+        let offset = 0;
+        for (let guard = 0; guard < 60; guard += 1) {
+          const result = await callApi(session, { op: "catalog-refresh", sellerId: account.seller_id, offset });
+          setProgress(`${account.nickname || account.seller_id} · Competencia del catálogo: ${result.next} de ${result.total}…`);
+          offset = result.next;
+          if (result.done || !result.total) break;
+        }
+      } catch (competitionError) { if (missingSql(competitionError.message)) sqlMissing = true; else failed.push(`competencia ${account.nickname || ""}: ${competitionError.message}`); }
+    }
     setProgress("Tendencias de búsqueda…");
     try {
       const result = await callApi(session, { op: "trends-refresh" });

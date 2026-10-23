@@ -31,6 +31,7 @@ import { Empty } from "./ui-primitives";
 import { today } from "./app-shared";
 import { todayPlan } from "./today-plan.mjs";
 import { TaskList } from "./Tasks";
+import { IntegrationsAlert } from "./IntegrationsStatus.jsx";
 
 const AUTO_TASK_SOURCES = new Set([
   AUTO_HOT_LEAD_TASK_SOURCE,
@@ -599,6 +600,7 @@ function DashboardBase({
       {supabase && <OverdueCard supabase={supabase} clients={clients} onNavigate={onNavigate} />}
       <AlertsPanel hotLeads={hotLeads} coldQuotes={coldQuotes} expiredQuotes={expiredQuotes} staleClients={staleClients} repurchaseRadar={repurchaseRadar} onNavigate={onNavigate} />
       <AutomationSummary tasks={tasks} cronStatus={cronStatus} />
+      {supabase && isAdmin && <IntegrationsAlert supabase={supabase} onNavigate={onNavigate} />}
     </div>
   );
 }

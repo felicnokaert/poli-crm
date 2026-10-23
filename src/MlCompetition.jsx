@@ -72,7 +72,7 @@ export function MlCompetition({ supabase, session, isAdmin, items = [], nickname
   const summary = useMemo(() => competitorSummary(rows), [rows]);
 
   function discoverMessage(result) {
-    if (result.blocked) return `Mercado Libre no deja buscar a nuestra app: ${result.blocked}. Pegame este aviso tal cual y vemos el plan B (pegar los reportes de Métricas → Competencia).`;
+    if (result.blocked) return `Mercado Libre no deja buscar a nuestra app: ${result.blocked}. No es un error del CRM: los socios de Mercado Libre (Administrado, Real Trends) tienen permisos que nuestra app no. Usá los reportes de Métricas → Competencia (Más → Datos → Mercado Libre).`;
     const base = `Busqué en ${result.searched} categorías y sumé ${result.saved} publicaciones de otros vendedores (están vinculadas a la nuestra que más vende en cada categoría).`;
     return result.errors?.length ? `${base} Sin resultado: ${result.errors.slice(0, 3).join("; ")}.` : base;
   }
@@ -98,8 +98,8 @@ export function MlCompetition({ supabase, session, isAdmin, items = [], nickname
             <input value={ourItem} onChange={(event) => setOurItem(event.target.value)} placeholder="Nuestra publicación (link o MLA, opcional)" aria-label="Nuestra publicación" />
           </div>
           <div className="panel-head-actions">
-            <button type="button" className="primary" disabled={busy || !text.trim()} onClick={() => run({ op: "competitors-add", text, competitorName: who, ourItemId: ourItem }, (result) => { setText(""); return `Listo: ${result.saved} publicaciones en seguimiento${result.missing?.length ? `; no se encontraron ${result.missing.length}` : ""}${result.products ? `; ${result.products} links de catálogo no sirven (pegá el de la publicación)` : ""}.`; })}>Sumar</button>
-            <button type="button" className="secondary" disabled={busy} title="Prueba la búsqueda de Mercado Libre de varias formas y muestra qué deja hacer a nuestra app" onClick={() => run({ op: "competitors-probe" }, (result) => { setProbe(result.results || []); return "Diagnóstico listo (abajo)."; })}>Probar búsqueda</button>
+            <button type="button" className="primary" disabled={busy || !text.trim()} onClick={() => run({ op: "competitors-add", text, competitorName: who, ourItemId: ourItem }, (result) => { setText(""); if (result.blocked && !result.saved) return "Mercado Libre no deja a nuestra app leer publicaciones de otros vendedores (respondió 403). No es un error del CRM: usá los reportes de Métricas → Competencia (Más → Datos → Mercado Libre)."; return `Listo: ${result.saved} publicaciones en seguimiento${result.missing?.length ? `; no se encontraron ${result.missing.length}` : ""}${result.products ? `; ${result.products} links de catálogo no sirven (pegá el de la publicación)` : ""}.`; })}>Sumar</button>
+            <button type="button" className="secondary" disabled={busy} title="Prueba la búsqueda de Mercado Libre de varias formas y muestra qué deja hacer a nuestra app" onClick={() => run({ op: "competitors-probe" }, (result) => { setProbe(result.results || []); return "Diagnóstico listo (abajo)."; })}>Probar qué deja Mercado Libre</button>
             <button type="button" className="secondary" disabled={busy} title="Busca en Mercado Libre, por cada una de tus categorías que más venden, qué publican otros vendedores y los sigue solos" onClick={() => run({ op: "competitors-discover" }, discoverMessage)}>Descubrir competencia</button>
             <button type="button" className="secondary" disabled={!rows.length} onClick={() => downloadCsv(rows)}>Descargar CSV</button>
             <button type="button" className="secondary" disabled={busy || !rows.length} onClick={() => run({ op: "competitors-refresh" }, (result) => `Precios al día: ${result.saved} publicaciones.`)}>Actualizar ahora</button>

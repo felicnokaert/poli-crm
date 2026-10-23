@@ -57,3 +57,12 @@ test('competencia: precio y vendidas contra hace 7 y 30 días, y contra la nuest
   assert.ok(!asksMlCompetition('competidores de espuma'));
   assert.ok(asksMlCompetition('que vendedores de ml nos compiten'));
 });
+
+test('competencia: si Mercado Libre bloquea la publicación (403 adentro) se cuenta aparte', async () => {
+  const get = async (path) => (path.startsWith('/items') ? [{ code: 403, body: { message: 'forbidden' } }, { code: 404, body: { id: 'MLA2' } }] : {});
+  const store = { upsert: async () => {} };
+  const result = await refreshCompetitors(['MLA1', 'MLA2'], { get, token: 't', store, today: '2026-10-23' });
+  assert.equal(result.saved, 0);
+  assert.equal(result.blocked, 1);
+  assert.deepEqual(result.missing, ['MLA2']);
+});

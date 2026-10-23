@@ -1,4 +1,5 @@
 import { Building2, Calculator, ChevronRight, ClipboardList, Database, FileCheck2, GraduationCap, Inbox, LayoutDashboard, ListChecks, MapPin, MessageCircle, ReceiptText, Search, ShoppingBag, Store, UserCog } from "lucide-react";
+import { useEffect } from "react";
 import { onlineConfigured } from "./online";
 
 // Menú lateral: 6 grupos (Hoy, Ventas, Canales online, Cartera, Aprender, Más). Salió de App.jsx (QA 16/10).
@@ -36,6 +37,12 @@ export const NAV_GROUPS = [
 export const NAV_ITEMS = NAV_GROUPS.flatMap(([, items]) => items);
 
 export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNavGroups, narrowScreen, overdueTaskCount, inboxSignalCount }) {
+  // Al entrar a una pantalla se abre su sección; después se puede cerrar igual (23/10, Felipe: "Canales online
+  // no deja minimizarlo": antes la sección donde estabas parado quedaba siempre abierta y el botón no hacía nada).
+  useEffect(() => {
+    const group = NAV_GROUPS.find(([, items]) => items.some(([id]) => id === view))?.[0];
+    if (group) setCollapsedNavGroups((current) => (current.includes(group) ? current.filter((item) => item !== group) : current));
+  }, [view, setCollapsedNavGroups]);
   return (
   <aside className="sidebar">
     <div className="brand">
@@ -47,13 +54,8 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
     </div>
     <nav>
       {NAV_GROUPS.map(([group, items]) => {
-        // La sección donde estás parado se ve abierta sola, sin importar
-        // si la habías colapsado antes - así nunca "desaparece" de
-        // adentro tuyo la pantalla en la que estás. El resto respeta lo
-        // que el usuario eligió.
-        const isActiveGroup = items.some(([id]) => id === view);
         // En el celular los títulos de sección no se muestran, así que nunca se colapsa.
-        const collapsed = collapsedNavGroups.includes(group) && !isActiveGroup && !narrowScreen;
+        const collapsed = collapsedNavGroups.includes(group) && !narrowScreen;
         return (
           <div className={`nav-group ${collapsed ? "collapsed" : ""}`} key={group}>
             <button

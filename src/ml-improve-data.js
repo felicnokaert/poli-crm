@@ -19,10 +19,11 @@ export const loadActiveItems = (supabase) => readPaged(() => supabase.from("ml_i
 // 23/10: competencia y tendencias (últimos 40 días de fotos).
 export async function loadCompetition(supabase) {
   const since = new Date(Date.now() - 40 * 86400000).toISOString().slice(0, 10);
-  const [competitors, snapshots, trends] = await Promise.all([
+  const [competitors, snapshots, trends, catalog] = await Promise.all([
     readPaged(() => supabase.from("ml_competitor_items").select("*").order("id")),
     readPaged(() => supabase.from("ml_competitor_snapshots").select("item_id,taken_on,price,sold_quantity").gte("taken_on", since).order("item_id")),
     readPaged(() => supabase.from("ml_trends").select("category_id,taken_on,category_name,path,keywords").gte("taken_on", since).order("category_id")),
+    readPaged(() => supabase.from("ml_catalog_status").select("*").order("item_id")).catch(() => []),
   ]);
-  return { competitors, snapshots, trends };
+  return { competitors, snapshots, trends, catalog };
 }

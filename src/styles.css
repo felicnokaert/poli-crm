@@ -794,7 +794,12 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .sales-history-summary > div { border: 1px solid var(--color-border); border-radius: 12px; padding: 9px 12px; display: grid; gap: 2px; }
 .sales-history-summary span { font-size: .78rem; color: var(--brand-gray); }
 .sales-history-summary strong { font-size: 1.15rem; }
-.sales-chart { width: 100%; height: auto; display: block; color: var(--color-forest); }
+.sales-chart { width: 100%; max-width: 760px; max-height: 170px; height: auto; display: block; margin: 4px auto 0; color: var(--color-forest); }
+.sales-chart .sales-bar rect:last-of-type { transition: opacity .15s ease; }
+.sales-chart .sales-bar:hover rect:last-of-type, .sales-chart .sales-bar:focus-visible rect:last-of-type { opacity: .8; }
+/* Solo el mejor período muestra su valor; el resto aparece al pasar el mouse (y siempre está en el título de la barra). */
+.sales-chart .sales-bar-value { opacity: 0; transition: opacity .15s ease; }
+.sales-chart .sales-bar-value.best, .sales-chart .sales-bar:hover .sales-bar-value, .sales-chart .sales-bar:focus-visible .sales-bar-value { opacity: 1; }
 .sales-bar { cursor: pointer; outline: none; }
 .sales-bar:hover rect:nth-of-type(2), .sales-bar:focus-visible rect:nth-of-type(2) { filter: brightness(1.12); }
 .sales-bar:focus-visible rect:first-of-type { stroke: var(--brand-red); stroke-width: 2; fill: rgba(237,28,36,.06); }
@@ -1293,3 +1298,23 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .ic-trend > svg:first-child { display: inline; }
 .ic-table .secondary { padding: 6px 12px; font-size: 0.85rem; white-space: nowrap; }
 .ic-spark { display: block; margin-top: 2px; }
+
+/* 23/10: competencia por catálogo (Ventas → Mercado Libre → Competencia). */
+.ml-board .badge.bad { background: #fde2e2; color: #9b1c1c; }
+.ml-board .badge.ok { background: #dcf3e1; color: #1d6b32; }
+.ml-catalog-counts { display: flex; flex-wrap: wrap; gap: 10px; margin: 6px 0 10px; }
+.ml-catalog-counts > div { min-width: 92px; padding: 8px 12px; border-radius: 10px; background: var(--color-bg-soft); display: flex; flex-direction: column; gap: 2px; }
+.ml-catalog-counts strong { font-size: 20px; line-height: 1.1; }
+.ml-catalog-counts span { font-size: 12px; opacity: .7; }
+.ml-catalog-counts .bad strong { color: #c81e1e; }
+.ml-catalog-counts .warn strong { color: #b26a00; }
+.ml-catalog-counts .good strong { color: #1d7a3a; }
+.ml-competition-add details { margin-top: 10px; }
+.ml-competition-add details summary { cursor: pointer; opacity: .75; }
+
+/* 23/10: Más → Datos → Actualizaciones automáticas. */
+.integration-state { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; font-size: 13px; }
+.integration-state.ok { color: #1d7a3a; }
+.integration-state.warn { color: #b26a00; }
+.integration-state.bad { color: #c81e1e; }
+.integration-problems { margin: 4px 0 0; padding-left: 16px; }

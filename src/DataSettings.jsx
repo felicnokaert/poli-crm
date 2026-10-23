@@ -30,6 +30,7 @@ import { clientsToCsv, mergeClientsCsv } from "./client-csv.mjs";
 import { readFileSmart } from "./text-decode.mjs";
 import { CHANNEL_ADMINS, channelsForEmail, isChannelAdmin } from "./user-channels.mjs";
 import { ChannelsAdmin } from "./ChannelsAdmin";
+import { DATA_SECTION_KEY, IntegrationsStatus } from "./IntegrationsStatus.jsx";
 import { CHANNELS, initialState, today } from "./app-shared";
 
 // `data` y `session` llegan como la misma referencia mientras nadie edita
@@ -42,12 +43,18 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
   // Pestañas (QA 16/10: para Felipe eran ~10 paneles apilados). Cada uno ve solo las que puede usar.
   const sections = [
     ["respaldos", "Respaldos"],
+    ...(onlineConfigured && isAdmin ? [["automaticas", "Actualizaciones automáticas"]] : []),
     ...(onlineConfigured ? [["directorio", "Directorio"]] : []),
     ...(myChannels.length > 0 || (onlineConfigured && isAdmin) ? [["whatsapp", "WhatsApp"]] : []),
     ...(onlineConfigured && isAdmin ? [["equipo", "Equipo y cuentas"], ["mercadolibre", "Mercado Libre"], ["contabilium", "Contabilium"], ["asistente", "Asistente"]] : []),
     ...((onlineConfigured && isAdmin) || devPanel ? [["errores", "Errores y pruebas"]] : []),
   ];
-  const [section, setSection] = useState(() => (mlCallbackParams() ? "mercadolibre" : "respaldos"));
+  const [section, setSection] = useState(() => {
+    if (mlCallbackParams()) return "mercadolibre";
+    // El aviso de Inicio abre directo esta sección.
+    try { const wanted = sessionStorage.getItem(DATA_SECTION_KEY); if (wanted) { sessionStorage.removeItem(DATA_SECTION_KEY); return wanted; } } catch { /* sin almacenamiento */ }
+    return "respaldos";
+  });
   const shown = sections.some(([key]) => key === section) ? section : "respaldos";
   const [message, setMessage] = useState("");
   const [messageIsError, setMessageIsError] = useState(false);
@@ -440,6 +447,7 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
         <AdminUsers supabase={supabase} session={session} adminEmails={CHANNEL_ADMINS} />
         <WorkspaceCleanup session={session} />
       </>)}
+      {shown === "automaticas" && onlineConfigured && isAdmin && <IntegrationsStatus supabase={supabase} />}
       {shown === "mercadolibre" && onlineConfigured && isAdmin && <MercadoLibreSync supabase={supabase} session={session} />}
       {shown === "contabilium" && onlineConfigured && isAdmin && <ContabiliumTest session={session} />}
       {shown === "asistente" && onlineConfigured && isAdmin && <AssistantTraining supabase={supabase} />}

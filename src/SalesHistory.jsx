@@ -24,10 +24,12 @@ export function SalesHistory({ sales = [], goals = [], units = {}, unitNames = [
   const summary = seriesSummary(series, metric);
   const format = GOAL_METRICS[metric].format;
   const max = Math.max(1, ...series.map((item) => Math.max(item.value, item.target || 0)));
-  const W = 720, H = 230, top = 26, bottom = 28, left = 8, right = 8;
+  // 23/10 (Felipe: "el gráfico es muy grande e invasivo"): más bajo, barras finas y solo el valor del mejor período.
+  const W = 760, H = 150, top = 18, bottom = 22, left = 8, right = 8;
   const plotH = H - top - bottom;
   const slot = (W - left - right) / series.length;
-  const barW = Math.min(46, slot * 0.62);
+  const barW = Math.min(24, slot * 0.46);
+  const bestKey = summary.best?.key;
   const pick = (item) => onPickPeriod?.(granularity === "month" ? "month" : granularity === "quarter" ? "quarter" : "all", item.key, item);
 
   return (
@@ -53,7 +55,9 @@ export function SalesHistory({ sales = [], goals = [], units = {}, unitNames = [
         <div><span>Mejor período</span><strong>{summary.best ? `${summary.best.label} · ${compact(summary.best.value, metric)}` : "—"}</strong></div>
       </div>
       <svg className="sales-chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Gráfico ${GRANULARITIES[granularity].toLowerCase()} de ${GOAL_METRICS[metric].label.toLowerCase()} ${year}`}>
-        <line x1={left} x2={W - right} y1={top + plotH} y2={top + plotH} stroke="currentColor" opacity=".2" />
+        <defs><linearGradient id="sales-bar-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#ed1c24" /><stop offset="1" stopColor="#ed1c24" stopOpacity=".55" /></linearGradient><linearGradient id="sales-bar-hit" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#2e7d32" /><stop offset="1" stopColor="#2e7d32" stopOpacity=".55" /></linearGradient></defs>
+        {[0.5, 1].map((part) => <line key={part} x1={left} x2={W - right} y1={top + plotH - plotH * part} y2={top + plotH - plotH * part} stroke="currentColor" opacity=".07" />)}
+        <line x1={left} x2={W - right} y1={top + plotH} y2={top + plotH} stroke="currentColor" opacity=".18" />
         {series.map((item, index) => {
           const x = left + slot * index + (slot - barW) / 2;
           const h = (item.value / max) * plotH;
@@ -63,10 +67,10 @@ export function SalesHistory({ sales = [], goals = [], units = {}, unitNames = [
             <g key={item.key} className="sales-bar" role="button" tabIndex={0} aria-label={`${item.label}: ${format(item.value)}${item.target ? `, objetivo ${format(item.target)}` : ""}`} onClick={() => pick(item)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); pick(item); } }}>
               <title>{`${item.label} ${year}: ${format(item.value)} · ${item.count} ${item.count === 1 ? "venta" : "ventas"}${item.target ? ` · objetivo ${format(item.target)}` : ""}`}</title>
               <rect x={left + slot * index} y={top} width={slot} height={plotH + bottom} fill="transparent" />
-              <rect x={x} y={y} width={barW} height={Math.max(h, item.value > 0 ? 2 : 0)} rx="5" fill={hit ? "#2e7d32" : "#ed1c24"} opacity={item.value > 0 ? 1 : .15} />
-              {item.target ? <line x1={x - 6} x2={x + barW + 6} y1={top + plotH - (item.target / max) * plotH} y2={top + plotH - (item.target / max) * plotH} stroke="currentColor" strokeWidth="2.5" strokeDasharray="4 3" /> : null}
-              {item.value > 0 && <text x={x + barW / 2} y={y - 6} textAnchor="middle" fontSize="10" fontWeight="700" fill="currentColor">{compact(item.value, metric)}</text>}
-              <text x={x + barW / 2} y={H - 9} textAnchor="middle" fontSize="11" fill="currentColor" opacity=".7">{item.label}</text>
+              <rect x={x} y={y} width={barW} height={Math.max(h, item.value > 0 ? 2 : 0)} rx="4" fill={hit ? "url(#sales-bar-hit)" : "url(#sales-bar-fill)"} opacity={item.value > 0 ? 1 : .15} />
+              {item.target ? <line x1={x - 4} x2={x + barW + 4} y1={top + plotH - (item.target / max) * plotH} y2={top + plotH - (item.target / max) * plotH} stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 3" opacity=".6" /> : null}
+              {item.value > 0 && <text className={item.key === bestKey ? "sales-bar-value best" : "sales-bar-value"} x={x + barW / 2} y={y - 5} textAnchor="middle" fontSize="9" fontWeight="700" fill="currentColor">{compact(item.value, metric)}</text>}
+              <text x={x + barW / 2} y={H - 6} textAnchor="middle" fontSize="10" fill="currentColor" opacity=".6">{item.label}</text>
             </g>
           );
         })}

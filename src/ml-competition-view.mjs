@@ -85,7 +85,7 @@ export function trendsView(trends = [], ourTitles = []) {
 const ML_WORDS = /\b(mercado ?libre|meli|ml|publicacion\w*|vendedores?)\b/;
 export const asksMlCompetition = (query) => {
   const text = plain(query);
-  return /\b(tendencia\w*|lo mas buscado|mas buscad\w*|que buscan|que se busca)\b/.test(text) || (/\b(competencia|competidor\w*|compit\w*|rivales?)\b/.test(text) && ML_WORDS.test(text));
+  return /\b(tendencia\w*|lo mas buscado|mas buscad\w*|que buscan|que se busca)\b/.test(text) || (/\b(competencia|competidor\w*|compit\w*|rivales?|catalogo|precio para ganar|quien gana|nos ganan?|perdemos)\b/.test(text) && ML_WORDS.test(text));
 };
 
 export function competitionContext(rows = [], trends = [], { max = 10 } = {}) {

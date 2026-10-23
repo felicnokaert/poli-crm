@@ -1,4 +1,5 @@
 import { canSee } from "./module-access.mjs";
+import { TACOS_STATE, TACOS_TARGET, tacosFor } from "./ml-tacos.mjs";
 import { useEffect, useMemo, useState } from "react";
 import { MlImprove } from "./MlImprove.jsx";
 import { MlCompetition, MlTrends } from "./MlCompetition.jsx";
@@ -155,7 +156,7 @@ function FaqGaps({ supabase, items, seller, nickname }) {
   );
 }
 
-function Summary({ accounts, metricsBySeller, seller, items, nickname, permalinks, onIssue, isAdmin, session, onReload, supabase }) {
+function Summary({ accounts, metricsBySeller, seller, items, nickname, permalinks, onIssue, isAdmin, session, onReload, supabase, ads = {}, canSeeAds = false }) {
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [period, setPeriod] = useState(7);
@@ -251,6 +252,23 @@ function Summary({ accounts, metricsBySeller, seller, items, nickname, permalink
           {data.partial && <p className="muted small">A alguna cuenta le falta un dato: el total puede quedar corto.</p>}
         </section>
 
+        <section className="panel ml-tacos" aria-label="Publicidad (TACoS)">
+          <div className="panel-head"><div><span className="eyebrow">Publicidad · objetivo menos de {Math.round(TACOS_TARGET * 100)} %</span><h2>TACoS</h2></div></div>
+          <ul className="ml-tacos-list">
+            {perAccount.map((row) => {
+              const tacos = tacosFor({ sales30: salesKnown ? periodStats(metricsBySeller[row.key]?.days || [], 30).current.amount : null, report: canSeeAds ? ads?.[row.name] : null });
+              return (
+                <li key={row.key} className={`ml-tacos-row ml-tacos-${tacos.state}${tacos.high ? " is-high" : ""}`}>
+                  <AccountTag name={row.name} />
+                  {tacos.tacos === null
+                    ? <span className="muted small">{canSeeAds ? TACOS_STATE[tacos.state] : "Sin datos · falta conectar la API de Publicidad de Mercado Libre"}</span>
+                    : <span><strong>{(tacos.tacos * 100).toLocaleString("es-AR", { maximumFractionDigits: 1 })} %</strong><small className="muted"> · invertiste {money(tacos.spend, currency)} sobre {money(tacos.sales, currency)} vendidos en 30 días · {tacos.state === "desactualizado" ? `datos de hace ${tacos.ageDays} días, volvé a pegarlos` : "estimado con la tabla pegada en Dinero → Publicidad"}</small></span>}
+                </li>
+              );
+            })}
+          </ul>
+          <p className="muted small">Hasta que se conecte la API de Publicidad, la inversión sale de la tabla que se pega en Dinero → Publicidad (solo Felipe). "Sin datos" no quiere decir que se gaste 0.</p>
+        </section>
         <section className="panel">
           <div className="panel-head"><div><span className="eyebrow">Recomendaciones · nada se cambia solo</span><h2>Qué atender hoy</h2></div></div>
           {alerts.length === 0 && <p className="muted">Nada urgente con los datos de hoy.</p>}
@@ -495,7 +513,7 @@ export function MercadoLibreBoard({ supabase, session = null, isAdmin = false, c
       {tab !== "publicidad" && items === null && <div className="ml-skeleton" role="status" aria-label="Cargando Mercado Libre"><i /><i /><i /><i /></div>}
       {tab !== "publicidad" && items && items.length === 0 && !error && <Empty text={supabase ? "Todavía no hay datos: conectá las cuentas en Más → Datos → Mercado Libre." : "Mercado Libre está en la versión en línea."} />}
       {items && items.length > 0 && tab === "resumen" && (
-        <Summary accounts={accounts} metricsBySeller={metricsBySeller} seller={seller} items={items} nickname={nickname} permalinks={permalinks} onIssue={showIssue} isAdmin={isAdmin} session={session} supabase={supabase} onReload={() => setReload((value) => value + 1)} />
+        <Summary ads={ads} canSeeAds={canSeeAds} accounts={accounts} metricsBySeller={metricsBySeller} seller={seller} items={items} nickname={nickname} permalinks={permalinks} onIssue={showIssue} isAdmin={isAdmin} session={session} supabase={supabase} onReload={() => setReload((value) => value + 1)} />
       )}
       {items && items.length > 0 && tab === "mejorar" && <MlImprove supabase={supabase} items={items} seller={seller} nickname={nickname} />}
       {items && items.length > 0 && tab === "stock" && <MlEconomics supabase={supabase} session={session} isAdmin={isAdmin} items={items} seller={seller} nickname={nickname} />}

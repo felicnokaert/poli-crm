@@ -48,7 +48,7 @@ export function understand(query) {
 }
 
 // 23/10: en "cuánto sale la resina de 1 kg" el kilo es la presentación, no una pregunta de rendimiento.
-const PRICE_ASK = /\b(precio\w*|cuanto (sale|salen|cuesta|cuestan|vale|valen)|a cuanto)\b/;
+const PRICE_ASK = /\b(precio\w*|cuanto (sale|salen|cuesta|cuestan|vale|valen|gano|ganamos|ganancia|me queda|nos queda|cobra|cobran|cobramos|pago|pagamos)|a cuanto|comision\w*|margen\w*)\b/;
 const UNIT_WORDS = new Set(['kg', 'kilo', 'kilos', 'litro', 'litros', 'gramos']);
 
 export function detectIntent(query) {

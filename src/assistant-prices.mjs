@@ -6,7 +6,7 @@
 // no se aplican acá: se avisa.
 import { plain } from './knowledge-search.mjs';
 
-const ASK = /\b(precio\w*|cuanto (sale|salen|cuesta|cuestan|vale|valen|esta|estan)|a cuanto (esta|lo|la|los|las|sale|vendemos)|valor|lista de precios|cotiz\w*|mayorista)\b/;
+const ASK = /\b(precio\w*|cuanto (sale|salen|cuesta|cuestan|vale|valen|esta|estan)|a cuanto (esta|lo|la|los|las|sale|vendemos)|valor|lista de precios|cotizar|cotizame|cotizo|mayorista)\b/;
 export const asksPrice = (query) => ASK.test(plain(query));
 
 const FILLER = new Set(['el', 'la', 'lo', 'le', 'de', 'un', 'en', 'al', 'es', 'me', 'nos', 'precio', 'precios', 'cuanto', 'sale', 'salen', 'cuesta', 'cuestan', 'vale', 'valen', 'esta', 'estan', 'valor', 'lista', 'listas', 'cotizar', 'cotizacion', 'mayorista', 'mayoristas', 'consumidor', 'final', 'del', 'los', 'las', 'una', 'uno', 'que', 'para', 'con', 'por', 'hoy', 'actual', 'vigente', 'tiene', 'tenemos', 'dame', 'decime', 'pasame', 'quiero', 'saber', 'vendemos', 'cliente']);

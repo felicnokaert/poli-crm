@@ -64,7 +64,7 @@ export function improvePlan({ items = [], health = [], seller = '', max = 50 } =
 }
 
 const ASK_ML = /\b(mercado ?libre|ml|publicacion\w*|calidad|clips?|reclam\w*|experiencia de compra|visitas)\b/;
-const ASK_FIX = /\b(mejor\w*|arregl\w*|falla\w*|problema\w*|conviene|prioridad|priorizo|que hago|que le falta|le falta|calidad|reclam\w*|baj\w*|empiezo|primero|revisar)\b/;
+const ASK_FIX = /\b(mejor\w*|arregl\w*|falla\w*|problema\w*|conviene|prioridad|priorizo|que hago|que le falta|le falta|calidad|reclam\w*|baj\w*|empiezo|primero|revisar|no tienen|sin|faltan?)\b/;
 export const asksMlImprove = (query) => { const text = plain(query); return ASK_ML.test(text) && ASK_FIX.test(text); };
 
 export function improveContext(plan, nickname = {}, { max = 8 } = {}) {

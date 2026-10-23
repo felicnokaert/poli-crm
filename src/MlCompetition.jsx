@@ -1,3 +1,4 @@
+import { AccountTag } from "./MlAccountTag.jsx";
 import { useEffect, useMemo, useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { adminFetch } from "./admin-api.mjs";
@@ -134,7 +135,7 @@ export function MlCompetition({ supabase, session, isAdmin, items = [], nickname
                 <td>{signed(row.priceChange7)}</td>
                 <td>{signed(row.priceChange30)}</td>
                 <td>{row.sold7 ?? "—"} / {row.sold30 ?? "—"}<div className="muted small">total {row.item.sold_quantity ?? "—"}</div></td>
-                <td>{row.our ? <>{money(row.our.price)}<div className="muted small">{row.vsOur == null ? "" : row.vsOur > 0 ? `${row.vsOur} % más cara` : row.vsOur < 0 ? `${Math.abs(row.vsOur)} % más barata` : "mismo precio"} · {nickname[row.our.seller_id] || ""}</div></> : <span className="muted small">sin vincular</span>}</td>
+                <td>{row.our ? <>{money(row.our.price)}<div className="muted small">{row.vsOur == null ? "" : row.vsOur > 0 ? `${row.vsOur} % más cara` : row.vsOur < 0 ? `${Math.abs(row.vsOur)} % más barata` : "mismo precio"} · <AccountTag name={nickname[row.our.seller_id] || "cuenta"} /></div></> : <span className="muted small">sin vincular</span>}</td>
                 {isAdmin && <td><button type="button" className="secondary" disabled={busy} onClick={() => { if (window.confirm("¿Dejar de seguir esta publicación?")) run({ op: "competitors-remove", id: row.item.id }, () => "Quitada."); }}>Quitar</button></td>}
               </tr>
             ))}</tbody>

@@ -69,13 +69,19 @@ export function trendsView(trends = [], ourTitles = []) {
   })).sort((a, b) => String(a.category_name).localeCompare(String(b.category_name)));
 }
 
-export const asksMlCompetition = (query) => /\b(competencia|competidor\w*|tendencia\w*|lo mas buscado|mas buscad\w*|que buscan|que se busca)\b/.test(plain(query));
+// 23/10 (Felipe): la competencia de Mercado Libre (otros vendedores de ML) es otra cosa que la de ventas
+// directas (Academia → Competencia). Solo se usa esta si la pregunta nombra Mercado Libre, o si pide tendencias.
+const ML_WORDS = /\b(mercado ?libre|meli|ml|publicacion\w*|vendedores?)\b/;
+export const asksMlCompetition = (query) => {
+  const text = plain(query);
+  return /\b(tendencia\w*|lo mas buscado|mas buscad\w*|que buscan|que se busca)\b/.test(text) || (/\b(competencia|competidor\w*|compit\w*|rivales?)\b/.test(text) && ML_WORDS.test(text));
+};
 
 export function competitionContext(rows = [], trends = [], { max = 10 } = {}) {
   const lines = [];
   if (rows.length) {
     const money = (value) => (typeof value === 'number' ? `$ ${Math.round(value).toLocaleString('es-AR')}` : '—');
-    lines.push('COMPETENCIA EN MERCADO LIBRE (publicaciones que sigue Felipe; vendidas = diferencia entre fotos diarias, puede no ser exacta):');
+    lines.push('COMPETENCIA EN MERCADO LIBRE (otros vendedores de ML cuyas publicaciones sigue Felipe; NO es la lista de competidores de ventas directas de Academia, no las mezcles; vendidas = diferencia entre fotos diarias, puede no ser exacta):');
     for (const row of rows.slice(0, max)) {
       lines.push(`- ${row.who}: ${String(row.item.title).slice(0, 70)} a ${money(row.item.price)}${row.priceChange30 != null ? ` (${row.priceChange30 > 0 ? '+' : ''}${row.priceChange30} % en 30 días)` : ''}${row.sold30 != null ? `, vendió ~${row.sold30} en 30 días` : ''}${row.our ? `; la nuestra (${String(row.our.title).slice(0, 50)}) está a ${money(row.our.price)}${row.vsOur != null ? `, ${row.vsOur > 0 ? `${row.vsOur} % más cara` : `${Math.abs(row.vsOur)} % más barata`}` : ''}` : ''}.`);
     }

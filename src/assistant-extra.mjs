@@ -103,7 +103,7 @@ export function purchaseLine(summary, { today = new Date().toISOString().slice(0
 // Para el contexto de la IA.
 export function extraContext({ rivals = null, purchases = [], today } = {}) {
   const lines = [];
-  if (rivals?.list?.length) lines.push(`Competidores cargados en Academia${rivals.families.length ? ` (familia: ${rivals.families.join(', ')})` : ''}:`, ...rivals.list.slice(0, 25).map((rival) => `- ${rival.name}${rival.families?.length ? ` [${rival.families.join(', ')}]` : ''}${rival.summary ? `: ${String(rival.summary).slice(0, 200)}` : ''}`));
+  if (rivals?.list?.length) lines.push(`Competidores de ventas directas (fuera de Mercado Libre; cargados en Academia)${rivals.families.length ? ` (familia: ${rivals.families.join(', ')})` : ''}:`, ...rivals.list.slice(0, 25).map((rival) => `- ${rival.name}${rival.families?.length ? ` [${rival.families.join(', ')}]` : ''}${rival.summary ? `: ${String(rival.summary).slice(0, 200)}` : ''}`));
   if (purchases.length) lines.push('Compras según los comprobantes copiados de Contabilium (montos tal como figuran ahí; el historial todavía se está completando):', ...purchases.slice(0, 5).map((summary) => `- ${summary.name} (${summary.companies.join(', ')}): ${purchaseLine(summary, { today })}`));
   return lines.join('\n');
 }

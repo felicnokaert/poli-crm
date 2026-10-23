@@ -719,3 +719,4 @@
   :root:not([data-theme="light"]) .assistant-ai-text strong { color: #ff8a8f; }
   :root:not([data-theme="light"]) .assistant-source { border-top-color: rgba(255, 255, 255, .1); }
 }
+:root[data-theme="dark"] .ml-trend-words .badge.warn { background: #3a2f17; color: #f3d28b; }

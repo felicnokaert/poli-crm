@@ -1155,3 +1155,11 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .ml-sheet-text { white-space: pre-line; font-size: 0.9rem; max-height: 320px; overflow: auto; }
 .ml-sheet-faq { margin: 0; padding-left: 18px; display: grid; gap: 8px; }
 .ml-sheet .secondary { justify-self: start; }
+
+/* 23/10: Mercado Libre → Competencia y Tendencias */
+.ml-competition-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; margin: 8px 0; }
+.ml-trend { margin-top: 14px; }
+.ml-trend h3 { font-size: 1rem; margin: 0 0 6px; }
+.ml-trend-words { display: flex; flex-wrap: wrap; gap: 6px; }
+.ml-trend-words .badge { text-decoration: none; }
+.ml-trend-words .badge.warn { background: #fff1d6; color: #7a5200; }

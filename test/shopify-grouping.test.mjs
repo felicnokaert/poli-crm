@@ -56,7 +56,7 @@ test('con 3 opciones ya no hay Modelo; con 4 sin dimensión para partir se plieg
   assert.ok(proposal.options.length <= 3);
 });
 
-test('avisos: SKU repetido, precios muy distintos y stock de relleno', () => {
+test('avisos: SKU repetido y precios muy distintos (el stock 999 es a propósito y no avisa)', () => {
   const products = [product('a', 'Balde 10L'), product('b', 'Balde 20L')];
   const variants = [
     { id: 'v1', product_id: 'a', title: 'Rojo', sku: 'DUP', price: 1000, inventory_quantity: 999, options: [{ name: 'Color', value: 'Rojo' }] },
@@ -66,7 +66,7 @@ test('avisos: SKU repetido, precios muy distintos y stock de relleno', () => {
   const text = proposal.warnings.join(' ');
   assert.match(text, /SKU repetido DUP/);
   assert.match(text, /Precios muy distintos/);
-  assert.match(text, /stock de relleno/);
+  assert.doesNotMatch(text, /relleno/);
 });
 
 test('productos distintos o archivados no se agrupan; variantes repetidas se avisan', () => {

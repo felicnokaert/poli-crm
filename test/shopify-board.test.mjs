@@ -58,3 +58,11 @@ test('filtros por marca, tipo y stock; y CSV de lo que se ve', async () => {
   assert.match(csv, /"Balde plástico 20 L","Activo","Grupo Poliplast","Baldes","2"/);
   assert.match(csv, /Sin descripción \| Sin título ni descripción SEO/);
 });
+
+test('serie diaria: completa con ceros los días sin pedidos (fecha argentina)', async () => {
+  const { dailySeries } = await import('../src/shopify-board.mjs');
+  const series = dailySeries([{ day: '2026-10-22', orders: 2, amount: 500 }], 4, '2026-10-24');
+  assert.deepEqual(series.map((entry) => entry.day), ['2026-10-21', '2026-10-22', '2026-10-23', '2026-10-24']);
+  assert.deepEqual(series.map((entry) => entry.orders), [0, 2, 0, 0]);
+  assert.equal(series[1].amount, 500);
+});

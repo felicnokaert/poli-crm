@@ -1,0 +1,306 @@
+{
+ "name": "CRM — semana 24/10 al 06/11",
+ "lists": [
+  {
+   "id": "sab",
+   "name": "Sáb 24/10 · arranque",
+   "closed": false
+  },
+  {
+   "id": "lun",
+   "name": "Lun 26/10 · Mercado Libre",
+   "closed": false
+  },
+  {
+   "id": "mar",
+   "name": "Mar 27/10 · Shopify",
+   "closed": false
+  },
+  {
+   "id": "mie",
+   "name": "Mié 28/10 · Clientes y prospección",
+   "closed": false
+  },
+  {
+   "id": "jue",
+   "name": "Jue 29/10 · Contenido y Cyber",
+   "closed": false
+  },
+  {
+   "id": "vie",
+   "name": "Vie 30/10 · Cierre de semana",
+   "closed": false
+  },
+  {
+   "id": "sig",
+   "name": "Semana 2–6/11",
+   "closed": false
+  }
+ ],
+ "cards": [
+  {
+   "id": "6aa73d94d25a443b023444f0",
+   "idList": "sab",
+   "name": "Seguridad Supabase: contraseña mínima 8, Confirm email ON, cambiar contraseña compartida, borrar WHATSAPP_BRIDGE_TOKEN",
+   "due": "2026-10-24T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-botones-actualizar",
+   "idList": "sab",
+   "name": "CRM: apretar Shopify \"Actualizar ahora\", ML \"Actualizar todo (3 cuentas)\" y Qué atender hoy \"Actualizar\"",
+   "due": "2026-10-24T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-trello-keys",
+   "idList": "sab",
+   "name": "Vercel: cargar TRELLO_KEY y TRELLO_TOKEN para el Plan del día automático",
+   "due": "2026-10-24T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "6ad213d86401ec884da615f1",
+   "idList": "sab",
+   "name": "Pedidos #1174 / #1175 / #1176 vencidos en retiro: resolver y reembolso",
+   "due": "2026-10-24T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "6ac4d979df6f0a70cbc0dee3",
+   "idList": "lun",
+   "name": "Reputación Protegida ($1.030.000): decidir antes del 01/11; revisar color POLIPLAST",
+   "due": "2026-10-26T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "6ad213d34bb0f663921dce33",
+   "idList": "lun",
+   "name": "Platinum POLIPLAST: revisar reclamos abiertos",
+   "due": "2026-10-26T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "6aad28d722ed5b0cb241aeda",
+   "idList": "lun",
+   "name": "Ads: definir umbral de ACOS (propuesto 20 %) y pausar campaña Compartida B2 y Best Sellers (ACOS 178 %)",
+   "due": "2026-10-26T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "6ad213ee333b8b84c76c0240",
+   "idList": "lun",
+   "name": "Piloto pausa de campañas con $0: renovar o cancelar",
+   "due": "2026-10-26T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "6ad213e278ae0ee23566fc0a",
+   "idList": "lun",
+   "name": "Iniciar sesión en las 3 cuentas de ML que faltan (10 min)",
+   "due": "2026-10-26T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "6abb9e1f47cc6c7fcfd8d121",
+   "idList": "lun",
+   "name": "ML: unificar SKU duplicados (CSV de \"Ordenar los SKU de ML\") empezando por KT-PS-810ML-6",
+   "due": "2026-10-26T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "6ab667e25a60ac9e04fe984f",
+   "idList": "lun",
+   "name": "ML: envíos ME1 en 50 %: pasar a Flex / colecta",
+   "due": "2026-10-26T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-borradores-shopify",
+   "idList": "mar",
+   "name": "Shopify: marcar decisiones en Faltan en Shopify y crear 5 a 10 borradores con el botón del CRM",
+   "due": "2026-10-27T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "6abe6cc76294162e8791f438",
+   "idList": "mar",
+   "name": "Shopify: despachar pedidos pagos sin despachar",
+   "due": "2026-10-27T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-pesos-restantes",
+   "idList": "mar",
+   "name": "Shopify: pesos pendientes (20 con conflicto Zipnova y 113 sin dato, ver CSV de pesos)",
+   "due": "2026-10-27T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "6aa876f0cba4afef2cfafe39",
+   "idList": "mar",
+   "name": "Shopify: descripciones y SEO de los 88 productos sin descripción (propuesta en borrador)",
+   "due": "2026-10-27T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "6aa876fbc0b2ac7e1b93004c",
+   "idList": "mar",
+   "name": "Shopify: revisar productos activos con stock 0 que de verdad no tienen",
+   "due": "2026-10-27T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "6ad213e767606de2504f0629",
+   "idList": "mar",
+   "name": "Shopify: arreglar 3 links rotos del menú",
+   "due": "2026-10-27T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "6a96ed8c0aef2613de6e83ff",
+   "idList": "mie",
+   "name": "Lanzar Cohorte 1: CARROZADOS + RESINPLAST",
+   "due": "2026-10-28T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "6a96eda8696713d466b5bf53",
+   "idList": "mie",
+   "name": "Preparar reactivación de clientes históricos PUR",
+   "due": "2026-10-28T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "6ababafdda3cead1185e7b25",
+   "idList": "mie",
+   "name": "Prospección Q4: contacto real BALDES (top 10) y PENOSIL Fase 1",
+   "due": "2026-10-28T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-cola-dia",
+   "idList": "mie",
+   "name": "CRM: trabajar la Cola del día (Reactivar, Cotizaron y no compraron, Prospectos)",
+   "due": "2026-10-28T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "6ababb1355e64dc73b807072",
+   "idList": "mie",
+   "name": "Drive: subir Excel maestro y PDF de prospección a 03_PROSPECCION",
+   "due": "2026-10-28T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "6ababb1bcbcd05a608a2a75f",
+   "idList": "jue",
+   "name": "Cyber Monday y Black Friday: preparar precios, stock y publicaciones en ML y Shopify",
+   "due": "2026-10-29T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "6adb4210e56c967062b96997",
+   "idList": "jue",
+   "name": "Grabar clips de ML (275 publicaciones sin video): marcar los hechos en el CRM",
+   "due": "2026-10-29T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-fotos-bisagras",
+   "idList": "jue",
+   "name": "Fotos de Bisagras y Herrajes en Shopify",
+   "due": "2026-10-29T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-metricas-semana",
+   "idList": "vie",
+   "name": "Métricas semanales: ventas, visitas, clips hechos, borradores creados, Centro de mejoras",
+   "due": "2026-10-30T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "6adb592afd553e1fe0dd1e3c",
+   "idList": "vie",
+   "name": "Publicidad ML: revisar presupuesto de Espumas Rígidas / Almohadas / Espumas PU",
+   "due": "2026-10-30T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "6abb9e18ca3b79f19c427153",
+   "idList": "sig",
+   "name": "FOAM: stock con cargos en Full (antes del 08/11)",
+   "due": "2026-11-06T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-ordenar-catalogo",
+   "idList": "sig",
+   "name": "Shopify: Ordenar catálogo, fusionar de a un grupo (Cinta cortina PVC y PU-46 primero) como borrador",
+   "due": "2026-11-04T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "6ab525d870626e84bd1a1133",
+   "idList": "sig",
+   "name": "Shopify: revisar posible card testing en el checkout",
+   "due": "2026-11-04T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "6aa876f348661991b7a6724b",
+   "idList": "sig",
+   "name": "Shopify: arreglar colecciones \"fantasma-total\"",
+   "due": "2026-11-05T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "6aa87cfda7417c78ff599901",
+   "idList": "sig",
+   "name": "Cotizador: prueba autenticada Felipe/Juan en dos computadoras",
+   "due": "2026-11-05T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-tacos-vivo",
+   "idList": "sig",
+   "name": "ML: permiso de Publicidad (Product Ads) y reconectar cuentas para TACoS en vivo",
+   "due": "2026-11-06T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  }
+ ]
+}

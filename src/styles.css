@@ -1217,7 +1217,7 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .ml-account-chip.selected i { background: #fff; }
 
 /* Entrada suave de cada pestaña y de las tarjetas */
-.ml-pane { display: grid; gap: 16px; animation: ml-pane-in .28s ease both; }
+.ml-pane { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; animation: ml-pane-in .28s ease both; }
 @keyframes ml-pane-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .ml-board .metric-card { transition: transform .18s ease, box-shadow .18s ease; animation: ml-pane-in .35s ease both; }
 .ml-metric-grid .metric-card:nth-child(2) { animation-delay: .04s; } .ml-metric-grid .metric-card:nth-child(3) { animation-delay: .08s; } .ml-metric-grid .metric-card:nth-child(4) { animation-delay: .12s; } .ml-metric-grid .metric-card:nth-child(5) { animation-delay: .16s; }
@@ -1310,3 +1310,31 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .health-count { color: var(--color-text-muted); font-size: 0.82rem; white-space: nowrap; }
 .health-state { text-align: right; }
 @media (max-width: 640px) { .health-row { grid-template-columns: 20px 1fr; } .health-count, .health-state { grid-column: 2; text-align: left; } }
+
+/* Celular (24/10): lo nuevo de Canales online no se sale del ancho; las pestañas y los filtros se deslizan o se apilan. */
+.ml-board .table-scroll, .improvement-center .table-scroll { max-width: 100%; overflow-x: auto; }
+.ml-board .panel, .improvement-center .panel { min-width: 0; }
+@media (max-width: 640px) {
+  .ml-tabs, .ml-filter-tabs, .ml-subtabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .ml-tabs button, .ml-filter-tabs button, .ml-subtabs button { white-space: nowrap; flex: 0 0 auto; }
+  .shopify-board .ml-search input, .ml-search input { min-width: 0; width: 100%; }
+  .ml-search { width: 100%; }
+  .ml-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+  .ml-toolbar label { display: grid; gap: 2px; min-width: 0; }
+  .ml-toolbar select { width: 100%; min-width: 0; }
+  .ml-toolbar .ml-sort { grid-column: 1 / -1; }
+  .ic-health-grid { grid-template-columns: minmax(0, 1fr); }
+  .panel-head { flex-wrap: wrap; gap: 8px; }
+}
+
+/* Celular: las tablas de Productos y de la lista de trabajo pasan a tarjetas (una por fila). */
+@media (max-width: 640px) {
+  .ml-board-table thead, .ic-table thead { display: none; }
+  .ml-board-table, .ic-table, .ml-board-table tbody, .ic-table tbody { display: block; width: 100%; }
+  .ml-board-table tr, .ic-table tr { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--color-border-light); }
+  .ml-board-table td, .ic-table td { display: block; border: 0; padding: 0; width: auto; }
+  .ml-board-table td:first-child, .ic-table td:nth-child(2) { flex: 1 1 100%; }
+  .ml-board-table td[data-label]::before, .ic-table td[data-label]::before { content: attr(data-label) ": "; color: var(--color-text-muted); font-size: 0.78rem; }
+  .ic-table td:first-child { flex: 0 0 auto; }
+  .ic-table td:last-child { margin-left: auto; }
+}

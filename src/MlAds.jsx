@@ -81,6 +81,16 @@ export function MlAds({ ads = {}, onSave, accounts = [], session = null }) {
       setProbe({ results: body.results || [] });
     } catch (error) { setProbe({ error: error.message || "No se pudo probar." }); }
   }
+  const [refresh, setRefresh] = useState(null);
+  async function refreshSpend() {
+    setRefresh({ busy: true });
+    try {
+      const response = await adminFetch({ action: "mercadolibre", op: "ads-refresh" }, session?.access_token);
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || `Error ${response.status}`);
+      setRefresh({ results: body.results || [] });
+    } catch (error) { setRefresh({ error: error.message || "No se pudo leer la inversión." }); }
+  }
   const labels = accounts.length ? accounts.map((account) => account.nickname || String(account.seller_id)) : ["POLIPLAST", "FOAM FACTORY"];
   const [account, setAccount] = useState(labels[0]);
   const [text, setText] = useState("");
@@ -106,8 +116,17 @@ export function MlAds({ ads = {}, onSave, accounts = [], session = null }) {
           <h2>Publicidad</h2>
           <p className="muted">Pegá la tabla de campañas de cada cuenta (Publicidad → Product Ads → Campañas) y el CRM la compara con el objetivo de ROAS. Es una foto del momento en que la pegás: no se actualiza sola. Solo sugiere; no cambia presupuestos ni pausa campañas.</p>
         </div>
-        <button type="button" className="secondary" disabled={probe?.busy} onClick={probeAds}>{probe?.busy ? "Probando…" : "Probar conexión de Publicidad"}</button>
+        <div className="inline-actions">
+          <button type="button" className="primary" disabled={refresh?.busy} onClick={refreshSpend}>{refresh?.busy ? "Leyendo…" : "Actualizar inversión (TACoS)"}</button>
+          <button type="button" className="secondary" disabled={probe?.busy} onClick={probeAds}>{probe?.busy ? "Probando…" : "Probar conexión de Publicidad"}</button>
+        </div>
       </div>
+      {refresh?.error && <p className="system-message">{refresh.error}</p>}
+      {refresh?.results && (
+        <ul className="ml-alerts">
+          {refresh.results.map((row) => <li key={row.name} className={row.ok ? "" : "is-urgent"}><span><strong>{row.ok ? "✅" : "❌"} {row.name}</strong><small className="muted"> · {row.ok ? `invertido en 30 días: ${Number(row.spend).toLocaleString("es-AR", { maximumFractionDigits: 0 })} · ${row.campaigns} campañas` : row.error}</small></span></li>)}
+        </ul>
+      )}
       {probe?.error && <p className="system-message">{probe.error}</p>}
       {probe?.results && (
         <ul className="ml-alerts">

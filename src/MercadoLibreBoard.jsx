@@ -101,6 +101,20 @@ function Summary({ accounts, metricsBySeller, seller, items, nickname, permalink
   const [error, setError] = useState("");
   const [period, setPeriod] = useState(7);
   const [metric, setMetric] = useState("amount");
+  const [liveAds, setLiveAds] = useState({});
+  useEffect(() => {
+    let active = true;
+    if (!supabase) return undefined;
+    try {
+      const query = supabase.from("crm_system_status").select("key,detail");
+      if (typeof query?.like !== "function") return undefined;
+      query.like("key", "ml-ads:%").then(({ data: rows }) => {
+        if (!active || !rows) return;
+        setLiveAds(Object.fromEntries(rows.map((row) => [String(row.key).replace("ml-ads:", ""), row.detail])));
+      }, () => {});
+    } catch { /* sin lectura en vivo: queda la tabla pegada */ }
+    return () => { active = false; };
+  }, [supabase]);
   const chosen = seller ? { [seller]: metricsBySeller[seller] } : metricsBySeller;
   const data = combineMetrics(Object.values(chosen).filter(Boolean));
   const stats = useMemo(() => periodStats(data?.days || [], period), [data, period]);
@@ -196,18 +210,18 @@ function Summary({ accounts, metricsBySeller, seller, items, nickname, permalink
           <div className="panel-head"><div><span className="eyebrow">Publicidad · objetivo menos de {Math.round(TACOS_TARGET * 100)} %</span><h2>TACoS</h2></div></div>
           <ul className="ml-tacos-list">
             {perAccount.map((row) => {
-              const tacos = tacosFor({ sales30: salesKnown ? periodStats(metricsBySeller[row.key]?.days || [], 30).current.amount : null, report: canSeeAds ? ads?.[row.name] : null });
+              const tacos = tacosFor({ sales30: salesKnown ? periodStats(metricsBySeller[row.key]?.days || [], 30).current.amount : null, report: canSeeAds ? ads?.[row.name] : null, live: liveAds[String(row.key)] });
               return (
                 <li key={row.key} className={`ml-tacos-row ml-tacos-${tacos.state}${tacos.high ? " is-high" : ""}`}>
                   <AccountTag name={row.name} />
                   {tacos.tacos === null
-                    ? <span className="muted small">{canSeeAds ? TACOS_STATE[tacos.state] : "Sin datos · falta conectar la API de Publicidad de Mercado Libre"}</span>
-                    : <span><strong>{(tacos.tacos * 100).toLocaleString("es-AR", { maximumFractionDigits: 1 })} %</strong><small className="muted"> · invertiste {money(tacos.spend, currency)} sobre {money(tacos.sales, currency)} vendidos en 30 días · {tacos.state === "desactualizado" ? `datos de hace ${tacos.ageDays} días, volvé a pegarlos` : "estimado con la tabla pegada en Dinero → Publicidad"}</small></span>}
+                    ? <span className="muted small">{canSeeAds || tacos.live ? TACOS_STATE[tacos.state] : "Sin datos · falta conectar la API de Publicidad de Mercado Libre"}</span>
+                    : <span><strong>{(tacos.tacos * 100).toLocaleString("es-AR", { maximumFractionDigits: 1 })} %</strong><small className="muted"> · invertiste {money(tacos.spend, currency)} sobre {money(tacos.sales, currency)} vendidos en 30 días · {tacos.live ? (tacos.state === "en-vivo-viejo" ? `lectura de hace ${tacos.ageDays} días: la actualización diaria de Publicidad no corrió` : "leído de la API de Publicidad (se actualiza solo cada día)") : tacos.state === "desactualizado" ? `datos de hace ${tacos.ageDays} días, volvé a pegarlos` : "estimado con la tabla pegada en Dinero → Publicidad"}</small></span>}
                 </li>
               );
             })}
           </ul>
-          <p className="muted small">Hasta que se conecte la API de Publicidad, la inversión sale de la tabla que se pega en Dinero → Publicidad (solo Felipe). "Sin datos" no quiere decir que se gaste 0.</p>
+          <p className="muted small">La inversión se lee sola de la API de Publicidad cada día; si una cuenta todavía no tiene lectura, se usa la tabla pegada en Dinero → Publicidad (solo Felipe). "Sin datos" no quiere decir que se gaste 0.</p>
         </section>
         <section className="panel">
           <div className="panel-head"><div><span className="eyebrow">Recomendaciones · nada se cambia solo</span><h2>Qué atender hoy</h2></div></div>

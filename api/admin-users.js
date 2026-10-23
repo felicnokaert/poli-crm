@@ -4,7 +4,7 @@ import { deleteUser } from '../lib/admin-users.mjs';
 import { cleanupWorkspaces } from '../lib/workspace-cleanup-admin.mjs';
 import { technicalAdmin } from '../lib/technical-admin.mjs';
 import { listClientErrors, logClientError } from '../lib/error-log.mjs';
-import { mercadoLibreAdmin, mercadoLibreCron, mercadoLibreMarketCron } from '../lib/mercadolibre.mjs';
+import { mercadoLibreAdmin, mercadoLibreAdsCron, mercadoLibreCron, mercadoLibreMarketCron } from '../lib/mercadolibre.mjs';
 import { runIntegrationCron } from '../lib/integration-crons.mjs';
 import { contabiliumAdmin, contabiliumCron } from '../lib/contabilium.mjs';
 import { assistantAi } from '../lib/assistant-ai.mjs';
@@ -22,6 +22,7 @@ import { shopifyAdmin, shopifyCron } from '../lib/shopify.mjs';
 const CRONS = {
   mercadolibre: mercadoLibreCron,
   'mercadolibre-mercado': mercadoLibreMarketCron,
+  'mercadolibre-publicidad': mercadoLibreAdsCron,
   contabilium: contabiliumCron,
   shopify: shopifyCron,
   alertas: alertsCron,

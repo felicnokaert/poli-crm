@@ -1,0 +1,320 @@
+{
+  "name": "VENTAS — Grupo Poliplast (resumen 24/10)",
+  "lists": [
+    {
+      "id": "6a96ecd0c2fa00d210d46ce1",
+      "name": "Entrada",
+      "closed": false
+    },
+    {
+      "id": "6a96ecd27c411e13feb08ab5",
+      "name": "Prioridad semanal",
+      "closed": false
+    },
+    {
+      "id": "6a96ecd58f0c75d6bd8b89e9",
+      "name": "En ejecución",
+      "closed": false
+    },
+    {
+      "id": "6a96ecd8da5d8424ea07a2ab",
+      "name": "Esperando cliente / equipo",
+      "closed": false
+    },
+    {
+      "id": "6a96ecddc88b4cb6fa7f0110",
+      "name": "Revisión",
+      "closed": false
+    }
+  ],
+  "cards": [
+    {
+      "id": "6aa73d5dd8878ca97f8f4cf8",
+      "idList": "6a96ecd0c2fa00d210d46ce1",
+      "name": "CRM — Decisión: hasta dónde llega la Automatización (¿IA o mensajería saliente?)",
+      "due": null,
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/l9Cg9Q05/49-crm-decisi%C3%B3n-hasta-d%C3%B3nde-llega-la-automatizaci%C3%B3n-ia-o-mensajer%C3%ADa-saliente"
+    },
+    {
+      "id": "6aa73d789178d2bfe4172033",
+      "idList": "6a96ecd0c2fa00d210d46ce1",
+      "name": "CRM — Revisar 3 hallazgos de la reconstrucción de migraciones SQL",
+      "due": null,
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/0J8xnpzW/51-crm-revisar-3-hallazgos-de-la-reconstrucci%C3%B3n-de-migraciones-sql"
+    },
+    {
+      "id": "6aa73d86b7d6284a1b2bbca9",
+      "idList": "6a96ecd0c2fa00d210d46ce1",
+      "name": "CRM — Revisar 27 duplicados pendientes + rescatar 3 fichas de la fila vieja",
+      "due": null,
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/Xrg8It3r/52-crm-revisar-27-duplicados-pendientes-rescatar-3-fichas-de-la-fila-vieja"
+    },
+    {
+      "id": "6aa73d94d25a443b023444f0",
+      "idList": "6a96ecd0c2fa00d210d46ce1",
+      "name": "CRM — Confirmar 2 acciones de seguridad pendientes en Supabase",
+      "due": null,
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/X9EO1lGU/53-crm-confirmar-2-acciones-de-seguridad-pendientes-en-supabase"
+    },
+    {
+      "id": "6ababb1355e64dc73b807072",
+      "idList": "6a96ecd0c2fa00d210d46ce1",
+      "name": "Drive — subir Excel maestro y PDF de prospección a 03_PROSPECCION/Investigacion_por_familia",
+      "due": "2026-10-09T15:00:00.000Z",
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/HGdpBuLd/103-drive-subir-excel-maestro-y-pdf-de-prospecci%C3%B3n-a-03prospeccion-investigacionporfamilia"
+    },
+    {
+      "id": "6ababb1bcbcd05a608a2a75f",
+      "idList": "6a96ecd0c2fa00d210d46ce1",
+      "name": "CyberMonday y Black Friday — preparar ML y Shopify (confirmar fechas)",
+      "due": "2026-10-30T15:00:00.000Z",
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/BNQMgG0i/104-cybermonday-y-black-friday-preparar-ml-y-shopify-confirmar-fechas"
+    },
+    {
+      "id": "6abc3492cded6be03e7c3196",
+      "idList": "6a96ecd0c2fa00d210d46ce1",
+      "name": "CRM — En mantenimiento (sin protagonismo esta semana)",
+      "due": null,
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/sav7Q2hh/115-crm-en-mantenimiento-sin-protagonismo-esta-semana"
+    },
+    {
+      "id": "6abc349b7a5909a13e0c88e8",
+      "idList": "6a96ecd0c2fa00d210d46ce1",
+      "name": "Cotizador — Pausado esta semana (retomar cuando llegue la lista mayorista Resinplast)",
+      "due": null,
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/aOM7c8qM/116-cotizador-pausado-esta-semana-retomar-cuando-llegue-la-lista-mayorista-resinplast"
+    },
+    {
+      "id": "6abc34a2c84f256dd370de9b",
+      "idList": "6a96ecd0c2fa00d210d46ce1",
+      "name": "Prospección — PURMAC y PISOS corriendo en paralelo (sin entrega esta semana)",
+      "due": null,
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/6NME1fk2/117-prospecci%C3%B3n-purmac-y-pisos-corriendo-en-paralelo-sin-entrega-esta-semana"
+    },
+    {
+      "id": "6adb48c4422916cef53cda96",
+      "idList": "6a96ecd27c411e13feb08ab5",
+      "name": "🎯 ML — Plan del día 2026-10-23",
+      "due": "2026-10-23T20:00:00.000Z",
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/nBVPYg0Q/139-%F0%9F%8E%AF-ml-plan-del-d%C3%ADa-2026-10-23"
+    },
+    {
+      "id": "6ad755c1583ed76712d7d179",
+      "idList": "6a96ecd27c411e13feb08ab5",
+      "name": "🛍️ Shopify — Plan del día 2026-10-20",
+      "due": "2026-10-21T02:00:00.000Z",
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/j6z6NzTd/137-%F0%9F%9B%8D%EF%B8%8F-shopify-plan-del-d%C3%ADa-2026-10-20"
+    },
+    {
+      "id": "6ad75584cf28a71ed28784ee",
+      "idList": "6a96ecd27c411e13feb08ab5",
+      "name": "🎯 ML — Plan del día 2026-10-20",
+      "due": "2026-10-21T02:00:00.000Z",
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/H3vj9J8U/136-%F0%9F%8E%AF-ml-plan-del-d%C3%ADa-2026-10-20"
+    },
+    {
+      "id": "6ad5fb3f942c7cd8ca8a9766",
+      "idList": "6a96ecd27c411e13feb08ab5",
+      "name": "🎬 Lista de grabación — semana 19/10",
+      "due": "2026-10-23T21:00:00.000Z",
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/YAxk7zek/134-%F0%9F%8E%AC-lista-de-grabaci%C3%B3n-semana-19-10"
+    },
+    {
+      "id": "6ad213ee333b8b84c76c0240",
+      "idList": "6a96ecd27c411e13feb08ab5",
+      "name": "⏰ Piloto pausa campañas ML $0 — vencio 14-oct: renovar o cancelar",
+      "due": "2026-10-16T18:00:00.000Z",
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/1lyzZ9Ey/133-%E2%8F%B0-piloto-pausa-campa%C3%B1as-ml-0-vencio-14-oct-renovar-o-cancelar"
+    },
+    {
+      "id": "6ad213d34bb0f663921dce33",
+      "idList": "6a96ecd27c411e13feb08ab5",
+      "name": "🚨 Platinum POLIPLAST — revisar reclamos antes del 20-oct",
+      "due": "2026-10-19T15:00:00.000Z",
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/Ql8uhPHP/127-%F0%9F%9A%A8-platinum-poliplast-revisar-reclamos-antes-del-20-oct"
+    },
+    {
+      "id": "6ad213d86401ec884da615f1",
+      "idList": "6a96ecd27c411e13feb08ab5",
+      "name": "📦 Pedidos vencidos #1174 / #1175 / #1176 — READY FOR PICKUP 31-35 días",
+      "due": "2026-10-16T18:00:00.000Z",
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/YWII8lsk/128-%F0%9F%93%A6-pedidos-vencidos-1174-1175-1176-ready-for-pickup-31-35-d%C3%ADas"
+    },
+    {
+      "id": "6ad213e16f53b38833614e4a",
+      "idList": "6a96ecd27c411e13feb08ab5",
+      "name": "❓ DECIDE FELIPE — bloque 5 min (16-oct)",
+      "due": "2026-10-16T18:00:00.000Z",
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/80j6QO8t/129-%E2%9D%93-decide-felipe-bloque-5-min-16-oct"
+    },
+    {
+      "id": "6ad213e278ae0ee23566fc0a",
+      "idList": "6a96ecd27c411e13feb08ab5",
+      "name": "🔐 Felipe — iniciar sesión en 3 cuentas ML faltantes (10 min)",
+      "due": "2026-10-16T18:00:00.000Z",
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/UuDgxMVF/130-%F0%9F%94%90-felipe-iniciar-sesi%C3%B3n-en-3-cuentas-ml-faltantes-10-min"
+    },
+    {
+      "id": "6ad7555ae6fc4ba5358b8838",
+      "idList": "6a96ecd27c411e13feb08ab5",
+      "name": "🔄 Sync stock y precios ML ↔ Shopify — 2026-10-20",
+      "due": null,
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/AOqiGyNe/135-%F0%9F%94%84-sync-stock-y-precios-ml-%E2%86%94-shopify-2026-10-20"
+    },
+    {
+      "id": "6adb4210e56c967062b96997",
+      "idList": "6a96ecd27c411e13feb08ab5",
+      "name": "🎬 Grabación de clips ML — 275 publicaciones sin video",
+      "due": "2026-11-15T20:00:00.000Z",
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/020cche5/138-%F0%9F%8E%AC-grabaci%C3%B3n-de-clips-ml-275-publicaciones-sin-video"
+    },
+    {
+      "id": "6adb592afd553e1fe0dd1e3c",
+      "idList": "6a96ecd27c411e13feb08ab5",
+      "name": "📣 Publicidad ML — Panel Notion activo + acciones pendientes",
+      "due": "2026-10-23T20:00:00.000Z",
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/imO60bRO/140-%F0%9F%93%A3-publicidad-ml-panel-notion-activo-acciones-pendientes"
+    },
+    {
+      "id": "6adb59e5a31e3a6f947108c6",
+      "idList": "6a96ecd27c411e13feb08ab5",
+      "name": "🖥️ CRM + Cotizador — Hecho 23/10 y pendientes",
+      "due": "2026-10-24T15:00:00.000Z",
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/vKceouk6/141-%F0%9F%96%A5%EF%B8%8F-crm-cotizador-hecho-23-10-y-pendientes"
+    },
+    {
+      "id": "6ad20e5fdb34df3e17cc868d",
+      "idList": "6a96ecd58f0c75d6bd8b89e9",
+      "name": "🎯 ML — Plan del día 2026-10-16",
+      "due": "2026-10-17T02:00:00.000Z",
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/amxcyvTD/126-%F0%9F%8E%AF-ml-plan-del-d%C3%ADa-2026-10-16"
+    },
+    {
+      "id": "6a96ed8c0aef2613de6e83ff",
+      "idList": "6a96ecd58f0c75d6bd8b89e9",
+      "name": "Lanzar Cohorte 1 — CARROZADOS + RESINPLAST",
+      "due": null,
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/MlIK8ISz/4-lanzar-cohorte-1-carrozados-resinplast"
+    },
+    {
+      "id": "6a96eda8696713d466b5bf53",
+      "idList": "6a96ecd58f0c75d6bd8b89e9",
+      "name": "Preparar reactivación de clientes históricos PUR",
+      "due": null,
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/KhSy9ZgB/5-preparar-reactivaci%C3%B3n-de-clientes-hist%C3%B3ricos-pur"
+    },
+    {
+      "id": "6ababafdda3cead1185e7b25",
+      "idList": "6a96ecd58f0c75d6bd8b89e9",
+      "name": "Prospección Q4 — contacto real: BALDES (top 10) y PENOSIL Fase 1",
+      "due": "2026-10-09T15:00:00.000Z",
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/TnOlQxq7/101-prospecci%C3%B3n-q4-contacto-real-baldes-top-10-y-penosil-fase-1"
+    },
+    {
+      "id": "6aa87cfda7417c78ff599901",
+      "idList": "6a96ecd8da5d8424ea07a2ab",
+      "name": "COTIZADOR — Prueba autenticada Felipe/Juan en dos computadoras",
+      "due": null,
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/xYJ3kfQD/80-cotizador-prueba-autenticada-felipe-juan-en-dos-computadoras"
+    },
+    {
+      "id": "6ad0bdae16607cc9d7578e84",
+      "idList": "6a96ecddc88b4cb6fa7f0110",
+      "name": "🗂️ Pendientes ordenados — Urgente / Importante / Después (15-oct-2026)",
+      "due": "2026-10-20T23:00:00.000Z",
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/aSUmNcq4/124-%F0%9F%97%82%EF%B8%8F-pendientes-ordenados-urgente-importante-despu%C3%A9s-15-oct-2026"
+    },
+    {
+      "id": "6aa1a59f3d32fd807b04021f",
+      "idList": "6a96ecddc88b4cb6fa7f0110",
+      "name": "Revisar ficha PRFV actualizada en Shopify",
+      "due": null,
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/CKw5yPT4/41-revisar-ficha-prfv-actualizada-en-shopify"
+    },
+    {
+      "id": "6a96ed7d909c76eb4d8b8bab",
+      "idList": "6a96ecddc88b4cb6fa7f0110",
+      "name": "Objetivo comercial del trimestre",
+      "due": null,
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/OMAyzTRr/1-objetivo-comercial-del-trimestre"
+    },
+    {
+      "id": "6acf859a5ea53c9fb16edb0b",
+      "idList": "6a96ecddc88b4cb6fa7f0110",
+      "name": "Prospección: probar la lupa (Penosil en Paraná) y decidir el merge",
+      "due": null,
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/AOrMnJ9H/123-prospecci%C3%B3n-probar-la-lupa-penosil-en-paran%C3%A1-y-decidir-el-merge"
+    },
+    {
+      "id": "6ababaf750db137c24de90a3",
+      "idList": "6a96ecddc88b4cb6fa7f0110",
+      "name": "Objetivos Q4 (octubre a diciembre) en el módulo Ventas del CRM",
+      "due": "2026-10-01T15:00:00.000Z",
+      "dueComplete": false,
+      "closed": false,
+      "url": "https://trello.com/c/KDoxkgGE/100-objetivos-q4-octubre-a-diciembre-en-el-m%C3%B3dulo-ventas-del-crm"
+    }
+  ]
+}

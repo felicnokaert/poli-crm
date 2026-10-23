@@ -61,6 +61,12 @@ export function MlCompetition({ supabase, session, isAdmin, items = [], nickname
   const rows = useMemo(() => competitionRows({ competitors: data.competitors, snapshots: data.snapshots, ours, today }), [data, ours, today]);
   const summary = useMemo(() => competitorSummary(rows), [rows]);
 
+  function discoverMessage(result) {
+    if (result.blocked) return `Mercado Libre no deja buscar a nuestra app: ${result.blocked}. Pegame este aviso tal cual y vemos el plan B (pegar los reportes de Métricas → Competencia).`;
+    const base = `Busqué en ${result.searched} categorías y sumé ${result.saved} publicaciones de otros vendedores (están vinculadas a la nuestra que más vende en cada categoría).`;
+    return result.errors?.length ? `${base} Sin resultado: ${result.errors.slice(0, 3).join("; ")}.` : base;
+  }
+
   async function run(body, done) {
     setBusy(true); setMessage("");
     try { const result = await callMl(body, session); setMessage(done(result)); setReload((value) => value + 1); } catch (error) { setMessage(error.message); }
@@ -83,6 +89,7 @@ export function MlCompetition({ supabase, session, isAdmin, items = [], nickname
           </div>
           <div className="panel-head-actions">
             <button type="button" className="primary" disabled={busy || !text.trim()} onClick={() => run({ op: "competitors-add", text, competitorName: who, ourItemId: ourItem }, (result) => { setText(""); return `Listo: ${result.saved} publicaciones en seguimiento${result.missing?.length ? `; no se encontraron ${result.missing.length}` : ""}${result.products ? `; ${result.products} links de catálogo no sirven (pegá el de la publicación)` : ""}.`; })}>Sumar</button>
+            <button type="button" className="secondary" disabled={busy} title="Busca en Mercado Libre, por cada una de tus categorías que más venden, qué publican otros vendedores y los sigue solos" onClick={() => run({ op: "competitors-discover" }, discoverMessage)}>Descubrir competencia</button>
             <button type="button" className="secondary" disabled={busy || !rows.length} onClick={() => run({ op: "competitors-refresh" }, (result) => `Precios al día: ${result.saved} publicaciones.`)}>Actualizar ahora</button>
           </div>
           {message && <p className="muted small" role="status">{message}</p>}

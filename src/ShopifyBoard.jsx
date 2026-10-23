@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ExternalLink, Layers, PackageCheck, RefreshCw, ShoppingBag, TriangleAlert, Wallet } from "lucide-react";
 import { adminFetch } from "./admin-api.mjs";
-import { SHOPIFY_ISSUES, SHOPIFY_SORTS, SHOPIFY_STATUS, boardRows, filterRows, issueLabel, periodTotals, statusLabel, summarize } from "./shopify-board.mjs";
+import { SHOPIFY_ISSUES, SHOPIFY_SORTS, SHOPIFY_STATUS, boardRows, facets, filterRows, issueLabel, periodTotals, productsCsv, statusLabel, summarize } from "./shopify-board.mjs";
 import { Empty } from "./ui-primitives";
 
 // Ventas → Shopify (24/10, etapas 1 y 2): espejo de SOLO LECTURA de la tienda. Resumen, "Qué mejorar" (lo que le falta a cada
@@ -21,6 +21,14 @@ async function readAll(query) {
     rows.push(...(data || []));
     if (!data || data.length < 1000) return rows;
   }
+}
+
+function downloadCsv(rows) {
+  const url = URL.createObjectURL(new Blob([productsCsv(rows)], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url; link.download = `shopify-productos-${argentinaToday()}.csv`;
+  document.body.appendChild(link); link.click(); link.remove();
+  URL.revokeObjectURL(url);
 }
 
 async function callShopify(body, session) {
@@ -93,7 +101,11 @@ function Products({ rows, issue, setIssue }) {
   const [status, setStatus] = useState("ACTIVE");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("titulo");
-  const shown = useMemo(() => filterRows(rows, { status, issue, query, sort }), [rows, status, issue, query, sort]);
+  const [vendor, setVendor] = useState("");
+  const [type, setType] = useState("");
+  const [stock, setStock] = useState("");
+  const options = useMemo(() => facets(rows), [rows]);
+  const shown = useMemo(() => filterRows(rows, { status, issue, query, sort, vendor, type, stock }), [rows, status, issue, query, sort, vendor, type, stock]);
   return (
     <section className="panel">
       <div className="panel-head">
@@ -107,8 +119,12 @@ function Products({ rows, issue, setIssue }) {
       </div>
       <div className="ml-toolbar">
         <label className="small">Problema <select value={issue} onChange={(event) => setIssue(event.target.value)}><option value="">Todos</option>{SHOPIFY_ISSUES.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+        <label className="small">Marca <select value={vendor} onChange={(event) => setVendor(event.target.value)}><option value="">Todas</option>{options.vendors.map((name) => <option key={name} value={name}>{name}</option>)}</select></label>
+        <label className="small">Tipo <select value={type} onChange={(event) => setType(event.target.value)}><option value="">Todos</option>{options.types.map((name) => <option key={name} value={name}>{name}</option>)}</select></label>
+        <label className="small">Stock <select value={stock} onChange={(event) => setStock(event.target.value)}><option value="">Todo</option><option value="cero">En 0</option><option value="con">Con stock</option></select></label>
         <label className="small ml-sort">Ordenar por <select value={sort} onChange={(event) => setSort(event.target.value)}>{SHOPIFY_SORTS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
       </div>
+      {shown.length > 0 && <div className="panel-head-actions"><button type="button" className="secondary" onClick={() => downloadCsv(shown)}>Descargar CSV ({shown.length})</button></div>}
       {shown.length === 0 ? <p className="muted">No hay productos con ese filtro.</p> : (
         <div className="table-scroll"><table className="sales-history-table ml-board-table">
           <thead><tr><th>Producto</th><th>Estado</th><th>Variantes</th><th>Precio</th><th>Stock</th><th>Le falta</th></tr></thead>

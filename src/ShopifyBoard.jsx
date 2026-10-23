@@ -6,6 +6,7 @@ import { canSee } from "./module-access.mjs";
 import { Empty } from "./ui-primitives";
 import { groupProposals, proposalsCsv } from "./shopify-grouping.mjs";
 import { DailyChart } from "./DailyChart.jsx";
+import { filterMissing, missingFromShopify, missingReviewCsv, shopifyImportCsv } from "./shopify-missing.mjs";
 import { PRICE_STATES, DISCOUNT, filterPriceRows, priceCross, priceProposalCsv, priceSummary } from "./shopify-prices.mjs";
 import { PICKUP_LIMIT_DAYS, SHIP_LIMIT_HOURS, operationSummary, pendingOrders, recoverList, weeklyFunnel } from "./shopify-operation.mjs";
 
@@ -16,7 +17,7 @@ const number = (value) => (typeof value === "number" ? value.toLocaleString("es-
 const argentinaToday = () => new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
 const when = (iso) => (iso ? new Date(iso).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "nunca");
 const MISSING = /shopify_|does not exist|schema cache/i;
-const TABS = [["resumen", "Resumen"], ["mejorar", "Qué mejorar"], ["productos", "Productos"], ["precios", "Precios vs ML"], ["operacion", "Operación"], ["ordenar", "Ordenar catálogo"]];
+const TABS = [["resumen", "Resumen"], ["mejorar", "Qué mejorar"], ["productos", "Productos"], ["precios", "Precios vs ML"], ["faltan", "Faltan en Shopify"], ["operacion", "Operación"], ["ordenar", "Ordenar catálogo"]];
 
 async function readAll(query) {
   const rows = [];
@@ -305,6 +306,100 @@ function Prices({ products, variants, mlItems }) {
   );
 }
 
+// Lo que se vende en Mercado Libre y no está en la tienda: propuesta completa para revisar y, si se quiere, importar como BORRADOR.
+function Missing({ supabase, products, variants }) {
+  const [full, setFull] = useState({ status: "loading", items: [] });
+  const [query, setQuery] = useState("");
+  const [view, setView] = useState("");
+  const [open, setOpen] = useState("");
+  useEffect(() => {
+    let alive = true;
+    readAll(() => supabase.from("ml_items").select("id,sku,title,status,price,sold_quantity,visits_30d,pictures_count,available_quantity,description,attributes,picture_url,thumbnail,permalink").eq("status", "active").order("id"))
+      .then((items) => { if (alive) setFull({ status: "ready", items }); })
+      .catch((error) => { if (alive) setFull({ status: "error", items: [], error: String(error?.message || error) }); });
+    return () => { alive = false; };
+  }, [supabase]);
+  const result = useMemo(() => missingFromShopify({ products, variants, mlItems: full.items }), [products, variants, full.items]);
+  const shown = useMemo(() => filterMissing(result.rows, { query, view }), [result.rows, query, view]);
+  if (full.status === "loading") return <div className="ml-skeleton" aria-busy="true"><i /><i /><i /></div>;
+  if (full.status === "error") return <Empty title="No se pudieron leer las publicaciones de Mercado Libre" text={full.error} />;
+  if (!full.items.length) return <Empty title="Faltan las publicaciones de Mercado Libre" text="Más → Datos → Mercado Libre → Actualizar todo." />;
+  const { summary } = result;
+  const chips = [["", "Todos", result.rows.length], ["ventas", "Con ventas", summary.withSales], ["grupos", "Se agrupan", result.rows.filter((row) => row.group).length], ["sumar", "Se suman a uno existente", summary.joinExisting], ["dudosos", "Posible duplicado", summary.doubtful]];
+  return (
+    <div className="content-stack">
+      <section className="metric-grid ml-metric-grid">
+        <article className="metric-card"><ShoppingBag size={20} /><span>Están en ML y no en Shopify</span><strong>{number(summary.missing)}</strong><small className="muted">{number(summary.withSales)} con ventas</small></article>
+        <article className="metric-card"><Layers size={20} /><span>Se agruparían en</span><strong>{number(summary.groups)}</strong><small className="muted">productos con variantes</small></article>
+        <article className={`metric-card ${summary.noSku ? "is-urgent" : ""}`}><TriangleAlert size={20} /><span>Publicaciones sin SKU</span><strong>{number(summary.noSku)}</strong><small className="muted">no se pueden cruzar</small></article>
+      </section>
+      <section className="panel">
+        <div className="panel-head">
+          <div><span className="eyebrow">Mercado Libre → Shopify · nada se publica solo</span><h2>Productos que faltan en la tienda</h2></div>
+          <label className="ml-search"><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por título o SKU…" aria-label="Buscar" /></label>
+        </div>
+        <p className="muted small">Publicaciones activas de ML con SKU que ninguna variante de Shopify tiene, de las que más vendieron a las que menos. Cada fila trae precio sugerido (ML − 10 %), título corto, descripción sin links ni teléfonos, SEO, etiquetas, metacampos y con quién se agruparía. El CSV de importación sale como <strong>borrador</strong> (Shopify → Productos → Importar): lo revisás en la tienda antes de publicar. Stock inicial 999 si ML tiene stock (tu criterio de stock constante).</p>
+        <div className="ml-tabs ml-filter-tabs" role="tablist" aria-label="Filtro">
+          {chips.map(([key, label, count]) => <button key={key || "todos"} type="button" role="tab" aria-selected={view === key} className={view === key ? "selected" : ""} onClick={() => setView(key)}>{label} ({count})</button>)}
+        </div>
+        <div className="ml-toolbar">
+          <button type="button" className="ghost" onClick={() => downloadText(`shopify-borradores-${argentinaToday()}.csv`, shopifyImportCsv(shown))}>CSV para importar como borrador</button>
+          <button type="button" className="ghost" onClick={() => downloadText(`faltan-en-shopify-${argentinaToday()}.csv`, missingReviewCsv(shown))}>Hoja de revisión (todo lo sugerido)</button>
+        </div>
+        {shown.length === 0 ? <Empty title="Nada para mostrar" text="Probá con otro filtro." /> : (
+          <div className="table-scroll"><table className="sales-history-table ml-board-table">
+            <thead><tr><th>Producto en ML</th><th>Vendidas</th><th>Visitas 30 d</th><th>Precio ML</th><th>Shopify sugerido</th><th>Qué hacer</th></tr></thead>
+            <tbody>{shown.slice(0, 200).map((row) => (
+              <FragmentRow key={row.sku} row={row} open={open === row.sku} toggle={() => setOpen(open === row.sku ? "" : row.sku)} />
+            ))}</tbody>
+          </table></div>
+        )}
+        {shown.length > 200 && <p className="muted small">Se muestran los primeros 200; usá los filtros o descargá el CSV.</p>}
+      </section>
+      {result.noSku.length > 0 && (
+        <section className="panel">
+          <div className="panel-head"><div><span className="eyebrow">No se pueden cruzar</span><h2>Publicaciones activas de ML sin SKU ({result.noSku.length})</h2></div></div>
+          <p className="muted small">Sin SKU no se sabe si están en Shopify. Cargarles el SKU en Mercado Libre (el mismo del catálogo) las incorpora a este cruce y a Precios vs ML. Las más vendidas primero:</p>
+          <ul className="ml-simple-list">{result.noSku.slice(0, 15).map((item) => (
+            <li key={item.mlId}><a href={item.permalink} target="_blank" rel="noreferrer">{item.title}</a> <small className="muted">· {number(item.sold)} vendidas{item.maybe ? ` · parece ser «${item.maybe.title}» de Shopify` : ""}</small></li>
+          ))}</ul>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function FragmentRow({ row, open, toggle }) {
+  const doubtful = Boolean(row.twin || row.lookalike);
+  const action = row.joinsProduct ? `Sumar como variante a «${row.joinsProduct.title}»` : doubtful ? "Revisar si ya está cargado" : row.group ? `Crear con ${row.group.size} variantes (${row.group.options.join(" / ")})` : "Crear producto nuevo";
+  return (
+    <>
+      <tr>
+        <td><strong>{row.title}</strong><div className="muted small">{row.sku}{row.listings > 1 ? ` · ${row.listings} publicaciones` : ""}</div></td>
+        <td data-label="Vendidas">{number(row.sold)}</td>
+        <td data-label="Visitas 30 d">{number(row.visits)}</td>
+        <td data-label="Precio ML">{row.permalink ? <a href={row.permalink} target="_blank" rel="noreferrer">{money(row.mlPrice)}</a> : money(row.mlPrice)}</td>
+        <td data-label="Shopify sugerido">{row.price > 0 ? <strong>{money(row.price)}</strong> : "—"}</td>
+        <td data-label="Qué hacer"><span className={`badge ${doubtful ? "warn" : row.joinsProduct ? "" : "ok"}`}>{action}</span> <button type="button" className="ghost" onClick={toggle} aria-expanded={open}>{open ? "Ocultar" : "Ver propuesta"}</button></td>
+      </tr>
+      {open && (
+        <tr className="proposal-detail"><td colSpan={6}>
+          <div className="small">
+            {row.warnings.map((warning) => <p key={warning} className="warn-line">⚠ {warning}</p>)}
+            <p><strong>Título sugerido:</strong> {row.title}</p>
+            <p><strong>SEO:</strong> {row.seoTitle} — {row.seoDescription || "(sin texto)"}</p>
+            <p><strong>Etiquetas:</strong> {row.tags.join(", ") || "—"}</p>
+            {row.group && <p><strong>Variantes del grupo:</strong> {row.group.options.map((name, index) => `${name}: ${row.group.values[index]}`).join(" · ")}</p>}
+            {row.metafields.length > 0 && <p><strong>Metacampos sugeridos:</strong> {row.metafields.map((field) => `${field.name}: ${field.value}`).join(" · ")}</p>}
+            <p><strong>Descripción (de ML, sin links ni teléfonos):</strong></p>
+            <p className="muted" style={{ whiteSpace: "pre-wrap" }}>{row.description ? row.description.slice(0, 900) + (row.description.length > 900 ? "…" : "") : "Sin descripción en ML: hay que escribirla."}</p>
+          </div>
+        </td></tr>
+      )}
+    </>
+  );
+}
+
 export function ShopifyBoard({ supabase, session, isAdmin, hiddenTabs = null, email = "" }) {
   // Desde el Centro de mejoras se abre directo en Productos con el problema elegido.
   const opened = useMemo(() => { try { const key = sessionStorage.getItem("poliplast-open-shopify"); sessionStorage.removeItem("poliplast-open-shopify"); return key || ""; } catch { return ""; } }, []);
@@ -386,6 +481,7 @@ export function ShopifyBoard({ supabase, session, isAdmin, hiddenTabs = null, em
         {data.status === "ready" && data.products.length > 0 && tab === "mejorar" && <Issues rows={rows} onPick={pick} />}
         {data.status === "ready" && data.products.length > 0 && tab === "productos" && <Products rows={rows} issue={issue} setIssue={setIssue} />}
         {data.status === "ready" && data.products.length > 0 && tab === "precios" && <Prices products={data.products} variants={data.variants} mlItems={data.mlItems || []} />}
+        {data.status === "ready" && data.products.length > 0 && tab === "faltan" && <Missing supabase={supabase} products={data.products} variants={data.variants} />}
         {data.status === "ready" && data.products.length > 0 && tab === "operacion" && <Operation orders={data.orders || []} checkouts={data.checkouts || []} />}
         {data.status === "ready" && data.products.length > 0 && tab === "ordenar" && <Organize products={data.products} variants={data.variants} />}
       </div>

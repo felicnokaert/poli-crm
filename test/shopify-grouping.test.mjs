@@ -83,3 +83,26 @@ test('el CSV trae una fila por variante propuesta', () => {
   assert.equal(csv.split('\n').length, 3);
   assert.match(csv, /Capacidad: 10 L/);
 });
+
+test('PU-46: manual y pistola son UNA opción "Aplicación", también en los kits con opciones canula/pistola', () => {
+  const mk = (id, title, status, opts) => ({ product: { id, title, status, product_type: 'espumas de construccion', total_inventory: 10 }, opts });
+  const items = [
+    mk('m', 'Espuma Multiuso PU-46 - Manual', 'ACTIVE', ['Contenido', ['X1', 'X6', 'X12']]),
+    mk('p', 'Espuma Multiuso PU-46 - Pistola', 'DRAFT', ['Contenido', ['X1', 'X6', 'X12']]),
+    mk('km', 'Kit Espuma Multiuso Pu-46', 'ACTIVE', ['cantidad', ['3', '6', '12', '24'], 'canula']),
+    mk('kp', 'Kit Espuma Multiuso Pu-46 Pistola', 'DRAFT', ['cantidad', ['3', '6', '12', '24'], 'pistola']),
+  ];
+  const products = items.map((item) => item.product);
+  const variants = items.flatMap((item) => item.opts[1].map((value, index) => ({
+    id: `${item.product.id}-${index}`, product_id: item.product.id, title: value, sku: `${item.product.id}-${value}`, price: 1000, inventory_quantity: 1,
+    options: item.opts[2] ? [{ name: item.opts[2], value: 'Default Title' }, { name: item.opts[0], value }] : [{ name: item.opts[0], value }],
+  })));
+  const proposals = groupProposals(products, variants);
+  assert.equal(proposals.length, 2);
+  for (const proposal of proposals) {
+    assert.deepEqual(proposal.options.map((option) => option.name), ['Aplicación', 'Pack']);
+    assert.deepEqual(proposal.options[0].values.sort(), ['Manual', 'Pistola']);
+    assert.equal(proposal.warnings.length, 0);
+  }
+  assert.deepEqual(proposals.find((proposal) => proposal.name.startsWith('Kit')).options[1].values.sort(), ['x12', 'x24', 'x3', 'x6']);
+});

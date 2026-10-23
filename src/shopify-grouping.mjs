@@ -12,6 +12,23 @@ const SIZE_ALL = new RegExp(SIZE.source, 'g');
 const PACK = /\bx\s?(\d+)\b(?![.,]\d)(?!\s?(?:kg|gr|g|lts|lt|l|ml|cc|m2|mts|mt|m|cm|mm|u|un|unid)\b)/;
 const PRIORITY = ['Capacidad', 'Peso', 'Medida', 'Superficie', 'Talle', 'Aplicación', 'Cuerpo', 'Pack', 'Color', 'Tapa', 'Línea'];
 
+// Las opciones propias de cada variante vienen con nombres distintos según cómo se cargó el producto: "canula" o "pistola" con
+// valor "Default Title" (kits) son la MISMA opción "Aplicación"; "Contenido", "cantidad" y "pack" son el mismo "Pack" (x1, x3…).
+export function normalizeOption(name = '', value = '') {
+  const key = plain(String(name)).trim();
+  const text = String(value ?? '').trim();
+  if (['canula', 'manual', 'pistola'].includes(key)) {
+    if (!text || /^default title$/i.test(text) || /^(si|sí|1)$/i.test(text)) return ['Aplicación', key === 'pistola' ? 'Pistola' : 'Manual'];
+    return ['Aplicación', titleCase(plain(text) === 'canula' ? 'manual' : text)];
+  }
+  if (['aplicacion', 'modo de aplicacion', 'tipo de aplicacion'].includes(key)) return ['Aplicación', titleCase(plain(text) === 'canula' ? 'manual' : text)];
+  if (['contenido', 'cantidad', 'pack', 'unidades', 'presentacion'].includes(key)) {
+    const pack = /^x?\s?(\d+)$/i.exec(text);
+    return ['Pack', pack ? `x${pack[1]}` : text];
+  }
+  return [titleCase(key), text];
+}
+
 const titleCase = (text) => text.replace(/\s+/g, ' ').trim().replace(/(^|\s)(\S)/g, (match, space, letter) => space + letter.toUpperCase());
 
 // Atributos que se detectan en el título; lo que queda es el "nombre base".
@@ -35,7 +52,7 @@ export function parseTitle(title = '') {
   else if (/\bcon tapa\b/.test(rest)) { attrs.Tapa = 'Con tapa'; rest = rest.replace(/\bcon tapa\b/, ' '); }
   if (/\beconomic[oa]s?\b/.test(rest)) { attrs['Línea'] = 'Económico'; rest = rest.replace(/\beconomic[oa]s?\b/, ' '); }
   const apply = /\b(manual|pistola|canula)\b/.exec(rest);
-  if (apply) { attrs['Aplicación'] = titleCase(apply[1] === 'canula' ? 'cánula' : apply[1]); rest = rest.replace(apply[0], ' '); }
+  if (apply) { attrs['Aplicación'] = titleCase(apply[1] === 'pistola' ? 'pistola' : 'manual'); rest = rest.replace(apply[0], ' '); }
   const body = /\bcuerpo (alto|bajo)\b/.exec(rest);
   if (body) { attrs.Cuerpo = titleCase(body[1]); rest = rest.replace(body[0], ' '); }
   const talle = /\btalle (xxl|xl|xs|s|m|l)\b/.exec(rest);
@@ -130,7 +147,7 @@ export function groupProposals(products = [], variants = []) {
     if (members.length < 2) continue;
     // Cada variante existente con sus valores: los del título del producto + sus propias opciones (ej. color).
     const rows = members.flatMap((member) => (member.variants.length ? member.variants : [null]).map((variant) => {
-      const own = Object.fromEntries((variant?.options || []).filter((option) => option.name && option.name !== 'Title').map((option) => [titleCase(plain(option.name)), option.value]));
+      const own = Object.fromEntries((variant?.options || []).filter((option) => option.name && option.name !== 'Title').map((option) => normalizeOption(option.name, option.value)));
       const values = { ...member.attrs };
       for (const [name, value] of Object.entries(own)) if (!(name in values) || !values[name]) values[name] = value;
       return { member, variant, values };

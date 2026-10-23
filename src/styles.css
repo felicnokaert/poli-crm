@@ -794,15 +794,6 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .sales-history-summary > div { border: 1px solid var(--color-border); border-radius: 12px; padding: 9px 12px; display: grid; gap: 2px; }
 .sales-history-summary span { font-size: .78rem; color: var(--brand-gray); }
 .sales-history-summary strong { font-size: 1.15rem; }
-.sales-chart { width: 100%; max-width: 760px; max-height: 170px; height: auto; display: block; margin: 4px auto 0; color: var(--color-forest); }
-.sales-chart .sales-bar rect:last-of-type { transition: opacity .15s ease; }
-.sales-chart .sales-bar:hover rect:last-of-type, .sales-chart .sales-bar:focus-visible rect:last-of-type { opacity: .8; }
-/* Solo el mejor período muestra su valor; el resto aparece al pasar el mouse (y siempre está en el título de la barra). */
-.sales-chart .sales-bar-value { opacity: 0; transition: opacity .15s ease; }
-.sales-chart .sales-bar-value.best, .sales-chart .sales-bar:hover .sales-bar-value, .sales-chart .sales-bar:focus-visible .sales-bar-value { opacity: 1; }
-.sales-bar { cursor: pointer; outline: none; }
-.sales-bar:hover rect:nth-of-type(2), .sales-bar:focus-visible rect:nth-of-type(2) { filter: brightness(1.12); }
-.sales-bar:focus-visible rect:first-of-type { stroke: var(--brand-red); stroke-width: 2; fill: rgba(237,28,36,.06); }
 .sales-legend-bar, .sales-legend-target { display: inline-block; vertical-align: middle; margin-right: 4px; }
 .sales-legend-bar { width: 10px; height: 10px; border-radius: 3px; background: #ed1c24; }
 .sales-legend-target { width: 16px; border-top: 2px dashed currentColor; }
@@ -1363,3 +1354,21 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
   .ic-table td:first-child { flex: 0 0 auto; }
   .ic-table td:last-child { margin-left: auto; }
 }
+
+/* 23/10: gráfico de Ventas → historial (barras en HTML, altura fija, a todo el ancho). */
+.sales-bars { display: grid; gap: clamp(4px, 1.2vw, 14px); height: 170px; margin: 6px 0 4px; padding: 18px 2px 0; border-bottom: 1px solid var(--color-border-light); }
+.sales-bar-col { display: flex; flex-direction: column; align-items: stretch; height: 100%; min-width: 0; padding: 0; border: 0; background: none; cursor: pointer; color: inherit; font: inherit; border-radius: 8px; }
+.sales-bar-col:hover, .sales-bar-col:focus-visible { background: rgba(237, 28, 36, .05); outline: none; }
+.sales-bar-col:focus-visible { box-shadow: 0 0 0 2px var(--brand-red); }
+.sales-bar-track { position: relative; flex: 1; display: flex; align-items: flex-end; justify-content: center; }
+.sales-bar-fill { position: relative; width: min(30px, 64%); border-radius: 6px 6px 2px 2px; background: linear-gradient(180deg, #ed1c24, #f2646a); transition: height .45s cubic-bezier(.2, .8, .2, 1), filter .15s ease; }
+.sales-bar-fill.hit { background: linear-gradient(180deg, #2e7d32, #5fa463); }
+.sales-bar-fill.is-zero { background: var(--color-border-light); opacity: .7; }
+.sales-bar-col:hover .sales-bar-fill { filter: brightness(1.08); }
+.sales-bar-value { position: absolute; bottom: calc(100% + 3px); left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 11px; font-weight: 700; opacity: 0; transition: opacity .15s ease; pointer-events: none; }
+.sales-bar-col.best .sales-bar-value, .sales-bar-col:hover .sales-bar-value, .sales-bar-col:focus-visible .sales-bar-value { opacity: 1; }
+.sales-bar-target { position: absolute; left: 12%; right: 12%; border-top: 2px dashed currentColor; opacity: .45; z-index: 1; pointer-events: none; }
+.sales-bar-label { padding: 5px 0 4px; font-size: 11px; text-align: center; opacity: .65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sales-bar-col.best .sales-bar-label { opacity: 1; font-weight: 700; }
+@media (max-width: 640px) { .sales-bars { height: 140px; } .sales-bar-value, .sales-bar-label { font-size: 10px; } }
+@media (prefers-reduced-motion: reduce) { .sales-bar-fill { transition: none; } }

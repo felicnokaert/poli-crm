@@ -9,7 +9,6 @@ export function ModuleAccessPanel({ supabase }) {
   const [rows, setRows] = useState([]);
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
-  const [busy, setBusy] = useState("");
 
   async function load() {
     const [list, access] = await Promise.all([supabase.rpc("admin_list_users"), supabase.from("module_access").select("email, module, allowed")]);
@@ -24,23 +23,26 @@ export function ModuleAccessPanel({ supabase }) {
 
   const denied = useMemo(() => deniedSet(rows.filter((row) => String(row.email).toLowerCase() === email)), [rows, email]);
 
-  async function toggle(key, allowed) {
-    const change = accessChange(email, key, allowed);
-    setBusy(key); setMessage("");
-    const result = change.op === "delete"
-      ? await supabase.from("module_access").delete().eq("email", change.email).eq("module", change.module)
-      : await supabase.from("module_access").upsert(change.row, { onConflict: "email,module" });
-    setBusy("");
-    if (result.error) { setMessage("No se pudo guardar el cambio."); return; }
+  // El cambio se ve al instante; si el servidor lo rechaza, se vuelve atrás y se avisa.
+  function apply(change, allowed) {
     setRows((current) => {
-      const rest = current.filter((row) => !(String(row.email).toLowerCase() === change.email && row.module === key));
-      return allowed ? rest : [...rest, { email: change.email, module: key, allowed: false }];
+      const rest = current.filter((row) => !(String(row.email).toLowerCase() === change.email && row.module === change.module));
+      return allowed ? rest : [...rest, { email: change.email, module: change.module, allowed: false }];
     });
+  }
+  async function toggle(key, allowed) {
+    const change = { ...accessChange(email, key, allowed), email: String(email).toLowerCase(), module: key };
+    setMessage("");
+    apply(change, allowed);
+    const result = allowed
+      ? await supabase.from("module_access").delete().eq("email", change.email).eq("module", key)
+      : await supabase.from("module_access").upsert(accessChange(email, key, false).row, { onConflict: "email,module" });
+    if (result.error) { apply(change, !allowed); setMessage("No se pudo guardar el cambio; quedó como estaba."); }
   }
 
   const box = (key, label, parentDenied = false) => (
     <label key={key} className="check-row">
-      <input type="checkbox" checked={!denied.has(key) && !parentDenied} disabled={busy === key || parentDenied} onChange={(event) => toggle(key, event.target.checked)} />
+      <input type="checkbox" checked={!denied.has(key) && !parentDenied} disabled={parentDenied} onChange={(event) => toggle(key, event.target.checked)} />
       {label}
     </label>
   );

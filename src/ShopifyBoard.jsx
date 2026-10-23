@@ -135,11 +135,11 @@ function Products({ rows, issue, setIssue }) {
             return (
               <tr key={row.product.id}>
                 <td><div className="ml-board-title">{row.product.image_url ? <img src={row.product.image_url} alt="" width="40" height="40" loading="lazy" /> : <span className="shopify-noimg" aria-hidden="true" />}<span>{row.product.online_url ? <a href={row.product.online_url} target="_blank" rel="noreferrer">{row.product.title} <ExternalLink size={11} /></a> : row.product.title}<small className="muted"> {[row.product.vendor, row.product.product_type].filter(Boolean).join(" · ")}</small></span></div></td>
-                <td><span className={`badge ${tone}`}>{label}</span></td>
-                <td>{row.variants.length}{row.variants.length > 1 ? <small className="muted"> ({[...new Set(row.variants.flatMap((variant) => variant.options.map((option) => option.name)))].filter((name) => name !== "Title").join(" · ") || "—"})</small> : null}</td>
-                <td>{row.minPrice == null ? "—" : row.minPrice === row.maxPrice ? money(row.minPrice) : `${money(row.minPrice)} – ${money(row.maxPrice)}`}</td>
-                <td>{number(row.product.total_inventory)}</td>
-                <td>{row.issues.length === 0 ? <span className="muted small">—</span> : row.issues.map((key) => <span key={key} className="badge warn" title={issueLabel(key)}>{issueLabel(key)}</span>)}</td>
+                <td data-label="Estado"><span className={`badge ${tone}`}>{label}</span></td>
+                <td data-label="Variantes">{row.variants.length}{row.variants.length > 1 ? <small className="muted"> ({[...new Set(row.variants.flatMap((variant) => variant.options.map((option) => option.name)))].filter((name) => name !== "Title").join(" · ") || "—"})</small> : null}</td>
+                <td data-label="Precio">{row.minPrice == null ? "—" : row.minPrice === row.maxPrice ? money(row.minPrice) : `${money(row.minPrice)} – ${money(row.maxPrice)}`}</td>
+                <td data-label="Stock">{number(row.product.total_inventory)}</td>
+                <td data-label="Le falta">{row.issues.length === 0 ? <span className="muted small">—</span> : row.issues.map((key) => <span key={key} className="badge warn" title={issueLabel(key)}>{issueLabel(key)}</span>)}</td>
               </tr>
             );
           })}</tbody>

@@ -18,7 +18,7 @@ export const MODULES = [
   },
   {
     id: 'shopify', label: 'Shopify',
-    children: [['resumen', 'Resumen'], ['mejorar', 'Qué mejorar'], ['productos', 'Productos'], ['operacion', 'Operación'], ['ordenar', 'Ordenar catálogo']],
+    children: [['resumen', 'Resumen'], ['mejorar', 'Qué mejorar'], ['productos', 'Productos'], ['precios', 'Precios vs ML'], ['operacion', 'Operación'], ['ordenar', 'Ordenar catálogo']],
   },
   { id: 'clients', label: 'Empresas y contactos' },
   { id: 'map', label: 'Mapa' },

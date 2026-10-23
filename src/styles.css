@@ -1402,3 +1402,10 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
   .local-chip { font-size: 0.68rem; padding: 1px 6px; }
   main { padding-top: 10px; }
 }
+
+/* Qué atender hoy (alertas persistentes) */
+.attention-group h3 { margin: 12px 0 4px; font-size: 0.9rem; }
+.attention-alta h3 { color: #b91c1c; }
+.attention-media h3 { color: #b45309; }
+.attention-baja h3 { color: var(--color-text-muted); }
+.attention-panel .ml-alerts { margin: 0; }

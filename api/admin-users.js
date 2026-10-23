@@ -1,3 +1,4 @@
+import { alertsAdmin, alertsCron } from '../lib/crm-alerts.mjs';
 import { deleteUser } from '../lib/admin-users.mjs';
 import { cleanupWorkspaces } from '../lib/workspace-cleanup-admin.mjs';
 import { technicalAdmin } from '../lib/technical-admin.mjs';
@@ -22,6 +23,7 @@ const CRONS = {
   'mercadolibre-mercado': mercadoLibreMarketCron,
   contabilium: contabiliumCron,
   shopify: shopifyCron,
+  alertas: alertsCron,
 };
 
 export default async function handler(request, response) {
@@ -39,6 +41,7 @@ export default async function handler(request, response) {
     : action === 'mercadolibre' ? await mercadoLibreAdmin(request)
     : action === 'contabilium' ? await contabiliumAdmin(request)
     : action === 'shopify' ? await shopifyAdmin(request)
+    : action === 'alerts' ? await alertsAdmin(request)
     : action === 'assistant' ? await assistantAi(request)
     : await deleteUser(request);
   return response.status(result.status).json(result.body);

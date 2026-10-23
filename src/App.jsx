@@ -666,6 +666,7 @@ export default function App() {
 
         {view === "dashboard" && (
           <Dashboard
+            session={session}
             metrics={metrics}
             tasks={data.tasks}
             interactions={data.interactions}
@@ -809,7 +810,7 @@ export default function App() {
         )}
         {view === "mejoras" && (
           <Suspense fallback={<Splash text="Cargando el Centro de mejoras…" />}>
-            <ImprovementCenter supabase={supabase} isAdmin={isChannelAdmin(session?.user?.email)} onOpen={setView} />
+            <ImprovementCenter supabase={supabase} session={session} isAdmin={isChannelAdmin(session?.user?.email)} onOpen={setView} />
           </Suspense>
         )}
         {view === "shopify" && (

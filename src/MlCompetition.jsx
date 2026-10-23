@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { adminFetch } from "./admin-api.mjs";
-import { competitionRows, competitorSummary, trendsView } from "./ml-competition-view.mjs";
+import { competitionCsv, competitionRows, competitorSummary, trendsView } from "./ml-competition-view.mjs";
 
 // Ventas → Mercado Libre → "Competencia" y "Tendencias" (23/10). Felipe pega links de publicaciones de la
 // competencia; cada día se guarda su precio y vendidas para ver cuánto venden y cómo mueven el precio, contra
@@ -20,6 +20,14 @@ async function readAll(query) {
     if (!data || data.length < 1000) break;
   }
   return rows;
+}
+
+function downloadCsv(rows) {
+  const url = URL.createObjectURL(new Blob([competitionCsv(rows)], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url; link.download = `competencia-ml-${argentinaToday()}.csv`;
+  document.body.appendChild(link); link.click(); link.remove();
+  URL.revokeObjectURL(url);
 }
 
 async function callMl(body, session) {
@@ -56,6 +64,7 @@ export function MlCompetition({ supabase, session, isAdmin, items = [], nickname
   const [ourItem, setOurItem] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [probe, setProbe] = useState(null);
   const today = argentinaToday();
   const ours = useMemo(() => items.filter((item) => item.status === "active"), [items]);
   const rows = useMemo(() => competitionRows({ competitors: data.competitors, snapshots: data.snapshots, ours, today }), [data, ours, today]);
@@ -89,10 +98,18 @@ export function MlCompetition({ supabase, session, isAdmin, items = [], nickname
           </div>
           <div className="panel-head-actions">
             <button type="button" className="primary" disabled={busy || !text.trim()} onClick={() => run({ op: "competitors-add", text, competitorName: who, ourItemId: ourItem }, (result) => { setText(""); return `Listo: ${result.saved} publicaciones en seguimiento${result.missing?.length ? `; no se encontraron ${result.missing.length}` : ""}${result.products ? `; ${result.products} links de catálogo no sirven (pegá el de la publicación)` : ""}.`; })}>Sumar</button>
+            <button type="button" className="secondary" disabled={busy} title="Prueba la búsqueda de Mercado Libre de varias formas y muestra qué deja hacer a nuestra app" onClick={() => run({ op: "competitors-probe" }, (result) => { setProbe(result.results || []); return "Diagnóstico listo (abajo)."; })}>Probar búsqueda</button>
             <button type="button" className="secondary" disabled={busy} title="Busca en Mercado Libre, por cada una de tus categorías que más venden, qué publican otros vendedores y los sigue solos" onClick={() => run({ op: "competitors-discover" }, discoverMessage)}>Descubrir competencia</button>
+            <button type="button" className="secondary" disabled={!rows.length} onClick={() => downloadCsv(rows)}>Descargar CSV</button>
             <button type="button" className="secondary" disabled={busy || !rows.length} onClick={() => run({ op: "competitors-refresh" }, (result) => `Precios al día: ${result.saved} publicaciones.`)}>Actualizar ahora</button>
           </div>
           {message && <p className="muted small" role="status">{message}</p>}
+          {probe && (
+            <div className="table-scroll"><table className="sales-history-table" aria-label="Diagnóstico de la búsqueda">
+              <thead><tr><th>Prueba</th><th>Estado</th><th>Detalle</th></tr></thead>
+              <tbody>{probe.map((test) => <tr key={test.name}><td>{test.name}</td><td>{test.ok ? "✅" : "❌"} {test.status || "—"}</td><td className="small">{test.detail}</td></tr>)}</tbody>
+            </table></div>
+          )}
         </section>
       )}
       {summary.length > 0 && (
@@ -108,11 +125,12 @@ export function MlCompetition({ supabase, session, isAdmin, items = [], nickname
         <div className="panel-head"><div><h2>Publicaciones en seguimiento ({rows.length})</h2></div></div>
         {rows.length === 0 ? <p className="muted">{isAdmin ? "Todavía no hay: pegá links arriba." : "Todavía no hay: las carga Felipe."}</p> : (
           <div className="table-scroll"><table className="sales-history-table">
-            <thead><tr><th>Publicación</th><th>Precio</th><th>7 días</th><th>30 días</th><th>Vendidas 7 / 30 días</th><th>La nuestra</th>{isAdmin && <th></th>}</tr></thead>
+            <thead><tr><th>Publicación</th><th>Precio</th><th>24 h</th><th>7 días</th><th>30 días</th><th>Vendidas 7 / 30 días</th><th>La nuestra</th>{isAdmin && <th></th>}</tr></thead>
             <tbody>{rows.map((row) => (
               <tr key={row.item.id}>
                 <td><a href={row.item.permalink} target="_blank" rel="noreferrer">{String(row.item.title).slice(0, 60)} <ExternalLink size={11} /></a><div className="muted small">{row.who}{row.item.free_shipping ? " · envío gratis" : ""}{row.item.status && row.item.status !== "active" ? ` · ${row.item.status}` : ""} · seguida desde {row.since ? row.since.split("-").reverse().join("/") : "hoy"}</div></td>
                 <td>{money(row.item.price)}{row.item.original_price ? <div className="muted small">antes {money(row.item.original_price)}</div> : null}</td>
+                <td>{signed(row.priceChange1)}<div className="muted small">{row.sold1 == null ? "" : `${row.sold1} vendidas`}</div>{row.alerts.map((alert) => <div key={alert.kind} className={alert.kind === "precio" ? "badge warn" : "badge"} title={alert.text}>{alert.kind === "precio" ? "🔴" : "🟢"} {alert.text}</div>)}</td>
                 <td>{signed(row.priceChange7)}</td>
                 <td>{signed(row.priceChange30)}</td>
                 <td>{row.sold7 ?? "—"} / {row.sold30 ?? "—"}<div className="muted small">total {row.item.sold_quantity ?? "—"}</div></td>

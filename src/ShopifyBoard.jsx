@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, Layers, PackageCheck, RefreshCw, ShoppingBag, TriangleAlert, Truck, Wallet } from "lucide-react";
+import { ChevronDown, ChevronRight, ExternalLink, Layers, PackageCheck, RefreshCw, ShoppingBag, TriangleAlert, Truck, Wallet } from "lucide-react";
 import { adminFetch } from "./admin-api.mjs";
 import { SHOPIFY_ISSUES, SHOPIFY_SORTS, SHOPIFY_STATUS, boardRows, facets, filterRows, issueLabel, periodTotals, productsCsv, statusLabel, summarize } from "./shopify-board.mjs";
 import { canSee } from "./module-access.mjs";
@@ -178,9 +178,11 @@ function Organize({ products, variants }) {
       <button type="button" className="ghost" onClick={() => downloadText(`shopify-agrupar-${argentinaToday()}.csv`, proposalsCsv(proposals))}>Descargar propuesta (CSV)</button>
       {proposals.map((item) => (
         <section key={item.key} className="panel">
-          <button type="button" className="ghost" aria-expanded={open === item.key} onClick={() => setOpen(open === item.key ? "" : item.key)}>
-            <strong>{item.name}</strong> · {item.products.length} productos → 1 · {item.variants.length} variantes · {item.options.map((option) => option.name).join(" / ") || "sin opciones"}
-            {item.warnings.length > 0 && <span> · <TriangleAlert size={14} aria-hidden="true" /> {item.warnings.length}</span>}
+          <button type="button" className="proposal-head" aria-expanded={open === item.key} onClick={() => setOpen(open === item.key ? "" : item.key)}>
+            {open === item.key ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" />}
+            <span className="proposal-name">{item.name}</span>
+            <span className="proposal-meta">{item.products.length} productos → 1 · {item.variants.length} variantes · {item.options.map((option) => option.name).join(" / ") || "sin opciones"}</span>
+            {item.warnings.length > 0 && <span className="badge warn"><TriangleAlert size={12} aria-hidden="true" /> {item.warnings.length} {item.warnings.length === 1 ? "aviso" : "avisos"}</span>}
           </button>
           {open === item.key && (
             <div>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { adminFetch } from "./admin-api.mjs";
 import { DEFAULT_WATCH, VERDICT_TEXT, adsAdvice, buildAdsReport, matchesWatch } from "./ml-ads.mjs";
 
 // Ventas → Mercado Libre → Publicidad (23/10, solo Felipe): campañas de Product Ads por cuenta. La API de publicidad todavía no está
@@ -69,7 +70,17 @@ function Report({ report }) {
   );
 }
 
-export function MlAds({ ads = {}, onSave, accounts = [] }) {
+export function MlAds({ ads = {}, onSave, accounts = [], session = null }) {
+  const [probe, setProbe] = useState(null);
+  async function probeAds() {
+    setProbe({ busy: true });
+    try {
+      const response = await adminFetch({ action: "mercadolibre", op: "ads-probe" }, session?.access_token);
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || `Error ${response.status}`);
+      setProbe({ results: body.results || [] });
+    } catch (error) { setProbe({ error: error.message || "No se pudo probar." }); }
+  }
   const labels = accounts.length ? accounts.map((account) => account.nickname || String(account.seller_id)) : ["POLIPLAST", "FOAM FACTORY"];
   const [account, setAccount] = useState(labels[0]);
   const [text, setText] = useState("");
@@ -95,7 +106,15 @@ export function MlAds({ ads = {}, onSave, accounts = [] }) {
           <h2>Publicidad</h2>
           <p className="muted">Pegá la tabla de campañas de cada cuenta (Publicidad → Product Ads → Campañas) y el CRM la compara con el objetivo de ROAS. Es una foto del momento en que la pegás: no se actualiza sola. Solo sugiere; no cambia presupuestos ni pausa campañas.</p>
         </div>
+        <button type="button" className="secondary" disabled={probe?.busy} onClick={probeAds}>{probe?.busy ? "Probando…" : "Probar conexión de Publicidad"}</button>
       </div>
+      {probe?.error && <p className="system-message">{probe.error}</p>}
+      {probe?.results && (
+        <ul className="ml-alerts">
+          {probe.results.map((row) => <li key={row.name} className={row.ok ? "" : "is-urgent"}><span><strong>{row.ok ? "✅" : "❌"} {row.name}</strong><small className="muted"> · {row.status || "sin respuesta"} · {row.detail}</small></span></li>)}
+          {probe.results.length === 0 && <li><span className="muted">No hay cuentas conectadas.</span></li>}
+        </ul>
+      )}
       <div className="segmented" role="tablist" aria-label="Cuenta de publicidad">
         {labels.map((label) => <button key={label} type="button" role="tab" aria-selected={account === label} className={account === label ? "selected" : ""} onClick={() => { setAccount(label); setPreview(null); setMessage(""); }}>{label}</button>)}
       </div>

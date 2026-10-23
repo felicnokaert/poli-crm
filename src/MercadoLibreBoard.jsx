@@ -508,7 +508,7 @@ export function MercadoLibreBoard({ supabase, session = null, isAdmin = false, c
       </section>
       {error && <div className="system-message error">{error}</div>}
       <div key={tab} className="ml-pane">
-      {tab === "publicidad" && canSeeAds && <MlAds ads={ads} onSave={onAdsChange} accounts={accounts} />}
+      {tab === "publicidad" && canSeeAds && <MlAds ads={ads} onSave={onAdsChange} accounts={accounts} session={session} />}
       {tab === "publicidad" && !canSeeAds && null}
       {tab !== "publicidad" && items === null && <div className="ml-skeleton" role="status" aria-label="Cargando Mercado Libre"><i /><i /><i /><i /></div>}
       {tab !== "publicidad" && items && items.length === 0 && !error && <Empty text={supabase ? "Todavía no hay datos: conectá las cuentas en Más → Datos → Mercado Libre." : "Mercado Libre está en la versión en línea."} />}

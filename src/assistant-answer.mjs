@@ -6,17 +6,17 @@
 import { plain } from './knowledge-search.mjs';
 
 export const INTENTS = [
-  { key: 'rendimiento', label: 'Rendimiento', ask: ['rinde', 'rinden', 'rendimiento', 'cubre', 'cubro', 'alcanza', 'necesito', 'cuanto', 'cantidad', 'm2', 'metro', 'metros', 'kilo', 'kilos', 'kg', 'litro', 'litros', 'gramos', 'consumo'], search: ['rinde', 'rendimiento', 'cubre', 'm2'], line: ['rendimiento', 'rinde', 'm2', 'm²', 'por metro', 'kilo x', 'kg por', 'kg/m'], evidence: /\d[\d.,]*\s*(?:g|gr|gramos|kg|kilos?|litros?)\b.*?(?:m2|m²|metro)/i },
+  { key: 'rendimiento', label: 'Rendimiento', ask: ['rinde', 'rinden', 'rendimiento', 'cubre', 'cubro', 'alcanza', 'necesito', 'cantidad', 'm2', 'metro', 'metros', 'kilo', 'kilos', 'kg', 'litro', 'litros', 'gramos', 'consumo'], search: ['rinde', 'rendimiento', 'cubre', 'm2'], line: ['rendimiento', 'rinde', 'm2', 'm²', 'por metro', 'kilo x', 'kg por', 'kg/m'], evidence: /\d[\d.,]*\s*(?:g|gr|gramos|kg|kilos?|litros?)\b.*?(?:m2|m²|metro)/i },
   { key: 'tiempos', label: 'Tiempos de secado y curado', ask: ['seca', 'secado', 'secar', 'curado', 'cura', 'curar', 'tarda', 'demora', 'tiempo', 'tiempos', 'horas', 'gelificacion', 'gelifica', 'endurece'], search: ['secado', 'curado', 'tarda'], line: ['curado', 'secado', 'seca', 'tacto', 'gelific', 'tiempo de trabajo', 'tiempo abierto', 'horas', ' h ', ' min', 'dias'], evidence: /\d+\s*(?:a|y|-)?\s*\d*\s*(?:h|hs|horas|min|minutos|d[ií]as|semanas?)\b/i },
   { key: 'mezcla', label: 'Mezcla y proporción', ask: ['mezcla', 'mezclar', 'proporcion', 'relacion', 'catalizador', 'partes', 'endurecedor', 'dosifica'], search: ['mezcla', 'proporcion', 'catalizador'], line: ['mezcla', 'relacion', 'partes', 'proporcion', 'catalizador', '1:1', '2:1'], evidence: /\d\s*(?::|a|x|\/)\s*\d|partes?/i },
-  { key: 'alimentos', label: 'Contacto con alimentos y toxicidad', ask: ['alimento', 'alimentos', 'comida', 'toxico', 'toxica', 'peces', 'acuario', 'fda', 'mate', 'vaso'], search: ['alimentos', 'toxico', 'peces'], line: ['alimento', 'toxic', 'fda', 'peces', 'inerte'] },
+  { key: 'alimentos', label: 'Contacto con alimentos y toxicidad', ask: ['alimento', 'alimentos', 'comida', 'toxico', 'toxica', 'peces', 'acuario', 'fda', 'mate', 'vaso', 'potable', 'bebida', 'bebidas'], search: ['alimentos', 'toxico', 'peces'], line: ['alimento', 'toxic', 'fda', 'peces', 'inerte'] },
   { key: 'temperatura', label: 'Temperatura', ask: ['temperatura', 'calor', 'frio', 'grados', 'sol', 'resiste'], search: ['temperatura', 'calor'], line: ['°c', 'temperatura', 'calor', 'grados', 'frio'] },
   { key: 'espesor', label: 'Espesor', ask: ['espesor', 'capa', 'capas', 'grosor', 'alto', 'profundidad', 'colada'], search: ['espesor', 'capa'], line: ['espesor', 'capa', ' mm', ' cm'] },
   // 21/10: los temas que más preguntan en Mercado Libre y faltaban (sirve para, aplicación, medidas, envíos, color, diferencias).
   { key: 'usos', label: 'Para qué sirve', ask: ['sirve', 'apto', 'apta', 'techo', 'techos', 'chapa', 'madera', 'piso', 'pisos', 'pared', 'paredes', 'mesada', 'mesadas', 'molde', 'moldes', 'exterior', 'interior', 'humedad', 'goteras', 'pileta', 'tanque', 'banera', 'heladera', 'camion', 'aislar'], search: ['sirve', 'apto', 'recomendamos'], line: ['sirve', 'apto', 'apta', 'ideal', 'recomend', 'se puede', 'puede aplicar', 'perfectamente'] },
   { key: 'aplicacion', label: 'Cómo se aplica', ask: ['aplicar', 'aplica', 'aplico', 'colocar', 'coloca', 'poner', 'pongo', 'pegar', 'rellenar', 'pistola', 'limpiador', 'pico', 'agitar', 'proyectar', 'preparar', 'lijar', 'imprimacion'], search: ['aplicar', 'pistola', 'aplicacion'], line: ['aplic', 'pistola', 'limpiador', 'agit', 'proyect', 'lij', 'capa', 'pico', 'imprim'] },
   { key: 'medidas', label: 'Medidas y presentación', ask: ['ancho', 'largo', 'alto', 'medida', 'medidas', 'rollo', 'dimensiones', 'tamano', 'presentacion', 'presentaciones', 'viene', 'gramos', 'mililitros'], search: ['medidas', 'ancho', 'largo'], line: ['ancho', 'largo', 'medida', 'mts', ' cm', ' x ', 'rollo', 'presentacion', 'viene en'], evidence: /\d[\d.,]*\s*(?:x|por)\s*\d|\d[\d.,]*\s*(?:mts?|metros|cm|mm|ml|cc|gr|kg)\b/i },
-  { key: 'envios', label: 'Envíos y retiro', ask: ['envio', 'envios', 'envian', 'mandan', 'llegaria', 'llega', 'retiro', 'retirar', 'retira', 'flete', 'correo', 'domicilio', 'local'], search: ['envio', 'retiro'], line: ['envio', 'envios', 'retir', 'llega', 'flex', 'correo', 'local', 'domicilio'] },
+  { key: 'envios', label: 'Envíos y retiro', ask: ['envio', 'envios', 'envian', 'mandan', 'llegaria', 'llega', 'llegar', 'llegan', 'retiro', 'retirar', 'retira', 'flete', 'correo', 'domicilio', 'local'], search: ['envio', 'retiro'], line: ['envio', 'envios', 'retir', 'llega', 'flex', 'correo', 'local', 'domicilio'] },
   { key: 'color', label: 'Colores', ask: ['color', 'colores', 'blanco', 'negro', 'gris', 'rojo', 'transparente', 'pigmento', 'pigmentos', 'tenir', 'colorear'], search: ['color', 'colores', 'pigmento'], line: ['color', 'pigment', 'blanco', 'transparente', 'negro', 'gris', 'tonos'] },
   { key: 'fuego', label: 'Fuego e inflamabilidad', ask: ['ignifuga', 'ignifugo', 'ignifugas', 'fuego', 'llama', 'llamas', 'inflamable', 'incendio', 'quema', 'autoextinguible'], search: ['ignifuga', 'llama', 'fuego'], line: ['llama', 'ignif', 'fuego', 'autoextingu', 'inflamable', 'incendio'] },
   { key: 'diferencia', label: 'Diferencias entre productos', ask: ['diferencia', 'diferencias', 'versus', 'conviene', 'recomendas', 'recomiendan', 'cual es mejor'], search: ['diferencia', 'conviene'], line: ['diferencia', 'a diferencia', 'mejor', 'conviene', 'recomend', 'en cambio'] },
@@ -35,6 +35,7 @@ const SAYINGS = [
   [/\b(cuant[oa]s? (necesito|preciso|tengo que comprar|me hacen falta|compro|llevo)|me alcanza|cuanto me hace falta|para cubrir|cuantas latas|cuantos pomos|cuantos envases|cuantas unidades)\b/g, 'rinde'],
   [/\b(rendmiento|redimiento|rendimineto|rrinde)\b/g, 'rendimiento'],
   [/\b(en cuanto tiempo|cuanto tiempo|a las cuantas horas|cuando puedo (usar|pisar|pintar|desmoldar)|cuanto demora)\b/g, 'tiempo'],
+  [/\bagua potable\b/g, 'alimentos'],
   [/\b(es toxic[oa]|apto (para )?alimentos?|para (el )?mate|tablas? de picar|contacto con comida)\b/g, 'alimentos'],
   [/\b(cuanto aguanta|aguanta el calor|soporta (el )?calor|al sol)\b/g, 'temperatura'],
   [/\bembase\b/g, 'envase'],
@@ -46,8 +47,14 @@ export function understand(query) {
   return text;
 }
 
+// 23/10: en "cuánto sale la resina de 1 kg" el kilo es la presentación, no una pregunta de rendimiento.
+const PRICE_ASK = /\b(precio\w*|cuanto (sale|salen|cuesta|cuestan|vale|valen)|a cuanto)\b/;
+const UNIT_WORDS = new Set(['kg', 'kilo', 'kilos', 'litro', 'litros', 'gramos']);
+
 export function detectIntent(query) {
-  const words = understand(query).split(/[^a-z0-9]+/).filter(Boolean);
+  const text = understand(query);
+  const price = PRICE_ASK.test(text);
+  const words = text.split(/[^a-z0-9]+/).filter((word) => word && !(price && UNIT_WORDS.has(word)));
   let best = null;
   for (const intent of INTENTS) {
     const hits = words.filter((word) => intent.ask.includes(word)).length;

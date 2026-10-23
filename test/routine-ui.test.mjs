@@ -147,3 +147,33 @@ test('Usuarios registrados: lista mail y nombre, no deja borrar administradores 
   assert.equal(screen.getAllByRole('button', { name: /Borrar/ }).length, 1, 'solo el que no es administrador tiene botón');
   assert.ok(screen.getByText('Administrador'));
 });
+
+test('Equipo y cuentas: "Qué ve" destilda un módulo al instante y lo guarda; restablecer vuelve a mostrar todo', async () => {
+  const { AdminUsersWithConfirm } = await loadJsxModule('test/fixtures/admin-users-with-confirm.jsx');
+  const rows = [
+    { id: '1', email: 'felipe@grupopoliplast.com.ar', name: 'Felipe', created_at: '2026-08-29T00:00:00Z', last_sign_in_at: '2026-10-15T00:00:00Z', confirmed: true },
+    { id: '2', email: 'brenda@grupopoliplast.com.ar', name: 'Brenda', created_at: '2026-10-16T00:00:00Z', last_sign_in_at: null, confirmed: true },
+  ];
+  const saved = [];
+  const chain = (table) => {
+    const api = {
+      select: () => Promise.resolve({ data: [], error: null }),
+      upsert: (row) => { saved.push(['upsert', row.module]); return Promise.resolve({ error: null }); },
+      delete: () => ({ eq: () => ({ eq: (_, module) => { saved.push(['delete', module]); return Promise.resolve({ error: null }); }, then: (resolve) => { saved.push(['delete-all']); resolve({ error: null }); } }) }),
+    };
+    return api;
+  };
+  const supabase = { rpc: async () => ({ data: rows, error: null }), from: chain };
+  render(React.createElement(AdminUsersWithConfirm, { supabase, session: { access_token: 't' }, adminEmails: ['felipe@grupopoliplast.com.ar'] }));
+  await screen.findByText('Brenda');
+  fireEvent.click(screen.getByRole('button', { name: /Qué ve \(todo\)/ }));
+  const shopify = screen.getByLabelText('Shopify');
+  assert.equal(shopify.checked, true);
+  fireEvent.click(shopify);
+  assert.equal(screen.getByLabelText('Shopify').checked, false, 'se ve al instante, sin esperar al servidor');
+  assert.ok(screen.getByRole('button', { name: /Qué ve \(1 oculto\)/ }));
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.deepEqual(saved, [['upsert', 'shopify']]);
+  fireEvent.click(screen.getByRole('button', { name: /Restablecer/ }));
+  assert.ok(screen.getByRole('button', { name: /Qué ve \(todo\)/ }));
+});

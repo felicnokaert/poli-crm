@@ -13,13 +13,16 @@ const clientKeys = (row) => {
   const cuit = cuitKey(row.cuit);
   return [`${row.company}|${row.cliente_id || String(row.cliente || '').trim().toLowerCase()}`, ...(cuit ? [`${row.company}|${cuit}`] : [])];
 };
+// 24/10: el mismo CUIT también cruza ENTRE empresas del grupo (cotizó en POLIPLAST y compró en COMARG o FOAMFACTORY).
+// Solo cuenta si no hubo factura en la misma empresa; se informa aparte (crossCompany) para no inflar el número sin avisar.
+const groupKey = (row) => { const cuit = cuitKey(row.cuit); return cuit ? `grupo|${cuit}` : ''; };
 
 export function quoteConversion(rows = [], { today, months = 12 } = {}) {
   const since = new Date(Date.parse(today) - months * 30.4 * DAY).toISOString().slice(0, 10);
   const invoices = new Map();
   for (const row of rows) {
     if (!/^FC/.test(row.tipo || '')) continue;
-    for (const key of clientKeys(row)) {
+    for (const key of [...clientKeys(row), groupKey(row)].filter(Boolean)) {
       if (!invoices.has(key)) invoices.set(key, []);
       invoices.get(key).push(day(row.fecha));
     }
@@ -30,13 +33,18 @@ export function quoteConversion(rows = [], { today, months = 12 } = {}) {
   const byMonth = new Map();
   const closedDays = [];
   let closed = 0;
+  let crossCompany = 0;
   let pending = 0;
   let quotedAmount = 0;
   let closedAmount = 0;
   for (const quote of quotes) {
     const date = day(quote.fecha);
     const age = daysBetween(date, today);
-    const invoice = clientKeys(quote).flatMap((key) => invoices.get(key) || []).filter((when) => when >= date && daysBetween(date, when) <= CLOSE_WINDOW_DAYS).sort()[0];
+    const within = (keys) => keys.flatMap((key) => invoices.get(key) || []).filter((when) => when >= date && daysBetween(date, when) <= CLOSE_WINDOW_DAYS).sort()[0];
+    const sameCompany = within(clientKeys(quote));
+    const otherCompany = sameCompany ? undefined : within([groupKey(quote)].filter(Boolean));
+    const invoice = sameCompany || otherCompany;
+    if (otherCompany) crossCompany += 1;
     const amount = comprobanteAmount(quote);
     quotedAmount += amount;
     const state = invoice ? 'cerrada' : age <= CLOSE_WINDOW_DAYS ? 'en curso' : 'perdida';
@@ -56,6 +64,7 @@ export function quoteConversion(rows = [], { today, months = 12 } = {}) {
   return {
     quotes: quotes.length,
     closed,
+    crossCompany,
     pending,
     lost: decided - closed,
     rate: decided ? Math.round((closed / decided) * 100) : null,

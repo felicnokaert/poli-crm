@@ -1,3 +1,6 @@
+import { ProspectRulesPanel } from './ProspectRulesPanel.jsx';
+import { normalizeRules } from './prospect-rules.mjs';
+import { radiusForPopulation } from './prospect-radius.mjs';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { FileUp, Plus, Search } from 'lucide-react';
 import {
@@ -240,7 +243,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       const response = await fetch('/api/prospeccion', {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lat: zone.lat, lon: zone.lon, population: zone.pob, source, zoneName: zone.nombre, province: provinces[zone.prov] || '', family: planFamily, rubros }),
+        body: JSON.stringify({ lat: zone.lat, lon: zone.lon, population: zone.pob, radiusKm: radiusForPopulation(zone.pob, normalizeRules(data.prospectRules)), source, zoneName: zone.nombre, province: provinces[zone.prov] || '', family: planFamily, rubros }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -539,7 +542,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     </div>
   );
 
-  const queue = buildQueue(bySearch, checks, { skipped });
+  const queue = buildQueue(bySearch, checks, { skipped, rules: data.prospectRules });
   const detail = detailId ? prospectsById.get(detailId) : null;
 
   return (
@@ -556,19 +559,21 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       </div>
 
       <div className="segmented prospect-tabs" role="tablist" aria-label="Secciones de Prospección">
-        {[['hoy', 'Cola del día'], ['prospectos', 'Prospectos'], ['buscar', 'Buscar con IA']].map(([key, label]) => (
+        {[['hoy', 'Cola del día'], ['prospectos', 'Prospectos'], ['buscar', 'Buscar con IA'], ['reglas', 'Reglas']].map(([key, label]) => (
           <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? 'selected' : ''} onClick={() => setTab(key)}>{label}</button>
         ))}
       </div>
 
       {tab === 'hoy' && (
         <DailyQueues
-          supabase={supabase} clients={clients} prospects={prospects} checks={checks} userEmail={userEmail} setData={setData}
+          rules={data.prospectRules} supabase={supabase} clients={clients} prospects={prospects} checks={checks} userEmail={userEmail} setData={setData}
           defaultSender={String(userEmail || '').split('@')[0].split(/[._-]/)[0].replace(/^./, (c) => c.toLocaleUpperCase('es-AR'))}
           onOpenClient={onOpenClient} onMarkProspect={mark} onOpenProspect={(id) => { setTab('prospectos'); setDetailId(id); }}
           skipped={skipped} onSkip={(id) => setSkipped((list) => [...list, id])}
         />
       )}
+
+      {tab === 'reglas' && <ProspectRulesPanel rules={data.prospectRules} onChange={(prospectRules) => setData((current) => ({ ...current, prospectRules }))} />}
 
       {tab === 'buscar' && (<>
       <details className="panel research-panel" open>

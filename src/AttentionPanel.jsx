@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CircleCheck, RefreshCw, TriangleAlert } from "lucide-react";
 import { adminFetch } from "./admin-api.mjs";
+import { useConfirm } from "./ConfirmDialog";
 import { SEVERITY_LABEL, groupAlerts } from "./crm-alerts.mjs";
 
 const DATA_SECTION_KEY = "poliplast-data-section";
@@ -20,6 +21,7 @@ export function AttentionPanel({ supabase, session, isAdmin, onNavigate, compact
   const [rows, setRows] = useState(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const confirm = useConfirm();
 
   async function load() {
     if (!supabase?.from) return;
@@ -41,6 +43,20 @@ export function AttentionPanel({ supabase, session, isAdmin, onNavigate, compact
     setBusy(false);
   }
 
+  // Escribe en Trello (no en Mercado Libre ni Shopify), por eso pide confirmación.
+  async function sendPlan() {
+    const ok = await confirm({ title: "Crear el plan del día en Trello", message: "Se crea la tarjeta \"Plan del día\" en la lista Prioridad semanal con las alertas más importantes de hoy (máximo 5). Si ya había una de hoy, se crea otra. ¿Seguro?", confirmLabel: "Crear en Trello" });
+    if (!ok) return;
+    setBusy(true); setMessage("");
+    try {
+      const response = await adminFetch({ action: "trello-plan" }, session?.access_token);
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || `Error ${response.status}`);
+      setMessage(body.skipped ? `No se creó: ${body.skipped}.` : `Plan creado en Trello con ${body.items} ítems${body.url ? `: ${body.url}` : ""}.`);
+    } catch (error) { setMessage(error.message || "No se pudo crear el plan."); }
+    setBusy(false);
+  }
+
   if (rows === null) return null;
   const groups = groupAlerts(rows);
   if (!groups.total && !isAdmin && compact) return null;
@@ -49,7 +65,12 @@ export function AttentionPanel({ supabase, session, isAdmin, onNavigate, compact
     <section className="panel attention-panel" aria-label="Qué atender hoy">
       <div className="panel-head">
         <div><span className="eyebrow">Se actualiza sola cada día · nada se cambia solo</span><h2>Qué atender hoy</h2></div>
-        {isAdmin && <button type="button" className="ghost" disabled={busy} onClick={refresh}><RefreshCw size={15} /> {busy ? "Revisando…" : "Actualizar"}</button>}
+        {isAdmin && (
+          <div className="attention-actions">
+            <button type="button" className="ghost" disabled={busy} onClick={refresh}><RefreshCw size={15} /> {busy ? "Un momento…" : "Actualizar"}</button>
+            {!compact && <button type="button" className="ghost" disabled={busy} onClick={sendPlan}>Crear plan en Trello</button>}
+          </div>
+        )}
       </div>
       {message && <p className="muted small">{message}</p>}
       {!groups.total && <p className="muted small"><CircleCheck size={14} /> Nada urgente por ahora.{isAdmin ? " Si recién se publicó, tocá Actualizar." : ""}</p>}

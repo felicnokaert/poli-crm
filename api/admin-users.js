@@ -1,4 +1,5 @@
 import { alertsAdmin, alertsCron } from '../lib/crm-alerts.mjs';
+import { trelloPlanAdmin, trelloPlanCron } from '../lib/trello-plan.mjs';
 import { deleteUser } from '../lib/admin-users.mjs';
 import { cleanupWorkspaces } from '../lib/workspace-cleanup-admin.mjs';
 import { technicalAdmin } from '../lib/technical-admin.mjs';
@@ -24,6 +25,7 @@ const CRONS = {
   contabilium: contabiliumCron,
   shopify: shopifyCron,
   alertas: alertsCron,
+  'trello-plan': trelloPlanCron,
 };
 
 export default async function handler(request, response) {
@@ -42,6 +44,7 @@ export default async function handler(request, response) {
     : action === 'contabilium' ? await contabiliumAdmin(request)
     : action === 'shopify' ? await shopifyAdmin(request)
     : action === 'alerts' ? await alertsAdmin(request)
+    : action === 'trello-plan' ? await trelloPlanAdmin(request)
     : action === 'assistant' ? await assistantAi(request)
     : await deleteUser(request);
   return response.status(result.status).json(result.body);

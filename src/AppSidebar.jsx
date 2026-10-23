@@ -1,7 +1,7 @@
 import { Building2, Calculator, ChevronRight, ClipboardList, Database, FileCheck2, GraduationCap, Inbox, LayoutDashboard, MapPin, MessageCircle, ReceiptText, Search, ShoppingBag, Store, UserCog } from "lucide-react";
 import { onlineConfigured } from "./online";
 
-// Menú lateral: 5 grupos (Hoy, Ventas, Cartera, Aprender, Más). Salió de App.jsx (QA 16/10).
+// Menú lateral: 6 grupos (Hoy, Ventas, Canales online, Cartera, Aprender, Más). Salió de App.jsx (QA 16/10).
 export const NAV_GROUPS = [
   ["Hoy", [
     ["dashboard", "Inicio", LayoutDashboard],
@@ -12,9 +12,11 @@ export const NAV_GROUPS = [
     ["sales", "Ventas", ReceiptText],
     ["quoter", "Cotizador", Calculator],
     ["prospecting", "Prospección", Search],
+    ["conversations", "Historial", MessageCircle],
+  ]],
+  ["Canales online", [
     ["mercadolibre", "Mercado Libre", Store],
     ["shopify", "Shopify", ShoppingBag],
-    ["conversations", "Historial", MessageCircle],
   ]],
   ["Cartera", [
     ["clients", "Empresas y contactos", Building2],

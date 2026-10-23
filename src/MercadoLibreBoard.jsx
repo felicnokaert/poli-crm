@@ -43,6 +43,7 @@ function Trend({ value }) {
   );
 }
 
+const LEAF_LABELS = { resumen: "Resumen", publicaciones: "Todas las publicaciones", mejorar: "Qué mejorar", competencia: "Competencia", tendencias: "Tendencias", stock: "Stock y ganancia", publicidad: "Publicidad" };
 const CHART_METRICS = [["amount", "Facturado"], ["orders", "Ventas"], ["visits", "Visitas"]];
 
 // Gráfico del Resumen (21/10, Felipe: "mejores gráficos"): barras con degradé, el valor arriba de cada
@@ -448,16 +449,31 @@ export function MercadoLibreBoard({ supabase, session = null, isAdmin = false, c
   const permalinks = useMemo(() => Object.fromEntries((items || []).map((item) => [item.id, item.permalink])), [items]);
   const metricsBySeller = useMemo(() => Object.fromEntries(Object.entries(latestBySeller(metricRows)).map(([key, row]) => [key, row.data])), [metricRows]);
 
+  // 24/10: 8 pestañas eran demasiadas; se agrupan en 4 (Felipe: "organizarlo mejor").
+  const tabGroups = [
+    ["resumen", "Resumen", ["resumen"]],
+    ["publicaciones", "Publicaciones", ["publicaciones", "mejorar"]],
+    ["mercado", "Mercado", ["competencia", "tendencias"]],
+    ["dinero", "Dinero", ["stock", ...(canSeeAds ? ["publicidad"] : [])]],
+  ];
+  const currentGroup = tabGroups.find(([, , leaves]) => leaves.includes(tab)) || tabGroups[0];
+
   function showIssue(key) { setIssue(key); setTab("publicaciones"); }
 
   return (
     <div className="content-stack ml-board">
       <section className="panel ml-board-head">
         <div className="ml-tabs" role="tablist" aria-label="Sección">
-          {[["resumen", "Resumen"], ["mejorar", "Qué mejorar"], ["stock", "Stock y ganancia"], ["competencia", "Competencia"], ["tendencias", "Tendencias"], ["publicaciones", "Publicaciones"], ...(canSeeAds ? [["publicidad", "Publicidad"]] : [])].map(([key, label]) => (
-            <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? "selected" : ""} onClick={() => setTab(key)}>{label}</button>
-          ))}
+          {tabGroups.map(([key, label, leaves]) => {
+            const active = leaves.includes(tab);
+            return <button key={key} type="button" role="tab" aria-selected={active} className={active ? "selected" : ""} onClick={() => { if (!active) setTab(leaves[0]); }}>{label}</button>;
+          })}
         </div>
+        {currentGroup[2].length > 1 && (
+          <div className="ml-subtabs" role="tablist" aria-label={currentGroup[1]}>
+            {currentGroup[2].map((leaf) => <button key={leaf} type="button" role="tab" aria-selected={tab === leaf} className={tab === leaf ? "selected" : ""} onClick={() => setTab(leaf)}>{LEAF_LABELS[leaf]}</button>)}
+          </div>
+        )}
         <div className="ml-accounts" role="tablist" aria-label="Cuenta">
           <button type="button" role="tab" aria-selected={seller === ""} className={`ml-account-chip ${seller === "" ? "selected" : ""}`} onClick={() => setSeller("")}>Todas las cuentas</button>
           {accounts.map((account) => {

@@ -91,7 +91,7 @@ const STORAGE_KEY = "poliplast-sales-copilot-v1";
 // Mismos 6 grupos que arma navGroups más abajo - repetidos acá porque hacen
 // falta antes de que el componente pueda armar navGroups (son el estado
 // inicial "todo colapsado").
-const NAV_GROUP_NAMES = ["Hoy", "Ventas", "Cartera", "Aprender", "Más"];
+const NAV_GROUP_NAMES = ["Hoy", "Ventas", "Canales online", "Cartera", "Aprender", "Más"];
 
 function loadState() {
   try {

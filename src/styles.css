@@ -1409,3 +1409,4 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .attention-media h3 { color: #b45309; }
 .attention-baja h3 { color: var(--color-text-muted); }
 .attention-panel .ml-alerts { margin: 0; }
+.attention-actions { display: flex; flex-wrap: wrap; gap: 6px; }

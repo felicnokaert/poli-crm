@@ -8,6 +8,8 @@ import { useTeamSharedNotes } from "./hooks/useSharedNotesSync";
 import { asksMlImprove, improveContext, improvePlan } from "./ml-improve.mjs";
 import { loadActiveItems, loadCompetition, loadHealth } from "./ml-improve-data.js";
 import { asksMlCompetition, competitionContext, competitionRows, trendsView } from "./ml-competition-view.mjs";
+import { asksMlEconomics, economicsContext, economicsView } from "./ml-economics-view.mjs";
+import { loadEconomics } from "./ml-economics-data.js";
 import { asksLearning, learningContext, prospectLearning, routeFor, routesContext, teamNotes, teamNotesContext } from "./assistant-team.mjs";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { adminFetch } from "./admin-api.mjs";
@@ -140,18 +142,18 @@ export async function loadListPrices(supabase, words, today) {
 const plainText = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 // 23/10: calidad y experiencia de compra de Mercado Libre para "¿qué publicación mejoro primero?".
-function useMlImproveData(supabase, withCompetition = false) {
-  const [state, setState] = useState({ status: "idle", items: [], health: [], nickname: {}, competition: null });
+function useMlImproveData(supabase, withCompetition = false, withEconomics = false) {
+  const [state, setState] = useState({ status: "idle", items: [], health: [], nickname: {}, competition: null, economics: null });
   useEffect(() => {
     if (!supabase?.from) return undefined;
     let alive = true;
     setState((current) => ({ ...current, status: "loading" }));
     // Cada parte por separado: si falta una tabla (SQL sin pegar), lo demás sigue sirviendo.
-    Promise.all([loadActiveItems(supabase), loadHealth(supabase).catch(() => []), supabase.rpc("ml_account_names"), withCompetition ? loadCompetition(supabase).catch(() => null) : null])
-      .then(([items, health, names, competition]) => { if (alive) setState({ status: "ready", items, health, nickname: Object.fromEntries((names?.data || []).map((row) => [row.seller_id, row.nickname])), competition }); })
-      .catch(() => { if (alive) setState({ status: "error", items: [], health: [], nickname: {}, competition: null }); });
+    Promise.all([loadActiveItems(supabase), loadHealth(supabase).catch(() => []), supabase.rpc("ml_account_names"), withCompetition ? loadCompetition(supabase).catch(() => null) : null, withEconomics ? loadEconomics(supabase).catch(() => null) : null])
+      .then(([items, health, names, competition, economics]) => { if (alive) setState({ status: "ready", items, health, nickname: Object.fromEntries((names?.data || []).map((row) => [row.seller_id, row.nickname])), competition, economics }); })
+      .catch(() => { if (alive) setState({ status: "error", items: [], health: [], nickname: {}, competition: null, economics: null }); });
     return () => { alive = false; };
-  }, [supabase, withCompetition]);
+  }, [supabase, withCompetition, withEconomics]);
   return state;
 }
 
@@ -430,11 +432,13 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   // 23/10: qué mejorar en Mercado Libre (calidad y experiencia de compra), se lee la primera vez que se pregunta.
   const wantsImprove = Boolean(typed && asksMlImprove(typed));
   const wantsCompetition = Boolean(typed && asksMlCompetition(typed));
-  const wantsMl = wantsImprove || wantsCompetition;
+  const wantsEconomics = Boolean(typed && asksMlEconomics(typed));
+  const wantsMl = wantsImprove || wantsCompetition || wantsEconomics;
   const [mlOn, setMlOn] = useState(false);
   const [competitionOn, setCompetitionOn] = useState(false);
-  useEffect(() => { if (wantsMl) setMlOn(true); if (wantsCompetition) setCompetitionOn(true); }, [wantsMl, wantsCompetition]);
-  const mlData = useMlImproveData(mlOn ? supabase : null, competitionOn);
+  const [economicsOn, setEconomicsOn] = useState(false);
+  useEffect(() => { if (wantsMl) setMlOn(true); if (wantsCompetition) setCompetitionOn(true); if (wantsEconomics) setEconomicsOn(true); }, [wantsMl, wantsCompetition, wantsEconomics]);
+  const mlData = useMlImproveData(mlOn ? supabase : null, competitionOn, economicsOn);
   const mlText = useMemo(() => {
     if (!wantsMl || mlData.status !== "ready") return "";
     const parts = [];
@@ -443,9 +447,10 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
       const today = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
       parts.push(competitionContext(competitionRows({ ...mlData.competition, ours: mlData.items, today }), trendsView(mlData.competition.trends, mlData.items.map((item) => item.title))));
     }
+    if (wantsEconomics && mlData.economics) parts.push(economicsContext(economicsView({ items: mlData.items, ...mlData.economics }), mlData.nickname));
     return parts.filter(Boolean).join("\n");
-  }, [wantsMl, wantsImprove, wantsCompetition, mlData]);
-  const waitingBusiness = (wantsBusiness && !business && billing.status !== "error" && Boolean(supabase?.from)) || (wantsMl && (mlData.status !== "ready" || (wantsCompetition && mlData.competition === null && !competitionOn)) && mlData.status !== "error" && Boolean(supabase?.from));
+  }, [wantsMl, wantsImprove, wantsCompetition, wantsEconomics, mlData]);
+  const waitingBusiness = (wantsBusiness && !business && billing.status !== "error" && Boolean(supabase?.from)) || (wantsMl && (mlData.status !== "ready" || (wantsCompetition && mlData.competition === null && !competitionOn) || (wantsEconomics && mlData.economics === null && !economicsOn)) && mlData.status !== "error" && Boolean(supabase?.from));
   // 22/10: lo que anotó el equipo sobre el tema, a quién derivar y qué aprendimos en la Cola del día.
   const notes = typed && !clientsFound.length ? teamNotes(typed, { interactions: workspace.interactions || [], clients, prospects: workspace.prospects || [], shared: sharedNotes }) : [];
   const routes = typed ? routeFor(typed) : [];

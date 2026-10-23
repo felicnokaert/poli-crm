@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildDailyMaintenanceUpdate,
+  lastClosableDay,
   buildDailySignalsUpdate,
   buildFullDailyMaintenanceUpdate,
   buildAutoFollowupTasks,
@@ -61,7 +62,7 @@ test("no marca nada si no hay tareas vencidas, pero igual avanza el cutoff", () 
   const result = buildDailyMaintenanceUpdate(state, "2026-09-12T03:00:00.000Z");
   assert.equal(result.changed, true);
   assert.equal(result.summary.tasksClosed, 0);
-  assert.equal(result.nextState.tasksClosedThrough, "2026-09-12T03:00:00.000Z");
+  assert.equal(result.nextState.tasksClosedThrough, "2026-09-11T23:59:59.999Z");
 });
 
 test("no hace nada si ya se corrió el mantenimiento para ese cutoff", () => {
@@ -110,9 +111,24 @@ test("usa la fecha de creación cuando la tarea no tiene fecha de vencimiento", 
 
 test("usa el ISO completo actual como cutoff por defecto cuando no se pasa nowISO", () => {
   const state = { tasks: [], tasksClosedThrough: "" };
-  const before = new Date().toISOString();
   const result = buildDailyMaintenanceUpdate(state);
-  assert.ok(result.summary.cutoff >= before);
+  assert.equal(result.summary.cutoff, lastClosableDay());
+});
+
+test("el cron de las 03:00 argentinas NO cierra las tareas de hoy, solo las vencidas", () => {
+  const state = {
+    tasks: [
+      { id: "ayer", dueDate: "2026-10-22", done: false },
+      { id: "hoy", dueDate: "2026-10-23", done: false },
+    ],
+    tasksClosedThrough: "",
+  };
+  const result = buildDailyMaintenanceUpdate(state, "2026-10-23T06:00:00.000Z");
+  assert.equal(result.nextState.tasks.find((t) => t.id === "ayer").done, true);
+  assert.equal(result.nextState.tasks.find((t) => t.id === "hoy").done, false);
+  // Al día siguiente sí se cierran las de ayer-hoy, y el corte sigue creciendo.
+  const next = buildDailyMaintenanceUpdate(result.nextState, "2026-10-24T06:00:00.000Z");
+  assert.equal(next.nextState.tasks.find((t) => t.id === "hoy").done, true);
 });
 
 test("buildDailySignalsUpdate calcula las 3 señales y las persiste con timestamp", () => {

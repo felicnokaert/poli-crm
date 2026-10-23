@@ -60,11 +60,10 @@ function Setup({ status, isAdmin }) {
       <p className="muted">{status === "missing" ? "Falta crear las tablas: pegar el SQL de supabase/migrations/20261024_shopify.sql en Supabase (SQL Editor → Run)." : "Todavía no hay datos de la tienda."}</p>
       {isAdmin && (
         <ol className="shopify-steps">
-          <li>En Shopify: Configuración → Apps y canales de venta → Desarrollar apps → Crear app.</li>
-          <li>Permisos de solo lectura: <code>read_products</code>, <code>read_inventory</code>, <code>read_orders</code> (para ver la tienda sin poder cambiarla).</li>
-          <li>Instalar la app y copiar el “Admin API access token” (se muestra una sola vez).</li>
-          <li>En Vercel, cargar <code>SHOPIFY_ADMIN_TOKEN</code> (esa llave) y <code>SHOPIFY_STORE_DOMAIN</code> (por ejemplo <code>tutienda.myshopify.com</code>). No pegues la llave en el chat.</li>
-          <li>Volver acá y tocar “Actualizar ahora”.</li>
+          <li>La app de solo lectura ya está creada en el Dev Dashboard de Shopify (con <code>read_products</code>, <code>read_inventory</code> y <code>read_orders</code>) e instalada en la tienda.</li>
+          <li>En el Dev Dashboard → tu app → Resumen → tarjeta “Credenciales”: copiá el <strong>ID de cliente</strong> y el <strong>Secreto del cliente</strong>.</li>
+          <li>En Vercel (Settings → Environment Variables, Production) cargá <code>SHOPIFY_STORE_DOMAIN</code> (<code>poliplastarg.myshopify.com</code>), <code>SHOPIFY_CLIENT_ID</code> y <code>SHOPIFY_CLIENT_SECRET</code>. El secreto va solo ahí: no lo pegues en un chat ni en una página.</li>
+          <li>Volvé a publicar la app (Redeploy) para que tome las variables y tocá “Actualizar ahora”. El CRM canjea esas credenciales por un token de 24 horas y lo renueva solo.</li>
         </ol>
       )}
     </section>

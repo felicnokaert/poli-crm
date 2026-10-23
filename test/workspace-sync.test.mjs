@@ -210,3 +210,12 @@ test('workspaceStatesEqual es false cuando un registro difiere', () => {
 test('workspaceStatesEqual es true para dos estados vacíos', () => {
   assert.equal(workspaceStatesEqual(baseState(), baseState()), true);
 });
+
+test('Publicidad de Mercado Libre: la tabla pegada sobrevive a la sincronización y gana la más reciente de cada cuenta', () => {
+  const local = { mlAds: { POLIPLAST: { savedAt: '2026-10-23T12:00:00Z', campaigns: [{ name: 'nueva' }] } } };
+  const remote = { mlAds: { POLIPLAST: { savedAt: '2026-10-22T12:00:00Z', campaigns: [{ name: 'vieja' }] }, FOAM: { savedAt: '2026-10-23T09:00:00Z', campaigns: [{ name: 'foam' }] } } };
+  const merged = mergeWorkspaceState(local, remote);
+  assert.equal(merged.mlAds.POLIPLAST.campaigns[0].name, 'nueva');
+  assert.equal(merged.mlAds.FOAM.campaigns[0].name, 'foam');
+  assert.equal('mlAds' in mergeWorkspaceState({}, {}), false, 'sin publicidad no agrega la clave');
+});

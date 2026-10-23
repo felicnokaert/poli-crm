@@ -795,7 +795,7 @@ export default function App() {
         )}
         {view === "mercadolibre" && (
           <Suspense fallback={<Splash text="Cargando Mercado Libre…" />}>
-            <MercadoLibreBoard supabase={supabase} session={session} isAdmin={isChannelAdmin(session?.user?.email)} />
+            <MercadoLibreBoard supabase={supabase} session={session} isAdmin={isChannelAdmin(session?.user?.email)} canSeeAds={isFelipeTools} ads={data.mlAds || {}} onAdsChange={(next) => setData((current) => ({ ...current, mlAds: next }))} />
           </Suspense>
         )}
         {view === "academy" && (

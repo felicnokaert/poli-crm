@@ -64,6 +64,7 @@ import {
 } from "./client-contacts.mjs";
 import { shouldCreateFollowup } from "./followup-policy.mjs";
 import { useWorkspaceSync } from "./hooks/useWorkspaceSync";
+import { useSharedNotesSync } from "./hooks/useSharedNotesSync";
 import { useSelectedRecords } from "./hooks/useSelectedRecords";
 import { postponeTask } from "./day-review.mjs";
 import { useNavGroups } from "./hooks/useNavGroups";
@@ -136,6 +137,8 @@ export default function App() {
   } = useWorkspaceSync(data, setData);
   const cronStatus = useCronStatus(session);
   const whatsappHealth = useWhatsAppHealth(session);
+  // 23/10: lo que anota cada uno se comparte para que el asistente y el resumen aprendan de todo el equipo.
+  useSharedNotesSync(onlineConfigured && session ? supabase : null, session?.user?.email, String(session?.user?.user_metadata?.full_name || ""), data, Boolean(remoteReady));
   // Al volver de autorizar Mercado Libre se abre Más → Datos → Mercado Libre para terminar la conexión.
   // Al recargar (F5) se queda en el módulo donde estaba (21/10, pedido de Felipe). Se guarda por pestaña:
   // una pestaña nueva arranca en Inicio.

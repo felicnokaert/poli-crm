@@ -11,7 +11,8 @@ const dm = (iso) => String(iso).slice(5, 10).split('-').reverse().join('/');
 const inWeek = (value, since, today) => { const day = String(value || '').slice(0, 10); return day >= since && day <= today; };
 const INTEREST = /con inter[eé]s|pidi[oó] cotizaci|respondi[oó], sigue/i;
 
-export function weekActivity({ prospects = [], clients = [], tasks = [], today }) {
+// shared: los contactos que anotaron los demás (team_shared_notes, kind "contacto"), así el resumen es del equipo.
+export function weekActivity({ prospects = [], clients = [], tasks = [], shared = [], today }) {
   const since = new Date(Date.parse(today) - 6 * DAY).toISOString().slice(0, 10);
   let contacted = 0;
   let interested = 0;
@@ -32,9 +33,19 @@ export function weekActivity({ prospects = [], clients = [], tasks = [], today }
       else if (REJECTION_REASONS.includes(entry.outcome)) reasons.set(entry.outcome, (reasons.get(entry.outcome) || 0) + 1);
     }
   }
+  const people = new Set();
+  for (const row of shared) {
+    if (!inWeek(row.noted_at, since, today)) continue;
+    contacted += 1;
+    people.add(row.author_name || row.author_email);
+    const outcome = String(row.outcome || '').split(' · ').pop();
+    if (INTEREST.test(row.outcome || '')) interested += 1;
+    else if (REJECTION_REASONS.includes(outcome)) reasons.set(outcome, (reasons.get(outcome) || 0) + 1);
+  }
   const alive = tasks.filter((task) => task && !task.deleted && !task.deletedAt);
   return {
     since,
+    others: people.size,
     contacted,
     interested,
     topReason: [...reasons.entries()].sort((a, b) => b[1] - a[1])[0] || null,
@@ -45,7 +56,7 @@ export function weekActivity({ prospects = [], clients = [], tasks = [], today }
 
 export function weeklySummaryText({ facts = null, activity, gaps = null, today }) {
   const lines = [`*Resumen semanal del CRM* (${dm(activity.since)} al ${dm(today)})`];
-  lines.push(`• Cola del día: ${activity.contacted} contactos anotados, ${activity.interested} con interés${activity.topReason ? `; el motivo de rechazo más común fue "${activity.topReason[0]}" (${activity.topReason[1]})` : ''}.`);
+  lines.push(`• Cola del día${activity.others ? ` (vos y ${activity.others} más del equipo)` : ''}: ${activity.contacted} contactos anotados, ${activity.interested} con interés${activity.topReason ? `; el motivo de rechazo más común fue "${activity.topReason[0]}" (${activity.topReason[1]})` : ''}.`);
   lines.push(`• Tareas: ${activity.tasksDone} hechas en la semana, ${activity.tasksLate} vencidas sin hacer.`);
   const quotes = facts?.quotes;
   if (quotes?.quotes) {

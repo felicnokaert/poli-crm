@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { linkMlToCatalog, secureUrl } from "./ml-catalog-link.mjs";
+import { MlProductSheets } from "./MlProductSheets.jsx";
 
 // Catálogo del cotizador ↔ Mercado Libre, por SKU. Solo lectura: muestra qué publicaciones ya tienen su producto en el
 // catálogo, de cuáles se podría tomar la foto, y qué SKU de ML todavía no están en el catálogo o se repiten.
@@ -111,6 +112,7 @@ export function MlCatalogLink({ supabase, isAdmin = false, userEmail = "" }) {
     ["sinrevisar", `Fotos sin revisar (${link.matched.filter(unreviewed).length})`],
     ["aprobadas", `Fotos aprobadas (${summary.photosApproved})`],
     ["vinculados", `Vinculados (${summary.matchedSkus})`],
+    ["ficha", "Descripción y preguntas"],
     ["sinCatalogo", `SKU de ML sin producto (${summary.unmatchedSkus})`],
     ["repetidos", `SKU repetidos (${summary.duplicatedSkus})`],
     ["sinSku", `Publicaciones sin SKU (${summary.noSku})`],
@@ -144,7 +146,7 @@ export function MlCatalogLink({ supabase, isAdmin = false, userEmail = "" }) {
       )}
       {view === "sinCatalogo" && <p className="muted small">SKU que figuran en ML y no están en el catálogo del cotizador: pueden ser productos que faltan cargar, o SKU escritos distinto.</p>}
       {view === "repetidos" && <p className="muted small">El mismo SKU en más de una publicación (ML pide unificarlas).</p>}
-      {rows.length === 0 ? <p className="muted">No hay nada en esta lista.</p> : (
+      {view === "ficha" ? <MlProductSheets supabase={supabase} entries={link.matched} search={search} /> : rows.length === 0 ? <p className="muted">No hay nada en esta lista.</p> : (
         <div className="table-scroll">
           <table className="sales-history-table">
             <thead><tr><th>SKU</th><th>Producto del catálogo</th>{(view === "foto" || view === "aprobadas" || view === "sinrevisar") && <th>Foto</th>}<th>Publicaciones en Mercado Libre</th></tr></thead>
@@ -168,7 +170,7 @@ export function MlCatalogLink({ supabase, isAdmin = false, userEmail = "" }) {
           </table>
         </div>
       )}
-      {rows.length > shown && <button type="button" className="secondary" onClick={() => setShown((count) => count + SHOW)}>Ver {Math.min(SHOW, rows.length - shown)} más ({shown} de {rows.length})</button>}
+      {view !== "ficha" && rows.length > shown && <button type="button" className="secondary" onClick={() => setShown((count) => count + SHOW)}>Ver {Math.min(SHOW, rows.length - shown)} más ({shown} de {rows.length})</button>}
     </section>
   );
 }

@@ -16,6 +16,7 @@ import { buildCustomerBase } from "./customer-base.mjs";
 import { overdueQueue } from "./daily-queues.mjs";
 import { businessFacts } from "./assistant-business.mjs";
 import { weekActivity, weeklySummaryText } from "./weekly-summary.mjs";
+import { useTeamSharedNotes } from "./hooks/useSharedNotesSync";
 import { findColdQuotes } from "./cold-quotes.mjs";
 import { findStaleHotLeads } from "./hot-leads-radar.mjs";
 import { findStaleClients } from "./stale-clients-radar.mjs";
@@ -650,6 +651,9 @@ function WeeklySummaryBody({ supabase, clients, prospects, tasks, isAdmin }) {
   const [gaps, setGaps] = useState(null);
   const [copied, setCopied] = useState(false);
   const today = argentinaToday();
+  // 23/10: los contactos de la Cola del día que anotó el resto del equipo en la semana.
+  const sinceIso = useMemo(() => new Date(Date.now() - 8 * 86400000).toISOString(), []);
+  const shared = useTeamSharedNotes(supabase, { kind: "contactos", sinceIso });
   useEffect(() => {
     // Las preguntas sin respuesta solo las lee Felipe (para el resto la base devuelve 0: no se muestra).
     if (!isAdmin) return undefined;
@@ -660,8 +664,8 @@ function WeeklySummaryBody({ supabase, clients, prospects, tasks, isAdmin }) {
   }, [supabase, isAdmin]);
   const text = useMemo(() => {
     const facts = status === "ready" ? businessFacts(rows, clients, today) : null;
-    return weeklySummaryText({ facts, activity: weekActivity({ prospects, clients, tasks, today }), gaps, today });
-  }, [status, rows, clients, prospects, tasks, gaps, today]);
+    return weeklySummaryText({ facts, activity: weekActivity({ prospects, clients, tasks, shared, today }), gaps, today });
+  }, [status, rows, clients, prospects, tasks, shared, gaps, today]);
   async function copy() { try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { setCopied(false); } }
   return (
     <>

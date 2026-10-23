@@ -31,7 +31,7 @@ const termsOf = (query) => [...new Set(plain(query).split(/[^a-z0-9]+/).filter((
 const day = (value) => String(value || '').slice(0, 10).split('-').reverse().join('/');
 const alive = (row) => row && !row.deleted && !row.deletedAt;
 
-export function teamNotes(query, { interactions = [], clients = [], prospects = [] } = {}, { max = 6 } = {}) {
+export function teamNotes(query, { interactions = [], clients = [], prospects = [], shared = [] } = {}, { max = 6 } = {}) {
   const terms = termsOf(query);
   if (!terms.length) return [];
   const need = terms.length <= 2 ? terms.length : Math.ceil(terms.length * 0.6);
@@ -52,6 +52,12 @@ export function teamNotes(query, { interactions = [], clients = [], prospects = 
     const text = [prospect.notes, prospect.outcome].filter(Boolean).join(' · ');
     const score = hits(`${text} ${prospect.family || ''}`);
     if (prospect.notes && score >= need) found.push({ score, date: String(prospect.updatedAt || ''), line: `Prospecto ${prospect.company}${prospect.family ? ` (${prospect.family})` : ''}: ${text.slice(0, 220)}` });
+  }
+  // 23/10: lo que anotaron los demás (team_shared_notes, sin lo propio, que ya está arriba).
+  for (const row of shared) {
+    const score = hits(`${row.note} ${row.company}`);
+    const who = String(row.author_name || row.author_email || '').split(/[\s@]/)[0];
+    if (row.note && score >= need) found.push({ score, date: String(row.noted_at || ''), line: `${day(row.noted_at)} · ${row.company || 'sin empresa'} (anotó ${who || 'el equipo'}): ${String(row.note).slice(0, 260)}` });
   }
   return found.sort((a, b) => b.score - a.score || b.date.localeCompare(a.date)).slice(0, max).map((entry) => entry.line);
 }

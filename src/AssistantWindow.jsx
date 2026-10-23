@@ -4,6 +4,7 @@ import { isRule, rapypFor, rulesContext } from "./assistant-rapyp.mjs";
 import { asksBusiness, businessContext, businessFacts, businessLines } from "./assistant-business.mjs";
 import { argentinaToday, useComprobantes } from "./CustomerBasePanel.jsx";
 import { asksPrice, currentListPrices, priceLine, priceWords, pricesContext } from "./assistant-prices.mjs";
+import { useTeamSharedNotes } from "./hooks/useSharedNotesSync";
 import { asksLearning, learningContext, prospectLearning, routeFor, routesContext, teamNotes, teamNotesContext } from "./assistant-team.mjs";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { adminFetch } from "./admin-api.mjs";
@@ -397,6 +398,8 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   const purchases = purchaseRows.length ? purchaseSummary(purchaseRows) : [];
   const mine = typed ? workspaceAnswer(typed, workspace) : [];
   const listPrices = useListPrices(supabase, typed);
+  // 23/10: lo que anotaron los demás del equipo (team_shared_notes).
+  const sharedNotes = useTeamSharedNotes(supabase);
   // Números del negocio (22/10): la facturación se lee recién la primera vez que se pregunta por ellos.
   const wantsBusiness = Boolean(typed && asksBusiness(typed));
   const [businessOn, setBusinessOn] = useState(false);
@@ -407,7 +410,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   // Si se pregunta antes de que llegue la facturación, se espera y se pregunta solo (así no dice "no tengo el dato").
   const waitingBusiness = wantsBusiness && !business && billing.status !== "error" && Boolean(supabase?.from);
   // 22/10: lo que anotó el equipo sobre el tema, a quién derivar y qué aprendimos en la Cola del día.
-  const notes = typed && !clientsFound.length ? teamNotes(typed, { interactions: workspace.interactions || [], clients, prospects: workspace.prospects || [] }) : [];
+  const notes = typed && !clientsFound.length ? teamNotes(typed, { interactions: workspace.interactions || [], clients, prospects: workspace.prospects || [], shared: sharedNotes }) : [];
   const routes = typed ? routeFor(typed) : [];
   const learning = typed && asksLearning(typed) ? prospectLearning({ prospects: workspace.prospects || [], clients }) : null;
   const learningText = learning ? learningContext(learning) : "";

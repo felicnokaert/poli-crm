@@ -409,9 +409,12 @@ export function MercadoLibreBoard({ supabase, session = null, isAdmin = false, c
   const [metricRows, setMetricRows] = useState([]);
   const [questionCounts, setQuestionCounts] = useState({});
   const [error, setError] = useState("");
-  const [tab, setTab] = useState("resumen");
+  // Desde el Centro de mejoras se abre directo en Publicaciones filtradas (o en "Qué mejorar").
+  const opened = useMemo(() => { try { const key = sessionStorage.getItem("poliplast-open-ml"); sessionStorage.removeItem("poliplast-open-ml"); return key || ""; } catch { return ""; } }, []);
+  const toMejorar = opened === "calidad-ml" || opened === "experiencia-compra";
+  const [tab, setTab] = useState(opened ? (toMejorar ? "mejorar" : "publicaciones") : "resumen");
   const [seller, setSeller] = useState("");
-  const [issue, setIssue] = useState("");
+  const [issue, setIssue] = useState(opened && !toMejorar ? opened : "");
   const [reload, setReload] = useState(0);
 
   async function markClip(item, has) {

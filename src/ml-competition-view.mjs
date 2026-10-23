@@ -24,15 +24,26 @@ export function competitionRows({ competitors = [], snapshots = [], ours = [], t
   const ourById = new Map(ours.map((item) => [String(item.id), item]));
   return competitors.map((item) => {
     const list = (bySnap.get(String(item.id)) || []).sort((a, b) => a.taken_on.localeCompare(b.taken_on));
+    const day = snapshotAt(list, daysAgo(today, 1));
     const week = snapshotAt(list, daysAgo(today, 7));
     const month = snapshotAt(list, daysAgo(today, 30));
     const soldSince = (snap) => (snap && typeof item.sold_quantity === 'number' && typeof snap.sold_quantity === 'number' && snap.taken_on < today ? Math.max(0, item.sold_quantity - snap.sold_quantity) : null);
+    const priceChange1 = day && day.taken_on < today ? pct(item.price, day.price) : null;
+    const sold1 = soldSince(day);
+    // Alertas del seguimiento diario: bajó el precio más de 5 % o vendió más de 10 unidades en 24 horas.
+    const alerts = [
+      ...(priceChange1 != null && priceChange1 <= -5 ? [{ kind: 'precio', text: `Bajó el precio ${Math.abs(priceChange1)} % en 24 h` }] : []),
+      ...(sold1 != null && sold1 > 10 ? [{ kind: 'ventas', text: `Vendió ${sold1} en 24 h` }] : []),
+    ];
     const our = item.our_item_id ? ourById.get(String(item.our_item_id)) || null : null;
     return {
       item,
       who: item.competitor_name || item.seller_nickname || 'competidor',
       tracking: list.length,
       since: list[0]?.taken_on || null,
+      priceChange1,
+      sold1,
+      alerts,
       priceChange7: week && week.taken_on < today ? pct(item.price, week.price) : null,
       priceChange30: month && month.taken_on < today ? pct(item.price, month.price) : null,
       sold7: soldSince(week),
@@ -89,4 +100,15 @@ export function competitionContext(rows = [], trends = [], { max = 10 } = {}) {
   const open = trends.flatMap((row) => row.keywords.filter((trend) => !trend.covered).slice(0, 5).map((trend) => `${trend.keyword} (${row.category_name || row.category_id})`));
   if (open.length) lines.push(`TENDENCIAS DE BÚSQUEDA en nuestras categorías sin publicación nuestra que las nombre: ${open.slice(0, 15).join('; ')}.`);
   return lines.join('\n');
+}
+
+// CSV del seguimiento (23/10): lo que se ve en la tabla, listo para abrir en una planilla.
+const csvCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+export function competitionCsv(rows = []) {
+  const head = ['Vendedor', 'Título', 'Precio', 'Cambio precio 24 h %', 'Cambio precio 7 días %', 'Cambio precio 30 días %', 'Vendidas 24 h', 'Vendidas 7 días', 'Vendidas 30 días', 'Vendidas totales', 'Envío gratis', 'Estado', 'Nuestra publicación', 'Precio nuestro', 'Alertas', 'Link'];
+  const lines = rows.map((row) => [
+    row.who, row.item.title, row.item.price, row.priceChange1, row.priceChange7, row.priceChange30, row.sold1, row.sold7, row.sold30, row.item.sold_quantity,
+    row.item.free_shipping ? 'sí' : 'no', row.item.status, row.our?.title || '', row.our?.price ?? '', row.alerts.map((alert) => alert.text).join(' | '), row.item.permalink,
+  ].map(csvCell).join(','));
+  return `\uFEFF${[head.map(csvCell).join(','), ...lines].join('\n')}`;
 }

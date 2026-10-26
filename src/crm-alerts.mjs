@@ -51,8 +51,8 @@ function shopifyAlerts({ products, variants, orders, checkouts, days, now, mlIte
     const late = order.kind === 'retiro' ? `retiro sin retirar hace ${order.days} días` : order.hours >= 48 ? `sin despachar hace ${order.days} días` : `sin despachar hace ${order.hours} h`;
     out.push({
       type: 'shopify-pedido', entity_id: order.id, source: 'shopify',
-      severity: order.kind === 'envio' && order.hours >= 48 ? 'alta' : 'media',
-      title: `Pedido ${order.name}: ${late}`, detail: `Pagado, ${money(order.total || 0)}. Sin entregar frena la reputación y deja plata parada.`,
+      severity: 'baja', // 26/10 (Felipe): Brenda ve y despacha los pedidos; no son trabajo de Felipe ni van al plan del día
+      title: `Pedido ${order.name}: ${late}`, detail: `Pagado, ${money(order.total || 0)}. Los pedidos los atiende Brenda; acá solo se ven.`,
       link: { view: 'shopify', tab: 'operacion' },
     });
   }

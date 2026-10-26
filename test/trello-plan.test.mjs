@@ -6,7 +6,7 @@ const now = Date.parse('2026-10-24T15:00:00Z');
 const day = (n) => new Date(now - n * 86400000).toISOString();
 const alert = (over) => ({ type: 't', entity_id: '', severity: 'media', title: 'X', detail: '', first_seen: day(0), resolved_at: null, ...over });
 
-test('plan: lo urgente primero, máximo 5, pedidos de Shopify juntos y sin las "para mejorar"', () => {
+test('plan: lo urgente primero, máximo 5, sin pedidos de Shopify (los ve Brenda) y sin las "para mejorar"', () => {
   const alerts = [
     alert({ type: 'a', severity: 'baja', title: 'Baja' }),
     alert({ type: 'b', severity: 'media', title: 'Media vieja', first_seen: day(5) }),
@@ -19,13 +19,11 @@ test('plan: lo urgente primero, máximo 5, pedidos de Shopify juntos y sin las "
   ];
   const plan = planItems(alerts, now);
   assert.equal(plan.items.length, 5);
-  assert.deepEqual(plan.items.slice(0, 3).map((item) => item.severity), ['alta', 'alta', 'alta']);
-  assert.match(plan.items[0].title, /^2 pedidos de Shopify/); // alta y la más vieja (9 días)
-  assert.equal(plan.items[1].title, 'Alta vieja');
-  assert.match(plan.items.find((item) => /pedidos de Shopify/.test(item.title)).title, /^2 pedidos de Shopify sin entregar/);
-  assert.ok(!plan.items.some((item) => item.title === 'Baja' || item.title === 'Resuelta'));
-  assert.equal(plan.extra, 1);
-  assert.match(itemText(plan.items[1]), /^🔴 Alta vieja \(hace 3 días\)$/);
+  assert.deepEqual(plan.items.slice(0, 2).map((item) => item.severity), ['alta', 'alta']);
+  assert.equal(plan.items[0].title, 'Alta vieja');
+  assert.ok(!plan.items.some((item) => /Pedido/.test(item.title) || item.title === 'Baja' || item.title === 'Resuelta'));
+  assert.equal(plan.extra, 0);
+  assert.match(itemText(plan.items[0]), /^🔴 Alta vieja \(hace 3 días\)$/);
 });
 
 test('tarjeta: nombre con la fecha y vencimiento a las 20:00 UTC (17:00 en Argentina)', () => {

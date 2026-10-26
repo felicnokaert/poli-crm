@@ -179,54 +179,67 @@ function useListPrices(supabase, query) {
 // Comprobantes de Contabilium del cliente nombrado ("cuándo compró X"), con una pausa mientras se escribe.
 // 22/10: si la ficha tiene CUIT, primero por CUIT (fichas de Contabilium): encuentra las compras aunque la
 // razón social de la factura no se parezca al nombre de la cartera.
-function usePurchases(supabase, words = [], cuit = null) {
-  const [rows, setRows] = useState([]);
+async function fetchPurchases(supabase, words = [], cuit = null) {
   const key = words.join(" ");
-  useEffect(() => {
-    if (!supabase?.from || (!key && !cuit)) { setRows([]); return undefined; }
-    let active = true;
-    const columns = "company,tipo,numero,fecha,cliente,total,saldo";
-    const byName = () => {
-      if (!key) return Promise.resolve({ data: [] });
-      let request = supabase.from("contabilium_comprobantes").select(columns);
-      for (const word of key.split(" ")) request = request.ilike("cliente", `%${word}%`);
-      return Promise.resolve(request.order("fecha", { ascending: false }).limit(300));
-    };
-    const byCuit = async () => {
-      if (!cuit) return null;
-      const { data: fichas, error } = await supabase.from("contabilium_clientes").select("company,id").eq("cuit", cuit).limit(20);
-      if (error || !fichas?.length) return null;
-      const found = [];
-      for (const company of [...new Set(fichas.map((ficha) => ficha.company))]) {
-        const ids = fichas.filter((ficha) => ficha.company === company).map((ficha) => ficha.id);
-        const { data } = await supabase.from("contabilium_comprobantes").select(columns).eq("company", company).in("cliente_id", ids).order("fecha", { ascending: false }).limit(300);
-        found.push(...(data || []));
-      }
-      return found.length ? { data: found } : null;
-    };
-    const timer = setTimeout(() => {
-      byCuit().catch(() => null).then((result) => result || byName())
-        .then(({ data, error }) => { if (active) setRows(error ? [] : data || []); }, () => {});
-    }, 450);
-    return () => { active = false; clearTimeout(timer); };
-  }, [supabase, key, cuit]);
-  return rows;
+  const columns = "company,tipo,numero,fecha,cliente,total,saldo";
+  const byName = () => {
+    if (!key) return Promise.resolve({ data: [] });
+    let request = supabase.from("contabilium_comprobantes").select(columns);
+    for (const word of key.split(" ")) request = request.ilike("cliente", `%${word}%`);
+    return Promise.resolve(request.order("fecha", { ascending: false }).limit(300));
+  };
+  const byCuit = async () => {
+    if (!cuit) return null;
+    const { data: fichas, error } = await supabase.from("contabilium_clientes").select("company,id").eq("cuit", cuit).limit(20);
+    if (error || !fichas?.length) return null;
+    const found = [];
+    for (const company of [...new Set(fichas.map((ficha) => ficha.company))]) {
+      const ids = fichas.filter((ficha) => ficha.company === company).map((ficha) => ficha.id);
+      const { data } = await supabase.from("contabilium_comprobantes").select(columns).eq("company", company).in("cliente_id", ids).order("fecha", { ascending: false }).limit(300);
+      found.push(...(data || []));
+    }
+    return found.length ? { data: found } : null;
+  };
+  const result = (await byCuit().catch(() => null)) || (await byName());
+  return result.error ? [] : result.data || [];
 }
 
-// Comprobante buscado por número ("tengo la FCA 0006-00011425"): se busca en las copias de Contabilium de todas las empresas.
-function useInvoices(supabase, numbers = []) {
-  const [rows, setRows] = useState([]);
-  const key = numbers.join(" ");
+// 26/10: devuelve también si ya llegaron (ready). Antes, si se apretaba Enter antes de los 450 ms de pausa, la IA contestaba sin
+// los comprobantes y se quedaba con la "última compra" vieja de la ficha (caso Thorne: ficha 23/09, factura real 13/10).
+function usePurchases(supabase, words = [], cuit = null) {
+  const [state, setState] = useState({ key: "", rows: [] });
+  const key = `${words.join(" ")}|${cuit || ""}`;
+  const wanted = Boolean(supabase?.from && (words.length || cuit));
   useEffect(() => {
-    if (!supabase?.from || !key) { setRows([]); return undefined; }
+    if (!wanted) { setState({ key: "", rows: [] }); return undefined; }
     let active = true;
     const timer = setTimeout(() => {
-      Promise.resolve(supabase.from("contabilium_comprobantes").select("company,tipo,numero,fecha,cliente,total,saldo").in("numero", key.split(" ")).order("fecha", { ascending: false }).limit(10))
-        .then(({ data, error }) => { if (active) setRows(error ? [] : data || []); }, () => {});
+      fetchPurchases(supabase, words, cuit).then((rows) => { if (active) setState({ key, rows }); }, () => { if (active) setState({ key, rows: [] }); });
     }, 450);
     return () => { active = false; clearTimeout(timer); };
   }, [supabase, key]);
-  return rows;
+  return { rows: state.key === key ? state.rows : [], ready: !wanted || state.key === key, wanted, fetchNow: () => fetchPurchases(supabase, words, cuit) };
+}
+
+// Comprobante buscado por número ("tengo la FCA 0006-00011425"): se busca en las copias de Contabilium de todas las empresas.
+async function fetchInvoices(supabase, numbers = []) {
+  const { data, error } = await Promise.resolve(supabase.from("contabilium_comprobantes").select("company,tipo,numero,fecha,cliente,total,saldo").in("numero", numbers).order("fecha", { ascending: false }).limit(10));
+  return error ? [] : data || [];
+}
+
+function useInvoices(supabase, numbers = []) {
+  const [state, setState] = useState({ key: "", rows: [] });
+  const key = numbers.join(" ");
+  const wanted = Boolean(supabase?.from && key);
+  useEffect(() => {
+    if (!wanted) { setState({ key: "", rows: [] }); return undefined; }
+    let active = true;
+    const timer = setTimeout(() => {
+      fetchInvoices(supabase, key.split(" ")).then((rows) => { if (active) setState({ key, rows }); }, () => { if (active) setState({ key, rows: [] }); });
+    }, 450);
+    return () => { active = false; clearTimeout(timer); };
+  }, [supabase, key]);
+  return { rows: state.key === key ? state.rows : [], ready: !wanted || state.key === key, wanted, fetchNow: () => fetchInvoices(supabase, key.split(" ")) };
 }
 
 const dmy = (date) => String(date || "").slice(0, 10).split("-").reverse().join("/");
@@ -443,9 +456,10 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   // "Contame todo de lavopa": ficha de la cartera + sus compras en Contabilium (aunque no diga "compró").
   const clientsFound = typed && (asksClient(typed) || !intent) ? clientCards(clients, typed) : [];
   const buyWords = purchaseNameWords(typed);
-  const purchaseRows = usePurchases(supabase, buyWords.length ? buyWords : clientsFound.length ? clientWords(typed) : [], !buyWords.length && clientsFound.length === 1 ? clientsFound[0].cuit : null);
-  const purchases = purchaseRows.length ? purchaseSummary(purchaseRows) : [];
-  const invoices = useInvoices(supabase, invoiceNumbersOf(typed));
+  const purchaseState = usePurchases(supabase, buyWords.length ? buyWords : clientsFound.length ? clientWords(typed) : [], !buyWords.length && clientsFound.length === 1 ? clientsFound[0].cuit : null);
+  const purchases = purchaseState.rows.length ? purchaseSummary(purchaseState.rows) : [];
+  const invoiceState = useInvoices(supabase, invoiceNumbersOf(typed));
+  const invoices = invoiceState.rows;
   const mine = typed ? workspaceAnswer(typed, workspace) : [];
   const listPrices = useListPrices(supabase, typed);
   // 23/10: lo que anotaron los demás del equipo (team_shared_notes).
@@ -553,8 +567,11 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
       mlNow = fetched?.data || [];
     }
     const teamNow = mlNow === teamRows ? team : intent ? teamAnswer(mlNow, intent) : null;
+    // Si se apretó Enter antes de que lleguen los comprobantes, se piden en el momento (no se contesta con la ficha vieja).
+    const purchasesNow = purchaseState.ready ? purchases : purchaseSummary(await purchaseState.fetchNow().catch(() => []));
+    const invoicesNow = invoiceState.ready ? invoices : await invoiceState.fetchNow().catch(() => []);
     const pricesNow = listPrices.key && !listPrices.ready ? await loadListPrices(supabase, listPrices.words, isoToday()).catch(() => []) : listPrices.entries;
-    const context = [rulesContext({ rules, competitors: competitors || [], rapyp }), routesContext(), wantsBusiness ? businessContext(business) : "", kryptonContext(kryptonFor(asked)), mlText, opsText, pricesContext(pricesNow), teamNotesContext(notes), learningText, clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases, invoices }), buildAiContext({ intent, facts, team: teamNow, result, mlRows: mlNow, taught: withEarlier(taught) })].filter(Boolean).join("\n");
+    const context = [rulesContext({ rules, competitors: competitors || [], rapyp }), routesContext(), wantsBusiness ? businessContext(business) : "", kryptonContext(kryptonFor(asked)), mlText, opsText, pricesContext(pricesNow), teamNotesContext(notes), learningText, clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases: purchasesNow, invoices: invoicesNow }), buildAiContext({ intent, facts, team: teamNow, result, mlRows: mlNow, taught: withEarlier(taught) })].filter(Boolean).join("\n");
     const reply = await askAi(supabase, { question: asked, context, history, today: isoToday(), userName: firstName }).catch(() => ({ ok: false, reason: "red" }));
     setThinking(false);
     if (reply.ok) {

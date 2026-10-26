@@ -100,10 +100,24 @@ export function purchaseLine(summary, { today = new Date().toISOString().slice(0
   return parts.join(' · ');
 }
 
+// Número de comprobante escrito en la pregunta ("FCA 0006-00011425", "0006 00011425" o "6-11425"): punto de venta + número.
+export function invoiceNumbersOf(query) {
+  const found = new Set();
+  for (const match of String(query || '').matchAll(/\b(\d{1,5})\s*[-–/ ]\s*(\d{3,8})\b/g)) {
+    const [point, number] = [match[1], match[2]];
+    if (point.length > 5 || number.length < 4) continue;
+    found.add(`${point.padStart(4, '0')}-${number.padStart(8, '0')}`);
+  }
+  return [...found].slice(0, 3);
+}
+
+export const invoiceLine = (row) => `${dmy(row.fecha)} · ${row.tipo} ${row.numero} · ${row.company} · ${row.cliente || 'sin cliente'} · ${pesos(Number(row.total) || 0)}${Number(row.saldo) > 0 ? ` · saldo ${pesos(Number(row.saldo))}` : ''}`;
+
 // Para el contexto de la IA.
-export function extraContext({ rivals = null, purchases = [], today } = {}) {
+export function extraContext({ rivals = null, purchases = [], invoices = [], today } = {}) {
   const lines = [];
   if (rivals?.list?.length) lines.push(`Competidores de ventas directas (fuera de Mercado Libre; cargados en Academia)${rivals.families.length ? ` (familia: ${rivals.families.join(', ')})` : ''}:`, ...rivals.list.slice(0, 25).map((rival) => `- ${rival.name}${rival.families?.length ? ` [${rival.families.join(', ')}]` : ''}${rival.summary ? `: ${String(rival.summary).slice(0, 200)}` : ''}`));
   if (purchases.length) lines.push('Compras según los comprobantes copiados de Contabilium (montos tal como figuran ahí; el historial todavía se está completando):', ...purchases.slice(0, 5).map((summary) => `- ${summary.name} (${summary.companies.join(', ')}): ${purchaseLine(summary, { today })}`));
+  if (invoices.length) lines.push('Comprobantes de Contabilium que coinciden con el número escrito:', ...invoices.slice(0, 5).map((row) => `- ${invoiceLine(row)}`));
   return lines.join('\n');
 }

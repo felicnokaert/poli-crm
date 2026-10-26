@@ -90,9 +90,9 @@ export function buildAlerts({ metricsBySeller = {}, items = [], nickname = {} } 
   if (blocked.length) alerts.push({ level: 'urgent', key: 'permiso', text: `Mercado Libre no deja leer las ventas de ${blocked.join(', ')}`, detail: 'Falta el permiso de ventas en la aplicación de Mercado Libre. Sin eso no hay facturado, ventas ni conversión.' });
   for (const [seller, data] of Object.entries(metricsBySeller)) {
     const name = nickname[seller] || seller;
-    if (data?.questionsPending > 0) alerts.push({ level: 'urgent', key: `q-${seller}`, text: `${name}: ${data.questionsPending} pregunta${data.questionsPending === 1 ? '' : 's'} sin responder`, detail: 'Responder rápido ayuda a vender y a la reputación.', href: 'https://www.mercadolibre.com.ar/preguntas/vendedor' });
+    if (data?.questionsPending > 0) alerts.push({ level: 'info', key: `q-${seller}`, text: `${name}: ${data.questionsPending} pregunta${data.questionsPending === 1 ? '' : 's'} sin responder`, detail: 'Las preguntas las atiende Brenda; se muestran solo como dato (no entran en el plan del día).', href: 'https://www.mercadolibre.com.ar/preguntas/vendedor' });
     const level = data?.reputation?.level;
-    if (level && REPUTATION[level]?.[1] === 'warn') alerts.push({ level: 'urgent', key: `r-${seller}`, text: `${name}: reputación ${REPUTATION[level][0].toLowerCase()}`, detail: 'Revisá reclamos, demoras y cancelaciones en Mercado Libre.' });
+    if (level && REPUTATION[level]?.[1] === 'warn') alerts.push({ level: 'urgent', key: `r-${seller}`, text: `${name}: reputación ${REPUTATION[level][0].toLowerCase()}`, detail: 'Los reclamos los atiende otra persona; acá solo se avisa el color de la reputación.' });
   }
   const active = items.filter((item) => item.status === 'active');
   const noStock = active.filter((item) => item.available_quantity === 0);

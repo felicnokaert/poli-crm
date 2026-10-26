@@ -67,3 +67,11 @@ test('asistente: alertas, Shopify y TACoS salen de las alertas del CRM', () => {
   assert.match(text, /NO está conectada/);
   assert.match(opsContext([], { now }), /No hay alertas guardadas/);
 });
+
+test('número de comprobante escrito en la pregunta (26/10)', async () => {
+  const { invoiceNumbersOf, invoiceLine } = await import('../src/assistant-extra.mjs');
+  assert.deepEqual(invoiceNumbersOf('YO TENGO 13/10/2026 FCA 0006-00011425').filter((n) => n === '0006-00011425'), ['0006-00011425']);
+  assert.deepEqual(invoiceNumbersOf('la FCA 6-11425'), ['0006-00011425']);
+  assert.deepEqual(invoiceNumbersOf('cuándo compró Thorne'), []);
+  assert.match(invoiceLine({ fecha: '2026-10-13', tipo: 'FCA', numero: '0006-00011425', company: 'POLIPLAST', cliente: 'THORNE SRL', total: 114671.7 }), /13\/10\/2026 · FCA 0006-00011425 · POLIPLAST · THORNE SRL/);
+});

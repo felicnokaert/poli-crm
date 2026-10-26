@@ -40,7 +40,7 @@ export function clientCards(clients = [], query) {
     lines: [
       [client.contact && `Contacto: ${client.contact}`, client.phone && `Tel: ${client.phone}`, client.email && `Mail: ${client.email}`].filter(Boolean).join(' · '),
       [client.cuit && `CUIT: ${client.cuit}`, [client.city, client.province].filter(Boolean).join(', '), client.type, client.rubro].filter(Boolean).join(' · '),
-      [client.stage && `Etapa: ${client.stage}`, client.mainProduct && `Producto principal: ${client.mainProduct}`, client.family && `Familia: ${client.family}`, client.lastPurchase && `Última compra: ${client.lastPurchase}`, client.lastQuotedAt && `Última cotización: ${String(client.lastQuotedAt).slice(0, 10).split('-').reverse().join('/')}`].filter(Boolean).join(' · '),
+      [client.stage && `Etapa: ${client.stage}`, client.mainProduct && `Producto principal: ${client.mainProduct}`, client.family && `Familia: ${client.family}`, client.lastPurchase && `Última compra anotada en la ficha (dato cargado a mano, puede estar viejo; la fecha real sale de los comprobantes de Contabilium): ${client.lastPurchase}`, client.lastQuotedAt && `Última cotización: ${String(client.lastQuotedAt).slice(0, 10).split('-').reverse().join('/')}`].filter(Boolean).join(' · '),
       client.nextAction && `Próxima acción: ${client.nextAction}${client.nextDate ? ` (${client.nextDate})` : ''}`,
       client.notes && `Notas: ${String(client.notes).slice(0, 400)}`,
     ].filter(Boolean),

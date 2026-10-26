@@ -24,7 +24,7 @@ import { useKnowledge } from "./useKnowledge.js";
 import { workspaceAnswer, workspaceContext } from "./assistant-workspace.mjs";
 import { AssistantKrypton } from "./AssistantKrypton.jsx";
 import { kryptonContext, kryptonFor } from "./assistant-krypton.mjs";
-import { extraContext, purchaseLine, purchaseNameWords, purchaseSummary, rivalsFor } from "./assistant-extra.mjs";
+import { extraContext, invoiceLine, invoiceNumbersOf, purchaseLine, purchaseNameWords, purchaseSummary, rivalsFor } from "./assistant-extra.mjs";
 
 // Ventana del asistente (21/10): flotante, abajo a la derecha (en el celular ocupa la pantalla). Por ahora
 // busca por palabras en todo lo que sabe el CRM, sin IA ni costo. Cuando se apruebe el presupuesto, esta
@@ -213,12 +213,34 @@ function usePurchases(supabase, words = [], cuit = null) {
   return rows;
 }
 
+// Comprobante buscado por número ("tengo la FCA 0006-00011425"): se busca en las copias de Contabilium de todas las empresas.
+function useInvoices(supabase, numbers = []) {
+  const [rows, setRows] = useState([]);
+  const key = numbers.join(" ");
+  useEffect(() => {
+    if (!supabase?.from || !key) { setRows([]); return undefined; }
+    let active = true;
+    const timer = setTimeout(() => {
+      Promise.resolve(supabase.from("contabilium_comprobantes").select("company,tipo,numero,fecha,cliente,total,saldo").in("numero", key.split(" ")).order("fecha", { ascending: false }).limit(10))
+        .then(({ data, error }) => { if (active) setRows(error ? [] : data || []); }, () => {});
+    }, 450);
+    return () => { active = false; clearTimeout(timer); };
+  }, [supabase, key]);
+  return rows;
+}
+
 const dmy = (date) => String(date || "").slice(0, 10).split("-").reverse().join("/");
 
 // Competidores de la familia y compras del cliente: sale de la base, sin IA ni costo.
-function ExtraAnswer({ rivals, purchases }) {
+function ExtraAnswer({ rivals, purchases, invoices = [] }) {
   return (
     <>
+      {invoices.length > 0 && (
+        <section className="assistant-answer" aria-label="Comprobante">
+          <span className="assistant-group-label">Comprobante (Contabilium)</span>
+          <ul className="assistant-rivals">{invoices.map((row) => <li key={`${row.company}-${row.tipo}-${row.numero}`}>{invoiceLine(row)}</li>)}</ul>
+        </section>
+      )}
       {rivals && (
         <section className="assistant-answer" aria-label="Competidores">
           <span className="assistant-group-label">Competencia{rivals.families.length ? ` · ${rivals.families.join(", ")}` : ""} · {rivals.list.length}</span>
@@ -423,6 +445,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   const buyWords = purchaseNameWords(typed);
   const purchaseRows = usePurchases(supabase, buyWords.length ? buyWords : clientsFound.length ? clientWords(typed) : [], !buyWords.length && clientsFound.length === 1 ? clientsFound[0].cuit : null);
   const purchases = purchaseRows.length ? purchaseSummary(purchaseRows) : [];
+  const invoices = useInvoices(supabase, invoiceNumbersOf(typed));
   const mine = typed ? workspaceAnswer(typed, workspace) : [];
   const listPrices = useListPrices(supabase, typed);
   // 23/10: lo que anotaron los demás del equipo (team_shared_notes).
@@ -471,7 +494,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   const routes = typed ? routeFor(typed) : [];
   const learning = typed && asksLearning(typed) ? prospectLearning({ prospects: workspace.prospects || [], clients }) : null;
   const learningText = learning ? learningContext(learning) : "";
-  const hasExtra = Boolean(rivals || purchases.length || mine.length || clientsFound.length || rapyp || notes.length || learningText || listPrices.entries.length || businessShown.length || krypton || opsText);
+  const hasExtra = Boolean(rivals || purchases.length || invoices.length || mine.length || clientsFound.length || rapyp || notes.length || learningText || listPrices.entries.length || businessShown.length || krypton || opsText);
   const hasAnswer = Boolean(taught.length || (intent && (facts.length || team)) || helpAnswer);
   useEffect(() => { setShowAll(false); }, [typed]);
   const [chat, setChat] = useState([]);
@@ -531,7 +554,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
     }
     const teamNow = mlNow === teamRows ? team : intent ? teamAnswer(mlNow, intent) : null;
     const pricesNow = listPrices.key && !listPrices.ready ? await loadListPrices(supabase, listPrices.words, isoToday()).catch(() => []) : listPrices.entries;
-    const context = [rulesContext({ rules, competitors: competitors || [], rapyp }), routesContext(), wantsBusiness ? businessContext(business) : "", kryptonContext(kryptonFor(asked)), mlText, opsText, pricesContext(pricesNow), teamNotesContext(notes), learningText, clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases }), buildAiContext({ intent, facts, team: teamNow, result, mlRows: mlNow, taught: withEarlier(taught) })].filter(Boolean).join("\n");
+    const context = [rulesContext({ rules, competitors: competitors || [], rapyp }), routesContext(), wantsBusiness ? businessContext(business) : "", kryptonContext(kryptonFor(asked)), mlText, opsText, pricesContext(pricesNow), teamNotesContext(notes), learningText, clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases, invoices }), buildAiContext({ intent, facts, team: teamNow, result, mlRows: mlNow, taught: withEarlier(taught) })].filter(Boolean).join("\n");
     const reply = await askAi(supabase, { question: asked, context, history, today: isoToday(), userName: firstName }).catch(() => ({ ok: false, reason: "red" }));
     setThinking(false);
     if (reply.ok) {
@@ -650,7 +673,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
           </section>
         )}
         {routes.length > 0 && <p className="muted small">Si hace falta una persona: {routes.map((route) => `${route.who} (${route.why})`).join(" · ")}.</p>}
-        {hasExtra && <ExtraAnswer rivals={rivals} purchases={purchases} />}
+        {hasExtra && <ExtraAnswer rivals={rivals} purchases={purchases} invoices={invoices} />}
         {typed && result.total === 0 && !hasAnswer && !hasExtra && (
           <div className="assistant-bubble muted">
             No encontré nada cargado con “{typed}”.

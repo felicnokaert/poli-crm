@@ -65,6 +65,8 @@ test('resumen, filtros y CSV de la propuesta', () => {
   assert.equal(filterPriceRows(rows, { query: 'poxiplast 3' }).length, 1);
   const csv = priceProposalCsv(rows);
   assert.ok(csv.startsWith('﻿"SKU"'));
-  assert.equal(csv.split('\n').length, 1 + 4); // v1, v2, v3 y v5 llevan propuesta
-  assert.match(csv, /"Bajar a"/);
+  assert.equal(csv.split('\n').length, 1 + 5); // v1, v2, v3 y v5 llevan propuesta; v4 (diferencia enorme) va marcado para revisar a mano
+  assert.match(csv, /"Bajar precio y tachar el de ML"/);
+  assert.match(csv, /Revisar a mano/);
+  assert.match(csv, /"Precio de comparación a cargar \(= ML\)"/);
 });

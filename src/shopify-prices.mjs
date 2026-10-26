@@ -39,7 +39,7 @@ export function priceCross({ products = [], variants = [], mlItems = [], discoun
     if (!product || product.status === 'ARCHIVED') continue;
     const sku = key(variant.sku);
     const shopify = Number(variant.price) || 0;
-    const base = { variantId: variant.id, productId: product.id, title: product.title, variantTitle: variant.title && variant.title !== 'Default Title' ? variant.title : '', status: product.status, sku, shopify, ml: null, target: null, diff: null, proposal: null };
+    const base = { variantId: variant.id, productId: product.id, title: product.title, variantTitle: variant.title && variant.title !== 'Default Title' ? variant.title : '', status: product.status, sku, shopify, compareAt: Number(variant.compare_at_price) || 0, ml: null, target: null, diff: null, proposal: null };
     if (!sku) { rows.push({ ...base, state: 'sin_sku' }); continue; }
     const listings = bySku.get(sku);
     if (!listings?.length) { rows.push({ ...base, state: shopify > 0 ? 'sin_ml' : 'sin_precio' }); continue; }
@@ -81,12 +81,18 @@ export function filterPriceRows(rows = [], { state = '', query = '', activeOnly 
 }
 
 const cell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
-// CSV de la propuesta (solo lo que habría que cambiar) para revisarla en una planilla antes de aprobar nada.
+// 26/10 (Felipe): el precio de Mercado Libre queda como precio normal (tachado en la tienda) y la regla ML -10 % es el precio
+// con promoción. En Shopify eso es: precio = objetivo y "precio de comparación" = precio de ML. Solo cuentan publicaciones de ML ACTIVAS.
+// Lo que difiere de eso más de la tolerancia (precio) o cuyo precio de comparación no es el de ML, entra en la propuesta; las diferencias
+// de más del 50 % (casi seguro otro tamaño o pack con el mismo SKU) van marcadas "Revisar a mano" y no se aplican solas.
+export const promoChange = (row) => row.ml?.active && row.target != null && (row.proposal != null || Math.round(row.compareAt || 0) !== Math.round(row.ml.price));
 export function priceProposalCsv(rows = []) {
-  const head = ['SKU', 'Producto', 'Variante', 'Estado del producto', 'Precio Shopify', 'Precio Mercado Libre', 'Precio objetivo (ML -10 %)', 'Diferencia', 'Acción', 'Publicación ML'];
-  const lines = rows.filter((row) => row.proposal != null).map((row) => [
-    row.sku, row.title, row.variantTitle, row.status, row.shopify || '', row.ml?.price ?? '', row.target ?? '',
-    row.diff == null ? '' : `${Math.round(row.diff * 100)} %`, row.state === 'alinear_bajar' ? 'Bajar a' : 'Subir a', row.ml?.permalink || row.ml?.itemId || '',
+  const head = ['SKU', 'Producto', 'Variante', 'Estado del producto', 'Precio Shopify hoy', 'Precio de comparación hoy', 'Precio Mercado Libre (activa)', 'Precio con promo a cargar (ML -10 %)', 'Precio de comparación a cargar (= ML)', 'Diferencia del precio', 'Acción', 'Publicación ML'];
+  const lines = rows.filter(promoChange).map((row) => [
+    row.sku, row.title, row.variantTitle, row.status, row.shopify || '', row.compareAt || '', row.ml?.price ?? '', row.target ?? '', row.ml?.price ?? '',
+    row.diff == null ? '' : `${Math.round(row.diff * 100)} %`,
+    row.state === 'revisar' ? 'Revisar a mano (¿mismo SKU en otro tamaño o pack?)' : row.state === 'alinear_bajar' ? 'Bajar precio y tachar el de ML' : row.state === 'alinear_subir' ? 'Subir precio y tachar el de ML' : row.state === 'sin_precio' ? 'Cargar precio y tachar el de ML' : 'Solo tachar el precio de ML',
+    row.ml?.permalink || row.ml?.itemId || '',
   ].map(cell).join(','));
-  return `﻿${[head.map(cell).join(','), ...lines].join('\n')}`;
+  return `\ufeff${[head.map(cell).join(','), ...lines].join('\n')}`;
 }

@@ -9,7 +9,7 @@ import { DailyChart } from "./DailyChart.jsx";
 import { skuCleanup, skuCleanupCsv } from "./ml-sku-cleanup.mjs";
 import { DraftButton } from "./ShopifyDrafts.jsx";
 import { DECISION_LABEL, filterMissing, draftSpecs, missingFromShopify, missingReviewCsv, shopifyImportCsv } from "./shopify-missing.mjs";
-import { PRICE_STATES, DISCOUNT, filterPriceRows, priceCross, priceProposalCsv, priceSummary } from "./shopify-prices.mjs";
+import { PRICE_STATES, DISCOUNT, filterPriceRows, priceCross, priceProposalCsv, priceSummary, promoChange } from "./shopify-prices.mjs";
 import { PICKUP_LIMIT_DAYS, SHIP_LIMIT_HOURS, operationSummary, pendingOrders, recoverList, weeklyFunnel } from "./shopify-operation.mjs";
 
 // Ventas → Shopify (24/10, etapas 1 y 2): espejo de SOLO LECTURA de la tienda. Resumen, "Qué mejorar" (lo que le falta a cada
@@ -282,7 +282,7 @@ function Prices({ products, variants, mlItems }) {
         </div>
         <div className="ml-toolbar">
           <label className="small check-row"><input type="checkbox" checked={activeOnly} onChange={(event) => setActiveOnly(event.target.checked)} /> Solo productos activos</label>
-          <button type="button" className="ghost" onClick={() => downloadText(`shopify-precios-vs-ml-${argentinaToday()}.csv`, priceProposalCsv(shown))}>Descargar propuesta ({shown.filter((row) => row.proposal != null).length})</button>
+          <button type="button" className="ghost" onClick={() => downloadText(`shopify-precios-vs-ml-${argentinaToday()}.csv`, priceProposalCsv(shown))}>Descargar propuesta con promo ({shown.filter(promoChange).length})</button>
         </div>
         {shown.length === 0 ? <Empty title="Nada para mostrar" text="Probá con otro filtro." /> : (
           <div className="table-scroll"><table className="sales-history-table ml-board-table">

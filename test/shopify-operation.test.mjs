@@ -57,3 +57,10 @@ test('lectura de Shopify: peso en gramos, pedidos y carritos sin datos del compr
   assert.equal(row.total, 10.5);
   assert.deepEqual(Object.keys(checkoutRow({ id: 'c', createdAt: ago(1), lineItems: { nodes: [{ title: 'X', quantity: 2 }] } })).includes('email'), false);
 });
+
+test('orderRow sin permiso de fulfillmentOrders deduce el retiro por el nombre del envío', () => {
+  const base = { id: 'o', name: '#9', createdAt: '2026-10-20T10:00:00Z', displayFinancialStatus: 'PAID', displayFulfillmentStatus: 'UNFULFILLED', currentTotalPriceSet: { shopMoney: { amount: '10', currencyCode: 'ARS' } } };
+  assert.equal(orderRow({ ...base, shippingLine: { title: 'Retiro en sucursal', code: 'x' } }).delivery, 'PICK_UP');
+  assert.equal(orderRow({ ...base, shippingLine: { title: 'Envío a domicilio', code: 'x' } }).delivery, 'SHIPPING');
+  assert.equal(orderRow({ ...base, shippingLine: null }).delivery, '');
+});

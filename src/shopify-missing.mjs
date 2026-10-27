@@ -146,14 +146,25 @@ export function missingFromShopify({ products = [], variants = [], mlItems = [],
     const title = shortTitle(item.title);
     const brand = brandOf(item.attributes);
     // Mismo producto con otro formato de SKU (0.750 = 750): ya está en la tienda.
-    const sameStem = skuStem(entry.sku);
+    // Un SKU compuesto «PS-PP888-3+PS-PPC1-1+PS-L47-1» es el kit de PS-PP888-3 (+ pistola + limpiador): la cantidad es el número del primer
+    // componente y lo que viene después distingue el tipo de kit (con o sin pistola).
     const kit = kitOf(entry.sku);
-    const twin = squashed.get(squash(entry.sku)) || ((stemSkus.get(sameStem) || []).find(([sku]) => skuSuffixEquivalent(sku, entry.sku)) || [])[1]
+    const first = kit || key(entry.sku);
+    const rest = kit ? key(entry.sku).split('+').slice(1).join('+') : '';
+    const sameStem = skuStem(first);
+    const twin = squashed.get(squash(entry.sku)) || ((stemSkus.get(sameStem) || []).find(([sku]) => skuSuffixEquivalent(sku, first)) || [])[1]
       || (kit ? squashed.get(squash(`KT-${kit}`)) || null : null)
-      || (allShopify.find(([sku]) => skuNear(sku, entry.sku)) || [])[1] || null;
+      || (allShopify.find(([sku]) => skuNear(sku, first)) || [])[1] || null;
     let lookalike = null; let best = 0;
-    for (const product of catalog) { const score = similarity(item.title, product.title); if (score > best) { best = score; lookalike = product; } }
-    const stem = skuStem(entry.sku);
+    // Número de modelo (888, 740…) que el producto de la tienda no tiene: es otro producto aunque los nombres se parezcan (Easypega 750 ≠ Easypega Turbo 888).
+    const models = (text) => (plain(text).match(/\b\d{3,}\b(?!\s?(?:ml|kg|gr|g|l|lt|lts|cc|cm|mm|m2|mts|mt|m)\b)/g) || []);
+    for (const product of catalog) {
+      const score = similarity(item.title, product.title);
+      const own = models(product.title);
+      if (score > best && !models(item.title).some((model) => !own.includes(model))) { best = score; lookalike = product; }
+    }
+    const stem = sameStem;
+    const groupKey = rest ? `${stem}+${rest}` : stem;
     // Parecido más flojo (50 a 70 %): no frena la creación, pero se muestra para que Felipe decida (ej. Lámina PRFV vs Placa PRFV).
     const hint = best >= 0.5 && best < 0.7 && !(stem && stems.has(stem)) ? lookalike : null;
     const warnings = [];
@@ -169,7 +180,7 @@ export function missingFromShopify({ products = [], variants = [], mlItems = [],
       stock: Number(item.available_quantity) || 0, pictures: Number(item.pictures_count) || 0, image: item.picture_url || item.thumbnail || '',
       description, seoTitle: `${shortTitle(title, 48)} | Poliplast`, seoDescription: firstSentences(seoSource, 155),
       brand, tags: [...new Set([brand, 'crm-borrador'].filter(Boolean))], metafields: metafieldsFrom(item.attributes),
-      stem, attrs: parseTitle(item.title).attrs, joinsProduct: stem ? stems.get(stem) || null : null, twin, hint, lookalike: best >= 0.7 && !(stem && stems.has(stem)) ? lookalike : null, warnings,
+      stem: groupKey, baseStem: stem, first, kitQty: kit ? (key(first).split('-').pop().match(/^\d+$/) ? Number(key(first).split('-').pop()) : null) : null, attrs: parseTitle(item.title).attrs, joinsProduct: stem ? stems.get(stem) || null : null, twin, hint, lookalike: best >= 0.7 && !(stem && stems.has(stem)) ? lookalike : null, warnings,
     };
   });
   // Agrupar los que faltan por familia de SKU (si los títulos se parecen) para proponerlos como UN producto con variantes.
@@ -208,8 +219,8 @@ export function missingFromShopify({ products = [], variants = [], mlItems = [],
     const kin = rows.filter((row) => row === seed || similarity(row.mlTitle, seed.mlTitle) >= 0.4);
     if (kin.length < 2) continue;
     // Valor de cada opción según el título (sin pack = x1). Si el título no lo dice, queda vacío y esa fila no entra al grupo.
-    const valueOf = (row, name) => (name === 'Presentación' ? row.sku.split('-').pop() : row.attrs[name] ?? (name === 'Pack' ? 'x1' : null));
-    const names = [...new Set(kin.flatMap((row) => Object.keys(row.attrs)))];
+    const valueOf = (row, name) => (name === 'Presentación' ? row.first.split('-').pop() : name === 'Pack' && row.kitQty ? `x${row.kitQty}` : row.attrs[name] ?? (name === 'Pack' ? 'x1' : null));
+    const names = [...new Set([...kin.flatMap((row) => Object.keys(row.attrs)), ...(kin.some((row) => row.kitQty) ? ['Pack'] : [])])];
     const varying = names.filter((name) => new Set(kin.map((row) => valueOf(row, name) ?? '—')).size > 1).slice(0, 3);
     const options = varying.length ? varying : ['Presentación'];
     // Todas las filas del grupo tienen que tener valor en todas las opciones; las que no, se crean aparte (no se inventan variantes).
@@ -312,6 +323,7 @@ export function draftGroups(rows = []) {
   }
   return [...products.values()].map((list) => {
     const lead = [...list].sort((a, b) => b.sold - a.sold)[0];
+    if (list.length > 1 && list.every((row) => row.kitQty)) list.sort((a, b) => a.kitQty - b.kitQty);
     if (lead.group?.note) list.sort((a, b) => parseFloat(a.group.values[0]) - parseFloat(b.group.values[0]));
     return { list, lead, grouped: Boolean(list.length > 1 && lead.group) };
   });

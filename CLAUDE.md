@@ -198,3 +198,5 @@ Búsqueda global Ctrl+K; tarjeta Mi día en Inicio; menú en 5 grupos; Prospecci
 - Instagram/Facebook (@Resinplast, @grupopoliplast, @imperpur, @rapyp): requieren cuentas profesionales y revisión de app de Meta.
 - WhatsApp de Meta sin entrega desde el 13/10 (caso de soporte abierto).
 - Borradores de pedidos con IA: diferido (requiere presupuesto).
+
+- 27/10 CRON DE VENTAS DE ML POR CUENTA: el resumen (órdenes 60 días, comisiones, envíos) ya no corre dentro del cron `mercadolibre` (las 3 cuentas juntas no entraban en 60 s: "sin tiempo hoy"). Ahora hay un cron por cuenta (`mercadolibre-ventas-1/-2/-3`, 09:40, 09:50 y 11:00 UTC, en orden de apodo; mercadoLibreSalesCron en lib/mercadolibre.mjs) y figuran en Conexiones → Actualizaciones automáticas. Shopify 27/10: se cargaron descripciones y SEO a ~20 productos más (kits, manta IBC, MS-35, 995, cintas, telas, bandas, pico, filtro, extensión, PU-476, pigmentos en pasta, pisos); quedan sin texto almohada, micas, Pistola Fusion/Anclaje y Kit Resina Epoxi+UV.

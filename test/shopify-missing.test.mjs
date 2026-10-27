@@ -111,3 +111,21 @@ test('decisiones: lo decidido sale de la lista y vuelve con "Decididos"; el pare
   assert.deepEqual(Object.keys(applyDecision(decisions, { skus: ['PRFV-2X2MM-1'], state: 'volver' })), []);
   assert.throws(() => applyDecision({}, { skus: ['X'], state: 'borrar' }), /desconocida/);
 });
+
+test('KT-618 y KT-619 son el mismo producto: UN borrador con la opción Presentación en kg, aunque los títulos no se parezcan', async () => {
+  const { draftSpecs } = await import('../src/shopify-missing.mjs');
+  const items = [
+    ml('A', 'KT-619-10', 'Espuma Poliuretano Expandido Poliol E Isocianato En Kit. Proyectada', { sold_quantity: 268, price: 319045 }),
+    ml('B', 'KT-618-2', 'Poliplus-619 Poliplast Spray Espuma Aislante 2kg Termoacustica', { sold_quantity: 23 }),
+    ml('C', 'KT-619-20', 'Pu Expandido Espuma Kit 47 Kg Fijacion Aislacion Termica Color', { sold_quantity: 79 }),
+    ml('D', 'KT-618-47', 'Poliplus-619 Spray Espuma Aislante 47k Termoacustica Liquida', { sold_quantity: 16 }),
+    ml('E', 'KT-619-2', 'Resina Poliuretanica De Alto Rendimiento X 2kg Color Beige/proyectada', { sold_quantity: 91 }),
+  ];
+  const specs = draftSpecs(missingFromShopify({ ...shop, mlItems: items }).rows);
+  assert.equal(specs.length, 1);
+  assert.match(specs[0].title, /POLIPLUS 618 SP/);
+  assert.deepEqual(specs[0].options, [{ name: 'Presentación', values: ['2 kg', '10 kg', '20 kg', '47 kg'] }]);
+  assert.deepEqual(specs[0].variants.map((variant) => variant.sku), ['KT-619-2', 'KT-619-10', 'KT-619-20', 'KT-618-47']);
+  assert.match(specs[0].descriptionHtml, /indica los kilos del kit \(2 kg, 10 kg, 20 kg, 47 kg\)/);
+  assert.match(specs[0].seoTitle, /POLIPLUS 618 SP/);
+});

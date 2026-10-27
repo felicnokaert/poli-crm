@@ -4,7 +4,7 @@
 // 3 opciones como máximo y hasta 2.048 variantes por producto; si hacen falta más opciones se juntan en "Modelo".
 import { plain } from './knowledge-search.mjs';
 
-const COLORS = ['negro', 'blanco', 'rojo', 'azul', 'amarillo', 'verde', 'gris', 'naranja', 'celeste', 'rosa', 'violeta', 'marron', 'transparente', 'cristal', 'natural'];
+export const COLORS = ['negro', 'blanco', 'rojo', 'azul', 'amarillo', 'verde', 'gris', 'naranja', 'celeste', 'rosa', 'violeta', 'marron', 'transparente', 'cristal', 'natural'];
 const UNITS = { kg: 'Peso', g: 'Peso', gr: 'Peso', l: 'Capacidad', lt: 'Capacidad', lts: 'Capacidad', ml: 'Capacidad', cc: 'Capacidad', m: 'Medida', mt: 'Medida', mts: 'Medida', cm: 'Medida', mm: 'Medida', m2: 'Superficie' };
 const UNIT_LABEL = { gr: 'g', lt: 'L', lts: 'L', l: 'L', mt: 'm', mts: 'm' };
 const SIZE = /(\d+(?:[.,]\d+)?)\s?(kg|gr|g|lts|lt|l|ml|cc|m2|mts|mt|m|cm|mm)\b/;
@@ -26,8 +26,13 @@ export function normalizeOption(name = '', value = '') {
     const pack = /^x?\s?(\d+)$/i.exec(text);
     return ['Pack', pack ? `x${pack[1]}` : text];
   }
+  if (['color', 'colour'].includes(key)) return ['Color', colorName(text)];
   return [titleCase(key), text];
 }
+
+// Los colores de las variantes vienen a veces en inglés (blue, red…) o con distinto formato: se llevan a un solo nombre en español.
+const COLOR_ES = { blue: 'Azul', red: 'Rojo', rojo: 'Rojo', green: 'Verde', yellow: 'Amarillo', orange: 'Naranja', white: 'Blanco', black: 'Negro', gray: 'Gris', grey: 'Gris', pink: 'Rosa', purple: 'Violeta', brown: 'Marrón' };
+export const colorName = (value = '') => { const key = plain(String(value)).trim(); return COLOR_ES[key] || titleCase(key); };
 
 const titleCase = (text) => text.replace(/\s+/g, ' ').trim().replace(/(^|\s)(\S)/g, (match, space, letter) => space + letter.toUpperCase());
 
@@ -35,7 +40,9 @@ const titleCase = (text) => text.replace(/\s+/g, ' ').trim().replace(/(^|\s)(\S)
 export function parseTitle(title = '') {
   let rest = ` ${plain(title)} `;
   const attrs = {};
-  const sizes = [...rest.matchAll(SIZE_ALL)];
+  let sizes = [...rest.matchAll(SIZE_ALL)];
+  // La misma medida escrita dos veces (ej. «3g … Negro 3g») es una sola medida.
+  if (sizes.length > 1 && new Set(sizes.map((match) => `${match[1]}${match[2]}`)).size === 1) { rest = rest.replace(sizes[1][0], ' '); sizes = [sizes[0]]; }
   if (sizes.length > 1) {
     // Varias medidas juntas (ej. 100mm x 1,5mm x 50m) son las dimensiones de un mismo artículo.
     attrs.Medida = sizes.map((match) => `${match[1].replace('.', ',')} ${UNIT_LABEL[match[2]] || match[2]}`).join(' x ');
@@ -87,7 +94,14 @@ export function groupProposals(products = [], variants = []) {
   const rank = (name) => (PRIORITY.indexOf(name) === -1 ? 99 : PRIORITY.indexOf(name));
   // Si hay más de 3 opciones que varían, se parte en varios productos por la dimensión que más separa
   // (capacidad, peso o medida; después la línea) en vez de apretar todo en una opción "Modelo".
+  const CONTAINER = /\b(balde|baldes|tacho|tachos|tambor|bidon|bidones|cubeta|envase)\b/;
   const SPLIT_BY = ['Capacidad', 'Peso', 'Medida', 'Superficie', 'Línea'];
+  // Nombre del producto cuando se partió por modelo: «Balde plástico económico sin tapa 20 L» (lo que es igual en todas las variantes).
+  const modelName = (base, rows, options) => {
+    const fixed = (key) => { if (options.includes(key)) return ''; const values = [...new Set(rows.map((row) => row.values[key]).filter(Boolean))]; return values.length === 1 ? values[0] : ''; };
+    const bits = [titleCase(base), fixed('Línea') === 'Económico' ? 'económico' : '', fixed('Tapa') === 'Sin tapa' ? 'sin tapa' : '', fixed('Capacidad') || fixed('Peso') || fixed('Medida')].filter(Boolean);
+    return bits.join(' ');
+  };
   const build = (name, base, rows, parts = []) => {
     const members = [...new Set(rows.map((row) => row.member))];
     if (members.length < 2) return; // un solo producto no se fusiona con nada
@@ -95,7 +109,9 @@ export function groupProposals(products = [], variants = []) {
     const varying = names.filter((key) => new Set(rows.map((row) => valueOf(row, key))).size > 1);
     if (!varying.length && !parts.length) return;
     const ordered = [...varying].sort((x, y) => rank(x) - rank(y));
-    const splitter = ordered.length > 3 ? SPLIT_BY.find((key) => ordered.includes(key)) : null;
+    // Tapa y línea (económico) son el MODELO: van siempre como productos distintos. En envases (baldes, tachos…) el tamaño también.
+    const forced = ['Tapa', 'Línea'].find((key) => ordered.includes(key)) || (CONTAINER.test(base) ? ['Capacidad'].find((key) => ordered.includes(key)) : null);
+    const splitter = forced || (ordered.length > 3 ? SPLIT_BY.find((key) => ordered.includes(key)) : null);
     if (splitter) {
       const byValue = new Map();
       for (const row of rows) { const value = valueOf(row, splitter); if (!byValue.has(value)) byValue.set(value, []); byValue.get(value).push(row); }
@@ -134,10 +150,12 @@ export function groupProposals(products = [], variants = []) {
       byShape.set(key, entry);
     }
     for (const [shape, range] of byShape) if (range.max / range.min >= 1.4) warnings.push(`Precios muy distintos para lo mismo (${shape || 'todas'}): de $${Math.round(range.min).toLocaleString('es-AR')} a $${Math.round(range.max).toLocaleString('es-AR')}. La ficha mostraría "desde" el menor.`);
+    const hidden = members.filter((member) => member.product.status !== 'ACTIVE');
+    if (hidden.length) warnings.push(`${hidden.length} de los productos juntos no están activos (${hidden.map((member) => member.product.status === 'UNLISTED' ? 'no listado' : member.product.status.toLowerCase()).filter((v, i, a) => a.indexOf(v) === i).join(', ')}): al unificarlos sus variantes se van a mostrar. Sacá las que no quieras mostrar antes de publicar.`);
     if (proposed.length > 2048) warnings.push('Supera las 2.048 variantes que admite Shopify: dividirlo en dos productos.');
     const survivor = [...members].sort((x, y) => (statusRank[x.product.status] ?? 9) - (statusRank[y.product.status] ?? 9) || (y.product.total_inventory ?? 0) - (x.product.total_inventory ?? 0))[0].product;
     proposals.push({
-      key: `${base}|${parts.join('|')}`, name: titleCase(name), products: members.map((member) => member.product), survivor,
+      key: `${base}|${parts.join('|')}`, name: parts.length ? modelName(base, rows, options) : titleCase(name), products: members.map((member) => member.product), survivor,
       options: options.map((key) => ({ name: key, values: [...new Set(proposed.map((item) => item.optionValues[key]))] })),
       variants: proposed, warnings,
       activeProducts: members.filter((member) => member.product.status === 'ACTIVE').length,

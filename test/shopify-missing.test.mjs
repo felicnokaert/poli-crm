@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { missingFromShopify, filterMissing, shopifyImportCsv, missingReviewCsv, cleanDescription, skuStem, metafieldsFrom } from '../src/shopify-missing.mjs';
+import { skuNear, missingFromShopify, filterMissing, shopifyImportCsv, missingReviewCsv, cleanDescription, skuStem, metafieldsFrom } from '../src/shopify-missing.mjs';
 
 const ml = (id, sku, title, over = {}) => ({ id, sku, title, status: 'active', price: 10000, sold_quantity: 5, visits_30d: 10, pictures_count: 5, available_quantity: 20, description: 'Producto de buena calidad. Más info en https://x.com o al +54 9 11 5555-5555.', attributes: [{ name: 'Marca', value: 'Poxiplast' }, { name: 'Motivo de GTIN vacío', value: 'Otra' }], permalink: `https://ml/${id}`, ...over });
 const shop = { products: [{ id: 'p1', title: 'Balde plástico 10 L', status: 'ACTIVE' }, { id: 'p2', title: 'Viejo', status: 'ARCHIVED' }], variants: [{ id: 'v1', product_id: 'p1', sku: 'BL-10-1' }, { id: 'v2', product_id: 'p2', sku: 'OLD-1' }] };
@@ -128,4 +128,32 @@ test('KT-618 y KT-619 son el mismo producto: UN borrador con la opción Presenta
   assert.deepEqual(specs[0].variants.map((variant) => variant.sku), ['KT-619-2', 'KT-619-10', 'KT-619-20', 'KT-618-47']);
   assert.match(specs[0].descriptionHtml, /indica los kilos del kit \(2 kg, 10 kg, 20 kg, 47 kg\)/);
   assert.match(specs[0].seoTitle, /POLIPLUS 618 SP/);
+});
+
+test('SKU parecidos y kits con otro formato: ya están en la tienda, no se recomiendan como nuevos', () => {
+  assert.ok(skuNear('PS-EMPU46M-1', 'PS-EMPU46MSP-1'));
+  assert.ok(skuNear('PS-PU47P-1', 'PS-PU47-1'));
+  assert.ok(skuNear('PS-EPP995-1', 'PS-EEP995-1'));
+  assert.ok(!skuNear('PS-PU47P-1', 'PS-PU47P-6')); // otro pack
+  assert.ok(!skuNear('RE-608-1', 'PG-PM-NEGRO-1'));
+  const store = {
+    products: [{ id: 'p1', title: 'Espuma Multiuso PU-46 - Manual', status: 'ACTIVE' }, { id: 'p2', title: 'Kit Easypega Fijar y Pegar', status: 'ACTIVE' }, { id: 'p3', title: 'Limpiador 995', status: 'ACTIVE' }],
+    variants: [{ id: 'v1', product_id: 'p1', sku: 'PS-EMPU46MSP-1' }, { id: 'v2', product_id: 'p2', sku: 'KT-PS-PP750-3' }, { id: 'v3', product_id: 'p3', sku: 'PS-EEP995-1' }],
+  };
+  const out = missingFromShopify({ ...store, mlItems: [ml('A', 'PS-EMPU46M-1', 'Penosil Espuma Multiuso Rellena Aislas Fija Pu-46 Marfil'), ml('B', 'PS-PP750-3+PS-PPC1-1+PS-L47-1', 'Penosil Easypega 750ml Muros + Pistola + Limpiador X 3 Gris'), ml('C', 'PS-EPP995-1', 'Limpiador Herramientas Espuma Seca Original Penosil 995')] });
+  for (const row of out.rows) assert.ok(row.twin, `${row.sku} debería figurar como ya cargado`);
+});
+
+test('mismo producto con otro color y SKU sin relación: un solo borrador con la opción Color', async () => {
+  const { draftSpecs } = await import('../src/shopify-missing.mjs');
+  const items = [
+    ml('A', 'GC1020-1', 'Pintura Nautica Para Fibra De Vidrio X 1 Kg Color Blanco', { sold_quantity: 71 }),
+    ml('B', 'KT-GC1002-1', 'Pintura Nautica Para Fibra De Vidrio X 1 Kg Color Azul', { sold_quantity: 46 }),
+    ml('C', 'KT-GC1030-1', 'Pintura Nautica Para Fibra De Vidrio X 1 Kg Color Celeste', { sold_quantity: 10 }),
+  ];
+  const specs = draftSpecs(missingFromShopify({ ...shop, mlItems: items }).rows);
+  assert.equal(specs.length, 1);
+  assert.deepEqual(specs[0].options.map((option) => option.name), ['Color']);
+  assert.deepEqual(specs[0].options[0].values.sort(), ['Azul', 'Blanco', 'Celeste']);
+  assert.doesNotMatch(specs[0].title, /Blanco|Azul|Celeste|Kg/i);
 });

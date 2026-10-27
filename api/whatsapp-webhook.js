@@ -51,7 +51,10 @@ export default async function handler(request, response) {
   }
 
   const signature = request.headers['x-hub-signature-256'];
-  if (!verifyMetaSignature(rawBody, signature, process.env.META_APP_SECRET)) {
+  // 27/10: la app de Meta de prueba («Poliplast CRM Prueba») firma con su propio secreto: se acepta también META_APP_SECRET_TEST,
+  // así se prueba sin tocar la configuración de la app anterior.
+  const secrets = [process.env.META_APP_SECRET, process.env.META_APP_SECRET_TEST].filter(Boolean);
+  if (!secrets.some((secret) => verifyMetaSignature(rawBody, signature, secret))) {
     // Sin esto un rechazo es invisible: queda constancia (sin datos del mensaje) para poder diagnosticar.
     logError('whatsapp-webhook', 'rejected: invalid or missing signature', { hasSignature: Boolean(signature), hasSecret: Boolean(process.env.META_APP_SECRET), bytes: rawBody.length });
     await logWebhookCall({ method: 'POST', outcome: 'bad_signature', statusCode: 401, bodyBytes: rawBody.length, hasSignature: Boolean(signature) });

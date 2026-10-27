@@ -37,3 +37,8 @@ test('normalizes inbound WhatsApp messages', () => {
   assert.equal(event.classification_status, 'pending');
 });
 
+
+import { envPhoneMap } from '../lib/channels.mjs';
+test('número de prueba: WHATSAPP_TEST_PHONE_ID entra al canal general', () => {
+  assert.deepEqual(envPhoneMap({ WHATSAPP_TEST_PHONE_ID: '1005717922614447' }), { 1005717922614447: 'general' });
+});

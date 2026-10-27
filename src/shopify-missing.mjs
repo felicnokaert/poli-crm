@@ -3,7 +3,7 @@
 // limpia, SEO, etiquetas, metacampos (de los atributos de ML) y con qué otros se agruparía como variantes. Solo PROPONE: el CSV se
 // importa en Shopify como BORRADOR (Productos → Importar); el CRM no escribe nada en la tienda.
 import { plain } from './knowledge-search.mjs';
-import { parseTitle } from './shopify-grouping.mjs';
+import { parseTitle, COLORS } from './shopify-grouping.mjs';
 import { DISCOUNT } from './shopify-prices.mjs';
 
 const key = (sku) => String(sku || '').trim().toUpperCase();
@@ -30,6 +30,32 @@ export function skuSuffixEquivalent(a, b) {
   if (nx !== null && ny !== null) return nx === ny || Math.abs(nx * 1000 - ny) < 1e-9 || Math.abs(ny * 1000 - nx) < 1e-9;
   return x.replace(/[^A-Z0-9]/g, '').replace(/^0+/, '') === y.replace(/[^A-Z0-9]/g, '').replace(/^0+/, '');
 }
+
+// 27/10 (Felipe: «me recomendás publicar productos que ya están»): el mismo producto cargado con un SKU parecido (PS-EMPU46M-1 y
+// PS-EMPU46MSP-1, PS-PU47P-1 y PS-PU47-1, PS-EPP995-1 y PS-EEP995-1) o un kit con otro formato (PS-PP750-3+PS-PPC1-1+PS-L47-1 y KT-PS-PP750-3).
+// Misma terminación equivalente + el resto casi igual (una letra de diferencia, una es prefijo de la otra o letras cambiadas de lugar).
+const editDistance = (a, b) => {
+  const row = Array.from({ length: b.length + 1 }, (_, index) => index);
+  for (let i = 1; i <= a.length; i += 1) {
+    let prev = row[0]; row[0] = i;
+    for (let j = 1; j <= b.length; j += 1) { const keep = row[j]; row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = keep; }
+  }
+  return row[b.length];
+};
+export function skuNear(a, b) {
+  const x = key(a); const y = key(b);
+  if (!x || !y || x === y || !skuSuffixEquivalent(x, y)) return false;
+  const head = (sku) => sku.split('-').slice(0, -1).join('').replace(/[^A-Z0-9]/g, '');
+  const hx = head(x); const hy = head(y);
+  if (hx.length < 5 || hy.length < 5) return false;
+  if (hx === hy) return true;
+  const [short, long] = hx.length <= hy.length ? [hx, hy] : [hy, hx];
+  if (long.startsWith(short) && long.length - short.length <= 3) return true;
+  const distance = editDistance(hx, hy);
+  return Math.abs(hx.length - hy.length) <= 1 && (distance <= 1 || (distance <= 2 && [...hx].sort().join('') === [...hy].sort().join('')));
+}
+// Un SKU compuesto «A-3+B-1+C-1» es el kit de A: en la tienda suele figurar como «KT-A-3».
+export const kitOf = (sku) => { const first = key(sku).split('+')[0]; return key(sku).includes('+') ? first : ''; };
 
 // Familia del SKU: todo menos el último tramo (RE-608-750 → RE-608).
 export function skuStem(sku) {
@@ -112,6 +138,7 @@ export function missingFromShopify({ products = [], variants = [], mlItems = [],
     if (stem) { if (!stemSkus.has(stem)) stemSkus.set(stem, []); stemSkus.get(stem).push([key(variant.sku), product]); }
   }
   const catalog = [...live.values()];
+  const allShopify = variants.filter((variant) => variant.sku && live.has(variant.product_id)).map((variant) => [key(variant.sku), live.get(variant.product_id)]);
   const missing = perSku(mlItems).filter((entry) => !shopifySkus.has(entry.sku)).map((entry) => {
     const { item } = entry;
     const price = Number(item.price) || 0;
@@ -120,7 +147,10 @@ export function missingFromShopify({ products = [], variants = [], mlItems = [],
     const brand = brandOf(item.attributes);
     // Mismo producto con otro formato de SKU (0.750 = 750): ya está en la tienda.
     const sameStem = skuStem(entry.sku);
-    const twin = squashed.get(squash(entry.sku)) || ((stemSkus.get(sameStem) || []).find(([sku]) => skuSuffixEquivalent(sku, entry.sku)) || [])[1] || null;
+    const kit = kitOf(entry.sku);
+    const twin = squashed.get(squash(entry.sku)) || ((stemSkus.get(sameStem) || []).find(([sku]) => skuSuffixEquivalent(sku, entry.sku)) || [])[1]
+      || (kit ? squashed.get(squash(`KT-${kit}`)) || null : null)
+      || (allShopify.find(([sku]) => skuNear(sku, entry.sku)) || [])[1] || null;
     let lookalike = null; let best = 0;
     for (const product of catalog) { const score = similarity(item.title, product.title); if (score > best) { best = score; lookalike = product; } }
     const stem = skuStem(entry.sku);
@@ -200,6 +230,35 @@ export function missingFromShopify({ products = [], variants = [], mlItems = [],
     const members = kin.filter((item) => !loose.has(item));
     if (members.length < 2) continue;
     for (const row of members) row.group = { id: seed.stem, size: members.length, options, values: options.map((name) => valueOf(row, name)) };
+  }
+  // Los que quedaron sueltos pero son el MISMO producto con otro color / tamaño / pack (ej. Pintura náutica blanca, azul y celeste con SKU
+  // sin relación): se juntan por el nombre del título.
+  const loose = missing.filter((row) => !row.group && !row.joinsProduct && !row.twin && !row.lookalike && !row.dupOf);
+  const byBase = new Map();
+  for (const row of loose) {
+    const { base, attrs } = parseTitle(row.mlTitle);
+    if (base.length < 12) continue;
+    row.titleAttrs = attrs;
+    if (!byBase.has(base)) byBase.set(base, []);
+    byBase.get(base).push(row);
+  }
+  for (const [base, rows] of byBase) {
+    if (rows.length < 2) continue;
+    const names = [...new Set(rows.flatMap((row) => Object.keys(row.titleAttrs)))];
+    const varying = names.filter((name) => new Set(rows.map((row) => row.titleAttrs[name] ?? (name === 'Pack' ? 'x1' : '—'))).size > 1).slice(0, 3);
+    if (!varying.length) continue;
+    const valueOf = (row, name) => row.titleAttrs[name] ?? (name === 'Pack' ? 'x1' : null);
+    const members = []; const seen = new Set();
+    for (const row of [...rows].sort((a, b) => b.sold - a.sold)) {
+      if (varying.some((name) => valueOf(row, name) === null)) continue;
+      const id = varying.map((name) => valueOf(row, name)).join('|');
+      if (seen.has(id)) continue;
+      seen.add(id); members.push(row);
+    }
+    if (members.length < 2) continue;
+    const lead = members[0];
+    const title = shortTitle(String(lead.mlTitle).split(/\s+/).filter((word) => !COLORS.includes(plain(word))).join(' ').replace(/\b\d+(?:[.,]\d+)?\s?(?:kg|gr|g|lts|lt|l|ml|cc|m2|mts|mt|m|cm|mm)\b/gi, ' ').replace(/\bx\s?\d+\b/gi, ' ').replace(/\s+/g, ' ').trim(), 70);
+    for (const row of members) { row.group = { id: `t:${base}`, size: members.length, options: varying, values: varying.map((name) => valueOf(row, name)), title }; row.warnings.push('Se agrupa por el nombre del título (los SKU no tienen relación): revisá que sean el mismo producto.'); }
   }
   const sorted = missing.sort((a, b) => b.sold - a.sold || b.visits - a.visits || a.sku.localeCompare(b.sku));
   const noSku = mlItems.filter((item) => item.status === 'active' && !key(item.sku)).map((item) => {

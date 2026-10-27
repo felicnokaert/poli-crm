@@ -21,43 +21,29 @@ test('parseTitle: medidas juntas, aplicación, cuerpo y talle', () => {
   assert.equal(parseTitle('Máscara Cara Completa 3M 6800 Reutilizable Talle M').attrs.Talle, 'M');
 });
 
-test('baldes: 6 productos del mismo balde se proponen como UNO con Capacidad, Pack y Color (3 opciones)', () => {
-  const products = [product('a', 'BALDE PLASTICO 10L'), product('b', 'BALDE PLASTICO 10L X5', { status: 'UNLISTED' }), product('c', 'BALDE PLASTICO 20L'), product('d', 'BALDE PLASTICO 20L X5'), product('e', 'Resina epoxi 1 kg', { product_type: 'Resinas' })];
-  const variants = [...colors('a', ['Rojo', 'Azul']), ...colors('b', ['Rojo', 'Azul']), ...colors('c', ['Rojo', 'Azul']), ...colors('d', ['Rojo', 'Azul']), ...colors('e', ['x'])];
-  const proposals = groupProposals(products, variants);
-  assert.equal(proposals.length, 1);
-  const [balde] = proposals;
-  assert.equal(balde.products.length, 4);
-  assert.deepEqual(balde.options.map((option) => option.name), ['Capacidad', 'Pack', 'Color']);
-  assert.deepEqual(balde.options[0].values, ['10 L', '20 L']);
-  assert.deepEqual(balde.options[1].values, ['x1', 'x5']);
-  assert.equal(balde.variants.length, 8);
-  assert.equal(balde.survivor.id, 'a'); // el activo con más stock
-  assert.deepEqual(balde.warnings, []);
-});
-
-test('más de 3 opciones: se parte por capacidad y línea en vez de juntar todo en "Modelo"', () => {
-  const titles = ['BALDE PLASTICO 10L', 'BALDE PLASTICO SIN TAPA 10L X5', 'BALDE PLASTICO ECONOMICO 10L X3', 'BALDE PLASTICO 20L', 'BALDE PLASTICO SIN TAPA 20L X5', 'BALDE PLASTICO ECONOMICO 20L X3'];
-  const products = titles.map((title, index) => product(`p${index}`, title));
-  const variants = products.flatMap((item) => colors(item.id, ['Rojo', 'Azul']));
-  const proposals = groupProposals(products, variants);
-  const names = proposals.map((proposal) => proposal.name);
-  assert.ok(names.some((name) => /10 L · línea Estándar/i.test(name)), names.join(' | '));
-  assert.ok(names.some((name) => /20 L · línea Estándar/i.test(name)));
-  for (const proposal of proposals) {
-    assert.ok(proposal.options.length <= 3);
-    assert.ok(!proposal.options.some((option) => option.name === 'Modelo'));
-  }
+test('baldes: tamaño y modelo (tapa, línea) son productos distintos; adentro van Color y Pack (con colores en español)', () => {
+  const titles = ['BALDE PLASTICO 10L', 'BALDE PLASTICO 10L X3', 'BALDE PLASTICO NEGRO 10L', 'BALDE PLASTICO SIN TAPA 10L', 'BALDE PLASTICO SIN TAPA 10L X5', 'BALDE PLASTICO 20L', 'BALDE PLASTICO 20L X5',
+    'BALDE PLASTICO ECONOMICO 20L', 'BALDE PLASTICO ECONOMICO 20L X3', 'BALDE PLASTICO ECONOMICO SIN TAPA 20L', 'BALDE PLASTICO ECONOMICO SIN TAPA 20L X5'];
+  const products = titles.map((title, index) => product(`p${index}`, title, { status: /X5|X3/.test(title) ? 'UNLISTED' : 'ACTIVE' }));
+  const colorOf = { p0: ['blue', 'red', 'blanco'], p1: ['blue', 'red', 'blanco'], p2: ['negro'] };
+  const variants = products.flatMap((item) => colors(item.id, colorOf[item.id] || ['white', 'black']));
+  const names = groupProposals(products, variants).map((proposal) => proposal.name);
+  assert.deepEqual(names.sort(), ['Balde Plastico 10 L', 'Balde Plastico 20 L', 'Balde Plastico económico 20 L', 'Balde Plastico económico sin tapa 20 L', 'Balde Plastico sin tapa 10 L'].sort());
+  const ten = groupProposals(products, variants).find((proposal) => proposal.name === 'Balde Plastico 10 L');
+  assert.deepEqual(ten.options.map((option) => option.name).sort(), ['Color', 'Pack']);
+  assert.deepEqual(ten.options.find((option) => option.name === 'Color').values.sort(), ['Azul', 'Blanco', 'Negro', 'Rojo']);
+  assert.deepEqual(ten.options.find((option) => option.name === 'Pack').values.sort(), ['x1', 'x3']);
+  assert.match(ten.warnings.join(' '), /no están activos/);
 });
 
 test('con 3 opciones ya no hay Modelo; con 4 sin dimensión para partir se pliega y se avisa', () => {
-  const products = [product('a', 'KIT RESINA ROJO X2'), product('b', 'KIT RESINA AZUL X3 SIN TAPA')];
+  const products = [product('a', 'KIT RESINA ROJO X2'), product('b', 'KIT RESINA AZUL X3')];
   const [proposal] = groupProposals(products, colors('a', ['Rojo']).concat(colors('b', ['Azul'])));
   assert.ok(proposal.options.length <= 3);
 });
 
 test('avisos: SKU repetido y precios muy distintos (el stock 999 es a propósito y no avisa)', () => {
-  const products = [product('a', 'Balde 10L'), product('b', 'Balde 20L')];
+  const products = [product('a', 'Resina 10L'), product('b', 'Resina 20L')];
   const variants = [
     { id: 'v1', product_id: 'a', title: 'Rojo', sku: 'DUP', price: 1000, inventory_quantity: 999, options: [{ name: 'Color', value: 'Rojo' }] },
     { id: 'v2', product_id: 'a', title: 'Azul', sku: 'DUP', price: 2000, inventory_quantity: 5, options: [{ name: 'Color', value: 'Azul' }] },
@@ -71,13 +57,13 @@ test('avisos: SKU repetido y precios muy distintos (el stock 999 es a propósito
 
 test('productos distintos o archivados no se agrupan; variantes repetidas se avisan', () => {
   assert.equal(groupProposals([product('a', 'Resina epoxi 1 kg', { product_type: 'R' }), product('b', 'Pigmento rojo', { product_type: 'R' })], []).length, 0);
-  assert.equal(groupProposals([product('a', 'Balde 10L'), product('b', 'Balde 20L', { status: 'ARCHIVED' })], []).length, 0);
-  const dup = groupProposals([product('a', 'Balde 10L'), product('b', 'BALDE 10L', { status: 'DRAFT' }), product('c', 'Balde 20L')], []);
+  assert.equal(groupProposals([product('a', 'Resina 10L'), product('b', 'Resina 20L', { status: 'ARCHIVED' })], []).length, 0);
+  const dup = groupProposals([product('a', 'Resina 10L'), product('b', 'RESINA 10L', { status: 'DRAFT' }), product('c', 'Resina 20L')], []);
   assert.match(dup[0].warnings.join(' '), /quedarían iguales/);
 });
 
 test('el CSV trae una fila por variante propuesta', () => {
-  const [proposal] = groupProposals([product('a', 'Balde 10L'), product('b', 'Balde 20L')], colors('a', ['Rojo']).concat(colors('b', ['Rojo'])));
+  const [proposal] = groupProposals([product('a', 'Resina 10L'), product('b', 'Resina 20L')], colors('a', ['Rojo']).concat(colors('b', ['Rojo'])));
   const csv = proposalsCsv([proposal]);
   assert.ok(csv.startsWith('﻿"Producto propuesto"'));
   assert.equal(csv.split('\n').length, 3);
@@ -102,7 +88,7 @@ test('PU-46: manual y pistola son UNA opción "Aplicación", también en los kit
   for (const proposal of proposals) {
     assert.deepEqual(proposal.options.map((option) => option.name), ['Aplicación', 'Pack']);
     assert.deepEqual(proposal.options[0].values.sort(), ['Manual', 'Pistola']);
-    assert.equal(proposal.warnings.length, 0);
+    assert.ok(proposal.warnings.every((text) => /no están activos/.test(text)));
   }
   assert.deepEqual(proposals.find((proposal) => proposal.name.startsWith('Kit')).options[1].values.sort(), ['x12', 'x24', 'x3', 'x6']);
 });

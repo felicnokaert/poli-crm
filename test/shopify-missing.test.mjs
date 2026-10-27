@@ -157,3 +157,20 @@ test('mismo producto con otro color y SKU sin relación: un solo borrador con la
   assert.deepEqual(specs[0].options[0].values.sort(), ['Azul', 'Blanco', 'Celeste']);
   assert.doesNotMatch(specs[0].title, /Blanco|Azul|Celeste|Kg/i);
 });
+
+test('kits compuestos con la cantidad en el primer SKU: UN producto con variantes Pack y sin falso «ya está cargado» por el nombre', async () => {
+  const { draftSpecs } = await import('../src/shopify-missing.mjs');
+  const store = { products: [{ id: 'p1', title: 'EASYPEGA', status: 'ACTIVE' }], variants: [{ id: 'v1', product_id: 'p1', sku: 'PS-PP750-1' }] };
+  const items = [
+    ml('A', 'PS-PP888-3+PS-PPC1-1+PS-L47-1', 'Penosil Easypega Turbo 888 Paneles + Pistola + Limpiador Gris', { sold_quantity: 19, price: 174475 }),
+    ml('B', 'PS-PP888-6+PS-PPC1-1+PS-L47-1', 'Penosil Easypega Turbo 888 Paneles X6 + Pistola + Limpiador Gris', { sold_quantity: 2, price: 331502 }),
+    ml('C', 'PS-PP888-12+PS-PPC1-1+PS-L47-1', 'Penosil Easypega Turbo 888 Paneles X12 + Pistola + Limpiador Gris', { sold_quantity: 1, price: 596702 }),
+    ml('D', 'PS-PP888-24+PS-PPC1-1+PS-L47-1', 'Penosil Easypega Turbo 888 Paneles X24 + Pistola + Limpiador Gris', { sold_quantity: 1, price: 1133733 }),
+  ];
+  const out = missingFromShopify({ ...store, mlItems: items });
+  for (const row of out.rows) assert.ok(!row.lookalike && !row.twin, `${row.sku} no debería figurar como ya cargado`);
+  const specs = draftSpecs(out.rows);
+  assert.equal(specs.length, 1);
+  assert.deepEqual(specs[0].options, [{ name: 'Pack', values: ['x3', 'x6', 'x12', 'x24'] }]);
+  assert.equal(specs[0].variants.length, 4);
+});

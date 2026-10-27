@@ -444,6 +444,7 @@ function FragmentRow({ row, decision, onDecide, open, toggle }) {
             {row.metafields.length > 0 && <p><strong>Metacampos sugeridos:</strong> {row.metafields.map((field) => `${field.name}: ${field.value}`).join(" · ")}</p>}
             <p><strong>Descripción (de ML, sin links ni teléfonos):</strong></p>
             <p className="muted" style={{ whiteSpace: "pre-wrap" }}>{row.description ? row.description.slice(0, 900) + (row.description.length > 900 ? "…" : "") : "Sin descripción en ML: hay que escribirla."}</p>
+            <button type="button" className="ghost" onClick={toggle}>Ocultar propuesta</button>
           </div>
         </td></tr>
       )}

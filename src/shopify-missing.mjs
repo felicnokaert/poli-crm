@@ -62,6 +62,14 @@ export function metafieldsFrom(attributes) {
     .map((attr) => ({ name: attr.name, key: plain(attr.name).replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''), value: String(attr.value) }));
 }
 
+// 27/10 (Felipe): KT-618 y KT-619 son el MISMO producto (Poliplus SP, poliol + isocianato proyectado): el número final del SKU son los
+// kilos del kit (KT-619-45 = 45 kg). Van juntos como UN producto con la opción «Presentación» en kg, aunque los títulos de ML sean distintos.
+export const KG_FAMILIES = [
+  { stems: ['KT-618', 'KT-619'], id: 'KT-618/619', title: 'POLIPLUS 618 SP - Espuma de poliuretano proyectada (kit poliol + isocianato)' },
+];
+const kgFamilyOf = (stem) => KG_FAMILIES.find((family) => family.stems.includes(stem)) || null;
+const kgLabel = (sku) => { const n = key(sku).split('-').pop(); return /^\d+(?:\.\d+)?$/.test(n) ? `${Number(n)} kg` : null; };
+
 const brandOf = (attributes) => (Array.isArray(attributes) ? attributes.find((attr) => plain(attr?.name) === 'marca')?.value : '') || '';
 const firstSentences = (text, max) => {
   const clean = text.replace(/\s+/g, ' ').trim();
@@ -141,6 +149,30 @@ export function missingFromShopify({ products = [], variants = [], mlItems = [],
     if (!byStem.has(row.stem)) byStem.set(row.stem, []);
     byStem.get(row.stem).push(row);
   }
+  // Familias por kilos: se juntan todas las filas de las dos raíces, sin mirar el parecido de títulos.
+  const kgGroups = new Map();
+  for (const [stem, rows] of [...byStem]) {
+    const family = kgFamilyOf(stem);
+    if (!family) continue;
+    byStem.delete(stem);
+    kgGroups.set(family.id, { family, rows: [...(kgGroups.get(family.id)?.rows || []), ...rows] });
+  }
+  for (const { family, rows } of kgGroups.values()) {
+    const ok = rows.filter((row) => kgLabel(row.sku));
+    for (const row of rows) if (!ok.includes(row)) row.warnings.push('El SKU no termina en kilos: se crea aparte.');
+    const taken = new Map();
+    const members = [];
+    for (const row of [...ok].sort((a, b) => b.sold - a.sold)) {
+      const label = kgLabel(row.sku);
+      if (taken.has(label)) { row.dupOf = taken.get(label); row.warnings.push(`Mismo producto que ${row.dupOf} (${label}) con otro SKU: se crea solo uno. Unificá el SKU en Mercado Libre.`); continue; }
+      taken.set(label, row.sku); members.push(row);
+    }
+    if (members.length < 2) continue;
+    members.sort((a, b) => parseFloat(kgLabel(a.sku)) - parseFloat(kgLabel(b.sku)));
+    const labels = [...taken.keys()].sort((a, b) => parseFloat(a) - parseFloat(b));
+    const note = `Se ofrece en distintos formatos: el número final del código indica los kilos del kit (${labels.join(', ')}).`;
+    for (const row of members) row.group = { id: family.id, size: members.length, options: ['Presentación'], values: [kgLabel(row.sku)], title: family.title, note };
+  }
   for (const rows of byStem.values()) {
     const seed = [...rows].sort((a, b) => b.sold - a.sold)[0];
     const kin = rows.filter((row) => row === seed || similarity(row.mlTitle, seed.mlTitle) >= 0.4);
@@ -207,7 +239,7 @@ const handleOf = (text) => plain(text).replace(/[^a-z0-9]+/g, '-').replace(/^-|-
 export const descriptionHtml = (text) => text.split(/\n{2,}/).map((part) => `<p>${part.replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch])).replace(/\n/g, '<br>')}</p>`).join('');
 
 // Título de un producto con variantes: el de la publicación más vendida sin los tamaños ni el pack (eso pasa a ser la opción).
-export const groupTitle = (lead) => shortTitle(String(lead.mlTitle).replace(/\b\d+(?:[.,]\d+)?\s?(?:kg|gr|g|lts|lt|l|ml|cc|m2|mts|mt|m|cm|mm)\b/gi, ' ').replace(/\bx\s?\d+\b/gi, ' ').replace(/\s+/g, ' ').trim(), 70);
+export const groupTitle = (lead) => lead.group?.title || shortTitle(String(lead.mlTitle).replace(/\b\d+(?:[.,]\d+)?\s?(?:kg|gr|g|lts|lt|l|ml|cc|m2|mts|mt|m|cm|mm)\b/gi, ' ').replace(/\bx\s?\d+\b/gi, ' ').replace(/\s+/g, ' ').trim(), 70);
 
 // Lo que se puede crear: sin los que se suman a un producto existente ni los que parecen duplicados. Los de una misma familia
 // van juntos como un producto con variantes. Lo usan el CSV y la creación de borradores.
@@ -221,15 +253,20 @@ export function draftGroups(rows = []) {
   }
   return [...products.values()].map((list) => {
     const lead = [...list].sort((a, b) => b.sold - a.sold)[0];
+    if (lead.group?.note) list.sort((a, b) => parseFloat(a.group.values[0]) - parseFloat(b.group.values[0]));
     return { list, lead, grouped: Boolean(list.length > 1 && lead.group) };
   });
 }
+
+// Descripción de un producto: la de la publicación que más vendió y, en grupos por kilos, la aclaración de los formatos.
+const draftSeoTitle = (lead, grouped) => (grouped && lead.group?.title ? `${shortTitle(lead.group.title, 48)} | Poliplast` : lead.seoTitle);
+const draftDescription = (lead, grouped) => (grouped && lead.group?.note ? `${lead.description}\n\n${lead.group.note}`.trim() : lead.description);
 
 // Pedido para crear cada grupo como borrador en Shopify (ver lib/shopify-write.mjs).
 export function draftSpecs(rows = []) {
   return draftGroups(rows).map(({ list, lead, grouped }) => ({
     title: grouped ? groupTitle(lead) : lead.title,
-    descriptionHtml: descriptionHtml(lead.description), tags: lead.tags, seoTitle: lead.seoTitle, seoDescription: lead.seoDescription,
+    descriptionHtml: descriptionHtml(draftDescription(lead, grouped)), tags: lead.tags, seoTitle: draftSeoTitle(lead, grouped), seoDescription: lead.seoDescription,
     images: lead.image ? [lead.image] : [],
     // En un producto con variantes, lo que cambia entre variantes (color, peso…) no va como metacampo del producto.
     metafields: lead.metafields.filter((field) => !grouped || !(field.key.startsWith('color') || ['peso', 'medida', 'tama_o', 'capacidad'].includes(field.key) || lead.group.options.some((name) => plain(name).replace(/[^a-z0-9]+/g, '_') === field.key))).map((field) => ({ key: field.key, value: field.value })),
@@ -252,8 +289,8 @@ export function shopifyImportCsv(rows = []) {
       const optCells = [0, 1, 2].flatMap((n) => (opts[n] ? [opts[n], vals[n]] : ['', '']));
       const first = index === 0;
       lines.push([
-        handle, first ? (grouped ? groupTitle(lead) : lead.title) : '', first ? descriptionHtml(lead.description) : '', first ? 'Poliplast' : '', '', first ? lead.tags.join(', ') : '', first ? 'FALSE' : '',
-        ...optCells, row.sku, 'shopify', row.stock > 0 ? 999 : 0, 'deny', 'manual', row.price, 'TRUE', 'TRUE', first ? lead.image : '', first ? lead.seoTitle : '', first ? lead.seoDescription : '', first ? 'draft' : '',
+        handle, first ? (grouped ? groupTitle(lead) : lead.title) : '', first ? descriptionHtml(draftDescription(lead, grouped)) : '', first ? 'Poliplast' : '', '', first ? lead.tags.join(', ') : '', first ? 'FALSE' : '',
+        ...optCells, row.sku, 'shopify', row.stock > 0 ? 999 : 0, 'deny', 'manual', row.price, 'TRUE', 'TRUE', first ? lead.image : '', first ? draftSeoTitle(lead, grouped) : '', first ? lead.seoDescription : '', first ? 'draft' : '',
       ].map(cell).join(','));
     });
   }

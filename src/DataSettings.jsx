@@ -381,10 +381,11 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
             </button>
           </p>
         )}
-        {isChannelAdmin(session?.user?.email) && myChannels.length > 0 && (
+        {myChannels.length > 0 && (
           <>
             <p className="muted">
-              Solo para el administrador. Volver a conectar un número ya activo puede cortar la recepción de mensajes: hacelo solo siguiendo un plan. ¿Meta dice "Sin conexión" para tu número? Conectalo acá: se abre Meta, elegís
+              {isChannelAdmin(session?.user?.email) ? "" : "Para conectar tu propio número. "}
+              Volver a conectar un número ya activo puede cortar la recepción de mensajes: hacelo solo siguiendo un plan. ¿Meta dice "Sin conexión" para tu número? Conectalo acá: se abre Meta, elegís
               "conectar una cuenta existente de WhatsApp Business" y seguís los pasos. Al
               terminar, el CRM te muestra el ID del número.
             </p>
@@ -393,15 +394,19 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
                 Conectar mi número con Meta
               </button>
             </p>
-            <p>
-              <button type="button" className="secondary" disabled={connecting} onClick={runMetaDiagnosis}>
-                Diagnóstico de conexión
-              </button>{" "}
-              <button type="button" className="secondary" disabled={connecting} onClick={repairMetaWebhook}>
-                Reparar recepción de mensajes
-              </button>
-            </p>
-            {diagnosis && <pre className="muted" style={{ whiteSpace: "pre-wrap", userSelect: "all" }}>{diagnosis}</pre>}
+            {isChannelAdmin(session?.user?.email) && (
+              <>
+                <p>
+                  <button type="button" className="secondary" disabled={connecting} onClick={runMetaDiagnosis}>
+                    Diagnóstico de conexión
+                  </button>{" "}
+                  <button type="button" className="secondary" disabled={connecting} onClick={repairMetaWebhook}>
+                    Reparar recepción de mensajes
+                  </button>
+                </p>
+                {diagnosis && <pre className="muted" style={{ whiteSpace: "pre-wrap", userSelect: "all" }}>{diagnosis}</pre>}
+              </>
+            )}
           </>
         )}
       </section>

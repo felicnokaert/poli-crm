@@ -127,9 +127,11 @@ export function InboxRow({
           </p>
           {insights && !insights.empty && (
             <div className="insight-chips" title={insights.summary}>
-              <span className={`insight-chip readiness-${insights.readiness >= 8 ? "high" : insights.readiness >= 5 ? "mid" : "low"}`}>
-                Compra {insights.readiness}/10
-              </span>
+              {item.classification_status !== "excluded" && (
+                <span className={`insight-chip readiness-${insights.readiness >= 8 ? "high" : insights.readiness >= 5 ? "mid" : "low"}`}>
+                  Compra {insights.readiness}/10
+                </span>
+              )}
               <span className={`insight-chip mood-${insights.sentiment.toLowerCase()}`}>{insights.sentiment}</span>
               {insights.competitors.length > 0 && (
                 <span className="insight-chip">Competencia: {insights.competitors.join(", ")}</span>

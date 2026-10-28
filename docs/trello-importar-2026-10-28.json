@@ -1,0 +1,21 @@
+{
+  "name": "VENTAS — Grupo Poliplast (28/10)",
+  "lists": [
+    {
+      "id": "mie29",
+      "name": "Mié 29/10 · Redes sociales",
+      "closed": false
+    }
+  ],
+  "cards": [
+    {
+      "id": "6ae1752b4537a97e06110c22",
+      "idList": "mie29",
+      "name": "Lista de páginas de Facebook e Instagram por marca (para conectar al CRM)",
+      "due": "2026-10-29T20:00:00.000Z",
+      "dueComplete": false,
+      "closed": false,
+      "desc": "Por marca: página de Facebook, cuenta de Instagram, si es profesional y si está vinculada a la página, quién la atiende y cuántos mensajes y comentarios por día. Sin cuenta profesional vinculada Meta no deja conectarla."
+    }
+  ]
+}

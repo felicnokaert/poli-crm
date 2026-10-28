@@ -5,6 +5,11 @@
       "id": "mie29",
       "name": "Mié 29/10 · Redes sociales",
       "closed": false
+    },
+    {
+      "id": "vie30",
+      "name": "Vie 30/10 · Mercado Libre",
+      "closed": false
     }
   ],
   "cards": [
@@ -16,6 +21,15 @@
       "dueComplete": false,
       "closed": false,
       "desc": "Por marca: página de Facebook, cuenta de Instagram, si es profesional y si está vinculada a la página, quién la atiende y cuántos mensajes y comentarios por día. Sin cuenta profesional vinculada Meta no deja conectarla."
+    },
+    {
+      "id": "6ae2295db51091780fba7679",
+      "idList": "vie30",
+      "name": "Clips de Mercado Libre (POLIPLAST y FOAM): cargar qué publicaciones tienen clip",
+      "due": "2026-10-30T20:00:00.000Z",
+      "dueComplete": false,
+      "closed": false,
+      "desc": "Más → Datos → Mercado Libre → Cargar qué publicaciones tienen clip, una cuenta por vez."
     }
   ]
 }

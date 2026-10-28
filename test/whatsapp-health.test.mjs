@@ -36,10 +36,10 @@ test('token inválido o ausente se avisa', () => {
   assert.match(evaluateWhatsAppHealth({ ...good, report: { token: { isValid: false }, accounts: [] } }).problems[0], /ya no es válido/);
 });
 
-test('más de 72 horas sin mensajes entrantes da un aviso', () => {
+test('días sin mensajes entrantes NO dan aviso: el aviso es por línea, no por mensajes', () => {
   const r = evaluateWhatsAppHealth({ ...good, lastInboundAt: '2026-10-11T20:43:00Z' });
-  assert.equal(r.ok, false);
-  assert.match(r.problems[0], /Hace 3 días/);
+  assert.equal(r.ok, true);
+  assert.equal(r.lastInboundAt, '2026-10-11T20:43:00Z');
 });
 
 test('sin token de Meta el chequeo se omite sin fallar', async () => {

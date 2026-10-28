@@ -711,6 +711,9 @@ export default function App() {
               items={data.inbox}
               statusEvents={outboundStatusEvents}
               clients={data.clients}
+              whatsappHealth={myChannels.includes("general") ? whatsappHealth : null}
+              onNavigate={setView}
+              myChannels={myChannels}
               onClassify={classifyInbox}
               onDraft={openInboxDraft}
               onOpen={openInboxContact}

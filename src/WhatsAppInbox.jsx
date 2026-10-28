@@ -8,11 +8,15 @@ import { isLowSignalWhatsAppEvent } from "./whatsapp-events.mjs";
 import { FAMILIES } from "./families.mjs";
 import { Empty } from "./ui-primitives";
 import { InboxRow, LegacyInboxRow } from "./InboxComponents";
+import { CHANNELS } from "./app-shared";
 
 function WhatsAppInboxBase({
   items,
   statusEvents,
   clients,
+  whatsappHealth,
+  onNavigate,
+  myChannels = [],
   onClassify,
   onDraft,
   onOpen,
@@ -150,6 +154,24 @@ function WhatsAppInboxBase({
   };
   return (
     <div className="content-stack">
+      {whatsappHealth && whatsappHealth.ok === false && (
+        <section className="panel whatsapp-alert" role="alert">
+          <strong>WhatsApp: hay una línea para revisar</strong>
+          <ul>{(whatsappHealth.problems || []).map((line, index) => <li key={index}>{line}</li>)}</ul>
+          {onNavigate && <button type="button" className="secondary" onClick={() => onNavigate("settings")}>Ir a Datos para el diagnóstico</button>}
+        </section>
+      )}
+      {myChannels.length > 1 && (
+        <div className="segmented routine-tabs" role="tablist" aria-label="Línea de WhatsApp" style={{ width: "fit-content", maxWidth: "100%", overflowX: "auto" }}>
+          <button type="button" role="tab" aria-selected={channel === "all"} className={channel === "all" ? "selected" : ""} onClick={() => setChannel("all")}>Todas</button>
+          {myChannels.filter((key) => CHANNELS[key]).map((key) => (
+            <button key={key} type="button" role="tab" aria-selected={channel === key} className={channel === key ? "selected" : ""} onClick={() => setChannel(key)}>
+              <span className="channel-dot" style={{ background: CHANNELS[key].color, display: "inline-block", width: 9, height: 9, borderRadius: "50%", marginRight: 6 }} />
+              {String(CHANNELS[key].name).replace(/^WhatsApp\s+/, "")}
+            </button>
+          ))}
+        </div>
+      )}
       <section className="panel">
         <div className="panel-head">
           <div>

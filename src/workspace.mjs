@@ -151,6 +151,8 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
     ...(local.mlAds || remote.mlAds ? { mlAds: newerByAccount(local.mlAds, remote.mlAds) } : {}),
     // Reglas de prospección editadas (solo las que difieren de las de fábrica): gana lo de este navegador.
     ...(local.prospectRules || remote.prospectRules ? { prospectRules: { ...(remote.prospectRules || {}), ...(local.prospectRules || {}) } } : {}),
+    // Matriz de automatizaciones (solo lo que Felipe editó o agregó, por idea): gana lo de este navegador.
+    ...(local.automations || remote.automations ? { automations: Object.fromEntries(Object.entries({ ...(remote.automations || {}), ...(local.automations || {}) }).filter(([, row]) => row)) } : {}),
     ...(local.weeklyTargets || remote.weeklyTargets ? { weeklyTargets: local.weeklyTargets || remote.weeklyTargets } : {}),
     ...(local.welcomeDismissed || remote.welcomeDismissed ? { welcomeDismissed: true } : {}),
     mergeLogs: mergeRecords(local.mergeLogs, remote.mergeLogs),

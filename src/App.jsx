@@ -746,6 +746,8 @@ export default function App() {
             onPostpone={postponeTaskTo}
             personal={isFelipeTools}
             onAddEvent={addEvent}
+            automations={data.automations}
+            onAutomationsChange={(next) => setData((current) => ({ ...current, automations: next }))}
           />
         )}
         {view === "sales" && (

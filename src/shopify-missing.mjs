@@ -2,6 +2,7 @@
 // las publicaciones activas de ML; de cada uno sale una propuesta lista para revisar: precio (ML − 10 %), título corto, descripción
 // limpia, SEO, etiquetas, metacampos (de los atributos de ML) y con qué otros se agruparía como variantes. Solo PROPONE: el CSV se
 // importa en Shopify como BORRADOR (Productos → Importar); el CRM no escribe nada en la tienda.
+import { splitSections, sectionMetafields, stripQuantities } from './shopify-sections.mjs';
 import { plain } from './knowledge-search.mjs';
 import { parseTitle, COLORS } from './shopify-grouping.mjs';
 import { DISCOUNT } from './shopify-prices.mjs';
@@ -333,14 +334,25 @@ export function draftGroups(rows = []) {
 const draftSeoTitle = (lead, grouped) => (grouped && lead.group?.title ? `${shortTitle(lead.group.title, 48)} | Poliplast` : lead.seoTitle);
 const draftDescription = (lead, grouped) => (grouped && lead.group?.note ? `${lead.description}\n\n${lead.group.note}`.trim() : lead.description);
 
+// 28/10 (Felipe): la descripción es SOLO la presentación; Características, Áreas de aplicación, Instrucciones de uso y Limitaciones van a
+// metacampos custom.*; y un producto con variantes por cantidad nunca dice cuántas unidades trae (ver src/shopify-sections.mjs).
+export const hasQuantityVariants = (list, grouped) => Boolean(grouped && list.length > 1 && (list.every((row) => row.kitQty) || (list[0]?.group?.options || []).some((name) => /pack|cantidad|contenido/i.test(name))));
+export function draftTexts(lead, list, grouped) {
+  const raw = draftDescription(lead, grouped);
+  const text = hasQuantityVariants(list, grouped) ? stripQuantities(raw) : raw;
+  const split = splitSections(text);
+  const description = [split.presentation, split.kept].filter(Boolean).join('\n\n') || text;
+  return { description, sections: sectionMetafields(split.sections) };
+}
+
 // Pedido para crear cada grupo como borrador en Shopify (ver lib/shopify-write.mjs).
 export function draftSpecs(rows = []) {
   return draftGroups(rows).map(({ list, lead, grouped }) => ({
     title: grouped ? groupTitle(lead) : lead.title,
-    descriptionHtml: descriptionHtml(draftDescription(lead, grouped)), tags: lead.tags, seoTitle: draftSeoTitle(lead, grouped), seoDescription: lead.seoDescription,
+    descriptionHtml: descriptionHtml(draftTexts(lead, list, grouped).description), tags: lead.tags, seoTitle: draftSeoTitle(lead, grouped), seoDescription: lead.seoDescription,
     images: lead.image ? [lead.image] : [],
     // En un producto con variantes, lo que cambia entre variantes (color, peso…) no va como metacampo del producto.
-    metafields: lead.metafields.filter((field) => !grouped || !(field.key.startsWith('color') || ['peso', 'medida', 'tama_o', 'capacidad'].includes(field.key) || lead.group.options.some((name) => plain(name).replace(/[^a-z0-9]+/g, '_') === field.key))).map((field) => ({ key: field.key, value: field.value })),
+    metafields: lead.metafields.filter((field) => !grouped || !(field.key.startsWith('color') || ['peso', 'medida', 'tama_o', 'capacidad'].includes(field.key) || lead.group.options.some((name) => plain(name).replace(/[^a-z0-9]+/g, '_') === field.key))).map((field) => ({ key: field.key, value: field.value })).concat(draftTexts(lead, list, grouped).sections),
     options: grouped ? lead.group.options.map((name, index) => ({ name, values: list.map((row) => row.group.values[index]) })) : [],
     variants: list.map((row) => ({ optionValues: grouped ? row.group.values : [], sku: row.sku, price: row.price, stock: row.stock > 0 })),
   }));
@@ -360,7 +372,7 @@ export function shopifyImportCsv(rows = []) {
       const optCells = [0, 1, 2].flatMap((n) => (opts[n] ? [opts[n], vals[n]] : ['', '']));
       const first = index === 0;
       lines.push([
-        handle, first ? (grouped ? groupTitle(lead) : lead.title) : '', first ? descriptionHtml(draftDescription(lead, grouped)) : '', first ? 'Poliplast' : '', '', first ? lead.tags.join(', ') : '', first ? 'FALSE' : '',
+        handle, first ? (grouped ? groupTitle(lead) : lead.title) : '', first ? descriptionHtml(draftTexts(lead, list, grouped).description) : '', first ? 'Poliplast' : '', '', first ? lead.tags.join(', ') : '', first ? 'FALSE' : '',
         ...optCells, row.sku, 'shopify', row.stock > 0 ? 999 : 0, 'deny', 'manual', row.price, 'TRUE', 'TRUE', first ? lead.image : '', first ? draftSeoTitle(lead, grouped) : '', first ? lead.seoDescription : '', first ? 'draft' : '',
       ].map(cell).join(','));
     });

@@ -4,6 +4,7 @@ import { formatDate } from "./utils.mjs";
 import { Empty, Fact } from "./ui-primitives";
 import { Routine } from "./Routine.jsx";
 import { Calendar } from "./Calendar.jsx";
+import { AutomationMatrix } from "./AutomationMatrix.jsx";
 import { DayReview } from "./DayReview.jsx";
 import { trelloJsonSync } from "./trello-json-import.mjs";
 import { batchStamps, closedBySystem } from "./day-review.mjs";
@@ -111,7 +112,7 @@ function TrelloImport({ items, onImportTasks }) {
   );
 }
 
-function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, onNavigate, onImportPlan, onImportTasks, onAddEvent, onPostpone, personal = true, plan = [] }) {
+function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, onNavigate, onImportPlan, onImportTasks, onAddEvent, onPostpone, personal = true, plan = [], automations, onAutomationsChange }) {
   const [tab, setTab] = useState("tareas");
   const [filter, setFilter] = useState("pending");
   const [query, setQuery] = useState("");
@@ -136,6 +137,7 @@ function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, o
       <button type="button" role="tab" aria-selected={tab === "tareas"} className={tab === "tareas" ? "selected" : ""} onClick={() => setTab("tareas")}>Tareas</button>
       <button type="button" role="tab" aria-selected={tab === "rutina"} className={tab === "rutina" ? "selected" : ""} onClick={() => setTab("rutina")}>{personal ? "Rutina" : "Cierre del día"}</button>
       <button type="button" role="tab" aria-selected={tab === "calendario"} className={tab === "calendario" ? "selected" : ""} onClick={() => setTab("calendario")}>Calendario</button>
+      {personal && onAutomationsChange && <button type="button" role="tab" aria-selected={tab === "automatizaciones"} className={tab === "automatizaciones" ? "selected" : ""} onClick={() => setTab("automatizaciones")}>Automatizaciones</button>}
     </div>
   );
   if (tab === "rutina") {
@@ -144,6 +146,14 @@ function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, o
         {tabs}
         {!personal && <section className="panel"><DayReview date={today()} planChecks={planChecks || {}} tasks={items} onPostpone={onPostpone} onToggleTask={onToggle} includeRoutine={false} /></section>}
         {personal && <Routine date={today()} planChecks={planChecks || {}} onToggle={onTogglePlan} onNavigate={onNavigate} tasks={items} onToggleTask={onToggle} plan={plan} onImportPlan={onImportPlan} onPostpone={onPostpone} />}
+      </div>
+    );
+  }
+  if (tab === "automatizaciones" && personal && onAutomationsChange) {
+    return (
+      <div className="content-stack">
+        {tabs}
+        <AutomationMatrix automations={automations || {}} onChange={onAutomationsChange} />
       </div>
     );
   }

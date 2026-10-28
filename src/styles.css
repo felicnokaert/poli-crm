@@ -1480,3 +1480,41 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .draft-results .bad { color: var(--brand-red); }
 .draft-results .ok { color: #1f7a4d; }
 .decision-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+
+/* Automatizaciones (Tareas → Automatizaciones): matriz de impacto × facilidad × costo. */
+.matrix-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+.matrix-card { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: var(--radius-lg, 12px); background: var(--color-white); border: 1px solid #e7e7e9; border-top: 4px solid #999; }
+.matrix-card strong { font-size: 1.7rem; line-height: 1; }
+.matrix-card span { font-weight: 700; }
+.matrix-card small { color: var(--color-text-mid, #666); line-height: 1.3; }
+.matrix-chart-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 210px; gap: 16px; align-items: start; }
+.matrix-chart { position: relative; width: 100%; aspect-ratio: 16 / 10; min-height: 260px; border-radius: 14px; background: linear-gradient(135deg, #0d776412, transparent 55%), #f7f7f8; border: 1px solid #e7e7e9; overflow: hidden; }
+.matrix-mid { position: absolute; background: #0000001a; }
+.matrix-mid-x { left: 50%; top: 0; bottom: 0; width: 1px; }
+.matrix-mid-y { top: 50%; left: 0; right: 0; height: 1px; }
+.matrix-axis { position: absolute; font-size: .74rem; color: #666; font-weight: 700; letter-spacing: .02em; }
+.matrix-axis-y { left: 8px; top: 6px; }
+.matrix-axis-x { right: 10px; bottom: 6px; }
+.matrix-bubble { position: absolute; transform: translate(-50%, 50%); border: 2px solid #fff; border-radius: 50%; color: #fff; font-weight: 800; font-size: .72rem; display: grid; place-items: center; cursor: pointer; padding: 0; box-shadow: 0 3px 10px #00000026; transition: transform .18s ease, box-shadow .18s ease; }
+.matrix-bubble:hover, .matrix-bubble.active { transform: translate(-50%, 50%) scale(1.25); z-index: 3; box-shadow: 0 6px 16px #0000003d; }
+.matrix-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: .86rem; }
+.matrix-legend li { display: flex; align-items: center; gap: 8px; }
+.matrix-legend i { width: 12px; height: 12px; border-radius: 50%; flex: 0 0 auto; }
+.matrix-list { display: grid; gap: 8px; }
+.matrix-row { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 4px 12px; padding: 12px; border-radius: 12px; border: 1px solid #e7e7e9; background: var(--color-white); }
+.matrix-row.active { border-color: #0d7764; box-shadow: 0 0 0 2px #0d776426; }
+.matrix-num { width: 26px; height: 26px; border-radius: 50%; color: #fff; font-weight: 800; font-size: .78rem; display: grid; place-items: center; }
+.matrix-main { display: grid; gap: 2px; min-width: 0; }
+.matrix-main small { color: #666; }
+.matrix-controls { grid-column: 2; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: end; }
+.matrix-controls label { display: grid; gap: 2px; font-size: .74rem; color: #666; font-weight: 700; }
+.matrix-controls select { font-weight: 600; }
+.matrix-check { display: flex !important; align-items: center; gap: 6px !important; font-weight: 600 !important; }
+.matrix-add { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.matrix-add input { flex: 1 1 260px; min-width: 0; }
+@media (max-width: 760px) {
+  .matrix-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .matrix-chart-wrap { grid-template-columns: minmax(0, 1fr); }
+  .matrix-chart { aspect-ratio: 1 / 1; min-height: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .matrix-bubble { transition: none; } }

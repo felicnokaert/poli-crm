@@ -4,6 +4,8 @@ import { Check, ChevronRight, X } from "lucide-react";
 import { inferIntent } from "./commercial-intelligence.mjs";
 import { buildSuggestion, PENDING_LABEL } from "./suggestion-rules.mjs";
 import { prepareManualQuery } from "./ai-provider.mjs";
+import { ReplySuggester } from "./ReplySuggester.jsx";
+import { buildReplyContext } from "./reply-context.mjs";
 import { docTypeLabel } from "./technical-library.mjs";
 import { FAMILIES } from "./families.mjs";
 import { TRIAGE_VARIABLES, scoreTriage } from "./commercial-triage.mjs";
@@ -347,6 +349,7 @@ export function CopilotSuggestionPanel({ event }) {
           )}
         </>
       )}
+      <ReplySuggester event={event} context={buildReplyContext(suggestion)} />
       <button type="button" className="secondary" onClick={copyForAI}>
         {copied ? "Copiado" : "Preparar consulta para IA"}
       </button>

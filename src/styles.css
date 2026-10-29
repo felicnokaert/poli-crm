@@ -1518,3 +1518,8 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
   .matrix-chart { aspect-ratio: 1 / 1; min-height: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .matrix-bubble { transition: none; } }
+
+/* Respuesta sugerida de WhatsApp (29/10) */
+.reply-suggester { display: grid; gap: 8px; margin: 10px 0; padding-top: 10px; border-top: 1px solid var(--color-border); }
+.reply-draft { display: grid; gap: 8px; }
+.reply-draft textarea { width: 100%; min-width: 0; box-sizing: border-box; resize: vertical; }

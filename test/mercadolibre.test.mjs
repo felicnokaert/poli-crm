@@ -99,3 +99,11 @@ test('visitas de a una publicación: total de 30 días y suma de los últimos 7'
   assert.deepEqual(windowVisits({ total_visits: 93, results }), [70, 93]);
   assert.deepEqual(windowVisits({ total_visits: 5 }), [undefined, 5]);
 });
+
+test('itemRow guarda todas las fotos en https (hasta 10) para sumarlas a Shopify', async () => {
+  const { itemRow } = await import('../lib/mercadolibre.mjs');
+  const row = itemRow({ id: 'MLA1', title: 't', pictures: [{ secure_url: 'https://a/1.jpg' }, { url: 'http://a/2.jpg' }, {}] }, '1');
+  assert.deepEqual(row.picture_urls, ['https://a/1.jpg', 'https://a/2.jpg']);
+  assert.equal(row.picture_url, 'https://a/1.jpg');
+  assert.deepEqual(itemRow({ id: 'MLA2', title: 't' }, '1').picture_urls, []);
+});

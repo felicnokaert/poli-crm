@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { assistantAi, buildMessages, ASSISTANT_MODEL } from '../lib/assistant-ai.mjs';
+import { assistantAi, buildMessages, buildReplyMessages, splitReply, REPLY_PROMPT, ASSISTANT_MODEL } from '../lib/assistant-ai.mjs';
 import { buildAiContext, detectIntent } from '../src/assistant-answer.mjs';
 
 const env = { SUPABASE_URL: 'https://db', SUPABASE_SERVICE_ROLE_KEY: 'svc', ANTHROPIC_API_KEY: 'k' };
@@ -72,4 +72,23 @@ test('clave sin workspace: manda el id del workspace si está cargado', async ()
   const body = (await assistantAi(req({ question: 'hola' }), env, noWorkspace.http)).body;
   assert.equal(body.reason, 'clave');
   assert.match(body.error, /workspace/);
+});
+
+test('respuesta sugerida: borrador sin herramientas, con la nota "Para revisar" aparte y sin enviar nada', async () => {
+  const { http, calls } = world({ reply: json({ content: [{ type: 'text', text: 'Hola Juan, ¿para qué superficie sería?\n\nPara revisar: confirmar el precio antes de enviarlo.' }], usage: { input_tokens: 500, output_tokens: 30 } }) });
+  const result = await assistantAi(req({ mode: 'respuesta', question: 'Necesito espuma para un techo', transcript: 'Juan: Necesito espuma para un techo', context: 'Familia: Espumas' }), env, http);
+  assert.equal(result.body.ok, true);
+  assert.equal(result.body.draft, 'Hola Juan, ¿para qué superficie sería?');
+  assert.equal(result.body.review, 'confirmar el precio antes de enviarlo.');
+  const sent = JSON.parse(calls.find((call) => call.url.includes('anthropic')).options.body);
+  assert.equal(sent.tools, undefined);
+  assert.equal(sent.max_tokens, 700);
+  assert.match(sent.system, /BORRADOR/);
+  assert.match(sent.messages[0].content, /Necesito espuma para un techo/);
+});
+
+test('respuesta sugerida: sin nota queda el borrador solo; el prompt prohíbe inventar datos', () => {
+  assert.deepEqual(splitReply('Hola, ¿cómo estás?'), { draft: 'Hola, ¿cómo estás?', review: '' });
+  assert.match(REPLY_PROMPT, /NUNCA inventes precios/);
+  assert.match(buildReplyMessages({ context: 'x', transcript: 'a', message: 'b' })[0].content, /ÚLTIMO MENSAJE DEL CLIENTE: b/);
 });

@@ -71,13 +71,13 @@ test('actualizaciones automáticas: constancia al empezar y al terminar, con los
 test('actualizaciones automáticas: qué mostrar de cada una', () => {
   const now = Date.parse('2026-10-24T12:00:00Z');
   const list = integrationsStatus([
-    { key: 'integration:mercadolibre', last_run_at: '2026-10-24T09:31:00Z', ok: true, detail: { problems: [] } },
+    { key: 'integration:mercadolibre-1', last_run_at: '2026-10-24T09:31:00Z', ok: true, detail: { problems: [] } },
     { key: 'integration:contabilium', last_run_at: '2026-10-24T10:00:00Z', ok: false, detail: { problems: ['token vencido'] } },
     { key: 'integration:shopify', last_run_at: '2026-10-24T10:30:00Z', ok: false, detail: { running: true } },
     { key: 'daily-maintenance', last_run_at: '2026-10-21T06:00:00Z', ok: true },
   ], { now });
   const state = Object.fromEntries(list.map((entry) => [entry.key, entry.state]));
-  assert.equal(state['integration:mercadolibre'], 'ok');
+  assert.equal(state['integration:mercadolibre-1'], 'ok');
   assert.equal(state['integration:contabilium'], 'failed');
   assert.equal(state['integration:shopify'], 'cut');
   assert.equal(state['daily-maintenance'], 'stale');

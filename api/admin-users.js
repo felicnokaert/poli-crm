@@ -4,7 +4,7 @@ import { deleteUser } from '../lib/admin-users.mjs';
 import { cleanupWorkspaces } from '../lib/workspace-cleanup-admin.mjs';
 import { technicalAdmin } from '../lib/technical-admin.mjs';
 import { listClientErrors, logClientError } from '../lib/error-log.mjs';
-import { mercadoLibreAdmin, mercadoLibreAdsCron, mercadoLibreCron, mercadoLibreMarketCron, mercadoLibreSalesCron } from '../lib/mercadolibre.mjs';
+import { mercadoLibreAccountCron, mercadoLibreAdmin, mercadoLibreAdsCron, mercadoLibreCron, mercadoLibreMarketCron, mercadoLibreSalesCron } from '../lib/mercadolibre.mjs';
 import { runIntegrationCron } from '../lib/integration-crons.mjs';
 import { contabiliumAdmin, contabiliumCron } from '../lib/contabilium.mjs';
 import { assistantAi } from '../lib/assistant-ai.mjs';
@@ -21,6 +21,9 @@ import { shopifyAdmin, shopifyCron } from '../lib/shopify.mjs';
 // y Más → Datos → Conexiones ("Actualizaciones automáticas") lo muestra.
 const CRONS = {
   mercadolibre: mercadoLibreCron,
+  'mercadolibre-1': mercadoLibreAccountCron(0),
+  'mercadolibre-2': mercadoLibreAccountCron(1),
+  'mercadolibre-3': mercadoLibreAccountCron(2),
   'mercadolibre-mercado': mercadoLibreMarketCron,
   'mercadolibre-ventas-1': mercadoLibreSalesCron(0),
   'mercadolibre-ventas-2': mercadoLibreSalesCron(1),

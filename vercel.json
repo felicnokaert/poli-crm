@@ -4,7 +4,9 @@
   "cleanUrls": true,
   "crons": [
     { "path": "/api/cron-daily-maintenance", "schedule": "0 6 * * *" },
-    { "path": "/api/admin-users?cron=mercadolibre", "schedule": "30 9 * * *" },
+    { "path": "/api/admin-users?cron=mercadolibre-1", "schedule": "30 9 * * *" },
+    { "path": "/api/admin-users?cron=mercadolibre-2", "schedule": "35 9 * * *" },
+    { "path": "/api/admin-users?cron=mercadolibre-3", "schedule": "45 9 * * *" },
     { "path": "/api/admin-users?cron=mercadolibre-ventas-1", "schedule": "40 9 * * *" },
     { "path": "/api/admin-users?cron=mercadolibre-ventas-2", "schedule": "50 9 * * *" },
     { "path": "/api/admin-users?cron=mercadolibre-ventas-3", "schedule": "0 11 * * *" },

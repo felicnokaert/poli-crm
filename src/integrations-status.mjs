@@ -3,7 +3,9 @@
 // Horarios en hora argentina (vercel.json está en UTC: 09:30 UTC = 06:30 AR).
 export const INTEGRATIONS = [
   { key: 'daily-maintenance', name: 'Mantenimiento (tareas automáticas y respaldo)', when: '03:00' },
-  { key: 'integration:mercadolibre', name: 'Mercado Libre: publicaciones, preguntas, visitas, calidad y resumen', when: '06:30' },
+  { key: 'integration:mercadolibre-1', name: 'Mercado Libre: publicaciones, preguntas, visitas y calidad (1.ª cuenta)', when: '06:30' },
+  { key: 'integration:mercadolibre-2', name: 'Mercado Libre: publicaciones, preguntas, visitas y calidad (2.ª cuenta)', when: '06:35' },
+  { key: 'integration:mercadolibre-3', name: 'Mercado Libre: publicaciones, preguntas, visitas y calidad (3.ª cuenta)', when: '06:45' },
   { key: 'integration:mercadolibre-ventas-1', name: 'Mercado Libre: resumen de ventas (1.ª cuenta)', when: '06:40' },
   { key: 'integration:mercadolibre-ventas-2', name: 'Mercado Libre: resumen de ventas (2.ª cuenta)', when: '06:50' },
   { key: 'integration:mercadolibre-ventas-3', name: 'Mercado Libre: resumen de ventas (3.ª cuenta)', when: '08:00' },

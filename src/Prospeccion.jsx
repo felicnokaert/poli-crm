@@ -25,6 +25,8 @@ import { DAILY_TARGET, currentFocus, scopeDescription, zoneStatus } from './pros
 
 import { DoNotContactPanel } from './DoNotContactPanel.jsx';
 import { addBlock, filterAllowed } from './do-not-contact.mjs';
+import { OutboxPanel } from './OutboxPanel.jsx';
+import { queueSequence, guardOutbox } from './mail-sequence.mjs';
 import { ProspectRow, downloadCsv, ProspectSheet, addToScope, ProspectDetail, ProspectQueue, SearchHistory, searchSummary } from './ProspectParts.jsx';
 export { searchSummary } from './ProspectParts.jsx';
 
@@ -40,6 +42,14 @@ const sharedMatcher = createMatcher();
 function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, cities: citiesProp, provinces: provincesProp, requests, supabase }) {
   const prospects = Array.isArray(data.prospects) ? data.prospects : EMPTY;
   const blockList = Array.isArray(data.doNotContact) ? data.doNotContact : EMPTY;
+  const outbox = guardOutbox(Array.isArray(data.outbox) ? data.outbox : EMPTY, blockList);
+  const senderName = String(userEmail || '').split('@')[0].split(/[._-]/)[0].replace(/^./, (c) => c.toLocaleUpperCase('es-AR'));
+  const armMails = (records) => {
+    let list = outbox; let added = 0; const reasons = [];
+    for (const record of records) { const result = queueSequence(list, record, { sender: senderName, blocked: blockList, by: userEmail }); list = result.outbox; added += result.added; if (!result.added && result.reason) reasons.push(`${record.company || 'prospecto'}: ${result.reason}`); }
+    if (added) setData((current) => ({ ...current, outbox: list }));
+    return added ? `Se armaron ${added / 3} secuencia(s) de 3 mails en borrador.${reasons.length ? ` No se armaron: ${reasons.slice(0, 3).join('; ')}.` : ''}` : `No se armó ninguna: ${reasons.slice(0, 3).join('; ') || 'nada para armar'}.`;
+  };
   const blockRecord = (record, reason = 'Marcado desde Prospección') => setData((current) => ({ ...current, doNotContact: addBlock(current.doNotContact, record, { reason, by: userEmail }).list }));
   const clients = Array.isArray(data.clients) ? data.clients : EMPTY;
   const switches = data.prospectSwitches || {};
@@ -563,7 +573,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       </div>
 
       <div className="segmented prospect-tabs" role="tablist" aria-label="Secciones de Prospección">
-        {[['hoy', 'Cola del día'], ['prospectos', 'Prospectos'], ['buscar', 'Buscar con IA'], ['reglas', 'Reglas'], ['nocontactar', 'No contactar']].map(([key, label]) => (
+        {[['hoy', 'Cola del día'], ['prospectos', 'Prospectos'], ['buscar', 'Buscar con IA'], ['reglas', 'Reglas'], ['salida', 'Bandeja de salida'], ['nocontactar', 'No contactar']].map(([key, label]) => (
           <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? 'selected' : ''} onClick={() => setTab(key)}>{label}</button>
         ))}
       </div>
@@ -577,6 +587,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         />
       )}
 
+      {tab === 'salida' && <OutboxPanel outbox={outbox} onChange={(next) => setData((current) => ({ ...current, outbox: next }))} queueCount={Math.min(10, queue.map((id) => prospectsById.get(id)).filter((item) => String(item?.email || '').includes('@')).length)} onArmQueue={() => armMails(queue.map((id) => prospectsById.get(id)).filter((item) => String(item?.email || '').includes('@')).slice(0, 10))} />}
       {tab === 'nocontactar' && <DoNotContactPanel list={blockList} userEmail={userEmail} onChange={(doNotContact) => setData((current) => ({ ...current, doNotContact }))} />}
       {tab === 'reglas' && <ProspectRulesPanel rules={data.prospectRules} onChange={(prospectRules) => setData((current) => ({ ...current, prospectRules }))} />}
 
@@ -820,7 +831,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         </div>
         <button type="button" className="secondary" disabled={!shown.length} onClick={() => downloadCsv(shown)}>Descargar CSV ({shown.length})</button>
       </div>
-      {listView === 'cola' && <ProspectQueue queue={queue} byId={prospectsById} checks={checks} onMark={mark} onBlock={blockRecord} onSkip={(id) => setSkipped((list) => [...list, id])} onOpen={setDetailId} onEnrich={async (prospect) => setMessage(await enrich(prospect))} onResearch={async (prospect) => setMessage(await researchProspect(prospect))} />}
+      {listView === 'cola' && <ProspectQueue queue={queue} byId={prospectsById} checks={checks} onMark={mark} onBlock={blockRecord} onArmMail={(record) => setMessage(armMails([record]))} onSkip={(id) => setSkipped((list) => [...list, id])} onOpen={setDetailId} onEnrich={async (prospect) => setMessage(await enrich(prospect))} onResearch={async (prospect) => setMessage(await researchProspect(prospect))} />}
       {listView !== 'cola' && shown.length === 0 && <p className="muted">{prospects.length ? 'No hay prospectos con ese filtro.' : 'Todavía no cargaste prospectos.'}</p>}
       {listView === 'planilla' && shown.length > 0 && <ProspectSheet rows={page} checks={checks} onMark={mark} onOpenClient={onOpenClient} onDelete={remove} onOpen={setDetailId} />}
       {listView === 'tarjetas' && (
@@ -861,7 +872,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       {detail && (
         <ProspectDetail
           key={detail.id} defaultSender={String(userEmail || '').split('@')[0].split(/[._-]/)[0].replace(/^./, (c) => c.toLocaleUpperCase('es-AR'))} prospect={detail} check={checks.get(detail.id) || { status: 'Nuevo', matches: [] }}
-          onClose={() => setDetailId(null)} onSave={saveProspect} onMark={mark} onBlock={blockRecord} onOpenClient={onOpenClient} onDelete={remove}
+          onClose={() => setDetailId(null)} onSave={saveProspect} onMark={mark} onBlock={blockRecord} onArmMail={(record) => setMessage(armMails([record]))} onOpenClient={onOpenClient} onDelete={remove}
           onEnrich={async (prospect) => setMessage(await enrich(prospect))}
         />
       )}

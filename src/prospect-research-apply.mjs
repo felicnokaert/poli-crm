@@ -9,7 +9,7 @@ export function applyResearch(prospect, result, now = new Date().toISOString()) 
   const enriched = result.contacts
     ? applyEnrichment(base, { ok: true, facebook: result.contacts.facebook, instagram: result.contacts.instagram, emails: result.contacts.emails, whatsapp: result.contacts.whatsapp }, now)
     : { prospect: base, added: [] };
-  const research = { score: result.score ?? 0, label: result.label || '', reasoning: result.reasoning || [], evidence: result.evidence || [], competitors: result.competitors || [], pages: result.pages || [], at: now };
+  const research = { score: result.score ?? 0, label: result.label || '', reasoning: result.reasoning || [], evidence: result.evidence || [], competitors: result.competitors || [], signals: result.signals || [], pages: result.pages || [], at: now };
   return { prospect: { ...enriched.prospect, research, updatedAt: now }, added: enriched.added };
 }
 

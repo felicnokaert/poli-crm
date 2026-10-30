@@ -3,6 +3,7 @@
 export const DEFAULT_RULES = {
   phone: 3, whatsapp: 1, website: 2, email: 2, social: 1, evidence: 2, family: 1, duplicate: 2,
   fitHigh: 3, fitMedium: 1, zoneA: 2, zoneB: 1, sheetScoreMax: 4,
+  signalRubros: 1, signalApplicator: 3, signalCompetitor: 1,
   radiusBig: 10, radiusLarge: 9, radiusMedium: 7, radiusSmall: 5,
   populationBig: 500000, populationLarge: 100000, populationMedium: 30000,
 };
@@ -17,6 +18,10 @@ export const RULE_GROUPS = [
   ['Lo que dice la planilla de Felipe', [
     ['fitHigh', 'Encaje Alto', 'puntos', 0, 10], ['fitMedium', 'Encaje Medio', 'puntos', 0, 10], ['zoneA', 'Zona A', 'puntos', 0, 10], ['zoneB', 'Zona B', 'puntos', 0, 10],
     ['sheetScoreMax', 'Tope por el puntaje de la planilla', 'puntos', 0, 10],
+  ]],
+  ['Señales leídas del sitio web (se calculan al investigar)', [
+    ['signalRubros', 'Su sitio nombra nuestros rubros (por cada rubro, hasta 3)', 'puntos', 0, 5], ['signalApplicator', 'Parece aplicador o instalador', 'puntos', 0, 10],
+    ['signalCompetitor', 'Menciona a un competidor', 'puntos', 0, 5],
   ]],
   ['Radio de búsqueda según el tamaño de la ciudad', [
     ['radiusBig', 'Ciudad grande', 'km', 1, 30], ['populationBig', '…desde (habitantes)', 'hab.', 1000, 5000000],

@@ -2,6 +2,7 @@
 // Más datos de contacto verificables = más arriba; competidores y duplicados confirmados no entran.
 import { possibleWhatsAppLink } from './prospect-model.mjs';
 import { DEFAULT_RULES, normalizeRules } from './prospect-rules.mjs';
+import { signalPoints } from './prospect-signals.mjs';
 
 // Aporte de la planilla de prospección (puntaje, encaje y zona) al orden de la cola. El puntaje se toma de 0 a 100
 // (si viene de 0 a 10 se pasa a esa escala); suma hasta 4. Encaje Alto suma 3 y Medio 1; zona A suma 2 y B 1.
@@ -29,6 +30,7 @@ export function prospectScore(prospect, check = { status: 'Nuevo' }, rules = DEF
   if (prospect.family) score += rules.family;
   if (prospect.research?.score) score += Math.round(prospect.research.score / 20);
   score += sheetBonus(prospect, rules);
+  score += signalPoints(prospect.research?.signals, rules);
   if (check.status === 'Posible duplicado') score -= rules.duplicate;
   return score;
 }

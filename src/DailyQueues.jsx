@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { buildCustomerBase, coverageByCompany } from './customer-base.mjs';
+import { useBillingCustomers } from './hooks/useBillingCustomers.js';
 import { useComprobantes, argentinaToday } from './CustomerBasePanel.jsx';
 import { QUEUE_SIZE, logClientContact, matchesFamily, queueFamilies, newProspectsQueue, overdueMessage, overdueQueue, quoteMessage, quotedQueue, reactivationMessage, reactivationQueue } from './daily-queues.mjs';
 import { blankTask } from './app-shared';
@@ -131,7 +132,8 @@ export function DailyQueues({ rules, supabase, clients: allClients = [], prospec
   const reactivar = useMemo(() => reactivationQueue({ clients, base: byClient, today }), [clients, byClient, today]);
   const cotizaron = useMemo(() => quotedQueue({ clients, base: byClient, today }), [clients, byClient, today]);
   const atrasados = useMemo(() => overdueQueue({ clients, base: byClient, today }), [clients, byClient, today]);
-  const nuevos = useMemo(() => newProspectsQueue({ prospects, checks, skipped, rules }), [prospects, checks, skipped, rules]);
+  const billingCustomers = useBillingCustomers(supabase);
+  const nuevos = useMemo(() => newProspectsQueue({ prospects, checks, skipped, rules, customers: billingCustomers }), [prospects, checks, skipped, rules, billingCustomers]);
   const coverage = useMemo(() => coverageByCompany(rows), [rows]);
   const syncing = sync.filter((item) => !item.history_done).map((item) => item.company);
   const learning = useMemo(() => prospectLearning({ prospects, clients }), [prospects, clients]);

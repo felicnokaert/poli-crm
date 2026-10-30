@@ -3,7 +3,7 @@
 export const DEFAULT_RULES = {
   phone: 3, whatsapp: 1, website: 2, email: 2, social: 1, evidence: 2, family: 1, duplicate: 2,
   fitHigh: 3, fitMedium: 1, zoneA: 2, zoneB: 1, sheetScoreMax: 4,
-  signalRubros: 1, signalApplicator: 3, signalCompetitor: 1, signalStore: 1, signalBranches: 1, signalHiring: 1,
+  signalRubros: 1, signalApplicator: 3, signalCompetitor: 1, signalStore: 1, signalBranches: 1, signalHiring: 1, signalReviews: 1,
   radiusBig: 10, radiusLarge: 9, radiusMedium: 7, radiusSmall: 5,
   populationBig: 500000, populationLarge: 100000, populationMedium: 30000,
 };
@@ -23,6 +23,9 @@ export const RULE_GROUPS = [
     ['signalRubros', 'Su sitio nombra nuestros rubros (por cada rubro, hasta 3)', 'puntos', 0, 5], ['signalApplicator', 'Parece aplicador o instalador', 'puntos', 0, 10],
     ['signalCompetitor', 'Menciona a un competidor', 'puntos', 0, 5], ['signalStore', 'Vende online (tienda o carrito)', 'puntos', 0, 5],
     ['signalBranches', 'Tiene varias sucursales o locales', 'puntos', 0, 5], ['signalHiring', 'Está sumando gente', 'puntos', 0, 5],
+  ]],
+  ['Señales del mapa', [
+    ['signalReviews', 'Reseñas en el mapa: 4 estrellas o más con 10+ reseñas (el doble con 50+)', 'puntos', 0, 5],
   ]],
   ['Radio de búsqueda según el tamaño de la ciudad', [
     ['radiusBig', 'Ciudad grande', 'km', 1, 30], ['populationBig', '…desde (habitantes)', 'hab.', 1000, 5000000],

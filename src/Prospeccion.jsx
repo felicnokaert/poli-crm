@@ -25,6 +25,7 @@ import { DAILY_TARGET, currentFocus, scopeDescription, zoneStatus } from './pros
 
 import { DoNotContactPanel } from './DoNotContactPanel.jsx';
 import { addBlock, filterAllowed } from './do-not-contact.mjs';
+import { useBillingCustomers } from './hooks/useBillingCustomers.js';
 import { OutboxPanel } from './OutboxPanel.jsx';
 import { queueSequence, guardOutbox, applyReplies } from './mail-sequence.mjs';
 import { ProspectRow, downloadCsv, ProspectSheet, addToScope, ProspectDetail, ProspectQueue, SearchHistory, searchSummary } from './ProspectParts.jsx';
@@ -65,6 +66,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     return armMails([{ ...base, id: `${base.id}:c:${address}`, email: address }]);
   };
   const blockRecord = (record, reason = 'Marcado desde Prospección') => setData((current) => ({ ...current, doNotContact: addBlock(current.doNotContact, record, { reason, by: userEmail }).list }));
+  const billingCustomers = useBillingCustomers(supabase);
   const clients = Array.isArray(data.clients) ? data.clients : EMPTY;
   const switches = data.prospectSwitches || {};
   const [tab, setTab] = useState(supabase ? 'hoy' : 'prospectos'); // sin cuenta en línea no hay facturación: entra directo a la lista
@@ -570,7 +572,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     </div>
   );
 
-  const queue = buildQueue(bySearch, checks, { skipped, rules: data.prospectRules, blocked: blockList });
+  const queue = buildQueue(bySearch, checks, { skipped, rules: data.prospectRules, blocked: blockList, customers: billingCustomers });
   const detail = detailId ? prospectsById.get(detailId) : null;
 
   return (

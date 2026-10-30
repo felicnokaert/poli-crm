@@ -11,6 +11,7 @@ import { missingContact } from './prospect-queue.mjs';
 import { contactQuality } from './prospect-contact.mjs';
 import { buildOutreachDraft } from './prospect-outreach.mjs';
 import { outreachVariant } from './prospect-model.mjs';
+import { reviewLabel } from './prospect-signals.mjs';
 
 // Partes de Prospección: la cola de trabajo, la planilla, las tarjetas, la ficha del prospecto y el
 // historial de búsquedas. Salieron de Prospeccion.jsx (QA 16/10: tenía 1.148 líneas), sin cambios.
@@ -286,6 +287,7 @@ function ResearchBox({ research }) {
   if (!research) return null;
   return (
     <div className="research-box">
+      {reviewLabel(prospect) && <p><strong>Mapa:</strong> {reviewLabel(prospect)}</p>}
       <p><strong>Investigación en la app:</strong> <em className={research.score >= 60 ? 'badge ok' : 'badge'}>{research.label} · {research.score}/100</em></p>
       <ul>{(research.reasoning || []).map((line, index) => <li key={index}>{line}</li>)}</ul>
       {(research.evidence || []).map((item, index) => (

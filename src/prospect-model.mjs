@@ -99,6 +99,8 @@ export function blankProspect(fields = {}, { id, now = new Date().toISOString() 
     lat: null,
     lon: null,
     source: 'Carga manual',
+    rating: null, // reseñas del mapa (solo Google Maps)
+    reviews: null,
     // De la planilla de prospección: puntaje (tal cual viene), nivel de encaje (Alto/Medio/Bajo) y zona (A/B/C).
     sheetScore: null,
     fitLevel: '',

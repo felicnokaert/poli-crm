@@ -2,7 +2,8 @@
 // Más datos de contacto verificables = más arriba; competidores y duplicados confirmados no entran.
 import { possibleWhatsAppLink } from './prospect-model.mjs';
 import { DEFAULT_RULES, normalizeRules } from './prospect-rules.mjs';
-import { signalPoints } from './prospect-signals.mjs';
+import { reviewPoints, signalPoints } from './prospect-signals.mjs';
+import { isBillingCustomer } from './prospect-customers.mjs';
 import { blockedBy } from './do-not-contact.mjs';
 
 // Aporte de la planilla de prospección (puntaje, encaje y zona) al orden de la cola. El puntaje se toma de 0 a 100
@@ -18,8 +19,9 @@ export function sheetBonus(prospect = {}, rules = DEFAULT_RULES) {
   return bonus;
 }
 
-export function prospectScore(prospect, check = { status: 'Nuevo' }, rules = DEFAULT_RULES) {
+export function prospectScore(prospect, check = { status: 'Nuevo' }, rules = DEFAULT_RULES, customers = null) {
   if (prospect.competitor) return -100;
+  if (isBillingCustomer(prospect, customers)) return -50; // ya le facturamos: es cliente, no prospecto
   if (check.status === 'Ya en el CRM' || check.status === 'Ya cargado') return -50;
   let score = 0;
   if (prospect.phone) score += rules.phone;
@@ -32,18 +34,19 @@ export function prospectScore(prospect, check = { status: 'Nuevo' }, rules = DEF
   if (prospect.research?.score) score += Math.round(prospect.research.score / 20);
   score += sheetBonus(prospect, rules);
   score += signalPoints(prospect.research?.signals, rules);
+  score += reviewPoints(prospect, rules);
   if (check.status === 'Posible duplicado') score -= rules.duplicate;
   return score;
 }
 
 // Ids en orden de trabajo: solo "No contactado", sin competidores ni duplicados confirmados,
 // sin los saltados hoy. Empata por fecha de carga (primero lo más viejo).
-export function buildQueue(prospects = [], checks = new Map(), { skipped = [], rules = DEFAULT_RULES, blocked = [] } = {}) {
+export function buildQueue(prospects = [], checks = new Map(), { skipped = [], rules = DEFAULT_RULES, blocked = [], customers = null } = {}) {
   const skip = new Set(skipped);
   const active = normalizeRules(rules);
   return prospects
     .filter((item) => item.state === 'No contactado' && !skip.has(item.id) && !blockedBy(item, blocked))
-    .map((item) => ({ item, score: prospectScore(item, checks.get(item.id), active) }))
+    .map((item) => ({ item, score: prospectScore(item, checks.get(item.id), active, customers) }))
     .filter((entry) => entry.score > -50)
     .sort((a, b) => b.score - a.score || String(a.item.createdAt || '').localeCompare(String(b.item.createdAt || '')))
     .map((entry) => entry.item.id);

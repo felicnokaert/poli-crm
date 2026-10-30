@@ -22,7 +22,8 @@
     "api/admin-users.js": { "maxDuration": 60 }
   },
   "rewrites": [
-    { "source": "/api/readiness", "destination": "/api/health" }
+    { "source": "/api/readiness", "destination": "/api/health" },
+    { "source": "/api/gmail-callback", "destination": "/api/admin-users?gmail=callback" }
   ],
   "headers": [
     {

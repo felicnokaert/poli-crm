@@ -1538,3 +1538,7 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .outbox-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .outbox-field { display: grid; gap: 4px; font-size: 0.85rem; }
 .outbox-field input, .outbox-field textarea { width: 100%; font: inherit; }
+
+.outbox-gmail { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 12px; margin: 10px 0; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-panel-bg); }
+.outbox-gmail > span:first-child { flex: 1 1 16rem; min-width: 0; }
+.outbox-reply { margin: 0; padding: 8px 10px; border-left: 3px solid var(--brand-red); background: var(--color-panel-bg); border-radius: 6px; overflow-wrap: anywhere; }

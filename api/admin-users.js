@@ -9,6 +9,7 @@ import { runIntegrationCron } from '../lib/integration-crons.mjs';
 import { contabiliumAdmin, contabiliumCron } from '../lib/contabilium.mjs';
 import { assistantAi } from '../lib/assistant-ai.mjs';
 import { shopifyAdmin, shopifyCron } from '../lib/shopify.mjs';
+import { gmailAdmin, gmailCallback } from '../lib/gmail-service.mjs';
 
 // Una sola función para las tareas de administrador (el plan de Vercel limita la cantidad de funciones):
 // borrar un usuario, revisar/limpiar espacios con datos de Felipe copiados (action: 'cleanup') o
@@ -36,6 +37,8 @@ const CRONS = {
 };
 
 export default async function handler(request, response) {
+  // Vuelta de Google al conectar Gmail: /api/gmail-callback se reescribe a /api/admin-users?gmail=callback (vercel.json).
+  if (request.method === 'GET' && request.query?.gmail === 'callback') return gmailCallback(request, response);
   const cron = request.method === 'GET' ? CRONS[request.query?.cron] : null;
   if (cron) {
     const result = await runIntegrationCron(request.query.cron, (req) => cron(req), request);
@@ -52,6 +55,7 @@ export default async function handler(request, response) {
     : action === 'shopify' ? await shopifyAdmin(request)
     : action === 'alerts' ? await alertsAdmin(request)
     : action === 'trello-plan' ? await trelloPlanAdmin(request)
+    : action === 'gmail' ? await gmailAdmin(request)
     : action === 'assistant' ? await assistantAi(request)
     : await deleteUser(request);
   return response.status(result.status).json(result.body);

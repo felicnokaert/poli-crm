@@ -156,3 +156,12 @@ test('sin credenciales de Google el panel queda apagado y sin conexión pide con
   const noAccount = await gmailAdmin(req({ op: 'send', item: sendItem }), env, fakeWorld({ account: null }).http, monday10);
   assert.equal(noAccount.body.code, 'sin_conexion');
 });
+
+import { queueSequence } from '../src/mail-sequence.mjs';
+test('otro contacto: la secuencia del mail nuevo no choca con la del original', () => {
+  const base = { id: 'p1', company: 'Sur', email: 'ventas@sur.com.ar' };
+  const first = queueSequence([], base, { sender: 'Ana' });
+  const second = queueSequence(first.outbox, { ...base, id: 'p1:c:compras@sur.com.ar', email: 'compras@sur.com.ar' }, { sender: 'Ana' });
+  assert.equal(second.added, 3);
+  assert.equal(new Set(second.outbox.map((i) => i.id)).size, 6);
+});

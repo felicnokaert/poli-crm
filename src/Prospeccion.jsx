@@ -55,6 +55,15 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     setData((current) => ({ ...current, outbox: result.outbox, doNotContact: result.doNotContact }));
     return result.lines;
   };
+  // «Otro contacto» (compras@, administración@…): se suma a la ficha del prospecto y se arma su secuencia de 3 mails.
+  const addOtherContact = (item, email) => {
+    const address = String(email || '').trim().toLowerCase();
+    const base = prospects.find((prospect) => prospect.id === item.prospectId);
+    if (!base) return 'No encontré la ficha del prospecto.';
+    const known = [base.email, ...(base.extraEmails || [])].map((x) => String(x || '').toLowerCase());
+    if (!known.includes(address)) setData((current) => ({ ...current, prospects: (current.prospects || []).map((prospect) => (prospect.id === base.id ? { ...prospect, extraEmails: [...(prospect.extraEmails || []), address] } : prospect)) }));
+    return armMails([{ ...base, id: `${base.id}:c:${address}`, email: address }]);
+  };
   const blockRecord = (record, reason = 'Marcado desde Prospección') => setData((current) => ({ ...current, doNotContact: addBlock(current.doNotContact, record, { reason, by: userEmail }).list }));
   const clients = Array.isArray(data.clients) ? data.clients : EMPTY;
   const switches = data.prospectSwitches || {};
@@ -592,7 +601,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         />
       )}
 
-      {tab === 'salida' && <OutboxPanel account={userEmail} session={session} onReplies={applyGmailReplies} outbox={outbox} onChange={(next) => setData((current) => ({ ...current, outbox: next }))} queueCount={Math.min(10, queue.map((id) => prospectsById.get(id)).filter((item) => String(item?.email || '').includes('@')).length)} onArmQueue={() => armMails(queue.map((id) => prospectsById.get(id)).filter((item) => String(item?.email || '').includes('@')).slice(0, 10))} />}
+      {tab === 'salida' && <OutboxPanel account={userEmail} session={session} onReplies={applyGmailReplies} onOtherContact={addOtherContact} outbox={outbox} onChange={(next) => setData((current) => ({ ...current, outbox: next }))} queueCount={Math.min(10, queue.map((id) => prospectsById.get(id)).filter((item) => String(item?.email || '').includes('@')).length)} onArmQueue={() => armMails(queue.map((id) => prospectsById.get(id)).filter((item) => String(item?.email || '').includes('@')).slice(0, 10))} />}
       {tab === 'nocontactar' && <DoNotContactPanel list={blockList} userEmail={userEmail} onChange={(doNotContact) => setData((current) => ({ ...current, doNotContact }))} />}
       {tab === 'reglas' && <ProspectRulesPanel rules={data.prospectRules} onChange={(prospectRules) => setData((current) => ({ ...current, prospectRules }))} />}
 

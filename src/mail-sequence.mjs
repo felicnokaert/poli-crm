@@ -1,7 +1,7 @@
 // Etapa 2 del plan estilo Harvey (30/10): secuencia de 3 mails por prospecto, que queda como BORRADOR en la Bandeja de salida.
 // Nada se envía desde acá: una persona aprueba, copia o abre cada mail en su correo. Puro y testeado.
 import { buildOutreachDraft } from './prospect-outreach.mjs';
-import { blockedBy } from './do-not-contact.mjs';
+import { addBlock, blockedBy } from './do-not-contact.mjs';
 
 export const OUTBOX_STATES = ['borrador', 'aprobado', 'enviado', 'descartado'];
 export const STEPS = [{ step: 1, day: 0, name: 'Primer contacto' }, { step: 2, day: 3, name: 'Recordatorio' }, { step: 3, day: 7, name: 'Cierre' }];
@@ -73,3 +73,24 @@ export const mailtoLink = (item) => `mailto:${encodeURIComponent(item.to)}?subje
 
 // Abre el borrador en Gmail (web) con la cuenta indicada (ej. felipe@grupopoliplast.com.ar): no hace falta tener un programa de correo instalado.
 export const gmailLink = (item, account = '') => `https://mail.google.com/mail/?view=cm&fs=1${account ? `&authuser=${encodeURIComponent(account)}` : ''}&to=${encodeURIComponent(item.to)}&su=${encodeURIComponent(item.subject)}&body=${encodeURIComponent(item.body)}`;
+
+// Respuestas leídas de Gmail (lib/gmail-service.mjs checkReplies) → qué pasa con la bandeja y con No contactar.
+// Baja: a No contactar (y se descartan los pendientes). Rebote, no le interesa o cualquier respuesta: no se insiste con los recordatorios.
+// Lo que dijo queda en el mail enviado (item.reply) para que una persona decida el resto.
+export function applyReplies(outbox = [], blocked = [], replies = [], { by = '', now = new Date().toISOString() } = {}) {
+  let list = Array.isArray(outbox) ? outbox : [];
+  let block = Array.isArray(blocked) ? blocked : [];
+  const lines = [];
+  for (const reply of replies || []) {
+    const to = String(reply.to || '').toLowerCase();
+    if (reply.kind === 'baja') block = addBlock(block, { email: to, company: reply.company }, { reason: 'Pidió la baja por mail', by, now }).list;
+    list = list.map((item) => {
+      if (item.id === reply.itemId) return { ...item, reply: { kind: reply.kind, action: reply.action, snippet: reply.snippet, emails: reply.emails || [], at: now }, updatedAt: now };
+      const pending = item.state === 'borrador' || item.state === 'aprobado';
+      if (pending && String(item.to).toLowerCase() === to) return { ...item, state: 'descartado', note: reply.kind === 'rebote' ? 'El mail rebotó' : 'Ya respondió: no se insiste', updatedAt: now };
+      return item;
+    });
+    lines.push(`${reply.company || reply.to}: ${reply.action}`);
+  }
+  return { outbox: guardOutbox(list, block, now), doNotContact: block, lines };
+}

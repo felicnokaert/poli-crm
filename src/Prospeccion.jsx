@@ -26,7 +26,7 @@ import { DAILY_TARGET, currentFocus, scopeDescription, zoneStatus } from './pros
 import { DoNotContactPanel } from './DoNotContactPanel.jsx';
 import { addBlock, filterAllowed } from './do-not-contact.mjs';
 import { OutboxPanel } from './OutboxPanel.jsx';
-import { queueSequence, guardOutbox } from './mail-sequence.mjs';
+import { queueSequence, guardOutbox, applyReplies } from './mail-sequence.mjs';
 import { ProspectRow, downloadCsv, ProspectSheet, addToScope, ProspectDetail, ProspectQueue, SearchHistory, searchSummary } from './ProspectParts.jsx';
 export { searchSummary } from './ProspectParts.jsx';
 
@@ -49,6 +49,11 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     for (const record of records) { const result = queueSequence(list, record, { sender: senderName, blocked: blockList, by: userEmail }); list = result.outbox; added += result.added; if (!result.added && result.reason) reasons.push(`${record.company || 'prospecto'}: ${result.reason}`); }
     if (added) setData((current) => ({ ...current, outbox: list }));
     return added ? `Se armaron ${added / 3} secuencia(s) de 3 mails en borrador.${reasons.length ? ` No se armaron: ${reasons.slice(0, 3).join('; ')}.` : ''}` : `No se armó ninguna: ${reasons.slice(0, 3).join('; ') || 'nada para armar'}.`;
+  };
+  const applyGmailReplies = (replies) => {
+    const result = applyReplies(outbox, blockList, replies, { by: userEmail });
+    setData((current) => ({ ...current, outbox: result.outbox, doNotContact: result.doNotContact }));
+    return result.lines;
   };
   const blockRecord = (record, reason = 'Marcado desde Prospección') => setData((current) => ({ ...current, doNotContact: addBlock(current.doNotContact, record, { reason, by: userEmail }).list }));
   const clients = Array.isArray(data.clients) ? data.clients : EMPTY;
@@ -587,7 +592,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         />
       )}
 
-      {tab === 'salida' && <OutboxPanel account={userEmail} outbox={outbox} onChange={(next) => setData((current) => ({ ...current, outbox: next }))} queueCount={Math.min(10, queue.map((id) => prospectsById.get(id)).filter((item) => String(item?.email || '').includes('@')).length)} onArmQueue={() => armMails(queue.map((id) => prospectsById.get(id)).filter((item) => String(item?.email || '').includes('@')).slice(0, 10))} />}
+      {tab === 'salida' && <OutboxPanel account={userEmail} session={session} onReplies={applyGmailReplies} outbox={outbox} onChange={(next) => setData((current) => ({ ...current, outbox: next }))} queueCount={Math.min(10, queue.map((id) => prospectsById.get(id)).filter((item) => String(item?.email || '').includes('@')).length)} onArmQueue={() => armMails(queue.map((id) => prospectsById.get(id)).filter((item) => String(item?.email || '').includes('@')).slice(0, 10))} />}
       {tab === 'nocontactar' && <DoNotContactPanel list={blockList} userEmail={userEmail} onChange={(doNotContact) => setData((current) => ({ ...current, doNotContact }))} />}
       {tab === 'reglas' && <ProspectRulesPanel rules={data.prospectRules} onChange={(prospectRules) => setData((current) => ({ ...current, prospectRules }))} />}
 

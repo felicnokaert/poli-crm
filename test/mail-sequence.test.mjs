@@ -41,3 +41,10 @@ test('se junta entre navegadores por la marca más nueva y el mailto codifica el
   assert.equal(mergeOutbox([b], [a])[0].state, 'aprobado');
   assert.match(mailtoLink({ to: 'a@b.com', subject: 'Hola ñ', body: 'x y' }), /^mailto:a%40b\.com\?subject=Hola%20%C3%B1&body=x%20y$/);
 });
+
+test('el enlace de Gmail usa la cuenta de quien lo manda y codifica el texto', async () => {
+  const { gmailLink } = await import('../src/mail-sequence.mjs');
+  const link = gmailLink({ to: 'a@b.com', subject: 'Hola ñ', body: 'x y' }, 'felipe@grupopoliplast.com.ar');
+  assert.match(link, /^https:\/\/mail\.google\.com\/mail\/\?view=cm&fs=1&authuser=felipe%40grupopoliplast\.com\.ar&to=a%40b\.com&su=Hola%20%C3%B1&body=x%20y$/);
+  assert.doesNotMatch(gmailLink({ to: 'a@b.com', subject: 's', body: 'b' }), /authuser/);
+});

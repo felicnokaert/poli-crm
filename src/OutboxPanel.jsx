@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Check, Copy, Mail, Send, Trash2, Wand2 } from "lucide-react";
-import { mailtoLink, updateMail } from "./mail-sequence.mjs";
+import { gmailLink, mailtoLink, updateMail } from "./mail-sequence.mjs";
 
 const STATE_LABEL = { borrador: "Borrador", aprobado: "Aprobado", enviado: "Enviado", descartado: "Descartado" };
 
 // Prospección → Bandeja de salida (etapa 2 del plan estilo Harvey, 30/10): mails en borrador de 3 pasos por prospecto.
 // El CRM NO envía: una persona revisa, aprueba y lo manda desde su correo ("Abrir en mi correo"), y después lo marca como enviado.
-export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount }) {
+export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount, account }) {
   const [filter, setFilter] = useState("borrador");
   const [message, setMessage] = useState("");
   const list = Array.isArray(outbox) ? outbox : [];
@@ -20,7 +20,7 @@ export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount }) {
         <div>
           <span className="eyebrow">Mails en 3 pasos por prospecto</span>
           <h2><Mail size={18} aria-hidden="true" /> Bandeja de salida</h2>
-          <p className="muted small">El CRM arma el texto y vos decidís. Nada sale solo: revisá, aprobá y mandalo desde tu correo con «Abrir en mi correo». Si el destinatario está en No contactar, el borrador se descarta solo.</p>
+          <p className="muted small">El CRM arma el texto y vos decidís. Nada sale solo: revisá, aprobá y mandalo desde tu Gmail con «Abrir en Gmail». Si el destinatario está en No contactar, el borrador se descarta solo.</p>
         </div>
         <div className="panel-head-actions">
           <button type="button" className="primary" onClick={() => setMessage(onArmQueue())} disabled={!queueCount}><Wand2 size={15} /> Armar para los primeros de la cola ({queueCount})</button>
@@ -49,7 +49,8 @@ export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount }) {
               </label>
               <div className="queue-actions">
                 {item.state === "borrador" && <button type="button" className="primary" onClick={() => patch(item.id, { state: "aprobado" })}><Check size={15} /> Aprobar</button>}
-                {item.state === "aprobado" && <a className="primary link-pill" href={mailtoLink(item)}><Send size={15} /> Abrir en mi correo</a>}
+                {item.state === "aprobado" && <a className="primary link-pill" href={gmailLink(item, account)} target="_blank" rel="noreferrer"><Send size={15} /> Abrir en Gmail</a>}
+                {item.state === "aprobado" && <a className="secondary link-pill" href={mailtoLink(item)}>Abrir en otro programa de correo</a>}
                 {item.state === "aprobado" && <button type="button" className="secondary" onClick={() => patch(item.id, { state: "enviado", sentAt: new Date().toISOString() })}>Ya lo mandé</button>}
                 {item.state === "aprobado" && <button type="button" className="secondary" onClick={() => patch(item.id, { state: "borrador" })}>Volver a borrador</button>}
                 <button type="button" className="secondary" onClick={() => copy(item)}><Copy size={15} /> Copiar</button>

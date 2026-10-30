@@ -2,7 +2,7 @@
 export const HOME_TZ = 'America/Argentina/Buenos_Aires';
 export const DEFAULT_PLACES = [
   { name: 'Mar del Plata', latitude: -38.0055, longitude: -57.5426, timezone: HOME_TZ },
-  { name: 'Berazategui', latitude: -34.7616, longitude: -58.2088, timezone: HOME_TZ },
+  { name: 'Villa Domínico', latitude: -34.6930, longitude: -58.3290, timezone: HOME_TZ },
 ];
 
 export function timeIn(timezone = HOME_TZ, now = new Date()) {

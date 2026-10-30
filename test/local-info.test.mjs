@@ -33,7 +33,7 @@ test('el componente muestra la hora y el clima de los lugares', async () => {
   const fetcher = async () => ({ json: async () => ({ current: { temperature_2m: 12.2, weather_code: 0 }, timezone: 'America/Argentina/Buenos_Aires' }) });
   render(React.createElement(LocalInfo, { fetcher }));
   assert.ok(screen.getByText(/Mar del Plata/));
-  assert.ok(screen.getByText(/Berazategui/));
+  assert.ok(screen.getByText(/Villa Domínico/));
   await screen.findAllByText(/12°/);
   cleanup();
 });

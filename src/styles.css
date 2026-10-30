@@ -1523,3 +1523,11 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .reply-suggester { display: grid; gap: 8px; margin: 10px 0; padding-top: 10px; border-top: 1px solid var(--color-border); }
 .reply-draft { display: grid; gap: 8px; }
 .reply-draft textarea { width: 100%; min-width: 0; box-sizing: border-box; resize: vertical; }
+
+/* Lista de no contactar (30/10) */
+.dnc-form { display: grid; grid-template-columns: 140px 1fr 1fr auto; gap: 10px; align-items: end; margin: 12px 0; }
+.dnc-form label { display: grid; gap: 4px; font-size: 0.85rem; }
+.dnc-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.dnc-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: 10px; }
+.dnc-list li .ghost { margin-left: auto; }
+@media (max-width: 760px) { .dnc-form { grid-template-columns: minmax(0, 1fr); } }

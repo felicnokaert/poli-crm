@@ -23,6 +23,8 @@ import { readFileSmart } from './text-decode.mjs';
 import { applyEnrichment } from './prospect-enrich-apply.mjs';
 import { DAILY_TARGET, currentFocus, scopeDescription, zoneStatus } from './prospect-plan.mjs';
 
+import { DoNotContactPanel } from './DoNotContactPanel.jsx';
+import { addBlock, filterAllowed } from './do-not-contact.mjs';
 import { ProspectRow, downloadCsv, ProspectSheet, addToScope, ProspectDetail, ProspectQueue, SearchHistory, searchSummary } from './ProspectParts.jsx';
 export { searchSummary } from './ProspectParts.jsx';
 
@@ -37,6 +39,8 @@ const sharedMatcher = createMatcher();
 
 function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, cities: citiesProp, provinces: provincesProp, requests, supabase }) {
   const prospects = Array.isArray(data.prospects) ? data.prospects : EMPTY;
+  const blockList = Array.isArray(data.doNotContact) ? data.doNotContact : EMPTY;
+  const blockRecord = (record, reason = 'Marcado desde Prospección') => setData((current) => ({ ...current, doNotContact: addBlock(current.doNotContact, record, { reason, by: userEmail }).list }));
   const clients = Array.isArray(data.clients) ? data.clients : EMPTY;
   const switches = data.prospectSwitches || {};
   const [tab, setTab] = useState(supabase ? 'hoy' : 'prospectos'); // sin cuenta en línea no hay facturación: entra directo a la lista
@@ -542,7 +546,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     </div>
   );
 
-  const queue = buildQueue(bySearch, checks, { skipped, rules: data.prospectRules });
+  const queue = buildQueue(bySearch, checks, { skipped, rules: data.prospectRules, blocked: blockList });
   const detail = detailId ? prospectsById.get(detailId) : null;
 
   return (
@@ -559,20 +563,21 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       </div>
 
       <div className="segmented prospect-tabs" role="tablist" aria-label="Secciones de Prospección">
-        {[['hoy', 'Cola del día'], ['prospectos', 'Prospectos'], ['buscar', 'Buscar con IA'], ['reglas', 'Reglas']].map(([key, label]) => (
+        {[['hoy', 'Cola del día'], ['prospectos', 'Prospectos'], ['buscar', 'Buscar con IA'], ['reglas', 'Reglas'], ['nocontactar', 'No contactar']].map(([key, label]) => (
           <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? 'selected' : ''} onClick={() => setTab(key)}>{label}</button>
         ))}
       </div>
 
       {tab === 'hoy' && (
         <DailyQueues
-          rules={data.prospectRules} supabase={supabase} clients={clients} prospects={prospects} checks={checks} userEmail={userEmail} setData={setData}
+          rules={data.prospectRules} supabase={supabase} clients={filterAllowed(clients, blockList)} prospects={filterAllowed(prospects, blockList)} checks={checks} userEmail={userEmail} setData={setData}
           defaultSender={String(userEmail || '').split('@')[0].split(/[._-]/)[0].replace(/^./, (c) => c.toLocaleUpperCase('es-AR'))}
           onOpenClient={onOpenClient} onMarkProspect={mark} onOpenProspect={(id) => { setTab('prospectos'); setDetailId(id); }}
           skipped={skipped} onSkip={(id) => setSkipped((list) => [...list, id])}
         />
       )}
 
+      {tab === 'nocontactar' && <DoNotContactPanel list={blockList} userEmail={userEmail} onChange={(doNotContact) => setData((current) => ({ ...current, doNotContact }))} />}
       {tab === 'reglas' && <ProspectRulesPanel rules={data.prospectRules} onChange={(prospectRules) => setData((current) => ({ ...current, prospectRules }))} />}
 
       {tab === 'buscar' && (<>
@@ -815,7 +820,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         </div>
         <button type="button" className="secondary" disabled={!shown.length} onClick={() => downloadCsv(shown)}>Descargar CSV ({shown.length})</button>
       </div>
-      {listView === 'cola' && <ProspectQueue queue={queue} byId={prospectsById} checks={checks} onMark={mark} onSkip={(id) => setSkipped((list) => [...list, id])} onOpen={setDetailId} onEnrich={async (prospect) => setMessage(await enrich(prospect))} onResearch={async (prospect) => setMessage(await researchProspect(prospect))} />}
+      {listView === 'cola' && <ProspectQueue queue={queue} byId={prospectsById} checks={checks} onMark={mark} onBlock={blockRecord} onSkip={(id) => setSkipped((list) => [...list, id])} onOpen={setDetailId} onEnrich={async (prospect) => setMessage(await enrich(prospect))} onResearch={async (prospect) => setMessage(await researchProspect(prospect))} />}
       {listView !== 'cola' && shown.length === 0 && <p className="muted">{prospects.length ? 'No hay prospectos con ese filtro.' : 'Todavía no cargaste prospectos.'}</p>}
       {listView === 'planilla' && shown.length > 0 && <ProspectSheet rows={page} checks={checks} onMark={mark} onOpenClient={onOpenClient} onDelete={remove} onOpen={setDetailId} />}
       {listView === 'tarjetas' && (
@@ -856,7 +861,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       {detail && (
         <ProspectDetail
           key={detail.id} defaultSender={String(userEmail || '').split('@')[0].split(/[._-]/)[0].replace(/^./, (c) => c.toLocaleUpperCase('es-AR'))} prospect={detail} check={checks.get(detail.id) || { status: 'Nuevo', matches: [] }}
-          onClose={() => setDetailId(null)} onSave={saveProspect} onMark={mark} onOpenClient={onOpenClient} onDelete={remove}
+          onClose={() => setDetailId(null)} onSave={saveProspect} onMark={mark} onBlock={blockRecord} onOpenClient={onOpenClient} onDelete={remove}
           onEnrich={async (prospect) => setMessage(await enrich(prospect))}
         />
       )}

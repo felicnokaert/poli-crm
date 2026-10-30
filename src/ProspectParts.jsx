@@ -147,7 +147,7 @@ const FICHA_FIELDS = [
 ];
 
 // Ficha del prospecto: todo lo que se sabe, editable, y desde dónde salió.
-export function ProspectDetail({ defaultSender, prospect, check, onClose, onSave, onMark, onBlock, onEnrich, onOpenClient, onDelete }) {
+export function ProspectDetail({ defaultSender, prospect, check, onClose, onSave, onMark, onBlock, onArmMail, onEnrich, onOpenClient, onDelete }) {
   const [form, setForm] = useState({ ...prospect });
   const [note, setNote] = useState('');
   const quality = contactQuality(form);
@@ -205,6 +205,7 @@ export function ProspectDetail({ defaultSender, prospect, check, onClose, onSave
         <h4>Estado</h4>
         <div className="panel-head-actions">
           {PROSPECT_STATES.map((state) => <button key={state} type="button" className={prospect.state === state ? 'primary' : 'secondary'} onClick={() => onMark(prospect.id, state, '')}>{state}</button>)}
+          {onArmMail && prospect.email && <button type="button" className="secondary" onClick={() => onArmMail(prospect)}>Armar mails (3 pasos)</button>}
           {onBlock && <button type="button" className="danger-link" onClick={() => { if (window.confirm(`¿Agregar a ${prospect.company || 'este prospecto'} a la lista de No contactar?`)) onBlock(prospect, 'Marcado desde la ficha'); }}>No contactar nunca</button>}
         </div>
         <p className="muted small">
@@ -294,7 +295,7 @@ function ResearchBox({ research }) {
   );
 }
 
-export function ProspectQueue({ queue, byId, checks, onMark, onBlock, onSkip, onOpen, onEnrich, onResearch }) {
+export function ProspectQueue({ queue, byId, checks, onMark, onBlock, onArmMail, onSkip, onOpen, onEnrich, onResearch }) {
   const [outcome, setOutcome] = useState('');
   const [note, setNote] = useState('');
   const current = byId.get(queue[0]);
@@ -338,6 +339,7 @@ export function ProspectQueue({ queue, byId, checks, onMark, onBlock, onSkip, on
           ))}
         </div>
         <button type="button" className="secondary" onClick={() => onSkip(current.id)}>Saltar por hoy</button>
+        {onArmMail && current.email && <button type="button" className="secondary" onClick={() => onArmMail(current)}>Armar mails (3 pasos)</button>}
         {onBlock && <button type="button" className="secondary" onClick={() => { if (window.confirm(`¿Agregar a ${current.company || 'este prospecto'} a la lista de No contactar? No va a volver a aparecer en las colas.`)) onBlock(current, 'Marcado desde la cola'); }}>No contactar nunca</button>}
         <button type="button" className="secondary" onClick={() => onOpen(current.id)}>Abrir ficha</button>
         {current.website && !/(facebook|instagram|wa\.me)/i.test(current.website) && <button type="button" className="secondary" onClick={() => onEnrich(current)}>Buscar redes y contacto</button>}

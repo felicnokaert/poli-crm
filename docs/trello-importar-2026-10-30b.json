@@ -1,0 +1,130 @@
+{
+ "name": "CRM — cierre 30/10 y estilo Harvey",
+ "lists": [
+  {
+   "id": "h",
+   "name": "Vie 30/10 · Cierre (hasta las 16 hs)",
+   "closed": false
+  },
+  {
+   "id": "l",
+   "name": "Lun 02/11",
+   "closed": false
+  },
+  {
+   "id": "s",
+   "name": "Prospección estilo Harvey",
+   "closed": false
+  }
+ ],
+ "cards": [
+  {
+   "id": "crm-30oct-b01",
+   "idList": "h",
+   "name": "ML: pausar campaña «Compartida B2 y Best Sellers» y subir presupuesto a las de baldes de FOAM",
+   "desc": "",
+   "due": "2026-10-30T19:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-b02",
+   "idList": "h",
+   "name": "Shopify: despublicar las 11 colecciones sobrantes",
+   "desc": "",
+   "due": "2026-10-30T19:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-b03",
+   "idList": "h",
+   "name": "Shopify: pasarle a Claude los 3 links rotos del menú (o arreglarlos en Navegación)",
+   "desc": "",
+   "due": "2026-10-30T19:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-b04",
+   "idList": "h",
+   "name": "Shopify: revisar pesos y fotos de los 16 productos nuevos (HOGAR y EPP) y la colección Hogar",
+   "desc": "",
+   "due": "2026-10-30T19:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-b05",
+   "idList": "h",
+   "name": "Lista de páginas de Facebook e Instagram por marca",
+   "desc": "",
+   "due": "2026-10-30T19:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-b06",
+   "idList": "l",
+   "name": "Revisar caída de ventas ML POLIPLAST (-29 % en 7 días)",
+   "desc": "",
+   "due": "2026-11-02T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-b07",
+   "idList": "l",
+   "name": "Clips ML: cargar los que tienen clip y grabar la lista de la semana",
+   "desc": "",
+   "due": "2026-11-02T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-b08",
+   "idList": "s",
+   "name": "Elegir buzón de cada persona para enviar mails (ej. felipe@grupopoliplast.com.ar) y volumen diario inicial",
+   "desc": "",
+   "due": null,
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-b09",
+   "idList": "s",
+   "name": "Definir texto de baja y dirección postal para los mails",
+   "desc": "",
+   "due": null,
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-b10",
+   "idList": "s",
+   "name": "Validar con un abogado el envío de mails en frío (datos de empresas)",
+   "desc": "",
+   "due": null,
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-b11",
+   "idList": "s",
+   "name": "Probar la Bandeja de salida con 3 prospectos reales y ajustar los textos",
+   "desc": "",
+   "due": null,
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-b12",
+   "idList": "s",
+   "name": "Claude: etapa 3, envío desde la cuenta de cada persona (Gmail/Workspace) con límite, baja y pausa",
+   "desc": "",
+   "due": null,
+   "dueComplete": false,
+   "closed": false
+  }
+ ]
+}

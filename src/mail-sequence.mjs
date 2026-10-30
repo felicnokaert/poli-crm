@@ -70,3 +70,6 @@ export function mergeOutbox(remote = [], local = []) {
 }
 
 export const mailtoLink = (item) => `mailto:${encodeURIComponent(item.to)}?subject=${encodeURIComponent(item.subject)}&body=${encodeURIComponent(item.body)}`;
+
+// Abre el borrador en Gmail (web) con la cuenta indicada (ej. felipe@grupopoliplast.com.ar): no hace falta tener un programa de correo instalado.
+export const gmailLink = (item, account = '') => `https://mail.google.com/mail/?view=cm&fs=1${account ? `&authuser=${encodeURIComponent(account)}` : ''}&to=${encodeURIComponent(item.to)}&su=${encodeURIComponent(item.subject)}&body=${encodeURIComponent(item.body)}`;

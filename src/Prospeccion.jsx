@@ -587,7 +587,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         />
       )}
 
-      {tab === 'salida' && <OutboxPanel outbox={outbox} onChange={(next) => setData((current) => ({ ...current, outbox: next }))} queueCount={Math.min(10, queue.map((id) => prospectsById.get(id)).filter((item) => String(item?.email || '').includes('@')).length)} onArmQueue={() => armMails(queue.map((id) => prospectsById.get(id)).filter((item) => String(item?.email || '').includes('@')).slice(0, 10))} />}
+      {tab === 'salida' && <OutboxPanel account={userEmail} outbox={outbox} onChange={(next) => setData((current) => ({ ...current, outbox: next }))} queueCount={Math.min(10, queue.map((id) => prospectsById.get(id)).filter((item) => String(item?.email || '').includes('@')).length)} onArmQueue={() => armMails(queue.map((id) => prospectsById.get(id)).filter((item) => String(item?.email || '').includes('@')).slice(0, 10))} />}
       {tab === 'nocontactar' && <DoNotContactPanel list={blockList} userEmail={userEmail} onChange={(doNotContact) => setData((current) => ({ ...current, doNotContact }))} />}
       {tab === 'reglas' && <ProspectRulesPanel rules={data.prospectRules} onChange={(prospectRules) => setData((current) => ({ ...current, prospectRules }))} />}
 

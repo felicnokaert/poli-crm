@@ -1,3 +1,6 @@
+
+import { mergeBlocks } from './do-not-contact.mjs';
+
 const EMPTY_STATE = { clients: [], interactions: [], tasks: [], inbox: [], opportunities: [], sales: [], boardLists: [], boardCards: [], salesGoals: [], businessUnits: [], deletedRecordIds: {}, dismissedInboxEventIds: [], ignoredWhatsAppContacts: [], planChecks: {}, commercialMasterVersion: '', historyResetVersion: '', tasksClosedThrough: '', primaryChannel: 'general', profileName: '', mergeLogs: [], duplicateReviewDecisions: [], prospects: [], prospectSearches: [], researchJobs: [] };
 const RECORD_COLLECTIONS = ['clients', 'interactions', 'tasks', 'opportunities', 'sales', 'boardLists', 'boardCards', 'salesGoals', 'businessUnits', 'prospects', 'prospectSearches', 'researchJobs'];
 const OBSOLETE_PREVIEW_TYPES = new Set(['unread_preview', 'unread_notice', 'verified_unread_preview']);
@@ -150,6 +153,7 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
     // Publicidad de Mercado Libre (tablas pegadas por Felipe, una por cuenta): gana la pegada más reciente de cada cuenta.
     ...(local.mlAds || remote.mlAds ? { mlAds: newerByAccount(local.mlAds, remote.mlAds) } : {}),
     // Reglas de prospección editadas (solo las que difieren de las de fábrica): gana lo de este navegador.
+    ...(local.doNotContact || remote.doNotContact ? { doNotContact: mergeBlocks(remote.doNotContact, local.doNotContact) } : {}),
     ...(local.prospectRules || remote.prospectRules ? { prospectRules: { ...(remote.prospectRules || {}), ...(local.prospectRules || {}) } } : {}),
     // Matriz de automatizaciones (solo lo que Felipe editó o agregó, por idea): gana lo de este navegador.
     ...(local.automations || remote.automations ? { automations: Object.fromEntries(Object.entries({ ...(remote.automations || {}), ...(local.automations || {}) }).filter(([, row]) => row)) } : {}),

@@ -3,6 +3,7 @@
 import { possibleWhatsAppLink } from './prospect-model.mjs';
 import { DEFAULT_RULES, normalizeRules } from './prospect-rules.mjs';
 import { signalPoints } from './prospect-signals.mjs';
+import { blockedBy } from './do-not-contact.mjs';
 
 // Aporte de la planilla de prospección (puntaje, encaje y zona) al orden de la cola. El puntaje se toma de 0 a 100
 // (si viene de 0 a 10 se pasa a esa escala); suma hasta 4. Encaje Alto suma 3 y Medio 1; zona A suma 2 y B 1.
@@ -37,11 +38,11 @@ export function prospectScore(prospect, check = { status: 'Nuevo' }, rules = DEF
 
 // Ids en orden de trabajo: solo "No contactado", sin competidores ni duplicados confirmados,
 // sin los saltados hoy. Empata por fecha de carga (primero lo más viejo).
-export function buildQueue(prospects = [], checks = new Map(), { skipped = [], rules = DEFAULT_RULES } = {}) {
+export function buildQueue(prospects = [], checks = new Map(), { skipped = [], rules = DEFAULT_RULES, blocked = [] } = {}) {
   const skip = new Set(skipped);
   const active = normalizeRules(rules);
   return prospects
-    .filter((item) => item.state === 'No contactado' && !skip.has(item.id))
+    .filter((item) => item.state === 'No contactado' && !skip.has(item.id) && !blockedBy(item, blocked))
     .map((item) => ({ item, score: prospectScore(item, checks.get(item.id), active) }))
     .filter((entry) => entry.score > -50)
     .sort((a, b) => b.score - a.score || String(a.item.createdAt || '').localeCompare(String(b.item.createdAt || '')))

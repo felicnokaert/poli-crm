@@ -1,0 +1,198 @@
+{
+ "name": "CRM — pendientes 30/10",
+ "lists": [
+  {
+   "id": "hoy",
+   "name": "Vie 30/10 · Hoy",
+   "closed": false
+  },
+  {
+   "id": "lun",
+   "name": "Lun 02/11 · Clips",
+   "closed": false
+  },
+  {
+   "id": "dec",
+   "name": "Decisiones de Felipe (destraban borradores)",
+   "closed": false
+  },
+  {
+   "id": "seg",
+   "name": "Seguimiento",
+   "closed": false
+  }
+ ],
+ "cards": [
+  {
+   "id": "crm-30oct-01",
+   "idList": "hoy",
+   "name": "Shopify: despublicar las 11 colecciones sobrantes (Prueba, landing, Aislación, Impermeabilización, Insumos, Desarrollos a medida, Automotriz, Línea blanca y confort, Textil, Soluciones, PURMAC promociones-1)",
+   "desc": "",
+   "due": "2026-10-30T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-02",
+   "idList": "hoy",
+   "name": "Shopify: revisar los 13 borradores nuevos (10 HOGAR + 3 EPP): pesos estimados, stock y publicar",
+   "desc": "",
+   "due": "2026-10-30T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-03",
+   "idList": "hoy",
+   "name": "Shopify: conseguir fotos de mamelucos 4510/4530/4565, cartuchos 6001/6003/2091, mascarilla 9332+ y anteojos Solus",
+   "desc": "",
+   "due": "2026-10-30T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-04",
+   "idList": "hoy",
+   "name": "Mercado Libre: pausar campaña «Compartida B2 y Best Sellers» (ACOS 136-178 %)",
+   "desc": "",
+   "due": "2026-10-30T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-05",
+   "idList": "hoy",
+   "name": "Armar lista de páginas de Facebook e Instagram por marca (para conectar al CRM)",
+   "desc": "",
+   "due": "2026-10-30T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-06",
+   "idList": "hoy",
+   "name": "RAPYP (+54 9 11 6856-5952): averiguar quién registró el número en Meta (admin de la página RAPYP, cuenta de hola@rapyp.com o soporte de Meta)",
+   "desc": "",
+   "due": "2026-10-30T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-07",
+   "idList": "lun",
+   "name": "Clips de Mercado Libre: cargar qué publicaciones tienen clip (POLIPLAST y FOAM) en Más → Datos → Mercado Libre",
+   "desc": "",
+   "due": "2026-11-02T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-08",
+   "idList": "lun",
+   "name": "Clips: grabar la lista de la semana (Espuma PU kit 2 kg, Resina Epoxi 750 g, Easyspray x6, pistola 34 cm, kit 10 kg, fibra de vidrio, filtro 3M 6005, almohada Sogni)",
+   "desc": "",
+   "due": "2026-11-02T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-09",
+   "idList": "dec",
+   "name": "Decidir Pinceles: ¿cuál es sintético y cuál económico? (ML y Shopify tienen PC-N15H y PC-AM cruzados)",
+   "desc": "",
+   "due": null,
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-10",
+   "idList": "dec",
+   "name": "Decidir precio SOFT-GUN: Shopify $1.336.000 vs ML −10 % $1.955.766",
+   "desc": "",
+   "due": null,
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-11",
+   "idList": "dec",
+   "name": "Pasar precio de venta de PMA-25DUO (hoy $0)",
+   "desc": "",
+   "due": null,
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-12",
+   "idList": "dec",
+   "name": "Silicona líquida para moldes: pasar precios (5 variantes) y fotos",
+   "desc": "",
+   "due": null,
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-13",
+   "idList": "dec",
+   "name": "Bisagras 126-11 ($49.815) y Herraje 126-24 ($410.400): ¿se publican? (en ML están pausadas)",
+   "desc": "",
+   "due": null,
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-14",
+   "idList": "dec",
+   "name": "Placa PRFV: pasar SKU y pesos de las variantes",
+   "desc": "",
+   "due": null,
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-15",
+   "idList": "seg",
+   "name": "Penosil (+54 9 11 7155-8957): probar coexistencia desde el CRM cuando la compañera tenga el celular a mano",
+   "desc": "",
+   "due": null,
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-16",
+   "idList": "seg",
+   "name": "Pedidos de Shopify #1174, #1175 y #1176 sin despachar hace unos 45 días (los ve Brenda); #1175/#1176 posible duplicado",
+   "desc": "",
+   "due": null,
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-17",
+   "idList": "seg",
+   "name": "Full: decidir qué retirar o promocionar del stock antiguo (cargos 08/11 FOAM y 21/11 POLIPLAST)",
+   "desc": "",
+   "due": null,
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-18",
+   "idList": "seg",
+   "name": "ME1 POLIPLAST 60 %: evaluar pasar a Flex o colecta con Brenda",
+   "desc": "",
+   "due": null,
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-30oct-19",
+   "idList": "seg",
+   "name": "Enviar mensajes de recupero de carritos abandonados grandes (Kit Poliurea Fría, EasySpray)",
+   "desc": "",
+   "due": null,
+   "dueComplete": false,
+   "closed": false
+  }
+ ]
+}

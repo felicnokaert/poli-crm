@@ -17,7 +17,7 @@ async function gmailCall(body, session) {
 
 const KIND_LABEL = { baja: "Pidió la baja", rebote: "Rebotó", "otro-contacto": "Pasó otro contacto", "no-interesa": "No le interesa", interesado: "Interesado", revisar: "Para leer" };
 
-export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount, account, session, onReplies }) {
+export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount, account, session, onReplies, onOtherContact }) {
   const [filter, setFilter] = useState("borrador");
   const [message, setMessage] = useState("");
   const [gmail, setGmail] = useState(null);
@@ -119,7 +119,7 @@ export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount, account,
                 <span className="badge">Paso {item.step} · {item.stepName}</span>
                 <span className="muted small">Para: {item.to} · le toca el {item.dueOn}{item.note ? ` · ${item.note}` : ""}</span>
               </div>
-              {item.reply && <p className="outbox-reply" role="note"><strong>{KIND_LABEL[item.reply.kind] || "Respondió"}:</strong> {item.reply.snippet} <span className="muted small">→ {item.reply.action}{item.reply.emails?.length ? ` (${item.reply.emails.join(", ")})` : ""}</span></p>}
+              {item.reply && <p className="outbox-reply" role="note"><strong>{KIND_LABEL[item.reply.kind] || "Respondió"}:</strong> {item.reply.snippet} <span className="muted small">→ {item.reply.action}{item.reply.emails?.length ? ` (${item.reply.emails.join(", ")})` : ""}</span>{item.reply.kind === "otro-contacto" && (item.reply.emails || []).map((address) => <button key={address} type="button" className="secondary" onClick={() => setMessage(onOtherContact?.(item, address) || "")}>Armar mails para {address}</button>)}</p>}
               {item.sentVia === "gmail" && <span className="muted small">Enviado desde el CRM{item.sentAt ? ` el ${item.sentAt.slice(0, 10)}` : ""}</span>}
               <label className="outbox-field">Asunto
                 <input value={item.subject} onChange={(event) => patch(item.id, { subject: event.target.value })} disabled={item.state === "enviado"} />

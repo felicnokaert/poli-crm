@@ -31,3 +31,11 @@ test('las señales suben el puntaje de la cola y quedan en la investigación', (
   assert.ok(research.signals.some((item) => item.key === 'aplicador'));
   assert.ok(research.reasoning.some((line) => line.startsWith('Señal:')));
 });
+
+test('detecta tienda online, sucursales y búsqueda de personal, con puntos editables', () => {
+  const signals = detectSignals(['Comprá online con envíos a todo el país. Conocé nuestras sucursales. Trabajá con nosotros: estamos buscando vendedores.']);
+  assert.deepEqual(signals.map((item) => item.key).sort(), ['contratando', 'sucursales', 'tienda']);
+  assert.equal(signalPoints(signals, DEFAULT_RULES), 3);
+  assert.equal(signalPoints(signals, normalizeRules({ signalStore: 3, signalBranches: 0, signalHiring: 2 })), 5);
+  assert.deepEqual(detectSignals(['Somos una carpintería familiar']), []);
+});

@@ -47,3 +47,14 @@ export function signalPoints(signals = [], rules = {}) {
   }
   return points;
 }
+
+// Reseñas del mapa (Google Maps): una empresa con buen puntaje y varias reseñas está activa. 10+ reseñas con 4 estrellas o más
+// suma lo que diga la regla; con 50+ suma el doble. Sin datos de reseñas (OpenStreetMap no los trae) no suma nada.
+export function reviewPoints(prospect = {}, rules = {}) {
+  const rating = Number(prospect.rating);
+  const reviews = Number(prospect.reviews);
+  if (!(rating >= 4) || !(reviews >= 10)) return 0;
+  return (rules.signalReviews ?? 1) * (reviews >= 50 ? 2 : 1);
+}
+
+export const reviewLabel = (prospect = {}) => (Number(prospect.reviews) > 0 && Number(prospect.rating) > 0 ? `${Number(prospect.rating).toFixed(1).replace('.', ',')} ★ · ${prospect.reviews} reseñas en el mapa` : '');

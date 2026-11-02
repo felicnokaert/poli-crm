@@ -68,3 +68,23 @@ test('listingContext arma la ficha sin links ni mails y buildAiContext la incluy
   assert.match(buildCtx({ listing: text }), /Ficha de la publicación/);
   assert.equal(listingContext({}), '');
 });
+
+import { familySiblings, trainingContext } from '../src/assistant-training.mjs';
+import { CUSTOMER_PROMPT } from '../lib/assistant-ai.mjs';
+test('familySiblings trae respuestas de otras publicaciones de la misma familia y trainingContext las rotula', () => {
+  const titles = { A: 'Poxiplast Resina 150 g', B: 'Poxiplast Resina 3 Kg', C: 'Penosil Espuma' };
+  const questions = [
+    { id: 1, item_id: 'A', question: 'cuantos metros cubre', answer: '' },
+    { id: 2, item_id: 'B', question: 'cuantos metros cubre', answer: 'Para pintada de protección 200 gramos x m2.' },
+    { id: 3, item_id: 'C', question: 'cuantos metros cubre', answer: 'otra cosa' },
+  ];
+  const family = familySiblings({ id: 1, item_id: 'A', question: 'cuantos metros cubre' }, questions, titles);
+  assert.deepEqual(family.map((row) => row.id), [2]);
+  const { context } = trainingContext({ id: 1, item_id: 'A', question: 'cuantos metros cubre', title: titles.A }, [], { family });
+  assert.match(context, /Otra publicación de la familia/);
+  assert.match(context, /200 gramos/);
+});
+test('el perfil cliente no deja inventar ni hablar como interno', () => {
+  assert.match(CUSTOMER_PROMPT, /DERIVAR/);
+  assert.match(CUSTOMER_PROMPT, /NUNCA inventes/);
+});

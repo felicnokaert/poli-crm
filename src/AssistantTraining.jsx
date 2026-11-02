@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { GraduationCap, Play } from "lucide-react";
 import { askAi, TeachForm } from "./AssistantWindow.jsx";
 import { matchTaught } from "./assistant-answer.mjs";
-import { appendEvalHistory, conflictingAnswers, evalSummary, pickQuestions, realAnswer, suggestTeachings, trainingContext, trainingQuestion, VERDICT_LABEL } from "./assistant-training.mjs";
+import { appendEvalHistory, conflictingAnswers, evalSummary, familySiblings, pickQuestions, realAnswer, suggestTeachings, trainingContext, trainingQuestion, VERDICT_LABEL } from "./assistant-training.mjs";
 
 // Más → Datos → Asistente (solo Felipe, 21/10). Toma preguntas reales ya respondidas en Mercado Libre, se
 // las hace a la IA sin mostrarle la respuesta real y pone las dos lado a lado. Si la IA le erra, "Enseñarle"
@@ -126,19 +126,24 @@ export function AssistantTraining({ supabase }) {
     const { questions, titles, guides, taught } = await load();
     const picked = pickQuestions(questions, titles, { count });
     if (!picked.length) { setStatus("No encontré preguntas de Mercado Libre para probar."); setRunning(false); return; }
-    for (const [index, row] of picked.entries()) {
-      if (stop.current) break;
-      setStatus(`Preguntando ${index + 1} de ${picked.length}…`);
+    // 3/11: de a 4 en paralelo (antes de a una: 40 preguntas tardaban unos 5 minutos) y las fichas de las publicaciones en UNA consulta.
+    const listings = {};
+    try {
+      const ids = [...new Set(picked.map((row) => row.item_id))];
+      const { data } = await supabase.from("ml_items").select("id,title,description,attributes").in("id", ids);
+      for (const item of data || []) listings[item.id] = item;
+    } catch { /* sin fichas: la IA contesta igual */ }
+    let done = 0;
+    let fatal = false;
+    async function work(row) {
       const question = trainingQuestion(row);
       const siblings = questions.filter((other) => other.item_id === row.item_id).slice(0, 40);
-      // 3/11: la ficha real de la publicación (atributos y descripción) para que conteste medidas, colores y usos con el dato de la publicación.
-      let listing = null;
-      try { listing = (await supabase.from("ml_items").select("title,description,attributes").eq("id", row.item_id).maybeSingle()).data || null; } catch { listing = null; }
-      const { team, context } = trainingContext(row, siblings, { guides, taught: matchTaught(taught, question), listing });
+      const family = familySiblings(row, questions, titles);
+      const { team, context } = trainingContext(row, siblings, { guides, taught: matchTaught(taught, question), listing: listings[row.item_id] || null, family });
       const reply = await askAi(supabase, { question, context }).catch(() => ({ ok: false, reason: "red" }));
       if (!reply.ok && ["sin-clave", "sin-credito", "clave"].includes(reply.reason)) {
+        fatal = true;
         setStatus(`${reply.error || "La IA no está disponible."}${reply.detail ? ` (${reply.detail})` : ""}`);
-        setRunning(false);
         return;
       }
       if (reply.usage) { tokens += (reply.usage.input || 0) + (reply.usage.output || 0); setUsage((current) => ({ input: current.input + (reply.usage.input || 0), output: current.output + (reply.usage.output || 0) })); }
@@ -152,14 +157,21 @@ export function AssistantTraining({ supabase }) {
         }
         results.push({ intent: row.intent, verdict: verdict.verdict });
       }
+      done += 1;
+      setStatus(`Listas ${done} de ${picked.length}…`);
       setRows((current) => [{ ...row, asked: question, ai: reply.ok ? reply.text : `(No respondió: ${reply.error || reply.reason})`, team, ...(verdict || {}) }, ...current]);
     }
+    let next = 0;
+    await Promise.all(Array.from({ length: Math.min(4, picked.length) }, async () => {
+      while (!stop.current && !fatal && next < picked.length) { const row = picked[next]; next += 1; await work(row); }
+    }));
+    if (fatal) { setRunning(false); return; }
     if (auto && results.length) {
-      const done = evalSummary(results);
-      setSummary(done);
-      const next = appendEvalHistory(readHistory(), done, { tokens });
-      setHistory(next);
-      try { localStorage.setItem(EVAL_HISTORY_KEY, JSON.stringify(next)); } catch { /* sin almacenamiento: el resumen igual se ve */ }
+      const finished = evalSummary(results);
+      setSummary(finished);
+      const nextHistory = appendEvalHistory(readHistory(), finished, { tokens });
+      setHistory(nextHistory);
+      try { localStorage.setItem(EVAL_HISTORY_KEY, JSON.stringify(nextHistory)); } catch { /* sin almacenamiento: el resumen igual se ve */ }
     }
     setStatus(stop.current ? "Pausado." : auto ? "Listo. Abajo están las que falló o no supo: enseñale la correcta." : "Listo. Revisá cada una: si la IA le erró, enseñale la correcta.");
     setRunning(false);

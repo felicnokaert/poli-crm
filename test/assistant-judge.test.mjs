@@ -59,3 +59,12 @@ test('modo juez en el servidor: manda el prompt del juez y devuelve veredicto y 
   assert.equal(sent.tools, undefined);
   assert.match(sent.system, /corrector de respuestas/);
 });
+
+import { listingContext, buildAiContext as buildCtx } from '../src/assistant-answer.mjs';
+test('listingContext arma la ficha sin links ni mails y buildAiContext la incluye', () => {
+  const text = listingContext({ title: 'Mica 100 g', description: 'Colores sueltos. Escribinos a ventas@x.com o https://x.com/a', attributes: [{ name: 'Color', value_name: 'Rojo' }, { name: 'GTIN', value_name: '123' }] });
+  assert.match(text, /Color: Rojo/);
+  assert.doesNotMatch(text, /GTIN|ventas@|https/);
+  assert.match(buildCtx({ listing: text }), /Ficha de la publicación/);
+  assert.equal(listingContext({}), '');
+});

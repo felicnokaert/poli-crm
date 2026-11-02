@@ -181,12 +181,28 @@ export function teamAnswer(rows = [], intent) {
 
 // Lo que se le pasa a la IA (src/AssistantWindow.jsx → lib/assistant-ai.mjs): primero la respuesta del
 // equipo y las líneas de la guía, después lo demás que encontró el buscador, todo con su origen.
-export function buildAiContext({ intent = null, facts = [], team = null, result = null, mlRows = [], taught = [] } = {}) {
+// Ficha de la publicación de Mercado Libre (3/11): atributos y descripción de lo que se vende, para contestar medidas, colores,
+// presentación y usos con el dato real de la publicación. Sin links ni teléfonos; recortada para no llenar el contexto.
+export function listingContext(item = {}, { maxDescription = 1500, maxAttributes = 14 } = {}) {
+  if (!item || (!item.description && !item.attributes && !item.title)) return '';
+  const attrs = (Array.isArray(item.attributes) ? item.attributes : [])
+    .map((attr) => ({ name: String(attr?.name || attr?.id || '').trim(), value: String(attr?.value_name ?? attr?.value ?? '').trim() }))
+    .filter((attr) => attr.name && attr.value && !/^(gtin|seller_sku|item_condition|brand_id)/i.test(attr.name) && attr.value.length < 120)
+    .slice(0, maxAttributes);
+  const description = String(item.description || '').replace(/https?:\/\/\S+/g, '').replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, '').replace(/\s+/g, ' ').trim().slice(0, maxDescription);
+  const lines = [`Ficha de la publicación en Mercado Libre${item.title ? ` («${String(item.title).slice(0, 120)}»)` : ''}:`];
+  if (attrs.length) lines.push(`- Datos: ${attrs.map((attr) => `${attr.name}: ${attr.value}`).join('; ')}`);
+  if (description) lines.push(`- Descripción: ${description}`);
+  return lines.length > 1 ? lines.join('\n') : '';
+}
+
+export function buildAiContext({ intent = null, facts = [], team = null, result = null, mlRows = [], taught = [], listing = '' } = {}) {
   const lines = [];
   if (intent) lines.push(`Tema detectado: ${intent.label}`);
   if (taught.length) lines.push('Respuestas validadas por Felipe (son las oficiales: usalas antes que todo lo demás):', ...taught.map((entry) => `- P: ${entry.question}${entry.product ? ` [${entry.product}]` : ''} | R: ${entry.answer}`));
   if (team && !team.varied) lines.push(`Respuesta del equipo en Mercado Libre (la que más repetimos, ${team.uses} de ${team.total} respuestas; es la válida): ${team.text}`);
   if (team?.varied) lines.push('En Mercado Libre respondimos distinto según el producto:', ...team.examples.map((text) => `- ${text}`));
+  if (listing) lines.push(listing);
   if (facts.length) lines.push('Según las guías de producto:', ...facts.map((fact) => `- ${fact.text} (${fact.guide}${fact.validated ? ', validada' : ', borrador'})`));
   for (const key of result?.order || Object.keys(result?.groups || {})) {
     const items = result?.groups?.[key];

@@ -2,7 +2,7 @@
 // IA con las mismas preguntas de Mercado Libre"). Se toma una pregunta ya respondida, se le pasa a la IA lo
 // que el equipo respondió en OTRAS preguntas de esa misma publicación (la respuesta real queda afuera) y se
 // compara con lo que respondimos de verdad. Si la IA le erra, Felipe le enseña la respuesta correcta.
-import { buildAiContext, cleanAnswer, detectIntent, guideFacts, quantities, teamAnswer } from './assistant-answer.mjs';
+import { buildAiContext, cleanAnswer, detectIntent, guideFacts, listingContext, quantities, teamAnswer } from './assistant-answer.mjs';
 
 // Mezcla estable (la misma semilla da el mismo orden) para no repetir siempre las mismas preguntas.
 function shuffle(list, seed) {
@@ -44,13 +44,13 @@ export function trainingQuestion(row) {
 }
 
 // Contexto para la IA sin la respuesta real: las demás preguntas de la publicación, las guías y lo enseñado.
-export function trainingContext(row, siblings = [], { guides = [], taught = [] } = {}) {
+export function trainingContext(row, siblings = [], { guides = [], taught = [], listing = null } = {}) {
   const others = siblings.filter((other) => other.id !== row.id && String(other.answer || '').trim())
     .map((other) => ({ kind: 'pregunta', body: `Pregunta: ${other.question}\nRespuesta: ${other.answer}` }));
   const intent = row.intent || detectIntent(row.question);
   const team = intent ? teamAnswer(others, intent) : null;
   const facts = intent ? guideFacts(guides, `${row.title} ${row.question}`, intent) : [];
-  return { team, context: buildAiContext({ intent, facts, team, mlRows: others, taught }) };
+  return { team, context: buildAiContext({ intent, facts, team, mlRows: others, taught, listing: listing ? listingContext(listing) : '' }) };
 }
 
 export const realAnswer = (row) => cleanAnswer(row.answer || '') || String(row.answer || '');

@@ -49,6 +49,7 @@ export function isIgnoredWhatsAppContact(rules = [], event = {}) {
   const identity = whatsappContactIdentity(event);
   const eventName = event.customer_name || event.customer_wa_id || '';
   return rules.some((rule) => {
+    if (rule.removed) return false; // «Corregir: es cliente»: la regla queda con marca de quitada para que la fusión no la traiga de vuelta
     const ruleIdentity = rule.contactIdentity || whatsappContactIdentity({ customer_wa_id: rule.customerWaId, customer_name: rule.customerName });
     if (ruleIdentity === identity) return true;
     const ruleName = rule.customerName || rule.customerWaId || '';

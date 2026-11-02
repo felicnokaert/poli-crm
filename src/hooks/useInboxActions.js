@@ -184,8 +184,11 @@ export function useInboxActions({ data, setData, confirm, session, inboxDraft, s
     setData({
       ...data,
       clients: data.clients.map((client) => classifyClientContactByWhatsApp(client, event, "")),
-      ignoredWhatsAppContacts: (data.ignoredWhatsAppContacts || []).filter(
-        (item) => !isIgnoredWhatsAppContact([eventAsRule], { customer_wa_id: item.customerWaId, customer_name: item.customerName }),
+      // No se borra: se marca como quitada (con fecha) para que la fusión con la copia en línea no la reviva.
+      ignoredWhatsAppContacts: (data.ignoredWhatsAppContacts || []).map((item) =>
+        !item.removed && isIgnoredWhatsAppContact([eventAsRule], { customer_wa_id: item.customerWaId, customer_name: item.customerName })
+          ? { ...item, removed: true, updatedAt: new Date().toISOString() }
+          : item,
       ),
       inbox: data.inbox.map((item) =>
         isIgnoredWhatsAppContact([eventAsRule], item)

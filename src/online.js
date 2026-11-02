@@ -73,7 +73,7 @@ export async function loadOnlineState(userId, allowedChannels = ['general']) {
   const state = stateRow?.data || null;
   if (stateRow?.updated_at) knownVersions.set(userId, stateRow.updated_at);
   const savedEvents = new Map((state?.inbox || []).map((item) => [item.event_id, item]));
-  const ignored = new Map((state?.ignoredWhatsAppContacts || []).map((item) => [item.contactIdentity || whatsappContactIdentity({ customer_wa_id: item.customerWaId, customer_name: item.customerName }), item]));
+  const ignored = new Map((state?.ignoredWhatsAppContacts || []).filter((item) => !item.removed).map((item) => [item.contactIdentity || whatsappContactIdentity({ customer_wa_id: item.customerWaId, customer_name: item.customerName }), item]));
   const inbox = filterDismissedEvents(events || [], state?.dismissedInboxEventIds || []).map((event) => {
     const rule = ignored.get(whatsappContactIdentity(event));
     return {

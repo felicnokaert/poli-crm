@@ -165,3 +165,21 @@ test('otro contacto: la secuencia del mail nuevo no choca con la del original', 
   assert.equal(second.added, 3);
   assert.equal(new Set(second.outbox.map((i) => i.id)).size, 6);
 });
+
+import { buildRawMessage as buildSigned, htmlBody, fetchSignatureHtml } from '../lib/gmail.mjs';
+test('con firma de Gmail el mensaje va en texto y HTML y reemplaza la firma de texto', () => {
+  const body = 'Hola Juan,\n\nTe cuento.\n\nFeli\nGrupo Poliplast\nSi preferís no recibir más mensajes nuestros, respondé "BAJA" y no te escribimos más.';
+  const html = htmlBody(body, '<b>Felipe Daniel Cnokaert</b>');
+  assert.match(html, /Felipe Daniel Cnokaert/);
+  assert.doesNotMatch(html, />Feli</);
+  assert.match(html, /respondé &quot;BAJA&quot;|respondé "BAJA"/);
+  const raw = Buffer.from(buildSigned({ from: 'a@b.com', to: 'c@d.com', subject: 'Hola', body, signatureHtml: '<b>Firma</b>' }).replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
+  assert.match(raw, /multipart\/alternative/);
+  assert.match(raw, /text\/plain/);
+  assert.match(raw, /text\/html/);
+});
+test('fetchSignatureHtml lee la firma y falla con aviso claro', async () => {
+  const ok = await fetchSignatureHtml('t', 'a@b.com', async () => ({ ok: true, json: async () => ({ signature: '<div>Firma<script>x()</script></div>' }) }));
+  assert.equal(ok, '<div>Firma</div>');
+  await assert.rejects(fetchSignatureHtml('t', 'a@b.com', async () => ({ ok: false, status: 403 })), /HTTP 403/);
+});

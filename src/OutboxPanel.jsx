@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { defaultSignature, loadSignature, saveSignature } from "./mail-signature.mjs";
 import { Check, Copy, Mail, Pause, Play, RefreshCw, Send, Trash2, Wand2 } from "lucide-react";
 import { adminFetch } from "./admin-api.mjs";
@@ -22,6 +22,7 @@ export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount, account,
   const [filter, setFilter] = useState("borrador");
   const [message, setMessage] = useState("");
   const [gmail, setGmail] = useState(null);
+  const signatureNote = useRef("");
   const [firma, setFirma] = useState(() => loadSignature(account));
   const [busy, setBusy] = useState("");
   const reload = () => gmailCall({ op: "status" }, session).then(setGmail).catch(() => setGmail({ enabled: false }));
@@ -44,6 +45,7 @@ export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount, account,
   const sendOne = async (item) => {
     const result = await gmailCall({ op: "send", item }, session);
     if (!result.sent) return result.reason || "No salió.";
+    signatureNote.current = result.signature ? " con tu firma de Gmail" : ` SIN la firma de Gmail${result.signatureError ? ` (${result.signatureError})` : ""}`;
     onChange(updateMail(list, item.id, { state: "enviado", sentAt: new Date().toISOString(), sentVia: "gmail" }));
     setGmail((current) => ({ ...current, sentToday: result.sentToday }));
     return true;
@@ -51,7 +53,7 @@ export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount, account,
   const sendNow = async (item) => {
     if (typeof window !== "undefined" && window.confirm && !window.confirm(`Se envía ahora a ${item.to} desde ${gmail.email}. ¿Seguimos?`)) return;
     setBusy(item.id); setMessage("");
-    try { const result = await sendOne(item); setMessage(result === true ? "Enviado." : `No salió: ${result}`); } catch (error) { setMessage(error.message); }
+    try { const result = await sendOne(item); setMessage(result === true ? `Enviado${signatureNote.current}.` : `No salió: ${result}`); } catch (error) { setMessage(error.message); }
     setBusy(""); reload();
   };
   const today = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
@@ -94,7 +96,7 @@ export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount, account,
           <button type="button" className="primary" onClick={() => setMessage(onArmQueue())} disabled={!queueCount}><Wand2 size={15} /> Armar para los primeros de la cola ({queueCount})</button>
         </div>
       </div>
-      <label className="muted small">Firma de tus mails (la usan los borradores que armes de ahora en más)
+      <label className="muted small">Nombre para la firma de texto del borrador (al enviar desde el CRM se usa la firma de tu Gmail, con logo y cargo)
         <textarea rows={2} value={firma} placeholder={defaultSignature(account)} onChange={(e) => { setFirma(e.target.value); saveSignature(account, e.target.value); }} />
       </label>
       {gmail?.enabled && (

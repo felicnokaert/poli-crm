@@ -115,6 +115,10 @@ export function AssistantTraining({ supabase }) {
   }
 
   async function run(count = BATCH, auto = false) {
+    try { await runInner(count, auto); } catch (error) { setStatus(`Se cortó: ${error?.message || error}`); setRunning(false); }
+  }
+
+  async function runInner(count, auto) {
     setRunning(true); setStatus("Buscando preguntas…"); stop.current = false; setSummary(null);
     if (auto) setRows([]);
     const results = [];
@@ -128,7 +132,8 @@ export function AssistantTraining({ supabase }) {
       const question = trainingQuestion(row);
       const siblings = questions.filter((other) => other.item_id === row.item_id).slice(0, 40);
       // 3/11: la ficha real de la publicación (atributos y descripción) para que conteste medidas, colores y usos con el dato de la publicación.
-      const { data: listing } = await supabase.from("ml_items").select("title,description,attributes").eq("id", row.item_id).maybeSingle().catch(() => ({ data: null }));
+      let listing = null;
+      try { listing = (await supabase.from("ml_items").select("title,description,attributes").eq("id", row.item_id).maybeSingle()).data || null; } catch { listing = null; }
       const { team, context } = trainingContext(row, siblings, { guides, taught: matchTaught(taught, question), listing });
       const reply = await askAi(supabase, { question, context }).catch(() => ({ ok: false, reason: "red" }));
       if (!reply.ok && ["sin-clave", "sin-credito", "clave"].includes(reply.reason)) {

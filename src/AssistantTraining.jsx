@@ -127,7 +127,9 @@ export function AssistantTraining({ supabase }) {
       setStatus(`Preguntando ${index + 1} de ${picked.length}…`);
       const question = trainingQuestion(row);
       const siblings = questions.filter((other) => other.item_id === row.item_id).slice(0, 40);
-      const { team, context } = trainingContext(row, siblings, { guides, taught: matchTaught(taught, question) });
+      // 3/11: la ficha real de la publicación (atributos y descripción) para que conteste medidas, colores y usos con el dato de la publicación.
+      const { data: listing } = await supabase.from("ml_items").select("title,description,attributes").eq("id", row.item_id).maybeSingle().catch(() => ({ data: null }));
+      const { team, context } = trainingContext(row, siblings, { guides, taught: matchTaught(taught, question), listing });
       const reply = await askAi(supabase, { question, context }).catch(() => ({ ok: false, reason: "red" }));
       if (!reply.ok && ["sin-clave", "sin-credito", "clave"].includes(reply.reason)) {
         setStatus(`${reply.error || "La IA no está disponible."}${reply.detail ? ` (${reply.detail})` : ""}`);

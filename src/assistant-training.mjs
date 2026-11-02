@@ -44,9 +44,21 @@ export function trainingQuestion(row) {
 }
 
 // Contexto para la IA sin la respuesta real: las demás preguntas de la publicación, las guías y lo enseñado.
-export function trainingContext(row, siblings = [], { guides = [], taught = [], listing = null } = {}) {
-  const others = siblings.filter((other) => other.id !== row.id && String(other.answer || '').trim())
-    .map((other) => ({ kind: 'pregunta', body: `Pregunta: ${other.question}\nRespuesta: ${other.answer}` }));
+// 3/11: respuestas del equipo en OTRAS publicaciones de la misma familia de producto (ej. Poxiplast 150 g, 750 g, 3 kg): muchas
+// "sin dato" tenían la respuesta en la publicación hermana. Primero las del mismo tema, hasta `max`.
+export function familySiblings(row, questions = [], titles = {}, { max = 12 } = {}) {
+  const family = shortProduct(titles[row.item_id] || row.title || '');
+  if (!family) return [];
+  const intent = row.intent || detectIntent(row.question);
+  const pool = questions.filter((other) => other.item_id !== row.item_id && String(other.answer || '').trim() && shortProduct(titles[other.item_id] || '') === family);
+  const sameTopic = intent ? pool.filter((other) => (other.intent || detectIntent(other.question)) === intent) : [];
+  const rest = pool.filter((other) => !sameTopic.includes(other));
+  return [...sameTopic, ...rest].slice(0, max).map((other) => ({ ...other, family: titles[other.item_id] || '' }));
+}
+
+export function trainingContext(row, siblings = [], { guides = [], taught = [], listing = null, family = [] } = {}) {
+  const others = [...siblings, ...family].filter((other) => other.id !== row.id && String(other.answer || '').trim())
+    .map((other) => ({ kind: 'pregunta', body: `${other.family ? `[Otra publicación de la familia: ${String(other.family).slice(0, 80)}] ` : ''}Pregunta: ${other.question}\nRespuesta: ${other.answer}` }));
   const intent = row.intent || detectIntent(row.question);
   const team = intent ? teamAnswer(others, intent) : null;
   const facts = intent ? guideFacts(guides, `${row.title} ${row.question}`, intent) : [];

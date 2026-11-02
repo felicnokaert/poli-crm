@@ -198,3 +198,34 @@ const GAP = [
 export function answerHasGap(text = '') {
   return GAP.some((pattern) => pattern.test(String(text)));
 }
+
+// Evaluación automática (3/11): resumen de una tanda con veredicto del juez por pregunta.
+// results: [{ intent: { label }, verdict: 'correcta' | 'parcial' | 'incorrecta' | 'sin-dato' }]
+export const VERDICT_LABEL = { correcta: 'Correcta', parcial: 'Parcial', incorrecta: 'Incorrecta', 'sin-dato': 'Sin dato' };
+
+export function evalSummary(results = []) {
+  const done = (results || []).filter((row) => row?.verdict);
+  const count = (verdict) => done.filter((row) => row.verdict === verdict).length;
+  const pct = (n, total) => (total ? Math.round((n / total) * 100) : 0);
+  const byIntent = new Map();
+  for (const row of done) {
+    const label = row.intent?.label || 'Otro';
+    const entry = byIntent.get(label) || { label, n: 0, ok: 0 };
+    entry.n += 1; if (row.verdict === 'correcta') entry.ok += 1;
+    byIntent.set(label, entry);
+  }
+  return {
+    total: done.length, correcta: count('correcta'), parcial: count('parcial'), incorrecta: count('incorrecta'), sinDato: count('sin-dato'),
+    pct: pct(count('correcta'), done.length),
+    // «Sirve» = correcta o parcial: el cliente igual recibe lo principal.
+    pctServe: pct(count('correcta') + count('parcial'), done.length),
+    byIntent: [...byIntent.values()].map((entry) => ({ label: entry.label, n: entry.n, pct: pct(entry.ok, entry.n) })).sort((a, b) => a.pct - b.pct || b.n - a.n),
+  };
+}
+
+// Historial de tandas para ver si el asistente mejora (se guarda en el navegador de Felipe; últimas 20).
+export function appendEvalHistory(history = [], summary = {}, { now = new Date().toISOString(), tokens = 0 } = {}) {
+  if (!summary.total) return Array.isArray(history) ? history : [];
+  const entry = { at: now, total: summary.total, pct: summary.pct, pctServe: summary.pctServe, incorrecta: summary.incorrecta, sinDato: summary.sinDato, tokens };
+  return [entry, ...(Array.isArray(history) ? history : [])].slice(0, 20);
+}

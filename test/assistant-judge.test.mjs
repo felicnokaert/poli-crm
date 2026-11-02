@@ -96,3 +96,17 @@ test('customerParts saca las marcas de derivar y adjuntar', () => {
   assert.deepEqual(out.attach, ['Ficha EasySpray']);
   assert.doesNotMatch(out.draft, /DERIVAR|ADJUNTAR/);
 });
+
+test('si Anthropic contesta vacío, reintenta una vez y usa la segunda respuesta', async () => {
+  let calls = 0;
+  const http = async (url) => {
+    if (String(url).endsWith('/auth/v1/user')) return { ok: true, json: async () => ({ id: 'u', email: 'felipe@grupopoliplast.com.ar' }) };
+    calls += 1;
+    return { ok: true, status: 200, json: async () => (calls === 1 ? { content: [], stop_reason: 'end_turn' } : { content: [{ type: 'text', text: 'Hola, ¿para qué superficie la necesitás?' }], usage: { input_tokens: 5, output_tokens: 5 } }) };
+  };
+  const env = { SUPABASE_URL: 'https://x.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'svc', ANTHROPIC_API_KEY: 'k' };
+  const result = await assistantAi({ headers: { authorization: 'Bearer t' }, body: { mode: 'cliente', question: 'cuanto rinde?', context: '' } }, env, http);
+  assert.equal(result.body.ok, true);
+  assert.match(result.body.draft, /superficie/);
+  assert.equal(calls, 2);
+});

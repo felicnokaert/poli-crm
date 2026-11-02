@@ -98,11 +98,11 @@ export function downloadCsv(rows, name = '') {
 }
 
 // Planilla: los prospectos como filas, para recorrerlos rápido y marcar el estado en el momento.
-export function ProspectSheet({ rows, checks, onMark, onOpenClient, onDelete, onOpen }) {
+export function ProspectSheet({ rows, checks, onMark, onOpenClient, onDelete, onOpen, onArmMail }) {
   return (
     <div className="prospect-sheet">
       <table>
-        <thead><tr><th>Empresa</th><th>Rubro</th><th>Localidad</th><th>Teléfono</th><th>Sitio / redes</th><th>Estado</th><th>Cruce</th><th /></tr></thead>
+        <thead><tr><th>Empresa</th><th>Rubro</th><th>Localidad</th><th>Teléfono</th><th>Mail</th><th>Sitio / redes</th><th>Estado</th><th>Cruce</th><th /></tr></thead>
         <tbody>
           {rows.map((item) => {
             const check = checks.get(item.id) || { status: 'Nuevo', matches: [] };
@@ -113,6 +113,7 @@ export function ProspectSheet({ rows, checks, onMark, onOpenClient, onDelete, on
                 <td>{item.rubro || '–'}</td>
                 <td>{[item.city, item.province].filter(Boolean).join(', ') || '–'}</td>
                 <td>{item.phone || '–'}{whatsapp && <> · <a href={whatsapp} target="_blank" rel="noreferrer">WhatsApp (posible)</a></>}</td>
+                <td className="wrap">{item.email ? <>{item.email}{onArmMail && <><br /><button type="button" className="link-button" onClick={() => onArmMail(item)}>✉ Armar mails</button></>}</> : '–'}</td>
                 <td className="wrap">
                   {item.website ? <a href={/^https?:/.test(item.website) ? item.website : `https://${item.website}`} target="_blank" rel="noreferrer">sitio</a> : '–'}
                   {item.instagram && <> · <a href={item.instagram} target="_blank" rel="noreferrer">Instagram</a></>}

@@ -62,6 +62,10 @@ export const SEED_IDEAS = [
   { id: 'shopify-carritos', name: 'Email de recuperación de carritos abandonados (función de Shopify)', area: 'Shopify', impact: 4, ease: 4, cost: 0, status: 'pendiente' },
   { id: 'shopify-descripciones', name: 'Descripciones y metacampos de Shopify desde Mercado Libre (borrador para aprobar)', area: 'Shopify', impact: 3, ease: 4, cost: 0, human: true, status: 'en-curso' },
   { id: 'shopify-precios', name: 'Precio de Shopify = precio de ML menos 10 % (proponer y aprobar)', area: 'Shopify', impact: 3, ease: 3, cost: 0, risk: true, status: 'en-curso' },
+  { id: 'wa-auto', name: 'Respuesta automática de WhatsApp a clientes (asistente en perfil cliente, con derivación a una persona)', area: 'WhatsApp', impact: 5, ease: 2, cost: 2, risk: true, human: true, status: 'en-curso' },
+  { id: 'gmail-envio', name: 'Enviar mails de prospección desde el CRM con Gmail (aprobados, con baja y límites)', area: 'Prospección', impact: 4, ease: 3, cost: 0, risk: true, status: 'en-curso' },
+  { id: 'gmail-respuestas', name: 'Detectar respuestas de los mails enviados y frenar los recordatorios', area: 'Prospección', impact: 4, ease: 4, cost: 0, status: 'hecho' },
+  { id: 'asistente-evaluacion', name: 'Evaluar al asistente con 40 a 100 preguntas reales y un juez (mide el avance)', area: 'Asistente', impact: 4, ease: 4, cost: 1, status: 'hecho' },
   { id: 'stock-sync', name: 'Sincronizar stock entre Mercado Libre y Shopify', area: 'Shopify', impact: 3, ease: 2, cost: 1, risk: true, status: 'pendiente' },
 ];
 

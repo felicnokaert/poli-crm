@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { defaultSignature, loadSignature, saveSignature } from "./mail-signature.mjs";
 import { Check, Copy, Mail, Pause, Play, RefreshCw, Send, Trash2, Wand2 } from "lucide-react";
 import { adminFetch } from "./admin-api.mjs";
 import { gmailLink, mailtoLink, updateMail } from "./mail-sequence.mjs";
@@ -21,9 +22,16 @@ export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount, account,
   const [filter, setFilter] = useState("borrador");
   const [message, setMessage] = useState("");
   const [gmail, setGmail] = useState(null);
+  const [firma, setFirma] = useState(() => loadSignature(account));
   const [busy, setBusy] = useState("");
   const reload = () => gmailCall({ op: "status" }, session).then(setGmail).catch(() => setGmail({ enabled: false }));
   useEffect(() => { if (session) reload(); }, [session?.access_token]); // eslint-disable-line react-hooks/exhaustive-deps
+  // 3/11: al abrir la bandeja con Gmail conectado y mails enviados, busca respuestas solo (antes había que tocar el botón).
+  const hasSent = (Array.isArray(outbox) ? outbox : []).some((item) => item.state === "enviado" && item.sentVia === "gmail");
+  useEffect(() => {
+    if (!session || !hasSent || !gmail?.connected) return;
+    gmailCall({ op: "check-replies" }, session).then((result) => { if (result.replies?.length) onReplies?.(result.replies); }).catch(() => null);
+  }, [gmail?.connected, hasSent]); // eslint-disable-line react-hooks/exhaustive-deps
   const connected = Boolean(gmail?.enabled && gmail?.connected);
   const list = Array.isArray(outbox) ? outbox : [];
   const counts = Object.fromEntries(Object.keys(STATE_LABEL).map((state) => [state, list.filter((item) => item.state === state).length]));
@@ -86,6 +94,9 @@ export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount, account,
           <button type="button" className="primary" onClick={() => setMessage(onArmQueue())} disabled={!queueCount}><Wand2 size={15} /> Armar para los primeros de la cola ({queueCount})</button>
         </div>
       </div>
+      <label className="muted small">Firma de tus mails (la usan los borradores que armes de ahora en más)
+        <textarea rows={2} value={firma} placeholder={defaultSignature(account)} onChange={(e) => { setFirma(e.target.value); saveSignature(account, e.target.value); }} />
+      </label>
       {gmail?.enabled && (
         <div className="outbox-gmail" role="group" aria-label="Conexión con Gmail">
           {connected ? (

@@ -32,6 +32,7 @@ import { readFileSmart } from "./text-decode.mjs";
 import { CHANNEL_ADMINS, channelsForEmail, isChannelAdmin } from "./user-channels.mjs";
 import { ChannelsAdmin } from "./ChannelsAdmin";
 import { DATA_SECTION_KEY, IntegrationsStatus } from "./IntegrationsStatus.jsx";
+import { WhatsAppAutoReply } from "./WhatsAppAutoReply.jsx";
 import { CHANNELS, initialState, today } from "./app-shared";
 
 // `data` y `session` llegan como la misma referencia mientras nadie edita
@@ -454,6 +455,7 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
       </>)}
       {shown === "conexiones" && onlineConfigured && isAdmin && (<>
         <IntegrationsStatus supabase={supabase} />
+        <WhatsAppAutoReply />
         <DataHealth supabase={supabase} />
       </>)}
       {shown === "mercadolibre" && onlineConfigured && isAdmin && <MercadoLibreSync supabase={supabase} session={session} />}

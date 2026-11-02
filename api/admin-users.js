@@ -1,6 +1,8 @@
 import { alertsAdmin, alertsCron } from '../lib/crm-alerts.mjs';
 import { trelloPlanAdmin, trelloPlanCron } from '../lib/trello-plan.mjs';
-import { deleteUser } from '../lib/admin-users.mjs';
+import { deleteUser, isAdminEmail } from '../lib/admin-users.mjs';
+import { authenticatedCorporateUser } from '../lib/corporate-auth.mjs';
+import { whatsappAutoAdmin } from '../lib/whatsapp-autoreply.mjs';
 import { cleanupWorkspaces } from '../lib/workspace-cleanup-admin.mjs';
 import { technicalAdmin } from '../lib/technical-admin.mjs';
 import { listClientErrors, logClientError } from '../lib/error-log.mjs';
@@ -55,6 +57,7 @@ export default async function handler(request, response) {
     : action === 'shopify' ? await shopifyAdmin(request)
     : action === 'alerts' ? await alertsAdmin(request)
     : action === 'trello-plan' ? await trelloPlanAdmin(request)
+    : action === 'whatsapp-auto' ? await whatsappAutoAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'gmail' ? await gmailAdmin(request)
     : action === 'assistant' ? await assistantAi(request)
     : await deleteUser(request);

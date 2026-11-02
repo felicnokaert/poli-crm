@@ -26,18 +26,36 @@ export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount, account,
   const reload = () => gmailCall({ op: "status" }, session).then(setGmail).catch(() => setGmail({ enabled: false }));
   useEffect(() => { if (session) reload(); }, [session?.access_token]); // eslint-disable-line react-hooks/exhaustive-deps
   // 3/11: al abrir la bandeja con Gmail conectado y mails enviados, busca respuestas solo (antes había que tocar el botón).
-  const hasSent = (Array.isArray(outbox) ? outbox : []).some((item) => item.state === "enviado" && item.sentVia === "gmail");
+  const hasSent = (Array.isArray(outbox) ? outbox : []).some((item) => item.state === "enviado" && String(item.sentVia || "").startsWith("gmail"));
   useEffect(() => {
     if (!session || !hasSent || !gmail?.connected) return;
     gmailCall({ op: "check-replies" }, session).then((result) => { if (result.replies?.length) onReplies?.(result.replies); }).catch(() => null);
   }, [gmail?.connected, hasSent]); // eslint-disable-line react-hooks/exhaustive-deps
   const connected = Boolean(gmail?.enabled && gmail?.connected);
   const list = Array.isArray(outbox) ? outbox : [];
+  // 3/11: lo que el envío automático ya mandó (el servidor no toca la bandeja): se marca «enviado» al abrir.
+  useEffect(() => {
+    if (!session || !connected) return;
+    gmailCall({ op: "sent-ids" }, session).then((result) => {
+      const ids = new Set(result.ids || []);
+      const pending = list.filter((item) => item.state === "aprobado" && ids.has(String(item.id)));
+      if (!pending.length) return;
+      const now = new Date().toISOString();
+      const set = new Set(pending.map((item) => item.id));
+      onChange(list.map((item) => (set.has(item.id) ? { ...item, state: "enviado", sentVia: "gmail-auto", sentAt: item.sentAt || now, updatedAt: now } : item)));
+    }).catch(() => null);
+  }, [connected, list.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const counts = Object.fromEntries(Object.keys(STATE_LABEL).map((state) => [state, list.filter((item) => item.state === state).length]));
-  const shown = list.filter((item) => item.state === filter).sort((a, b) => String(a.dueOn).localeCompare(String(b.dueOn)) || String(a.company).localeCompare(String(b.company)) || a.step - b.step);
+  const replied = list.filter((item) => item.reply && item.state !== "borrado");
+  const shown = (filter === "respondieron" ? replied : list.filter((item) => item.state === filter)).sort((a, b) => String(a.dueOn).localeCompare(String(b.dueOn)) || String(a.company).localeCompare(String(b.company)) || a.step - b.step);
   const patch = (id, change) => onChange(updateMail(list, id, change));
   // 3/11 (Felipe: "como borro mails, no se me acumulen"): borrar uno, o todos los de la pestaña. Se marcan «borrado» (no se ven) para que no vuelvan al sincronizar.
   const markAll = (ids, state) => { const set = new Set(ids); const now = new Date().toISOString(); onChange(list.map((item) => (set.has(item.id) ? { ...item, state, updatedAt: now } : item))); };
+  const approveAll = () => { if (window.confirm(`¿Aprobar los ${shown.length} mails de «${STATE_LABEL[filter]}»? Salen según el día que les toca (si activaste el envío automático, solos).`)) markAll(shown.map((item) => item.id), "aprobado"); };
+  const toggleAuto = async (enabled) => {
+    if (enabled && !window.confirm(`El CRM va a mandar SOLO los mails aprobados que ya tocan, de lunes a viernes de 9 a 18, hasta ${gmail.limit || 25} por día y de a pocos. Nunca manda a quien está en No contactar ni insiste a quien respondió. ¿Activar?`)) return;
+    try { await gmailCall({ op: "autosend", enabled, perDay: gmail.limit || 25 }, session); reload(); } catch (error) { setMessage(error.message); }
+  };
   const removeAll = () => { if (window.confirm(`¿Borrar los ${shown.length} mails de «${STATE_LABEL[filter]}»? No se pueden recuperar.`)) markAll(shown.map((item) => item.id), "borrado"); };
   const discardAll = () => { if (window.confirm(`¿Descartar los ${shown.length} mails de «${STATE_LABEL[filter]}»? No se mandan.`)) markAll(shown.map((item) => item.id), "descartado"); };
   const connect = async () => {
@@ -80,7 +98,7 @@ export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount, account,
     try {
       const result = await gmailCall({ op: "check-replies" }, session);
       const lines = result.replies?.length ? onReplies?.(result.replies) : [];
-      setMessage(result.replies?.length ? `Respuestas nuevas: ${lines.join(" · ")}` : `Revisé ${result.checked} conversación(es): sin respuestas nuevas.`);
+      setMessage(result.replies?.length ? `Respuestas nuevas: ${lines.join(" · ")}` : `Revisé ${result.checked} conversación(es): sin respuestas nuevas (las que ya se leyeron están en la pestaña Respondieron).`);
     } catch (error) { setMessage(error.message); }
     setBusy("");
   };
@@ -105,6 +123,7 @@ export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount, account,
               <span><strong>Gmail conectado</strong> · {gmail.email} · hoy {gmail.sentToday}/{gmail.limit}{gmail.paused ? " · en pausa" : ""}</span>
               <button type="button" className="secondary" onClick={sendDue} disabled={Boolean(busy) || gmail.paused || !dueToday.length}><Send size={15} /> Enviar los aprobados que tocan hoy ({dueToday.length})</button>
               <button type="button" className="secondary" onClick={checkReplies} disabled={Boolean(busy)}><RefreshCw size={15} /> Buscar respuestas</button>
+              <label className="muted small"><input type="checkbox" checked={Boolean(gmail.autoSend)} onChange={(event) => toggleAuto(event.target.checked)} /> Envío automático de los aprobados (lun a vie, 9 a 18, hasta {gmail.limit || 25} por día)</label>
               <button type="button" className="secondary" onClick={togglePause}>{gmail.paused ? <><Play size={15} /> Reanudar envíos</> : <><Pause size={15} /> Pausar envíos</>}</button>
             </>
           ) : (
@@ -121,11 +140,13 @@ export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount, account,
         {Object.entries(STATE_LABEL).map(([state, label]) => (
           <button key={state} type="button" role="tab" aria-selected={filter === state} className={filter === state ? "selected" : ""} onClick={() => setFilter(state)}>{label} ({counts[state]})</button>
         ))}
+        <button type="button" role="tab" aria-selected={filter === "respondieron"} className={filter === "respondieron" ? "selected" : ""} onClick={() => setFilter("respondieron")}>Respondieron ({replied.length})</button>
       </div>
-      {shown.length === 0 ? <p className="muted">No hay mails en «{STATE_LABEL[filter]}». Armalos desde la cola o desde la ficha de un prospecto con mail.</p> : (
+      {shown.length === 0 ? <p className="muted">No hay mails en «{filter === "respondieron" ? "Respondieron" : STATE_LABEL[filter]}». Armalos desde la cola o desde la ficha de un prospecto con mail.</p> : (
         <>
         {shown.length > 1 && (
           <div className="queue-actions">
+            {filter === "borrador" && <button type="button" className="primary" onClick={approveAll}>Aprobar los {shown.length} de esta pestaña</button>}
             {(filter === "borrador" || filter === "aprobado") && <button type="button" className="secondary" onClick={discardAll}>Descartar los {shown.length} de esta pestaña</button>}
             <button type="button" className="danger-link" onClick={removeAll}>Borrar los {shown.length} de esta pestaña</button>
           </div>

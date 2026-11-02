@@ -1,0 +1,149 @@
+{
+ "name": "CRM — semana del 02/11 (arranque, núcleo y progreso)",
+ "lists": [
+  {
+   "id": "l",
+   "name": "Lun 02/11 · Arranque",
+   "closed": false
+  },
+  {
+   "id": "m",
+   "name": "Mar 03/11",
+   "closed": false
+  },
+  {
+   "id": "x",
+   "name": "Mié 04/11",
+   "closed": false
+  },
+  {
+   "id": "j",
+   "name": "Jue 05/11",
+   "closed": false
+  },
+  {
+   "id": "v",
+   "name": "Vie 06/11 · Cierre de la semana",
+   "closed": false
+  }
+ ],
+ "cards": [
+  {
+   "id": "crm-02nov-01",
+   "idList": "l",
+   "name": "Probar el envío de Gmail: conectar mi Gmail y mandar un mail de prueba a mi propia casilla (Prospección → Bandeja de salida)",
+   "desc": "Lunes a viernes de 9 a 18 hs. Si sale bien, avisar a Claude.",
+   "due": "2026-11-02T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-02nov-02",
+   "idList": "l",
+   "name": "Mercado Libre: reponer o reactivar las publicaciones que más vendían y están pausadas sin stock",
+   "desc": "Ver docs/ESTADO_2026-11-02.md: guantes de nitrilo (Euromix rosa 963 vendidas, Mediglove negro 752, etc.), espuma Fischer 750 cc y 500 cc, cinta PVC cortina 100x1,5, filtro 3M 2091, almohadas rectas. Son 124 pausadas por falta de stock.",
+   "due": "2026-11-02T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-02nov-03",
+   "idList": "l",
+   "name": "Mercado Libre: revisar las 20 publicaciones «en revisión / forbidden» (Pistola aplicadora 34 cm, kits de espuma viscoelástica, vidrio líquido 450 g, Poliplus-619…)",
+   "desc": "Entrar al panel de cada cuenta y ver el motivo del bloqueo; corregir o apelar. Brenda puede ayudar.",
+   "due": "2026-11-02T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-02nov-04",
+   "idList": "l",
+   "name": "Completar la tabla de Instagram y Facebook (una fila por marca) y decirle «dale» a Claude",
+   "desc": "docs/PLAN_INSTAGRAM_FACEBOOK_2026-10-31.md",
+   "due": "2026-11-03T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-02nov-05",
+   "idList": "l",
+   "name": "Definir mi núcleo (3 principios que no se tocan) y un BHAG para el grupo",
+   "desc": "Idea del libro de Covey / Collins y Porras: preservar el núcleo y estimular el progreso. Claude lo baja a números y a Tareas.",
+   "due": "2026-11-05T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-02nov-06",
+   "idList": "m",
+   "name": "Clips de Mercado Libre (POLIPLAST y FOAM)",
+   "desc": "Estaban para el 02/11.",
+   "due": "2026-11-03T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-02nov-07",
+   "idList": "m",
+   "name": "Shopify: cerrar los pedidos #1174, #1175 y #1176 (desestimados) para que dejen de avisar",
+   "desc": "",
+   "due": "2026-11-03T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-02nov-08",
+   "idList": "m",
+   "name": "Mandarle a Claude los colores de las 3 almohadas rectas 60x35 y la lista de SKU de la boquilla Airless Purmac",
+   "desc": "Para cargar los SKU que faltan en Shopify.",
+   "due": "2026-11-03T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-02nov-09",
+   "idList": "x",
+   "name": "Shopify: reponer o decidir los 18 productos activos con stock 0 y los 22 con precio fuera de la regla ML −10 %",
+   "desc": "Alertas del CRM → Qué atender hoy.",
+   "due": "2026-11-04T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-02nov-10",
+   "idList": "x",
+   "name": "Primeros 10 prospectos: armar y mandar la secuencia de 3 mails desde la Bandeja de salida",
+   "desc": "Después de probar Gmail. Revisar uno por uno antes de aprobar.",
+   "due": "2026-11-04T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-02nov-11",
+   "idList": "j",
+   "name": "Decidir los productos trabados: Placa PRFV, silicona líquida para moldes, herraje 126-24 y PMA-25DUO",
+   "desc": "Si no se mueven esta semana, sacarlos de la lista.",
+   "due": "2026-11-05T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-02nov-12",
+   "idList": "j",
+   "name": "Mercado Libre: revisar por qué cae la conversión (precio contra competencia en catálogo, stock y las de más visitas sin ventas)",
+   "desc": "El CRM ya tiene Competencia → Catálogo: quién gana y Qué mejorar.",
+   "due": "2026-11-05T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-02nov-13",
+   "idList": "v",
+   "name": "Cierre de la semana: qué salió, qué no, y definir las 3 cosas más importantes de la semana que viene",
+   "desc": "Usar Tareas → Cierre del día / Rutina.",
+   "due": "2026-11-06T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  }
+ ]
+}

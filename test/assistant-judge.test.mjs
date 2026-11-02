@@ -110,3 +110,9 @@ test('si Anthropic contesta vacío, reintenta una vez y usa la segunda respuesta
   assert.match(result.body.draft, /superficie/);
   assert.equal(calls, 2);
 });
+
+test('customerParts nunca deja el borrador vacío si solo vino la marca de derivar', () => {
+  const out = customerParts('[DERIVAR: Ezequiel]');
+  assert.equal(out.derive, 'Ezequiel');
+  assert.match(out.draft, /consulto con el equipo/);
+});

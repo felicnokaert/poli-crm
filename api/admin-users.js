@@ -11,7 +11,7 @@ import { runIntegrationCron } from '../lib/integration-crons.mjs';
 import { contabiliumAdmin, contabiliumCron } from '../lib/contabilium.mjs';
 import { assistantAi } from '../lib/assistant-ai.mjs';
 import { shopifyAdmin, shopifyCron } from '../lib/shopify.mjs';
-import { gmailAdmin, gmailCallback } from '../lib/gmail-service.mjs';
+import { gmailAdmin, gmailAutoSendCron, gmailCallback } from '../lib/gmail-service.mjs';
 
 // Una sola función para las tareas de administrador (el plan de Vercel limita la cantidad de funciones):
 // borrar un usuario, revisar/limpiar espacios con datos de Felipe copiados (action: 'cleanup') o
@@ -36,6 +36,7 @@ const CRONS = {
   shopify: shopifyCron,
   alertas: alertsCron,
   'trello-plan': trelloPlanCron,
+  'gmail-envios': gmailAutoSendCron,
 };
 
 export default async function handler(request, response) {

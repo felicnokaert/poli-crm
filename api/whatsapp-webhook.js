@@ -2,6 +2,7 @@ import { buildPhoneMap, fetchChannelRows } from '../lib/channels.mjs';
 import { normalizeWebhook, verifyMetaSignature, verifyMetaVerifyToken } from '../lib/whatsapp.mjs';
 import { SOCIAL_OBJECTS, normalizeSocialWebhook, socialEnabled } from '../lib/social-webhook.mjs';
 import { persistEvents } from '../lib/storage.mjs';
+import { autoReplyEvents } from '../lib/whatsapp-autoreply.mjs';
 import { logError } from '../lib/log.mjs';
 import { logWebhookCall, summarizePayload } from '../lib/webhook-log.mjs';
 
@@ -91,6 +92,8 @@ export default async function handler(request, response) {
   try {
     const result = await persistEvents(events);
     await logWebhookCall({ method: 'POST', outcome: 'stored', statusCode: 200, bodyBytes: rawBody.length, hasSignature: true, summary: { ...summarizePayload(payload), accepted: events.length, stored: result.stored } });
+    // 3/11: respuesta automática SOLO a los contactos habilitados (apagada por defecto). Nunca frena ni rompe la recepción.
+    if (!isSocial) { try { await Promise.race([autoReplyEvents(events), new Promise((resolve) => setTimeout(resolve, 45000))]); } catch (error) { logError('whatsapp-webhook', 'auto reply failed', {}, error); } }
     return response.status(200).json({ ok: true, accepted: events.length, stored: result.stored });
   } catch (error) {
     logError('whatsapp-webhook', 'failed persisting events', { eventCount: events.length }, error);

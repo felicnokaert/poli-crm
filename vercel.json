@@ -19,7 +19,8 @@
   ],
   "functions": {
     "api/prospeccion.js": { "maxDuration": 60 },
-    "api/admin-users.js": { "maxDuration": 60 }
+    "api/admin-users.js": { "maxDuration": 60 },
+    "api/whatsapp-webhook.js": { "maxDuration": 60 }
   },
   "rewrites": [
     { "source": "/api/readiness", "destination": "/api/health" },

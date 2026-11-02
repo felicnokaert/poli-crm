@@ -1,3 +1,4 @@
+import { signatureFor } from './mail-signature.mjs';
 import { ProspectRulesPanel } from './ProspectRulesPanel.jsx';
 import { normalizeRules } from './prospect-rules.mjs';
 import { radiusForPopulation } from './prospect-radius.mjs';
@@ -44,7 +45,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const prospects = Array.isArray(data.prospects) ? data.prospects : EMPTY;
   const blockList = Array.isArray(data.doNotContact) ? data.doNotContact : EMPTY;
   const outbox = guardOutbox(Array.isArray(data.outbox) ? data.outbox : EMPTY, blockList);
-  const senderName = String(userEmail || '').split('@')[0].split(/[._-]/)[0].replace(/^./, (c) => c.toLocaleUpperCase('es-AR'));
+  const senderName = signatureFor(userEmail); // la firma elegida en Bandeja de salida (o el nombre del mail)
   const armMails = (records) => {
     let list = outbox; let added = 0; const reasons = [];
     for (const record of records) { const result = queueSequence(list, record, { sender: senderName, blocked: blockList, by: userEmail }); list = result.outbox; added += result.added; if (!result.added && result.reason) reasons.push(`${record.company || 'prospecto'}: ${result.reason}`); }

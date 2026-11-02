@@ -8,6 +8,8 @@ import { loadReplyKnowledge } from "./reply-knowledge.mjs";
 export function ReplySuggester({ event, context }) {
   const [state, setState] = useState({ status: "idle", draft: "", review: "", error: "" });
   const [copied, setCopied] = useState(false);
+  // 3/11: "como asistente al cliente" prueba el perfil cliente (mensaje corto, deriva solo) en modo borrador; el CRM sigue sin enviar nada.
+  const [asClient, setAsClient] = useState(false);
 
   async function suggest() {
     setState({ status: "loading", draft: "", review: "", error: "" });
@@ -20,7 +22,7 @@ export function ReplySuggester({ event, context }) {
       }).catch(() => "");
       const response = await adminFetch({
         action: "assistant",
-        mode: "respuesta",
+        mode: asClient ? "cliente" : "respuesta",
         question: event.text_body || "",
         transcript: event.transcript || "",
         context: [context, knowledge].filter(Boolean).join("\n"),
@@ -34,7 +36,7 @@ export function ReplySuggester({ event, context }) {
         setState({ status: "error", draft: "", review: "", error: reason });
         return;
       }
-      setState({ status: "ready", draft: body.draft || "", review: body.review || "", error: "" });
+      setState({ status: "ready", draft: body.draft || "", review: body.review || "", derive: body.derive || "", attach: body.attach || [], error: "" });
     } catch {
       setState({ status: "error", draft: "", review: "", error: "Sin conexión con el servidor. Probá de nuevo." });
     }
@@ -55,6 +57,9 @@ export function ReplySuggester({ event, context }) {
       <button type="button" className="secondary" onClick={suggest} disabled={state.status === "loading"}>
         {state.status === "loading" ? "Redactando…" : state.status === "ready" ? "Sugerir otra" : "Sugerir respuesta"}
       </button>
+      <label className="muted small" style={{ marginLeft: 8 }}>
+        <input type="checkbox" checked={asClient} onChange={(e) => setAsClient(e.target.checked)} /> Probar como asistente al cliente
+      </label>
       <span className="muted small"> Es un borrador: lo revisás, lo copiás y lo enviás vos. El CRM no manda nada.</span>
       {state.status === "error" && <p className="copilot-suggestion-pending" role="alert">{state.error}</p>}
       {state.status === "ready" && (
@@ -63,6 +68,8 @@ export function ReplySuggester({ event, context }) {
             Borrador (editable)
             <textarea rows={5} value={state.draft} onChange={(e) => setState({ ...state, draft: e.target.value })} />
           </label>
+          {state.derive && <p className="copilot-suggestion-pending">Derivaría a: {state.derive}</p>}
+          {state.attach?.length > 0 && <p className="copilot-suggestion-pending">Adjuntaría: {state.attach.join(", ")}</p>}
           {state.review && <p className="copilot-suggestion-pending">Para revisar: {state.review}</p>}
           <button type="button" className="primary" onClick={copy}>{copied ? "Copiado" : "Copiar para WhatsApp"}</button>
         </div>

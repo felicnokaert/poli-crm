@@ -88,3 +88,11 @@ test('el perfil cliente no deja inventar ni hablar como interno', () => {
   assert.match(CUSTOMER_PROMPT, /DERIVAR/);
   assert.match(CUSTOMER_PROMPT, /NUNCA inventes/);
 });
+
+import { customerParts } from '../lib/assistant-ai.mjs';
+test('customerParts saca las marcas de derivar y adjuntar', () => {
+  const out = customerParts('Lo consulto con el equipo y te respondo en breve.\n[DERIVAR: Brenda]\n[ADJUNTAR: Ficha EasySpray]');
+  assert.equal(out.derive, 'Brenda');
+  assert.deepEqual(out.attach, ['Ficha EasySpray']);
+  assert.doesNotMatch(out.draft, /DERIVAR|ADJUNTAR/);
+});

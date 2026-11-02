@@ -2,13 +2,18 @@ import { useEffect, useRef, useState } from "react";
 import { GraduationCap, Play } from "lucide-react";
 import { askAi, TeachForm } from "./AssistantWindow.jsx";
 import { matchTaught } from "./assistant-answer.mjs";
-import { conflictingAnswers, pickQuestions, realAnswer, suggestTeachings, trainingContext, trainingQuestion } from "./assistant-training.mjs";
+import { appendEvalHistory, conflictingAnswers, evalSummary, pickQuestions, realAnswer, suggestTeachings, trainingContext, trainingQuestion, VERDICT_LABEL } from "./assistant-training.mjs";
 
 // Más → Datos → Asistente (solo Felipe, 21/10). Toma preguntas reales ya respondidas en Mercado Libre, se
 // las hace a la IA sin mostrarle la respuesta real y pone las dos lado a lado. Si la IA le erra, "Enseñarle"
 // guarda la respuesta correcta (assistant_knowledge) y desde ahí va primero para todo el equipo.
 // Cada pregunta cuesta centavos de dólar del crédito prepago.
 const BATCH = 10;
+// Evaluación automática (3/11): la IA contesta y un «juez» (otra llamada corta) compara con lo que respondió el equipo.
+const EVAL_COUNTS = [20, 40, 60, 100];
+const EVAL_HISTORY_KEY = "poliplast-assistant-evals";
+const readHistory = () => { try { const list = JSON.parse(localStorage.getItem(EVAL_HISTORY_KEY) || "[]"); return Array.isArray(list) ? list : []; } catch { return []; } };
+const VERDICT_CLASS = { correcta: "badge ok", parcial: "badge", incorrecta: "badge warn", "sin-dato": "badge" };
 
 // La base entrega hasta 1000 filas por pedido: se piden de a páginas hasta traer todo (21/10: sin esto
 // faltaban títulos y preguntas, y las sugeridas daban 0).
@@ -89,6 +94,9 @@ export function AssistantTraining({ supabase }) {
   const [suggested, setSuggested] = useState(null);
   const [conflicts, setConflicts] = useState(null);
   const [teachingId, setTeachingId] = useState("");
+  const [evalCount, setEvalCount] = useState(40);
+  const [summary, setSummary] = useState(null);
+  const [history, setHistory] = useState(readHistory);
   const stop = useRef(false);
   const pool = useRef(null);
 
@@ -106,10 +114,13 @@ export function AssistantTraining({ supabase }) {
     return pool.current;
   }
 
-  async function run() {
-    setRunning(true); setStatus("Buscando preguntas…"); stop.current = false;
+  async function run(count = BATCH, auto = false) {
+    setRunning(true); setStatus("Buscando preguntas…"); stop.current = false; setSummary(null);
+    if (auto) setRows([]);
+    const results = [];
+    let tokens = 0;
     const { questions, titles, guides, taught } = await load();
-    const picked = pickQuestions(questions, titles, { count: BATCH });
+    const picked = pickQuestions(questions, titles, { count });
     if (!picked.length) { setStatus("No encontré preguntas de Mercado Libre para probar."); setRunning(false); return; }
     for (const [index, row] of picked.entries()) {
       if (stop.current) break;
@@ -123,10 +134,27 @@ export function AssistantTraining({ supabase }) {
         setRunning(false);
         return;
       }
-      if (reply.usage) setUsage((current) => ({ input: current.input + (reply.usage.input || 0), output: current.output + (reply.usage.output || 0) }));
-      setRows((current) => [{ ...row, asked: question, ai: reply.ok ? reply.text : `(No respondió: ${reply.error || reply.reason})`, team }, ...current]);
+      if (reply.usage) { tokens += (reply.usage.input || 0) + (reply.usage.output || 0); setUsage((current) => ({ input: current.input + (reply.usage.input || 0), output: current.output + (reply.usage.output || 0) })); }
+      let verdict = null;
+      if (auto) {
+        if (!reply.ok) verdict = { verdict: "sin-dato", reason: "La IA no respondió." };
+        else {
+          const judged = await askAi(supabase, { mode: "juez", question, realAnswer: realAnswer(row), aiAnswer: reply.text }).catch(() => ({ ok: false }));
+          if (judged.usage) { tokens += (judged.usage.input || 0) + (judged.usage.output || 0); setUsage((current) => ({ input: current.input + (judged.usage.input || 0), output: current.output + (judged.usage.output || 0) })); }
+          verdict = judged.ok ? { verdict: judged.verdict, reason: judged.reason } : { verdict: "parcial", reason: "El juez no pudo evaluarla: revisala a mano." };
+        }
+        results.push({ intent: row.intent, verdict: verdict.verdict });
+      }
+      setRows((current) => [{ ...row, asked: question, ai: reply.ok ? reply.text : `(No respondió: ${reply.error || reply.reason})`, team, ...(verdict || {}) }, ...current]);
     }
-    setStatus(stop.current ? "Pausado." : "Listo. Revisá cada una: si la IA le erró, enseñale la correcta.");
+    if (auto && results.length) {
+      const done = evalSummary(results);
+      setSummary(done);
+      const next = appendEvalHistory(readHistory(), done, { tokens });
+      setHistory(next);
+      try { localStorage.setItem(EVAL_HISTORY_KEY, JSON.stringify(next)); } catch { /* sin almacenamiento: el resumen igual se ve */ }
+    }
+    setStatus(stop.current ? "Pausado." : auto ? "Listo. Abajo están las que falló o no supo: enseñale la correcta." : "Listo. Revisá cada una: si la IA le erró, enseñale la correcta.");
     setRunning(false);
   }
 
@@ -171,13 +199,36 @@ export function AssistantTraining({ supabase }) {
       </p>
       <p className="muted small">Al enseñarle, completá el <strong>producto corto</strong> (ej. “Easy Spray”): así la respuesta se usa solo para ese producto.</p>
       <div className="assistant-teach-actions">
-        <button type="button" className="primary" disabled={running} onClick={run}><Play size={15} /> {rows.length ? "Probar otras 10" : "Probar 10 preguntas"}</button>
+        <button type="button" className="primary" disabled={running} onClick={() => run(BATCH, false)}><Play size={15} /> {rows.length ? "Probar otras 10" : "Probar 10 preguntas"}</button>
         {running && <button type="button" className="secondary" onClick={() => { stop.current = true; }}>Pausar</button>}
         <button type="button" className="secondary" disabled={running} onClick={check}>¿Anda la IA?</button>
         <button type="button" className="secondary" disabled={running} onClick={suggest}><GraduationCap size={15} /> Ver respuestas sugeridas</button>
         <button type="button" className="secondary" disabled={running} onClick={findConflicts}>Respuestas que no coinciden</button>
         {status && <span className="muted small" role="status">{status}</span>}
       </div>
+      <div className="assistant-teach-actions" aria-label="Evaluación automática">
+        <label className="small">Evaluación automática con juez:{" "}
+          <select value={evalCount} disabled={running} onChange={(event) => setEvalCount(Number(event.target.value))}>
+            {EVAL_COUNTS.map((n) => <option key={n} value={n}>{n} preguntas</option>)}
+          </select>
+        </label>
+        <button type="button" className="primary" disabled={running} onClick={() => { if (window.confirm(`Se hacen hasta ${evalCount} preguntas reales a la IA y otro tanto de juicios, con el crédito de Anthropic. Se puede pausar. ¿Seguimos?`)) run(evalCount, true); }}><Play size={15} /> Evaluar</button>
+      </div>
+      {summary && (
+        <div className="training-list" role="status">
+          <strong>Resultado: {summary.pct} % correctas · {summary.pctServe} % le sirven al cliente (correctas + parciales)</strong>
+          <p className="muted small">{summary.total} preguntas · {summary.correcta} correctas · {summary.parcial} parciales · {summary.incorrecta} incorrectas · {summary.sinDato} sin dato</p>
+          <ul>
+            {summary.byIntent.map((entry) => <li key={entry.label}>{entry.label}: {entry.pct} % ({entry.n})</li>)}
+          </ul>
+        </div>
+      )}
+      {history.length > 0 && (
+        <details>
+          <summary className="muted small">Evaluaciones anteriores ({history.length}) · solo en este navegador</summary>
+          <ul className="muted small">{history.map((entry) => <li key={entry.at}>{when(entry.at)}: {entry.pct} % correctas, {entry.pctServe} % sirven ({entry.total} preguntas, {(entry.tokens || 0).toLocaleString("es-AR")} tokens)</li>)}</ul>
+        </details>
+      )}
       {usage.input > 0 && <p className="muted small">Usado en esta prueba: {usage.input.toLocaleString("es-AR")} tokens de entrada y {usage.output.toLocaleString("es-AR")} de salida (el gasto exacto se ve en la consola de Anthropic → Usage).</p>}
       {teach && <TeachForm key={teach.question} supabase={supabase} initial={teach} onSaved={saved} onCancel={() => setTeach(null)} />}
       {conflicts && (
@@ -218,7 +269,7 @@ export function AssistantTraining({ supabase }) {
       <div className="training-list">
         {rows.map((row) => (
           <article key={row.id} className="training-row">
-            <span className="muted small">{row.intent?.label} · {row.title || "Publicación sin título"}</span>
+            <span className="muted small">{row.intent?.label} · {row.title || "Publicación sin título"}{row.verdict && <> · <em className={VERDICT_CLASS[row.verdict]}>{VERDICT_LABEL[row.verdict]}</em>{row.reason ? ` · ${row.reason}` : ""}</>}</span>
             <strong>{row.question}</strong>
             <div className="training-compare">
               <div><span className="muted small">Lo que respondimos</span><p>{realAnswer(row)}</p></div>

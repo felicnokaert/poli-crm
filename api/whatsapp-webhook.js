@@ -1,5 +1,6 @@
 import { buildPhoneMap, fetchChannelRows } from '../lib/channels.mjs';
 import { normalizeWebhook, verifyMetaSignature, verifyMetaVerifyToken } from '../lib/whatsapp.mjs';
+import { SOCIAL_OBJECTS, normalizeSocialWebhook, socialEnabled } from '../lib/social-webhook.mjs';
 import { persistEvents } from '../lib/storage.mjs';
 import { logError } from '../lib/log.mjs';
 import { logWebhookCall, summarizePayload } from '../lib/webhook-log.mjs';
@@ -74,13 +75,19 @@ export default async function handler(request, response) {
   // que no explota, pero tampoco tiene sentido seguir si esto no es ni
   // remotamente un webhook de Meta) de payloads con la firma válida pero de
   // otro producto/versión de la API.
-  if (payload?.object !== 'whatsapp_business_account' || !Array.isArray(payload?.entry)) {
+  // 2/11: Instagram y Facebook entran por la misma URL. Con META_SOCIAL_ENABLED apagado se confirma (200, para que Meta no reintente) y no se guarda nada.
+  const isSocial = SOCIAL_OBJECTS.includes(payload?.object) && Array.isArray(payload?.entry);
+  if (isSocial && !socialEnabled()) {
+    await logWebhookCall({ method: 'POST', outcome: 'social_disabled', statusCode: 200, bodyBytes: rawBody.length, hasSignature: true, summary: summarizePayload(payload) });
+    return response.status(200).json({ ok: true, accepted: 0, ignored: 'social_disabled' });
+  }
+  if (!isSocial && (payload?.object !== 'whatsapp_business_account' || !Array.isArray(payload?.entry))) {
     await logWebhookCall({ method: 'POST', outcome: 'unexpected_shape', statusCode: 400, bodyBytes: rawBody.length, hasSignature: true, summary: summarizePayload(payload) });
     return response.status(400).json({ ok: false, error: 'unexpected_payload_shape' });
   }
 
   const phoneMap = buildPhoneMap(process.env, await fetchChannelRows(process.env));
-  const events = normalizeWebhook(payload, phoneMap);
+  const events = isSocial ? normalizeSocialWebhook(payload, phoneMap) : normalizeWebhook(payload, phoneMap);
   try {
     const result = await persistEvents(events);
     await logWebhookCall({ method: 'POST', outcome: 'stored', statusCode: 200, bodyBytes: rawBody.length, hasSignature: true, summary: { ...summarizePayload(payload), accepted: events.length, stored: result.stored } });

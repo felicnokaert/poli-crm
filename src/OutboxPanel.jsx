@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { defaultSignature, loadSignature, saveSignature } from "./mail-signature.mjs";
 import { Check, Copy, Mail, Pause, Play, RefreshCw, Send, Trash2, Wand2 } from "lucide-react";
 import { adminFetch } from "./admin-api.mjs";
 import { gmailLink, mailtoLink, updateMail } from "./mail-sequence.mjs";
@@ -23,7 +22,6 @@ export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount, account,
   const [message, setMessage] = useState("");
   const [gmail, setGmail] = useState(null);
   const signatureNote = useRef("");
-  const [firma, setFirma] = useState(() => loadSignature(account));
   const [busy, setBusy] = useState("");
   const reload = () => gmailCall({ op: "status" }, session).then(setGmail).catch(() => setGmail({ enabled: false }));
   useEffect(() => { if (session) reload(); }, [session?.access_token]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -38,6 +36,10 @@ export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount, account,
   const counts = Object.fromEntries(Object.keys(STATE_LABEL).map((state) => [state, list.filter((item) => item.state === state).length]));
   const shown = list.filter((item) => item.state === filter).sort((a, b) => String(a.dueOn).localeCompare(String(b.dueOn)) || String(a.company).localeCompare(String(b.company)) || a.step - b.step);
   const patch = (id, change) => onChange(updateMail(list, id, change));
+  // 3/11 (Felipe: "como borro mails, no se me acumulen"): borrar uno, o todos los de la pestaña. Se marcan «borrado» (no se ven) para que no vuelvan al sincronizar.
+  const markAll = (ids, state) => { const set = new Set(ids); const now = new Date().toISOString(); onChange(list.map((item) => (set.has(item.id) ? { ...item, state, updatedAt: now } : item))); };
+  const removeAll = () => { if (window.confirm(`¿Borrar los ${shown.length} mails de «${STATE_LABEL[filter]}»? No se pueden recuperar.`)) markAll(shown.map((item) => item.id), "borrado"); };
+  const discardAll = () => { if (window.confirm(`¿Descartar los ${shown.length} mails de «${STATE_LABEL[filter]}»? No se mandan.`)) markAll(shown.map((item) => item.id), "descartado"); };
   const connect = async () => {
     try { const { url } = await gmailCall({ op: "authUrl" }, session); window.location.href = url; } catch (error) { setMessage(error.message); }
   };
@@ -96,9 +98,6 @@ export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount, account,
           <button type="button" className="primary" onClick={() => setMessage(onArmQueue())} disabled={!queueCount}><Wand2 size={15} /> Armar para los primeros de la cola ({queueCount})</button>
         </div>
       </div>
-      <label className="muted small">Nombre para la firma de texto del borrador (al enviar desde el CRM se usa la firma de tu Gmail, con logo y cargo)
-        <textarea rows={2} value={firma} placeholder={defaultSignature(account)} onChange={(e) => { setFirma(e.target.value); saveSignature(account, e.target.value); }} />
-      </label>
       {gmail?.enabled && (
         <div className="outbox-gmail" role="group" aria-label="Conexión con Gmail">
           {connected ? (
@@ -124,6 +123,13 @@ export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount, account,
         ))}
       </div>
       {shown.length === 0 ? <p className="muted">No hay mails en «{STATE_LABEL[filter]}». Armalos desde la cola o desde la ficha de un prospecto con mail.</p> : (
+        <>
+        {shown.length > 1 && (
+          <div className="queue-actions">
+            {(filter === "borrador" || filter === "aprobado") && <button type="button" className="secondary" onClick={discardAll}>Descartar los {shown.length} de esta pestaña</button>}
+            <button type="button" className="danger-link" onClick={removeAll}>Borrar los {shown.length} de esta pestaña</button>
+          </div>
+        )}
         <ul className="outbox-list">
           {shown.map((item) => (
             <li key={item.id} className="outbox-item">
@@ -148,12 +154,15 @@ export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount, account,
                 {item.state === "aprobado" && <button type="button" className="secondary" onClick={() => patch(item.id, { state: "enviado", sentAt: new Date().toISOString() })}>Ya lo mandé</button>}
                 {item.state === "aprobado" && <button type="button" className="secondary" onClick={() => patch(item.id, { state: "borrador" })}>Volver a borrador</button>}
                 <button type="button" className="secondary" onClick={() => copy(item)}><Copy size={15} /> Copiar</button>
+                {item.state !== "descartado" && item.state !== "enviado" && <button type="button" className="secondary" onClick={() => patch(item.id, { state: "descartado", note: "Descartado a mano" })}>Descartar</button>}
+                <button type="button" className="danger-link" onClick={() => { if (item.state !== "enviado" || window.confirm("Es un mail ya enviado: ¿borrarlo de la lista?")) patch(item.id, { state: "borrado" }); }}>Borrar</button>
                 {item.state !== "descartado" && item.state !== "enviado" && <button type="button" className="danger-link" onClick={() => patch(item.id, { state: "descartado" })}><Trash2 size={15} /> Descartar</button>}
                 {item.state === "descartado" && <button type="button" className="secondary" onClick={() => patch(item.id, { state: "borrador", note: "" })}>Recuperar</button>}
               </div>
             </li>
           ))}
         </ul>
+        </>
       )}
     </section>
   );

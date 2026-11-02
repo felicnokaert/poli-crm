@@ -183,3 +183,14 @@ test('fetchSignatureHtml lee la firma y falla con aviso claro', async () => {
   assert.equal(ok, '<div>Firma</div>');
   await assert.rejects(fetchSignatureHtml('t', 'a@b.com', async () => ({ ok: false, status: 403 })), /HTTP 403/);
 });
+
+import { classifyReply as classify2, freshText } from '../lib/gmail.mjs';
+test('la respuesta se lee sin el texto citado y sin contar los mails propios', () => {
+  const text = 'Me interesa, ¿qué precio tiene la espuma para furgones? El lun, 2 nov 2026 a las 14:23, <felipe@grupopoliplast.com.ar> escribió: Hola, buenos días. Soy Felipe de Grupo Poliplast.';
+  assert.doesNotMatch(freshText(text), /escribi/);
+  const result = classify2(text, { exclude: ['felipe@grupopoliplast.com.ar', 'cliente@x.com'] });
+  assert.equal(result.kind, 'interesado');
+  const other = classify2('Escribile a compras@empresa.com que ellos ven eso. El lun escribió: hola', { exclude: ['felipe@grupopoliplast.com.ar'] });
+  assert.equal(other.kind, 'otro-contacto');
+  assert.deepEqual(other.emails, ['compras@empresa.com']);
+});

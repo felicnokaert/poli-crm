@@ -25,7 +25,7 @@ import { applyEnrichment } from './prospect-enrich-apply.mjs';
 import { DAILY_TARGET, currentFocus, scopeDescription, zoneStatus } from './prospect-plan.mjs';
 
 import { DoNotContactPanel } from './DoNotContactPanel.jsx';
-import { addBlock, filterAllowed } from './do-not-contact.mjs';
+import { addBlock, blockedBy, filterAllowed } from './do-not-contact.mjs';
 import { useBillingCustomers } from './hooks/useBillingCustomers.js';
 import { OutboxPanel } from './OutboxPanel.jsx';
 import { queueSequence, guardOutbox, applyReplies } from './mail-sequence.mjs';
@@ -146,6 +146,11 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   );
 
   const visible = prospects.filter((item) => (familyFilter === 'Todas' || item.family === familyFilter) && (stateFilter === 'Todos' || item.state === stateFilter));
+  // 3/11 (Felipe: «tengo como 500 prospectos, no me aparece la opción de mandarles mail»): cuántos tienen mail y armar sus 3 mails de a tandas de 100.
+  const validMail = (item) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(item.email || '').trim());
+  const inOutbox = new Set(outbox.filter((item) => item.state !== 'borrado').map((item) => item.prospectId));
+  const withMail = visible.filter(validMail);
+  const mailable = withMail.filter((item) => !inOutbox.has(item.id) && !blockedBy({ email: item.email, company: item.company }, blockList));
 
   function addProspects(rows, source) {
     const now = new Date().toISOString();
@@ -848,9 +853,15 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         </div>
         <button type="button" className="secondary" disabled={!shown.length} onClick={() => downloadCsv(shown)}>Descargar CSV ({shown.length})</button>
       </div>
+      {visible.length > 0 && (
+        <div className="queue-actions" role="group" aria-label="Mails a los prospectos">
+          <span className="muted small">✉ {withMail.length} de {visible.length} prospectos tienen mail{visible.length - withMail.length ? ` (a ${visible.length - withMail.length} les falta: se pueden buscar con «Investigar»)` : ''} · {mailable.length} sin mails armados todavía</span>
+          <button type="button" className="primary" disabled={!mailable.length} onClick={() => { const batch = mailable.slice(0, 100); if (window.confirm(`Se arman los 3 mails (en borrador) de ${batch.length} prospecto(s). Después los revisás en Bandeja de salida y los aprobás. ¿Seguimos?`)) setMessage(armMails(batch)); }}>Armar los mails de {Math.min(100, mailable.length)} prospecto(s) con mail</button>
+        </div>
+      )}
       {listView === 'cola' && <ProspectQueue queue={queue} byId={prospectsById} checks={checks} onMark={mark} onBlock={blockRecord} onArmMail={(record) => setMessage(armMails([record]))} onSkip={(id) => setSkipped((list) => [...list, id])} onOpen={setDetailId} onEnrich={async (prospect) => setMessage(await enrich(prospect))} onResearch={async (prospect) => setMessage(await researchProspect(prospect))} />}
       {listView !== 'cola' && shown.length === 0 && <p className="muted">{prospects.length ? 'No hay prospectos con ese filtro.' : 'Todavía no cargaste prospectos.'}</p>}
-      {listView === 'planilla' && shown.length > 0 && <ProspectSheet rows={page} checks={checks} onMark={mark} onOpenClient={onOpenClient} onDelete={remove} onOpen={setDetailId} />}
+      {listView === 'planilla' && shown.length > 0 && <ProspectSheet rows={page} checks={checks} onMark={mark} onOpenClient={onOpenClient} onDelete={remove} onOpen={setDetailId} onArmMail={(record) => setMessage(armMails([record]))} />}
       {listView === 'tarjetas' && (
         <div className="units-list">
           {page.map((item) => (

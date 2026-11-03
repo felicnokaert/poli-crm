@@ -191,6 +191,19 @@ export function AssistantTraining({ supabase }) {
     setSuggested(suggestTeachings(questions, titles, { taught }));
     setStatus("");
   }
+  // Aprobar todas las sugeridas de una vez (3/11, Felipe: las validadas salen por repetición, sin inventar nada): cada una ya es
+  // lo que el equipo respondió 3+ veces en Mercado Libre para ese producto y tema.
+  async function approveAll() {
+    const list = suggested || [];
+    if (!list.length || !window.confirm(`Guardar las ${list.length} respuestas sugeridas como validadas? Son lo que el equipo ya respondió 3 o más veces en Mercado Libre; después podés corregir cualquiera.`)) return;
+    setStatus(`Guardando ${list.length} respuestas…`);
+    const now = new Date().toISOString();
+    const rows = list.map((entry) => ({ question: entry.question.trim(), product: String(entry.product || "").trim(), answer: entry.answer.trim(), updated_at: now }));
+    const { error } = await supabase.from("assistant_knowledge").insert(rows);
+    if (error) { setStatus("No se pudieron guardar. Probá de nuevo."); return; }
+    setSuggested([]); pool.current = null;
+    setStatus(`Listo: ${rows.length} respuestas guardadas. Desde ahora van primero para todo el equipo.`);
+  }
   // Respuestas que no coinciden: mismo producto y tema, números distintos. Felipe elige la correcta.
   async function findConflicts() {
     setStatus("Buscando respuestas que no coinciden…");
@@ -274,6 +287,7 @@ export function AssistantTraining({ supabase }) {
         <div className="training-list">
           <strong>Respuestas sugeridas ({suggested.length}) · lo que más repetimos en Mercado Libre, sin costo</strong>
           {suggested.length === 0 && <p className="muted small">No hay más sugeridas por ahora.</p>}
+          {suggested.length > 1 && <button type="button" className="primary" onClick={approveAll}>Aprobar las {suggested.length} sugeridas</button>}
           {suggested.map((entry) => (
             <article key={entry.id} className="training-row">
               <span className="muted small">{entry.title}</span>

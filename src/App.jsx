@@ -10,23 +10,41 @@ import {
   today,
 } from "./app-shared";
 import { Tasks, TaskDetail, TaskForm } from "./Tasks";
-const TechnicalDocumentsAdmin = lazy(() =>
-  import("./TechnicalDocuments").then((m) => ({ default: m.TechnicalDocumentsAdmin }))
-);
-const MapaCobertura = lazy(() => import("./MapaCobertura").then((m) => ({ default: m.MapaCobertura })));
-const CotizadorFrame = lazy(() => import("./CotizadorFrame").then((m) => ({ default: m.CotizadorFrame })));
+// Tras una publicación nueva, la parte pedida puede llegar vacía ("Cannot read properties of undefined (reading 'Clients')"):
+// se reintenta una vez y, si sigue sin venir, se recarga la página una sola vez para tomar la versión nueva.
+const lazyNamed = (loader, name) => lazy(async () => {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const m = await loader();
+      if (m && m[name]) return { default: m[name] };
+    } catch { /* se reintenta */ }
+    await new Promise((resolve) => setTimeout(resolve, 400));
+  }
+  const key = "poliplast-reload-for-new-version";
+  let last = 0;
+  try { last = Number(sessionStorage.getItem(key) || 0); } catch { /* sin almacenamiento */ }
+  if (Date.now() - last > 30000) {
+    try { sessionStorage.setItem(key, String(Date.now())); } catch { /* sin almacenamiento */ }
+    window.location.reload();
+    return new Promise(() => {});
+  }
+  throw new Error(`No se pudo cargar ${name}. Recargá la página.`);
+});
+const TechnicalDocumentsAdmin = lazyNamed(() => import("./TechnicalDocuments"), "TechnicalDocumentsAdmin");
+const MapaCobertura = lazyNamed(() => import("./MapaCobertura"), "MapaCobertura");
+const CotizadorFrame = lazyNamed(() => import("./CotizadorFrame"), "CotizadorFrame");
 // Único de los cinco named exports de Academy.jsx que se usa acá - los
 // otros (CommercialKnowledge, Coach, QuickReplies, Training) son internos,
 // consumidos solo por el propio <Academy> - así que separarla en su propio
 // chunk no arrastra nada que este archivo necesite.
-const ImprovementCenter = lazy(() => import("./ImprovementCenter").then((m) => ({ default: m.ImprovementCenter })));
-const ShopifyBoard = lazy(() => import("./ShopifyBoard").then((m) => ({ default: m.ShopifyBoard })));
-const MercadoLibreBoard = lazy(() => import("./MercadoLibreBoard").then((m) => ({ default: m.MercadoLibreBoard })));
-const Academy = lazy(() => import("./Academy").then((m) => ({ default: m.Academy })));
+const ImprovementCenter = lazyNamed(() => import("./ImprovementCenter"), "ImprovementCenter");
+const ShopifyBoard = lazyNamed(() => import("./ShopifyBoard"), "ShopifyBoard");
+const MercadoLibreBoard = lazyNamed(() => import("./MercadoLibreBoard"), "MercadoLibreBoard");
+const Academy = lazyNamed(() => import("./Academy"), "Academy");
 import { LoginScreen } from "./Login";
 import { canSeeWeeklySummary } from "./weekly-summary.mjs";
 import { ErrorBoundary } from "./ErrorBoundary.jsx";
-const DataSettings = lazy(() => import("./DataSettings").then((m) => ({ default: m.DataSettings })));
+const DataSettings = lazyNamed(() => import("./DataSettings"), "DataSettings");
 import { InteractionDetail } from "./Interactions";
 import { Dashboard } from "./Dashboard";
 import { useCronStatus } from "./hooks/useCronStatus";
@@ -48,7 +66,7 @@ const Sales = lazy(() => import("./Sales"));
 // cada una va a su propio chunk y se baja al entrar por primera vez. Login,
 // Dashboard, Tasks e Interactions quedan estáticos porque Dashboard y
 // ClientDetail los comparten (TaskList, InteractionRow).
-const lazyNamed = (loader, name) => lazy(() => loader().then((m) => ({ default: m[name] })));
+
 const Clients = lazyNamed(() => import("./Clients"), "Clients");
 const Prospeccion = lazyNamed(() => import("./Prospeccion"), "Prospeccion");
 const Contacts = lazyNamed(() => import("./Clients"), "Contacts");

@@ -10,6 +10,7 @@ import {
   today,
 } from "./app-shared";
 import { Tasks, TaskDetail, TaskForm } from "./Tasks";
+import { WhatsAppDerivations } from "./WhatsAppDerivations";
 // Tras una publicación nueva, la parte pedida puede llegar vacía ("Cannot read properties of undefined (reading 'Clients')"):
 // se reintenta una vez y, si sigue sin venir, se recarga la página una sola vez para tomar la versión nueva.
 const lazyNamed = (loader, name) => lazy(async () => {
@@ -725,6 +726,23 @@ export default function App() {
         )}
         {view === "inbox" && (
           <Suspense fallback={<Splash text="Cargando bandeja…" />}>
+            {onlineConfigured && session && (
+              <WhatsAppDerivations
+                supabase={supabase}
+                firstName={String(session.user?.user_metadata?.full_name || "").trim().split(/\s+/)[0]}
+                isAdmin={isChannelAdmin(session?.user?.email)}
+                done={data.derivationsDone}
+                onDone={(id) => setData((current) => ({ ...current, derivationsDone: [...new Set([...(current.derivationsDone || []), id])].slice(-300) }))}
+                onTask={(item) => {
+                  const stamp = new Date().toISOString();
+                  setData((current) => ({ ...current, tasks: [...(current.tasks || []), {
+                    ...blankTask(), id: crypto.randomUUID(), company: item.name || "Sin empresa",
+                    title: `Contestar a ${item.name || `WhatsApp …${String(item.wa).slice(-4)}`} (lo derivó el asistente a ${item.to})`,
+                    priority: "Alta", source: "derivacion-whatsapp", done: false, createdAt: stamp, updatedAt: stamp,
+                  }] }));
+                }}
+              />
+            )}
             <WhatsAppInbox
               items={data.inbox}
               statusEvents={outboundStatusEvents}

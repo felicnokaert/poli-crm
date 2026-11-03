@@ -21,7 +21,7 @@ export const PROSPECT_OUTCOMES = [
 
 // Motivos de rechazo que se marcan en un toque en la cola (los que explican por qué falla un mensaje).
 export const REJECTION_REASONS = [
-  'Precio', 'No llega al mínimo de USD 1.800', 'Ya tiene proveedor', 'Dólar', 'No vende ni usa espuma', 'No respondió',
+  'Precio', 'No llega al mínimo de USD 1.800', 'Ya tiene proveedor', 'Dólar', 'No vende ni usa espuma', 'Es revendedor (no es perfil)', 'No respondió',
 ];
 
 // Estados que convierten el prospecto en una Empresa del CRM.

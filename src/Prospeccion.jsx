@@ -1,5 +1,6 @@
 import { signatureFor } from './mail-signature.mjs';
 import { ProspectRulesPanel } from './ProspectRulesPanel.jsx';
+import QuickReplies from './QuickReplies.jsx';
 import { normalizeRules } from './prospect-rules.mjs';
 import { radiusForPopulation } from './prospect-radius.mjs';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
@@ -643,7 +644,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       </div>
 
       <div className="segmented prospect-tabs" role="tablist" aria-label="Secciones de Prospección">
-        {[['hoy', 'Cola del día'], ['prospectos', 'Prospectos'], ['buscar', 'Buscar con IA'], ['reglas', 'Reglas'], ['salida', 'Bandeja de salida'], ['nocontactar', 'No contactar']].map(([key, label]) => (
+        {[['hoy', 'Cola del día'], ['prospectos', 'Prospectos'], ['buscar', 'Buscar con IA'], ['respuestas', 'Respuestas rápidas'], ['reglas', 'Reglas'], ['salida', 'Bandeja de salida'], ['nocontactar', 'No contactar']].map(([key, label]) => (
           <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? 'selected' : ''} onClick={() => setTab(key)}>{label}</button>
         ))}
       </div>
@@ -659,6 +660,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
 
       {tab === 'salida' && <OutboxPanel account={userEmail} session={session} onReplies={applyGmailReplies} onOtherContact={addOtherContact} outbox={outbox} onChange={(next) => setData((current) => ({ ...current, outbox: next }))} queueCount={Math.min(10, queue.map((id) => prospectsById.get(id)).filter((item) => String(item?.email || '').includes('@')).length)} onArmQueue={() => armMails(queue.map((id) => prospectsById.get(id)).filter((item) => String(item?.email || '').includes('@')).slice(0, 10))} />}
       {tab === 'nocontactar' && <DoNotContactPanel list={blockList} userEmail={userEmail} onChange={(doNotContact) => setData((current) => ({ ...current, doNotContact }))} />}
+      {tab === 'respuestas' && <QuickReplies defaultSender={senderName} />}
       {tab === 'reglas' && <ProspectRulesPanel rules={data.prospectRules} onChange={(prospectRules) => setData((current) => ({ ...current, prospectRules }))} />}
 
       {tab === 'buscar' && (<>

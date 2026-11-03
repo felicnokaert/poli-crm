@@ -56,11 +56,11 @@ export function WhatsAppAutoReply() {
       </div>
       {message && <div className="system-message">{message}</div>}
       <h3>Lo que contestó</h3>
+      <p className="muted small">Acá solo queda cuándo y a qué contacto. El texto de cada respuesta está en la conversación, en Por revisar.</p>
       {!state.log.length && <p className="muted small">Todavía no contestó nada.</p>}
       <ul>{state.log.map((entry) => (
         <li key={`${entry.event_id}-${entry.at}`}>
-          <strong>{when(entry.at)} · {entry.status === "enviado" ? "Enviado" : "Error"}</strong> · pregunta: «{entry.question}»
-          {entry.reply && <><br />Respuesta: {entry.reply}</>}
+          <strong>{when(entry.at)} · {entry.status === "enviado" ? "Enviado" : "Error"}</strong> · contacto …{String(entry.wa || "").slice(-4)}
           {entry.derive && <><br /><span className="muted small">Derivaría a: {entry.derive}</span></>}
           {entry.error && <><br /><span className="copilot-suggestion-pending">{entry.error}</span></>}
         </li>

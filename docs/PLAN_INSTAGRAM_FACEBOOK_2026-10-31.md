@@ -49,3 +49,13 @@ Cómo ver cada dato:
 1. Completar la tabla del punto 1.
 2. Confirmar en cuál portfolio/app de Meta están las páginas (la app «Poliplast CRM Prueba» es la candidata, ID 1120091094157805).
 3. Con eso se arma la etapa 1 (lectura) y se prueba con una sola cuenta antes de sumar las demás.
+
+## Cuentas de Instagram informadas por Felipe (3/11)
+| Marca | Instagram | ¿Profesional? | Página de Facebook vinculada | Quién administra |
+|---|---|---|---|---|
+| Grupo Poliplast | instagram.com/grupopoliplast | falta confirmar | falta | falta |
+| Resinplast | instagram.com/resinplast1 | falta confirmar | falta | falta |
+| Imperpur | instagram.com/imperpur | falta confirmar | falta | falta |
+| PURMAC | instagram.com/purmac_ | falta confirmar | falta | falta |
+| RAPYP | instagram.com/rapyp.red | falta confirmar | falta | falta |
+| Foam Factory | instagram.com/foamfactory_ | falta confirmar | falta | falta |

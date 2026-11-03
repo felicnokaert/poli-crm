@@ -82,7 +82,7 @@ test('respuesta sugerida: borrador sin herramientas, con la nota "Para revisar" 
   assert.equal(result.body.review, 'confirmar el precio antes de enviarlo.');
   const sent = JSON.parse(calls.find((call) => call.url.includes('anthropic')).options.body);
   assert.equal(sent.tools, undefined);
-  assert.equal(sent.max_tokens, 700);
+  assert.equal(sent.max_tokens, 1500);
   assert.match(sent.system, /BORRADOR/);
   assert.match(sent.messages[0].content, /Necesito espuma para un techo/);
 });

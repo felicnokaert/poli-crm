@@ -7,6 +7,7 @@ import { pendingOrders, recoverList } from './shopify-operation.mjs';
 import { priceCross, priceSummary } from './shopify-prices.mjs';
 import { integrationsStatus, needsAttention } from './integrations-status.mjs';
 import { evaluate, HEALTH_SOURCES, ageText } from './data-health.mjs';
+import { channelStockAlerts } from './channel-stock.mjs';
 import { recentShippingChanges } from './ml-shipping-change.mjs';
 
 export const SEVERITY = { alta: 0, media: 1, baja: 2 };
@@ -132,6 +133,7 @@ export function buildCrmAlerts(data = {}, now = Date.now()) {
     ...tokenAlerts(data.accounts || [], now),
     ...mlAlerts({ mlItems: data.mlItems || [], mlMetrics: data.mlMetrics || [], mlNames: data.mlNames }),
     ...competitorShippingAlerts(data.competitors || [], now),
+    ...channelStockAlerts({ products: data.products || [], variants: data.variants || [], mlItems: data.mlItems || [] }),
     ...shopifyAlerts({ products: data.products || [], variants: data.variants || [], orders: data.orders || [], checkouts: data.checkouts || [], days: data.days || [], now, mlItems: data.mlItems || [] }),
   ];
   return list.sort((a, b) => SEVERITY[a.severity] - SEVERITY[b.severity]);

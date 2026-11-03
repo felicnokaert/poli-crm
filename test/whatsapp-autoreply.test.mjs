@@ -80,3 +80,10 @@ test('modo todos: tope de 150 respuestas por día', () => {
   const log = Array.from({ length: 150 }, (_, i) => ({ event_id: `d${i}`, status: 'enviado', wa: String(i).padStart(10, '5'), at: new Date().toISOString() }));
   assert.equal(shouldReply({ enabled: true, mode: 'todos', contacts: [], log }, event({ customer_wa_id: '5491122223333' }), Date.now(), []).reason, 'tope-por-dia');
 });
+
+test('recentClientText junta los últimos mensajes del cliente para buscar el producto', async () => {
+  const { recentClientText } = await import('../lib/whatsapp-autoreply.mjs');
+  const transcript = 'Cliente: ¿cuánto rinde la resina epoxi?\nNosotros: depende\nCliente: Y valor por kg tenes?';
+  assert.match(recentClientText(transcript, 'Y valor por kg tenes?'), /resina epoxi.*valor por kg/);
+  assert.equal(recentClientText('', 'hola'), 'hola');
+});

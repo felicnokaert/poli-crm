@@ -55,7 +55,7 @@ test('modo juez en el servidor: manda el prompt del juez y devuelve veredicto y 
   assert.equal(result.body.verdict, 'parcial');
   assert.equal(result.body.usage.input, 300);
   assert.equal(sent.model, 'modelo-juez');
-  assert.equal(sent.max_tokens, 250);
+  assert.equal(sent.max_tokens, 600);
   assert.equal(sent.tools, undefined);
   assert.match(sent.system, /corrector de respuestas/);
 });

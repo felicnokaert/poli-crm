@@ -9,6 +9,9 @@ import { buildOutreachDraft } from './prospect-outreach.mjs';
 import { outreachVariant, REJECTION_REASONS, possibleWhatsAppLink } from './prospect-model.mjs';
 import { normalizePhoneAR } from './prospect-contact.mjs';
 import { prospectLearning } from './assistant-team.mjs';
+import { coachingByPerson } from './team-coaching.mjs';
+import { useTeamSharedNotes } from './hooks/useSharedNotesSync.js';
+import { isChannelAdmin } from './user-channels.mjs';
 import { CLOSE_WINDOW_DAYS, quoteConversion } from './quote-conversion.mjs';
 
 const pesos = (value) => `$ ${Math.round(value || 0).toLocaleString('es-AR')}`;
@@ -35,8 +38,31 @@ function QuoteConversionPanel({ stats }) {
 
 // "Qué aprendimos" (22/10): con lo que se anota en las colas, qué versión del mensaje, familia y zona
 // responden mejor y por qué nos rechazan. Respeta el filtro de familia.
-function LearningPanel({ stats, quotes }) {
-  if (!stats.contacted && !stats.byQueue.length) return <><QuoteConversionPanel stats={quotes} /><p className="muted">Todavía no hay resultados anotados. A medida que marques Contactado, Con interés o el motivo de rechazo, acá vas a ver qué funciona.</p></>;
+// Coaching por vendedor (solo administradores): cuánto contacta cada uno, qué le responden y dónde practicar. Señales para conversar, no un puntaje.
+function CoachingPanel({ supabase, email }) {
+  const admin = isChannelAdmin(email);
+  const rows = useTeamSharedNotes(supabase, { kind: 'contactos', includeMine: true, enabled: admin, sinceIso: new Date(Date.now() - 90 * 86400000).toISOString() });
+  const people = useMemo(() => coachingByPerson(rows), [rows]);
+  if (!admin || !people.length) return null;
+  return (
+    <section className="panel" aria-label="Coaching por vendedor">
+      <h3>Coaching por vendedor · últimos 90 días</h3>
+      <p className="muted small">Sale de lo que cada persona anota en la Cola del día. Son señales para conversar y elegir qué practicar en Academia, no una calificación. Con menos de 8 contactos no se sugiere nada.</p>
+      {people.map((person) => (
+        <article key={person.email} className="coach-card">
+          <strong>{person.name}</strong> · {person.contacts} contactos ({person.last7} en los últimos 7 días) · {person.interested} con interés ({person.rate} %) · {person.noReply} sin respuesta
+          {person.reasons.length > 0 && <p className="muted small">Por qué le dicen que no: {person.reasons.map((item) => `${item.reason} (${item.count})`).join(', ')}</p>}
+          {person.families.length > 0 && <p className="muted small">Por familia: {person.families.map((item) => `${item.family} ${item.interested}/${item.contacted}`).join(' · ')}</p>}
+          {person.advice.map((item) => <p key={item.text}><strong>Practicar:</strong> {item.text} <span className="muted small">({item.because})</span></p>)}
+          {person.enoughData && !person.advice.length && <p className="muted small">Sin nada para marcar por ahora.</p>}
+        </article>
+      ))}
+    </section>
+  );
+}
+
+function LearningPanel({ stats, quotes, supabase, email }) {
+  if (!stats.contacted && !stats.byQueue.length) return <><QuoteConversionPanel stats={quotes} /><CoachingPanel supabase={supabase} email={email} /><p className="muted">Todavía no hay resultados anotados. A medida que marques Contactado, Con interés o el motivo de rechazo, acá vas a ver qué funciona.</p></>;
   const Table = ({ title, rows }) => rows.length > 0 && (
     <section className="panel">
       <h3>{title}</h3>
@@ -50,6 +76,7 @@ function LearningPanel({ stats, quotes }) {
   return (
     <div className="daily-learning">
       <QuoteConversionPanel stats={quotes} />
+      <CoachingPanel supabase={supabase} email={email} />
       <p>Prospectos contactados: <strong>{stats.contacted}</strong> · con interés: <strong>{stats.interested}</strong> ({stats.rate} %).{top ? ` El motivo de rechazo más común es "${top.reason}" (${top.count}).` : ''}</p>
       <Table title="Por versión del mensaje" rows={stats.byVariant} />
       <Table title="Por familia" rows={stats.byFamily} />
@@ -196,7 +223,7 @@ export function DailyQueues({ rules, supabase, clients: allClients = [], prospec
         ? <p className="muted">No hay cotizaciones sin respuesta entre 3 y 90 días (o ya las trabajaste en los últimos 14 días).</p>
         : cotizaron.map((item) => <ClientQueueCard key={item.client.id} item={item} queue="cotizaron" message={quoteMessage(item.client, item.quote, sender)} onOpenClient={onOpenClient} onResult={recordResult} />))}
 
-      {view === 'aprendido' && <LearningPanel stats={learning} quotes={quoteStats} />}
+      {view === 'aprendido' && <LearningPanel stats={learning} quotes={quoteStats} supabase={supabase} email={userEmail} />}
       {view === 'nuevos' && (nuevos.length === 0
         ? <p className="muted">No quedan prospectos nuevos pendientes. Importá la planilla de prospección desde la pestaña Prospectos.</p>
         : nuevos.map((prospect) => {

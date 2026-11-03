@@ -85,3 +85,11 @@ test('respuestas que no coinciden: mismo producto y tema con números distintos'
   assert.deepEqual(list[0].options.map((option) => option.uses), [2, 2]);
   assert.equal(conflictingAnswers(rows, titles, { taught: [{ product: list[0].product, question: '¿cuánto rinde?' }] }).length, 0, 'lo ya enseñado no vuelve');
 });
+
+test('worthTeaching descarta respuestas cortas o que son solo un link', async () => {
+  const { worthTeaching } = await import('../src/assistant-training.mjs');
+  assert.equal(worthTeaching('Si le sirve perfectamente.'), false);
+  assert.equal(worthTeaching('Hola, acá te dejo el link de la pistola https://articulo.mercadolibre.com.ar/MLA-1'), false);
+  assert.equal(worthTeaching('Para esta publicación tenemos disponible: COLOR: AMARILLO, AZUL, BLANCO, NEGRO, ROJO.'), true);
+  assert.equal(worthTeaching('Tiene figuras de 5, 3, 2 y 1 cm.'), true);
+});

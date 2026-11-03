@@ -33,6 +33,8 @@ export function closedBySystem(task = {}, stamps = null) {
 
 const byPriority = (a, b) => (b.priority === 'Alta') - (a.priority === 'Alta') || String(a.title).localeCompare(String(b.title));
 
+import { rocksSummary } from './big-rocks.mjs';
+
 export function reviewDay(date, { planChecks = {}, tasks = [], includeRoutine = true } = {}) {
   const day = includeRoutine ? routineForDate(date) : { ...routineForDate(date), blocks: [] };
   // Las tareas automáticas ("Retomar contacto", "Responder a…") son alertas, no tareas que la persona
@@ -53,6 +55,7 @@ export function reviewDay(date, { planChecks = {}, tasks = [], includeRoutine = 
   const base = day.blocks.filter((block) => !block.extra).length;
   const baseDone = base - blocksMissed.length;
   const score = base ? Math.round((baseDone / base) * 100) : null;
+  const rocks = rocksSummary(date, planChecks, tasks);
   return {
     date,
     weekend: day.weekend,
@@ -63,14 +66,16 @@ export function reviewDay(date, { planChecks = {}, tasks = [], includeRoutine = 
     carried,
     tomorrow,
     tomorrowTasks,
-    headline: headline({ weekend: day.weekend, score, doneTasks, pendingTasks, carried }),
+    rocks,
+    headline: headline({ weekend: day.weekend, score, doneTasks, pendingTasks, carried, rocks }),
   };
 }
 
-function headline({ weekend, score, doneTasks, pendingTasks, carried }) {
+function headline({ weekend, score, doneTasks, pendingTasks, carried, rocks }) {
   if (weekend) return 'Fin de semana: sin rutina. Descansá.';
   const parts = [];
   if (score !== null) parts.push(score >= 100 ? 'Rutina base completa.' : `Rutina base al ${score}%.`);
+  if (rocks?.total) parts.push(`Piedras grandes: ${rocks.done} de ${rocks.total}.`);
   parts.push(doneTasks.length ? `${doneTasks.length} ${doneTasks.length === 1 ? 'tarea resuelta' : 'tareas resueltas'}.` : 'Sin tareas resueltas.');
   if (pendingTasks.length) parts.push(`${pendingTasks.length} sin hacer.`);
   if (carried.length) parts.push(`${carried.length} vencidas de días anteriores.`);

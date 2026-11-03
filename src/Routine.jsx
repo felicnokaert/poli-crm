@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { DayReview } from "./DayReview.jsx";
+import { MAX_ROCKS, chosenRocks, rockCandidates, rockKey, sierraKey } from "./big-rocks.mjs";
 import { planSummary, tasksForDay } from "./trello-plan-import.mjs";
 import { CheckCircle2, Circle, ArrowRight, Flame } from "lucide-react";
 import {
@@ -7,6 +8,47 @@ import {
 } from "./routine.mjs";
 
 const DAY_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie"];
+
+// Las 3 piedras grandes del día y «afilar la sierra» de la semana (los 7 hábitos: primero lo importante).
+function BigRocks({ date, planChecks, tasks, onToggle, onToggleTask }) {
+  const [pick, setPick] = useState("");
+  const chosen = chosenRocks(date, planChecks, tasks);
+  const candidates = rockCandidates(date, planChecks, tasks);
+  const sierra = planChecks[sierraKey(date)] === true;
+  return (
+    <section className="panel big-rocks" aria-label="Piedras grandes">
+      <h3>Las 3 piedras grandes de hoy</h3>
+      <p className="muted small">Lo importante primero. Elegí hasta {MAX_ROCKS} tareas que, si las hacés, hacen que el día valga la pena, aunque no sean las más urgentes.</p>
+      {chosen.length === 0 && <p className="muted">Todavía no elegiste ninguna.</p>}
+      <ul>
+        {chosen.map((task) => (
+          <li key={task.id} className={task.done ? "done" : ""}>
+            <label><input type="checkbox" checked={Boolean(task.done)} onChange={() => onToggleTask?.(task.id)} /> <span>{task.title}</span></label>{" "}
+            <button type="button" className="link-button" onClick={() => onToggle(rockKey(date, task.id), false)}>Quitar</button>
+          </li>
+        ))}
+      </ul>
+      {chosen.length < MAX_ROCKS && candidates.length > 0 && (
+        <div className="list-toolbar">
+          <select value={pick} onChange={(event) => setPick(event.target.value)} aria-label="Elegir una piedra grande">
+            <option value="">Elegir de mis tareas pendientes…</option>
+            {candidates.map((task) => <option key={task.id} value={task.id}>{task.priority === "Alta" ? "★ " : ""}{task.title}{task.dueDate ? ` · ${task.dueDate}` : ""}</option>)}
+          </select>
+          <button type="button" className="secondary" disabled={!pick} onClick={() => { onToggle(rockKey(date, pick), true); setPick(""); }}>Sumar</button>
+        </div>
+      )}
+      <div className="routine-block sierra">
+        <button type="button" className="task-check" aria-pressed={sierra} aria-label={`${sierra ? "Desmarcar" : "Marcar"} afilar la sierra`} onClick={() => onToggle(sierraKey(date), !sierra)}>
+          {sierra ? <CheckCircle2 size={22} /> : <Circle size={22} />}
+        </button>
+        <div>
+          <strong>Afilar la sierra (esta semana)</strong>
+          <p className="muted small">Una hora para vos: leer, capacitarte o mejorar tu método. Lo que te hace más efectivo sin que lo pida nadie.</p>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export function Routine({ date, planChecks = {}, onToggle, onNavigate, tasks = [], onToggleTask, onImportPlan, plan = [], onPostpone }) {
   const [full, setFull] = useState(true);
@@ -34,6 +76,8 @@ export function Routine({ date, planChecks = {}, onToggle, onNavigate, tasks = [
           </div>
         )}
       </div>
+
+      {!day.weekend && <BigRocks date={date} planChecks={planChecks} tasks={tasks} onToggle={onToggle} onToggleTask={onToggleTask} />}
 
       {!day.weekend && (
         <>

@@ -2,7 +2,7 @@ import { signatureFor } from './mail-signature.mjs';
 import { ProspectRulesPanel } from './ProspectRulesPanel.jsx';
 import { normalizeRules } from './prospect-rules.mjs';
 import { radiusForPopulation } from './prospect-radius.mjs';
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { FileUp, Plus, Search } from 'lucide-react';
 import {
   PROSPECT_FAMILIES,
@@ -83,6 +83,8 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const [jobText, setJobText] = useState({});
   const researchJobs = Array.isArray(data.researchJobs) ? data.researchJobs : EMPTY;
   const [message, setMessage] = useState('');
+  const [siteBatch, setSiteBatch] = useState(null); // lectura de sitios en lote: { done, total, found } mientras corre
+  const stopSites = useRef(false);
   // Último clic deshacible (marcar o eliminar): un error de dedo no saca a nadie de la cola para siempre.
   const [undo, setUndo] = useState(null);
   const [pageSize, setPageSize] = useState(LIST_PAGE);
@@ -150,6 +152,8 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const validMail = (item) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(item.email || '').trim());
   const inOutbox = new Set(outbox.filter((item) => item.state !== 'borrado').map((item) => item.prospectId));
   const withMail = visible.filter(validMail);
+  // Sitios por leer: con web, sin mail, que no sean competidores y que todavía no se hayan leído (siteReadAt).
+  const readable = visible.filter((item) => item.website && !validMail(item) && !item.competitor && !item.siteReadAt);
   const mailable = withMail.filter((item) => !inOutbox.has(item.id) && !blockedBy({ email: item.email, company: item.company }, blockList));
 
   function addProspects(rows, source) {
@@ -501,6 +505,32 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     };
     await Promise.all([worker(), worker(), worker()]);
     setMessage(`Se leyeron los sitios de los prospectos nuevos: ${withMail} con mail encontrado.`);
+  }
+
+  // 3/11 (Felipe: «armame el botón para leer los sitios en lote»): lee de a 3 sitios, hasta 100 por vez, y marca cada uno
+  // como leído (siteReadAt) para no repetirlo. Se puede detener; lo ya leído queda guardado.
+  async function readSitesInBatch(list) {
+    const queue = list.slice(0, 100);
+    if (!queue.length || siteBatch) return;
+    stopSites.current = false;
+    const total = queue.length;
+    let done = 0;
+    let found = 0;
+    setSiteBatch({ done, total, found });
+    const worker = async () => {
+      while (queue.length && !stopSites.current) {
+        const item = queue.shift();
+        const text = await enrich(item);
+        if (/Agregado desde su sitio:.*email/i.test(text)) found += 1;
+        const stamp = new Date().toISOString();
+        setData((current) => ({ ...current, prospects: (current.prospects || []).map((entry) => (entry.id === item.id ? { ...entry, siteReadAt: stamp, updatedAt: stamp } : entry)) }));
+        done += 1;
+        setSiteBatch({ done, total, found });
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+    setSiteBatch(null);
+    setMessage(`${stopSites.current ? 'Lectura detenida' : 'Lectura terminada'}: se leyeron ${done} de ${total} sitios y ${found} tenían mail.`);
   }
 
   async function enrich(prospect) {
@@ -875,6 +905,10 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         <div className="queue-actions" role="group" aria-label="Mails a los prospectos">
           <span className="muted small">✉ {withMail.length} de {visible.length} prospectos tienen mail{visible.length - withMail.length ? ` (a ${visible.length - withMail.length} les falta: se pueden buscar con «Investigar»)` : ''} · {mailable.length} sin mails armados todavía</span>
           <button type="button" className="primary" disabled={!mailable.length} onClick={() => { const batch = mailable.slice(0, 100); if (window.confirm(`Se arman los 3 mails (en borrador) de ${batch.length} prospecto(s). Después los revisás en Bandeja de salida y los aprobás. ¿Seguimos?`)) setMessage(armMails(batch)); }}>Armar los mails de {Math.min(100, mailable.length)} prospecto(s) con mail</button>
+          <button type="button" className="secondary" disabled={!readable.length || Boolean(siteBatch)} onClick={() => { if (window.confirm(`Se leen los sitios web de ${Math.min(100, readable.length)} prospecto(s) para buscar su mail (respeta robots.txt, de a 3 por vez). Podés detener cuando quieras.`)) readSitesInBatch(readable); }}>
+            {siteBatch ? `Leyendo sitios… ${siteBatch.done} de ${siteBatch.total} · ${siteBatch.found} con mail` : `Buscar mails en sus sitios web (${readable.length} por leer)`}
+          </button>
+          {siteBatch && <button type="button" className="danger-link" onClick={() => { stopSites.current = true; }}>Detener</button>}
         </div>
       )}
       {listView === 'cola' && <ProspectQueue queue={queue} byId={prospectsById} checks={checks} onMark={mark} onBlock={blockRecord} onArmMail={(record) => setMessage(armMails([record]))} onSkip={(id) => setSkipped((list) => [...list, id])} onOpen={setDetailId} onEnrich={async (prospect) => setMessage(await enrich(prospect))} onResearch={async (prospect) => setMessage(await researchProspect(prospect))} />}

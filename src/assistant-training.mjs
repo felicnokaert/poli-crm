@@ -76,6 +76,15 @@ export function shortProduct(title = '') {
   return words.slice(0, 2).join(' ');
 }
 
+// Respuestas que no sirven para enseñar: de 4 palabras o menos y sin ningún número («Si le sirve perfectamente») o que son casi solo un link.
+export function worthTeaching(text = '') {
+  const plain = String(text).replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim();
+  const hadLink = /https?:\/\//.test(String(text));
+  if (plain.split(' ').filter(Boolean).length < 5 && !/\d/.test(plain)) return false; // corta y sin ningún dato (número): no enseña nada
+  if (hadLink && plain.length < 60) return false;
+  return true;
+}
+
 export function suggestTeachings(questions = [], titles = {}, { taught = [], minUses = 3, max = 30 } = {}) {
   const byItem = new Map();
   for (const row of questions) {
@@ -97,6 +106,7 @@ export function suggestTeachings(questions = [], titles = {}, { taught = [], min
     for (const { intent, rows: asked } of byIntent.values()) {
       const team = teamAnswer(asked, intent);
       if (!team || team.varied || team.uses < minUses) continue;
+      if (!worthTeaching(team.text)) continue;
       const product = shortProduct(titles[itemId] || '') || baseProduct([titles[itemId] || '']);
       const question = `${intent.label} (${intent.search.join(', ')})`;
       const key = `${product.toLowerCase()}|${question.toLowerCase()}`;

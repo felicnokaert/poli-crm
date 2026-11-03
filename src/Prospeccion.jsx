@@ -304,6 +304,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
           fresh: made.length, repeated: results.length - made.length, inCrm, ms, attempts: payload.attempts || 1, endpoint: payload.endpoint || '', radiusKm: payload.radiusKm ?? null, truncated: Boolean(payload.truncated),
         }],
       }));
+      readMailsFromSites(made);
       setMessage(searchSummary({ source, zoneName: zone.nombre, returned: stats.returned, withPhone: stats.withPhone, withWebsite: stats.withWebsite, fresh: made.length, repeated: results.length - made.length, inCrm, ms, truncated: payload.truncated }) + (payload.warning ? ` ${payload.warning}` : ''));
     } catch (error) {
       const reason = 'No se pudo hacer la búsqueda. Revisá tu conexión y probá de nuevo.';
@@ -485,6 +486,23 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   }
 
   // Lee el sitio de la propia empresa (con robots.txt) y completa solo lo que falta.
+  // 3/11 (Felipe: «al prospectar, que sume el mail»): después de cada búsqueda se leen los sitios de los prospectos nuevos
+  // (hasta 40, de a 3 por vez, sin frenar la pantalla) y se suma el mail que figure en el sitio. Los competidores no se leen.
+  async function readMailsFromSites(list) {
+    const queue = list.filter((item) => item.website && !item.email && !item.competitor).slice(0, 40);
+    if (!queue.length) return;
+    let withMail = 0;
+    const worker = async () => {
+      while (queue.length) {
+        const item = queue.shift();
+        const text = await enrich(item);
+        if (/Agregado desde su sitio:.*email/i.test(text)) withMail += 1;
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+    setMessage(`Se leyeron los sitios de los prospectos nuevos: ${withMail} con mail encontrado.`);
+  }
+
   async function enrich(prospect) {
     if (!session?.access_token) return 'Iniciá sesión para buscar.';
     try {

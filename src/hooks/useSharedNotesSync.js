@@ -36,10 +36,10 @@ export function useSharedNotesSync(supabase, email, name, data, enabled = true) 
 }
 
 // Lo que anotaron los DEMÁS (lo propio ya está en el espacio de cada uno). kind: "notas" o "contactos".
-export function useTeamSharedNotes(supabase, { kind = "notas", sinceIso = "", limit = 2000 } = {}) {
+export function useTeamSharedNotes(supabase, { kind = "notas", sinceIso = "", limit = 2000, includeMine = false, enabled = true } = {}) {
   const [rows, setRows] = useState([]);
   useEffect(() => {
-    if (!supabase?.from || !supabase?.auth) return undefined;
+    if (!enabled || !supabase?.from || !supabase?.auth) return undefined;
     let active = true;
     (async () => {
       try {
@@ -48,13 +48,13 @@ export function useTeamSharedNotes(supabase, { kind = "notas", sinceIso = "", li
         let query = supabase.from("team_shared_notes").select("author_email,author_name,kind,company,note,outcome,noted_at");
         query = kind === "contactos" ? query.eq("kind", "contacto") : query.neq("kind", "contacto");
         if (sinceIso) query = query.gte("noted_at", sinceIso);
-        const { data, error } = await query.neq("author_email", me).order("noted_at", { ascending: false }).limit(limit);
+        const { data, error } = await (includeMine ? query : query.neq("author_email", me)).order("noted_at", { ascending: false }).limit(limit);
         if (active && !error) setRows(data || []);
       } catch {
         // Sin la tabla (todavía no se aplicó la migración) queda vacío.
       }
     })();
     return () => { active = false; };
-  }, [supabase, kind, sinceIso, limit]);
+  }, [supabase, kind, sinceIso, limit, includeMine, enabled]);
   return rows;
 }

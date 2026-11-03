@@ -59,3 +59,6 @@ Cómo ver cada dato:
 | PURMAC | instagram.com/purmac_ | falta confirmar | falta | falta |
 | RAPYP | instagram.com/rapyp.red | falta confirmar | falta | falta |
 | Foam Factory | instagram.com/foamfactory_ | falta confirmar | falta | falta |
+
+### Aclaración de Felipe (3/11)
+Cada marca tiene en Facebook el mismo nombre de usuario que en Instagram (grupopoliplast, resinplast1, imperpur, purmac_, rapyp.red, foamfactory_) y las cuentas las administra el grupo, no una sola persona. Falta confirmar solo: que cada Instagram sea cuenta profesional y esté vinculada a su página de Facebook, y cuántas personas figuran como administradoras en Meta Business.

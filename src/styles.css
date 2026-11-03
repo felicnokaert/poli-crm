@@ -1546,3 +1546,4 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .training-row .badge { display: inline-block; font-style: normal; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #ededee; color: #444; }
 .training-row .badge.ok { background: var(--color-success-bg); color: var(--color-success); }
 .training-row .badge.warn { background: var(--color-danger-bg); color: var(--color-danger-text); }
+.coach-card{padding:10px 0;border-top:1px solid #e5e7eb}.coach-card p{margin:4px 0}

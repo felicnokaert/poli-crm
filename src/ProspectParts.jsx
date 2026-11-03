@@ -6,6 +6,7 @@ import {
   PROSPECT_STATES,
   REJECTION_REASONS,
   possibleWhatsAppLink,
+  whatsappLinkWithText,
 } from './prospect-model.mjs';
 import { missingContact } from './prospect-queue.mjs';
 import { contactQuality } from './prospect-contact.mjs';
@@ -21,6 +22,13 @@ function statusClass(status) {
   return 'badge';
 }
 
+// Link de WhatsApp con el primer mensaje armado para ese prospecto (con el nombre de quien escribe guardado en este navegador).
+export function quickWhatsAppLink(prospect = {}) {
+  let sender = '';
+  try { sender = localStorage.getItem('poliplast-sender-name') || ''; } catch { /* sin almacenamiento */ }
+  try { return whatsappLinkWithText(prospect.phone, buildOutreachDraft(prospect, { sender }).whatsapp); } catch { return ''; }
+}
+
 export function ProspectRow({ prospect, check, onMark, onOpenClient, onDelete, onEnrich }) {
   const [enriching, setEnriching] = useState(false);
   const [enrichNote, setEnrichNote] = useState('');
@@ -34,7 +42,7 @@ export function ProspectRow({ prospect, check, onMark, onOpenClient, onDelete, o
         <span>{[prospect.family, prospect.rubro, [prospect.city, prospect.province].filter(Boolean).join(', ')].filter(Boolean).join(' · ') || 'Sin datos de rubro o zona'}</span>
         <span>
           {prospect.phone || 'sin teléfono'}
-          {whatsapp && <> · <a href={whatsapp} target="_blank" rel="noreferrer">WhatsApp (posible)</a></>}
+          {whatsapp && <> · <a href={whatsapp} target="_blank" rel="noreferrer">WhatsApp (posible)</a> · <a href={quickWhatsAppLink(prospect)} target="_blank" rel="noreferrer">con mensaje</a></>}
           {prospect.website && <> · <a href={/^https?:/.test(prospect.website) ? prospect.website : `https://${prospect.website}`} target="_blank" rel="noreferrer">sitio web</a></>}
           {prospect.email && <> · {prospect.email}</>}
           {prospect.instagram && <> · <a href={prospect.instagram} target="_blank" rel="noreferrer">Instagram</a></>}
@@ -112,7 +120,7 @@ export function ProspectSheet({ rows, checks, onMark, onOpenClient, onDelete, on
                 <td><button type="button" className="link-button" onClick={() => onOpen(item.id)}><strong>{item.company}</strong></button>{item.competitor && <em className="badge warn"> Competencia</em>}<br /><span className="muted small">{[item.family, item.source].filter(Boolean).join(' · ')}</span></td>
                 <td>{item.rubro || '–'}</td>
                 <td>{[item.city, item.province].filter(Boolean).join(', ') || '–'}</td>
-                <td>{item.phone || '–'}{whatsapp && <> · <a href={whatsapp} target="_blank" rel="noreferrer">WhatsApp (posible)</a></>}</td>
+                <td>{item.phone || '–'}{whatsapp && <> · <a href={whatsapp} target="_blank" rel="noreferrer">WhatsApp (posible)</a><br /><a href={quickWhatsAppLink(item)} target="_blank" rel="noreferrer">WhatsApp con mensaje</a></>}</td>
                 <td className="wrap">{item.email ? <>{item.email}{onArmMail && <><br /><button type="button" className="link-button" onClick={() => onArmMail(item)}>✉ Armar mails</button></>}</> : '–'}</td>
                 <td className="wrap">
                   {item.website ? <a href={/^https?:/.test(item.website) ? item.website : `https://${item.website}`} target="_blank" rel="noreferrer">sitio</a> : '–'}
@@ -318,6 +326,7 @@ export function ProspectQueue({ queue, byId, checks, onMark, onBlock, onArmMail,
       <div className="drawer-quick">
         {current.phone && <a className="secondary link-pill" href={`tel:${String(current.phone).replace(/[^\d+]/g, '')}`}>Llamar {current.phone}</a>}
         {whatsapp && <a className="secondary link-pill" href={whatsapp} target="_blank" rel="noreferrer">WhatsApp (posible)</a>}
+        {whatsapp && <a className="primary link-pill" href={quickWhatsAppLink(current)} target="_blank" rel="noreferrer">WhatsApp con el mensaje armado</a>}
         {current.email && <a className="secondary link-pill" href={`mailto:${current.email}`}>{current.email}</a>}
         {current.website && <a className="secondary link-pill" href={/^https?:/.test(current.website) ? current.website : `https://${current.website}`} target="_blank" rel="noreferrer">Sitio web</a>}
         {current.instagram && <a className="secondary link-pill" href={current.instagram} target="_blank" rel="noreferrer">Instagram</a>}

@@ -124,6 +124,13 @@ export function possibleWhatsAppLink(phone = '') {
   return `https://wa.me/${digits}`;
 }
 
+// WhatsApp con el primer mensaje ya escrito (wa.me?text=): la persona solo toca «Enviar» en WhatsApp. No envía nada solo.
+export function whatsappLinkWithText(phone = '', text = '') {
+  const base = possibleWhatsAppLink(phone);
+  if (!base) return '';
+  return text ? `${base}?text=${encodeURIComponent(String(text).slice(0, 1500))}` : base;
+}
+
 // Versión del mensaje (A o B) que le toca a un prospecto: alterna por id para comparar cuál responde más.
 // Se puede fijar a mano con `prospect.variant`.
 export function outreachVariant(prospect = {}) {

@@ -21,7 +21,23 @@ test('agregar bloquea por cualquier dato y no duplica; quitar lo reactiva', () =
   assert.equal(blockedBy({ email: 'otro@otra.com', phone: '11 4444 9999', company: 'Otra SA' }, list), null);
   list = removeBlock(list, 'mail:ventas@aislacionessur.com.ar');
   assert.equal(activeEntries(list).length, 3);
+  // El dominio sigue bloqueando cualquier mail de esa empresa: hay que quitarlo también.
+  assert.ok(blockedBy({ email: 'ventas@aislacionessur.com.ar' }, list));
+  list = removeBlock(list, 'dominio:aislacionessur.com.ar');
   assert.equal(blockedBy({ email: 'ventas@aislacionessur.com.ar' }, list), null);
+});
+
+test('cierra los huecos: contactos de la ficha, mails extra, dominio del mail y plataformas compartidas', () => {
+  const { list } = addBlock([], { company: 'Aislaciones Sur', email: 'ventas@aislacionessur.com.ar', website: 'https://sites.google.com/view/pepe' }, { by: 'felipe' });
+  // un contacto de otra ficha con el mismo mail o el mismo teléfono
+  assert.ok(blockedBy({ company: 'Otra', contacts: [{ email: 'ventas@aislacionessur.com.ar' }] }, list));
+  assert.ok(blockedBy({ company: 'Otra', extraEmails: ['VENTAS@aislacionessur.com.ar'] }, list));
+  // el dominio del mail alcanza a otras casillas de la misma empresa
+  assert.ok(blockedBy({ company: 'Otra', email: 'compras@aislacionessur.com.ar' }, list));
+  // sites.google.com NO bloquea a todos los que lo usan
+  assert.equal(blockedBy({ company: 'Otra', website: 'https://sites.google.com/view/otro' }, list), null);
+  const phone = addBlock([], { company: 'Fulano SA', phone: '011 15 5555 1234' }).list;
+  assert.ok(blockedBy({ company: 'Otra', contacts: [{ phone: '+54 9 11 5555 1234' }] }, phone));
 });
 
 test('alta manual valida y la lista filtra registros', () => {

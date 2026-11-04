@@ -18,7 +18,8 @@ export const TACOS_STATE = {
 // sales30: ventas de la cuenta en 30 días (o null si no se leyeron). report: lo guardado en Publicidad para esa cuenta.
 // live: foto diaria que lee la API de Publicidad (lib/ml-ads.mjs); si está, manda sobre la tabla pegada.
 export function tacosFor({ sales30 = null, report = null, live = null, now = Date.now() } = {}) {
-  if (live && Number.isFinite(Number(live.spend)) && live.fetchedAt) {
+  // spend vacío/null NO es 0: sin lectura real se cae a la tabla pegada o a «sin datos» (4/11).
+  if (live && live.spend != null && live.spend !== '' && Number.isFinite(Number(live.spend)) && live.fetchedAt) {
     const ageDays = Math.max(0, Math.floor((now - Date.parse(live.fetchedAt)) / 86400000));
     const spend = Number(live.spend);
     if (!(sales30 > 0)) return { state: 'sin-ventas', tacos: null, spend, sales: sales30, ageDays, live: true };

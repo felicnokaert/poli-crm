@@ -29,3 +29,13 @@ test('recentWebhookCalls resume por resultado y dice cuándo fue la última llam
   const bad = await recentWebhookCalls(env, async () => ({ ok: false, status: 404 }));
   assert.equal(bad.available, false);
 });
+
+test('los avisos de la cuenta (account_update) dejan su evento en el resumen', async () => {
+  const { summarizePayload } = await import('../lib/webhook-log.mjs');
+  const payload = { object: 'whatsapp_business_account', entry: [{ changes: [{ field: 'account_update', value: { event: 'PHONE_NUMBER_REMOVED', phone_number: '5491152627555', ignorado: 'x' } }, { field: 'messages', value: { messages: [{ type: 'text' }], metadata: { phone_number_id: '1' } } }] }] };
+  const summary = summarizePayload(payload);
+  assert.equal(summary.accountEvents.length, 1);
+  assert.equal(summary.accountEvents[0].event, 'PHONE_NUMBER_REMOVED');
+  assert.equal(summary.accountEvents[0].ignorado, undefined);
+  assert.equal(summary.types['msg:text'], 1);
+});

@@ -45,7 +45,7 @@ test('modo juez en el servidor: manda el prompt del juez y devuelve veredicto y 
   let sent;
   const http = async (url, options = {}) => {
     const u = String(url);
-    if (u.endsWith('/auth/v1/user')) return { ok: true, json: async () => ({ id: 'u', email: 'felipe@grupopoliplast.com.ar' }) };
+    if (u.endsWith('/auth/v1/user')) return { ok: true, json: async () => ({ id: 'u', email: 'felipe@grupopoliplast.com.ar', email_confirmed_at: '2026-01-01T00:00:00Z' }) };
     sent = JSON.parse(options.body);
     return { ok: true, status: 200, json: async () => ({ content: [{ type: 'text', text: '{"veredicto":"parcial","motivo":"Falta el tiempo"}' }], usage: { input_tokens: 300, output_tokens: 20 } }) };
   };
@@ -100,7 +100,7 @@ test('customerParts saca las marcas de derivar y adjuntar', () => {
 test('si Anthropic contesta vacío, reintenta una vez y usa la segunda respuesta', async () => {
   let calls = 0;
   const http = async (url) => {
-    if (String(url).endsWith('/auth/v1/user')) return { ok: true, json: async () => ({ id: 'u', email: 'felipe@grupopoliplast.com.ar' }) };
+    if (String(url).endsWith('/auth/v1/user')) return { ok: true, json: async () => ({ id: 'u', email: 'felipe@grupopoliplast.com.ar', email_confirmed_at: '2026-01-01T00:00:00Z' }) };
     calls += 1;
     return { ok: true, status: 200, json: async () => (calls === 1 ? { content: [], stop_reason: 'end_turn' } : { content: [{ type: 'text', text: 'Hola, ¿para qué superficie la necesitás?' }], usage: { input_tokens: 5, output_tokens: 5 } }) };
   };

@@ -6,7 +6,7 @@ const env = { SUPABASE_URL: 'https://x.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 
 const req = (body) => ({ headers: { authorization: 'Bearer t' }, body });
 function http(email, stored = []) {
   return async (url, options = {}) => {
-    if (url.endsWith('/auth/v1/user')) return { ok: true, json: async () => ({ id: 'u', email }) };
+    if (url.endsWith('/auth/v1/user')) return { ok: true, json: async () => ({ id: 'u', email, email_confirmed_at: '2026-01-01T00:00:00Z' }) };
     if (url.includes('/object/list/')) return { ok: true, json: async () => (JSON.parse(options.body).prefix.includes('2026-10-16') ? stored.map((s) => ({ name: s.name })) : []) };
     if (options.method === 'POST' && url.includes('/object/backups/errors/')) { stored.push({ name: url.split('/').at(-1), body: JSON.parse(options.body) }); return { ok: true, json: async () => ({}) }; }
     const hit = stored.find((s) => url.endsWith(s.name));

@@ -1,4 +1,5 @@
 import { authenticatedCorporateUser } from '../lib/corporate-auth.mjs';
+import { isAdminEmail } from '../lib/admin-users.mjs';
 import { diagnoseMeta, repairWebhook, webhookStatus } from '../lib/meta-diagnose.mjs';
 import { recentWebhookCalls } from '../lib/webhook-log.mjs';
 
@@ -30,6 +31,8 @@ export default async function handler(request, response) {
   if (request.method !== 'POST') return response.status(405).json({ error: 'Método no permitido.' });
   const user = await authenticatedCorporateUser(request);
   if (!user) return response.status(401).json({ error: 'Acceso corporativo requerido.' });
+  // 4/11: reparar el webhook o ver el estado del acceso técnico de Meta es solo de administradores.
+  if (!isAdminEmail(user.email)) return response.status(403).json({ error: 'Solo un administrador puede hacer esto.' });
   if (!process.env.META_SYSTEM_USER_TOKEN) return response.status(503).json({ error: 'Falta el acceso técnico de Meta.' });
 
   if (request.body?.action === 'diagnose') {

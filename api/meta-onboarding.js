@@ -1,4 +1,5 @@
 import { authenticatedCorporateUser } from '../lib/corporate-auth.mjs';
+import { isAdminEmail } from '../lib/admin-users.mjs';
 
 const APP_ID = '857121580457426';
 const MAX_CODE_LENGTH = 2048; // los códigos de OAuth de Meta son largos (JWT-like), pero acotados
@@ -11,6 +12,7 @@ export default async function handler(request, response) {
   if (request.method !== 'POST') return response.status(405).json({ error: 'Método no permitido.' });
   const user = await authenticatedCorporateUser(request);
   if (!user) return response.status(401).json({ error: 'Acceso corporativo requerido.' });
+  if (!isAdminEmail(user.email)) return response.status(403).json({ error: 'Solo un administrador puede hacer esto.' });
   if (!process.env.META_APP_SECRET) return response.status(503).json({ error: 'Meta no está configurado.' });
 
   const body = request.body;

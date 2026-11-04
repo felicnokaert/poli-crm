@@ -31,6 +31,7 @@ import { useBillingCustomers } from './hooks/useBillingCustomers.js';
 import { OutboxPanel } from './OutboxPanel.jsx';
 import { queueSequence, guardOutbox, applyReplies } from './mail-sequence.mjs';
 import { ProspectRow, downloadCsv, ProspectSheet, addToScope, ProspectDetail, ProspectQueue, SearchHistory, searchSummary } from './ProspectParts.jsx';
+import { arToday } from './ar-date.mjs';
 export { searchSummary } from './ProspectParts.jsx';
 
 const DAILY_LIST_SIZE = 40;
@@ -133,7 +134,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     setZone(null);
   }, [planFamily]);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = arToday();
   // Zonas sugeridas por déficit de cobertura (habitantes por cliente/prospecto de la
   // familia); si la familia todavía no tiene datos, por población.
   const provinceCities = useMemo(() => (provSel ? cities.filter((item) => item.prov === provSel).sort((a, b) => b.pob - a.pob) : []), [provSel, cities]);
@@ -278,7 +279,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     setSearching(true);
     setMessage('');
     const startedAt = Date.now();
-    const base = { id: crypto.randomUUID(), family: planFamily, zoneId: zone.id, zoneName: zone.nombre, province: provinces[zone.prov] || '', date: new Date().toISOString().slice(0, 10), source, rubros };
+    const base = { id: crypto.randomUUID(), family: planFamily, zoneId: zone.id, zoneName: zone.nombre, province: provinces[zone.prov] || '', date: arToday(), source, rubros };
     const logSearch = (entry) => setData((current) => ({ ...current, prospectSearches: [...(Array.isArray(current.prospectSearches) ? current.prospectSearches : []), { ...base, createdAt: new Date().toISOString(), ...entry }] }));
     try {
       const response = await fetch('/api/prospeccion', {

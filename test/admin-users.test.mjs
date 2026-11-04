@@ -4,7 +4,7 @@ import { deleteUser, isAdminEmail } from '../lib/admin-users.mjs';
 
 const env = { SUPABASE_URL: 'https://x.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'svc' };
 const ID = '11111111-1111-1111-1111-111111111111';
-const FELIPE = { id: '22222222-2222-2222-2222-222222222222', email: 'felipe@grupopoliplast.com.ar' };
+const FELIPE = { id: '22222222-2222-2222-2222-222222222222', email: 'felipe@grupopoliplast.com.ar', email_confirmed_at: '2026-01-01T00:00:00Z' };
 
 function fakeHttp({ caller = FELIPE, target = { id: ID, email: 'brenda@grupopoliplast.com.ar' }, deleteOk = true } = {}) {
   const calls = [];
@@ -20,7 +20,7 @@ function fakeHttp({ caller = FELIPE, target = { id: ID, email: 'brenda@grupopoli
 const req = (body, token = 'Bearer t') => ({ headers: { authorization: token }, body });
 
 test('solo Felipe borra: otro usuario corporativo recibe 403', async () => {
-  const { http } = fakeHttp({ caller: { id: 'x', email: 'brenda@grupopoliplast.com.ar' } });
+  const { http } = fakeHttp({ caller: { id: 'x', email: 'brenda@grupopoliplast.com.ar', email_confirmed_at: '2026-01-01T00:00:00Z' } });
   assert.equal((await deleteUser(req({ userId: ID }), env, http)).status, 403);
 });
 

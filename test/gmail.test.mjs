@@ -111,7 +111,7 @@ function fakeWorld({ sends = [], blocked = [], account = { email: 'ana@grupopoli
     calls.push({ url: String(url), options });
     const u = String(url);
     const json = (body, ok = true) => ({ ok, status: ok ? 200 : 400, json: async () => body, headers: { get: () => '0/' + sends.length } });
-    if (u.endsWith('/auth/v1/user')) return json({ id: 'u1', email: 'ana@grupopoliplast.com.ar' });
+    if (u.endsWith('/auth/v1/user')) return json({ id: 'u1', email: 'ana@grupopoliplast.com.ar', email_confirmed_at: '2026-01-01T00:00:00Z' });
     if (u.includes('/gmail_accounts')) return json(account ? [account] : []);
     if (u.includes('/workspace_states')) return json([{ data: { doNotContact: blocked } }]);
     if (u.includes('/gmail_sends') && options.method === 'HEAD') return json([]);

@@ -87,7 +87,7 @@ export function ClientDetail({
     setNewContact({ name: "", role: "", phone: "", email: "" });
   }
   return (
-    <div className="modal-backdrop">
+    <div className="modal-backdrop" role="dialog" aria-modal="true">
       <section className="modal client-detail">
         <div className="modal-head">
           <div>

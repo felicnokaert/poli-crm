@@ -11,7 +11,7 @@ export function InteractionForm({ form, setForm, myChannels = [], editing = fals
     onChange: (event) => setForm({ ...form, [name]: event.target.value }),
   });
   return (
-    <div className="modal-backdrop">
+    <div className="modal-backdrop" role="dialog" aria-modal="true">
       <form className="modal" onSubmit={onSave}>
         <div className="modal-head">
           <div>

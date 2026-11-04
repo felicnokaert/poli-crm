@@ -302,7 +302,7 @@ export function TaskDetail({ task, client, onClose, onToggle, onSave, onOpenClie
     setEditing(false);
   }
   return (
-    <div className="modal-backdrop">
+    <div className="modal-backdrop" role="dialog" aria-modal="true">
       <section className="modal interaction-detail">
         <div className="modal-head">
           <div>
@@ -473,7 +473,7 @@ export function TaskForm({ form, setForm, clients, onClose, onSave }) {
     onChange: (event) => setForm({ ...form, [name]: event.target.value }),
   });
   return (
-    <div className="modal-backdrop">
+    <div className="modal-backdrop" role="dialog" aria-modal="true">
       <form className="modal interaction-detail" onSubmit={onSave}>
         <div className="modal-head">
           <div>

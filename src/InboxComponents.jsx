@@ -366,7 +366,7 @@ export function InboxDraftModal({ draft, setDraft, onClose, onConfirm }) {
   const updateTriage = (name, value) =>
     update("triage", { ...form.triage, [name]: value === "" ? null : Number(value) });
   return (
-    <div className="modal-backdrop">
+    <div className="modal-backdrop" role="dialog" aria-modal="true">
       <form className="modal" onSubmit={onConfirm}>
         <div className="modal-head">
           <div>

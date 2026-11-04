@@ -1,4 +1,5 @@
-export const SALES_UNITS = {
+
+import { arToday } from './ar-date.mjs';export const SALES_UNITS = {
   Poliplast: { rate: 0.03, invoicePoints: ['0006', '0011', '0013', '0016'] },
   Poliocho: { rate: 0.01, invoicePoints: ['0003'] },
 };
@@ -70,10 +71,9 @@ export function netAmountInUsd(sale, fallbackRate) {
 }
 
 export function blankSale(defaultUnit = '', defaultPointOfSale = '') {
-  const now = new Date();
   return {
     id: '',
-    date: now.toISOString().slice(0, 10),
+    date: arToday(),
     unit: defaultUnit,
     documentType: 'Factura',
     pointOfSale: defaultPointOfSale,

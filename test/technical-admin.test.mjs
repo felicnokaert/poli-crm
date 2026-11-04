@@ -9,7 +9,7 @@ function fakeHttp(email, { deleteFails = false } = {}) {
   const calls = [];
   const http = async (url, options = {}) => {
     calls.push({ url, method: options.method || 'GET', body: options.body });
-    if (url.endsWith('/auth/v1/user')) return { ok: true, json: async () => ({ id: 'u', email }) };
+    if (url.endsWith('/auth/v1/user')) return { ok: true, json: async () => ({ id: 'u', email, email_confirmed_at: '2026-01-01T00:00:00Z' }) };
     if (url.includes('select=id,storage_path')) return { ok: true, json: async () => [{ id: id1, storage_path: `${id1}/a.pdf` }, { id: id2, storage_path: null }] };
     if (options.method === 'DELETE' && url.includes('/rest/v1/technical_documents')) {
       return deleteFails ? { ok: false, status: 409, json: async () => ({ message: 'violates foreign key constraint' }) } : { ok: true, json: async () => [{ id: id1 }, { id: id2 }] };

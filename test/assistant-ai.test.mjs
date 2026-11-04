@@ -11,7 +11,7 @@ function world({ email = 'brenda@grupopoliplast.com.ar', reply = json({ content:
   const calls = [];
   const http = async (url, options = {}) => {
     calls.push({ url, options });
-    if (url.endsWith('/auth/v1/user')) return json({ id: 'u1', email });
+    if (url.endsWith('/auth/v1/user')) return json({ id: 'u1', email, email_confirmed_at: '2026-01-01T00:00:00Z' });
     if (url === 'https://api.anthropic.com/v1/messages') return reply;
     return json({}, 404);
   };

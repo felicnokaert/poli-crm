@@ -22,11 +22,11 @@ test('authenticatedCorporateUser rejects requests without a bearer token or Supa
 test('authenticatedCorporateUser accepts a corporate-domain user and rejects everyone else', async () => {
   const environment = { SUPABASE_URL: 'https://x', SUPABASE_SERVICE_ROLE_KEY: 'key' };
 
-  const corporateHttp = async () => ({ ok: true, json: async () => ({ email: 'vendedor@grupopoliplast.com.ar' }) });
+  const corporateHttp = async () => ({ ok: true, json: async () => ({ email: 'vendedor@grupopoliplast.com.ar', email_confirmed_at: '2026-01-01T00:00:00Z' }) });
   const corporateUser = await authenticatedCorporateUser({ headers: { authorization: 'Bearer good-token' } }, environment, corporateHttp);
   assert.equal(corporateUser?.email, 'vendedor@grupopoliplast.com.ar');
 
-  const outsiderHttp = async () => ({ ok: true, json: async () => ({ email: 'outsider@example.com' }) });
+  const outsiderHttp = async () => ({ ok: true, json: async () => ({ email: 'outsider@example.com', email_confirmed_at: '2026-01-01T00:00:00Z' }) });
   const outsiderUser = await authenticatedCorporateUser({ headers: { authorization: 'Bearer good-token' } }, environment, outsiderHttp);
   assert.equal(outsiderUser, null);
 

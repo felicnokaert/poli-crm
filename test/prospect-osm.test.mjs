@@ -109,7 +109,7 @@ test('el endpoint exige usuario corporativo y valida zona y rubros', async () =>
   process.env.SUPABASE_URL = 'https://db.test';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'service';
   globalThis.fetch = async (url) => {
-    if (String(url).includes('/auth/v1/user')) return { ok: true, json: async () => ({ email: 'marketing@grupopoliplast.com.ar' }) };
+    if (String(url).includes('/auth/v1/user')) return { ok: true, json: async () => ({ email: 'marketing@grupopoliplast.com.ar', email_confirmed_at: '2026-01-01T00:00:00Z' }) };
     return { ok: true, status: 200, json: async () => SAMPLE };
   };
   try {
@@ -146,7 +146,7 @@ test('si falla la búsqueda por nombre, igual se devuelve lo hallado por rubro c
   process.env.SUPABASE_URL = 'https://db.test';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'service';
   globalThis.fetch = async (url, options) => {
-    if (String(url).includes('/auth/v1/user')) return { ok: true, json: async () => ({ email: 'marketing@grupopoliplast.com.ar' }) };
+    if (String(url).includes('/auth/v1/user')) return { ok: true, json: async () => ({ email: 'marketing@grupopoliplast.com.ar', email_confirmed_at: '2026-01-01T00:00:00Z' }) };
     if (String(options?.body || '').includes('name')) return { ok: false, status: 504, json: async () => ({}) };
     return { ok: true, status: 200, json: async () => SAMPLE };
   };

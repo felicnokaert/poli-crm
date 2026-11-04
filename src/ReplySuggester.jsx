@@ -2,6 +2,7 @@ import { useState } from "react";
 import { adminFetch } from "./admin-api.mjs";
 import { supabase } from "./online.js";
 import { loadReplyKnowledge } from "./reply-knowledge.mjs";
+import { arToday } from './ar-date.mjs';
 
 // Respuesta sugerida de WhatsApp (29/10, etapa 1): borrador bajo demanda con IA. El CRM no envía nada: la persona lo
 // edita, lo copia y lo manda ella. Cada pedido gasta un poco del crédito de la IA, por eso solo corre al tocar el botón.
@@ -15,7 +16,7 @@ export function ReplySuggester({ event, context }) {
     setState({ status: "loading", draft: "", review: "", error: "" });
     try {
       // Lo que ya sabe el CRM del tema (Mercado Libre, lo enseñado y precios de lista); si falla, el borrador sale igual.
-      const today = new Date().toISOString().slice(0, 10);
+      const today = arToday();
       const knowledge = await loadReplyKnowledge(supabase, event.text_body, {
         today,
         loadPrices: async (client, words, day) => (await import("./AssistantWindow.jsx")).loadListPrices(client, words, day),

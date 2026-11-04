@@ -15,7 +15,7 @@ function fakeWorld({ email = 'felipe@grupopoliplast.com.ar', state = null, crowd
   const rows = new Map();
   const searches = [];
   const http = async (url, options = {}) => {
-    if (url.endsWith('/auth/v1/user')) return json({ id: 'u1', email });
+    if (url.endsWith('/auth/v1/user')) return json({ id: 'u1', email, email_confirmed_at: '2026-01-01T00:00:00Z' });
     if (url === 'https://rest.contabilium.com/token') return json({ access_token: 'T' });
     if (url.startsWith('https://rest.contabilium.com/api/comprobantes/search')) {
       const query = new URL(url).searchParams;

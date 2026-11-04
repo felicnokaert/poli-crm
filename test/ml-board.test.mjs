@@ -82,7 +82,7 @@ test('Contabilium: prueba cada empresa sin exponer las claves', async () => {
   assert.match(comarg.error, /invalid_client/);
   assert.equal(foam.error, 'faltan las claves en Vercel');
   assert.ok(!JSON.stringify([poli, comarg, foam]).includes('sec1'));
-  const denied = await contabiliumAdmin({ headers: { authorization: 'Bearer t' }, body: { op: 'test' } }, { SUPABASE_URL: 'https://db', SUPABASE_SERVICE_ROLE_KEY: 's' }, async () => json({ id: 'u', email: 'juan@grupopoliplast.com.ar' }));
+  const denied = await contabiliumAdmin({ headers: { authorization: 'Bearer t' }, body: { op: 'test' } }, { SUPABASE_URL: 'https://db', SUPABASE_SERVICE_ROLE_KEY: 's' }, async () => json({ id: 'u', email: 'juan@grupopoliplast.com.ar', email_confirmed_at: '2026-01-01T00:00:00Z' }));
   assert.equal(denied.status, 403);
 });
 

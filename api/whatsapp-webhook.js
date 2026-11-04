@@ -93,7 +93,7 @@ export default async function handler(request, response) {
     const result = await persistEvents(events);
     await logWebhookCall({ method: 'POST', outcome: 'stored', statusCode: 200, bodyBytes: rawBody.length, hasSignature: true, summary: { ...summarizePayload(payload), accepted: events.length, stored: result.stored } });
     // 3/11: respuesta automática SOLO a los contactos habilitados (apagada por defecto). Nunca frena ni rompe la recepción.
-    if (!isSocial) { try { await Promise.race([autoReplyEvents(events), new Promise((resolve) => setTimeout(resolve, 45000))]); } catch (error) { logError('whatsapp-webhook', 'auto reply failed', {}, error); } }
+    if (!isSocial) { try { await Promise.race([autoReplyEvents(Array.isArray(result.inserted) ? events.filter((event) => result.inserted.includes(String(event.event_id))) : events), new Promise((resolve) => setTimeout(resolve, 45000))]); } catch (error) { logError('whatsapp-webhook', 'auto reply failed', {}, error); } }
     return response.status(200).json({ ok: true, accepted: events.length, stored: result.stored });
   } catch (error) {
     logError('whatsapp-webhook', 'failed persisting events', { eventCount: events.length }, error);

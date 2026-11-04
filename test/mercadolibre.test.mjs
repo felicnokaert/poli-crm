@@ -11,7 +11,7 @@ function fakeWorld({ email = 'felipe@grupopoliplast.com.ar', account = null } = 
   const saved = { ml_accounts: [], ml_items: [], ml_questions: [], patches: [] };
   const http = async (url, options = {}) => {
     calls.push({ url, options });
-    if (url.endsWith('/auth/v1/user')) return json({ id: 'u1', email });
+    if (url.endsWith('/auth/v1/user')) return json({ id: 'u1', email, email_confirmed_at: '2026-01-01T00:00:00Z' });
     if (url.startsWith('https://db/rest/v1/ml_accounts?select=*')) return json(account ? [account] : []);
     if (url.startsWith('https://db/rest/v1/ml_items?select=id') && options.method === 'HEAD') return { ok: true, status: 200, headers: { get: () => '0-0/1' } };
     if (url.startsWith('https://db/rest/v1/ml_items?select=id')) return json([{ id: 'MLA7' }]);

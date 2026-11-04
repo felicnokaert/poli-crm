@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { COMMERCIAL_STAGES } from "./commercial-knowledge.mjs";
+import { arToday, arAddDays } from "./ar-date.mjs";
 
 // Tablero maestro de Trello (ver ProjectBoardGateway en Dashboard.jsx): unica
 // fuente de proyectos/prioridades del equipo, compartida acá tambien para el
@@ -115,13 +116,11 @@ export const initialState = {
 };
 
 export function today() {
-  return new Date().toISOString().slice(0, 10);
+  return arToday();
 }
 
 export function addDaysToToday(days) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
+  return arAddDays(days);
 }
 
 export function longToday() {

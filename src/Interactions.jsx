@@ -60,7 +60,7 @@ function InteractionDetailBase({
   useModalEscape(onClose);
   if (!interaction) return null;
   return (
-    <div className="modal-backdrop">
+    <div className="modal-backdrop" role="dialog" aria-modal="true">
       <section className="modal interaction-detail">
         <div className="modal-head">
           <div>

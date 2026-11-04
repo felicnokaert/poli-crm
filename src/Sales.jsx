@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CalendarCheck, CheckCircle2, Download, FileUp, Pencil, Plus, ReceiptText, Target, Trash2, X } from 'lucide-react';
 import { blankSale, computeGoalProgress, duplicateSale, GOAL_METRICS, netAmountInArs, normalizedSale, pointOfSaleMapFrom, quarterKey, saleCommission, salesToCsv, unitsMapFrom } from './sales-model.mjs';
 import { FAMILIES } from './families.mjs';
@@ -503,6 +503,8 @@ function BulkReviewTable({ rows, selected, existingSales, units, unitNames, onTo
 
 function SaleModal({ value, sales, units, unitNames, clients, onClose, onSave, onDelete }) {
   const confirm = useConfirm();
+  // Escape cierra la ventana (los demás modales ya lo hacían).
+  useEffect(() => { const onKey = (event) => { if (event.key === 'Escape') onClose?.(); }; window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey); }, [onClose]);
   const [form, setForm] = useState(value);
   const update = (name, value) => setForm((current) => ({ ...current, [name]: value }));
   const changeUnit = (unit) => setForm((current) => ({ ...current, unit, pointOfSale: current.documentType === 'Factura' ? (units[unit]?.invoicePoints[0] || '') : '' }));
@@ -516,7 +518,7 @@ function SaleModal({ value, sales, units, unitNames, clients, onClose, onSave, o
     if (duplicate && !(await confirm(`Ya existe una venta con este mismo comprobante para ${duplicate.customer} (${money(duplicate.netAmount)}). ¿Guardar de todas formas?`))) return;
     onSave(form);
   }
-  return <div className="modal-backdrop"><form className="modal" onSubmit={submit}>
+  return <div className="modal-backdrop" role="dialog" aria-modal="true"><form className="modal" onSubmit={submit}>
     <div className="modal-head"><div><span className="eyebrow">Venta concretada</span><h2>{form.id ? 'Editar venta' : 'Registrar venta'}</h2><p>Ingresá el importe neto, sin IVA.</p></div><button type="button" className="icon-button" onClick={onClose} aria-label="Cerrar"><X/></button></div>
     {duplicate && <p className="form-warning"><AlertTriangle size={15}/> Ya existe una venta con este mismo comprobante ({duplicate.customer}, {money(duplicate.netAmount)}). Revisá antes de guardar para no duplicarla.</p>}
     <div className="form-grid">

@@ -135,3 +135,50 @@ test('pausa global: solo administradores la cambian y frena respuesta automátic
   const cron = await gmailAutoSendCron({}, { ...ENV, GOOGLE_CLIENT_ID: 'i', GOOGLE_CLIENT_SECRET: 's' }, http, new Date('2026-11-03T15:00:00Z'), async () => {});
   assert.match(String(cron.body.skipped), /pausa/);
 });
+
+import { cleanChannels, CHANNEL_CONTEXT } from '../lib/whatsapp-autoreply.mjs';
+test('la respuesta automática contesta solo en las líneas habilitadas (por defecto, el general)', () => {
+  const config = { enabled: true, mode: 'todos', contacts: [], log: [] };
+  const base = { direction: 'inbound', message_type: 'text', text_body: 'hola', customer_wa_id: '5491100000000', event_id: 'e1', occurred_at: new Date().toISOString() };
+  assert.equal(shouldReply(config, { ...base, channel: 'general' }, Date.now(), []).ok, true);
+  assert.equal(shouldReply(config, { ...base, channel: 'penosil' }, Date.now(), []).reason, 'canal-no-habilitado');
+  assert.equal(shouldReply({ ...config, channels: ['general', 'penosil'] }, { ...base, channel: 'penosil' }, Date.now(), []).ok, true);
+  assert.deepEqual(cleanChannels(undefined), ['general']);
+  assert.deepEqual(cleanChannels(['Penosil', 'x', '../hack']), ['penosil']);
+  assert.match(CHANNEL_CONTEXT.penosil, /distribuidor oficial/);
+});
+
+test('registro de lo que hizo el CRM solo: solo administradores y devuelve WhatsApp y Gmail', async () => {
+  const http = async (url) => {
+    const u = String(url);
+    const ok = (data) => ({ ok: true, status: 200, json: async () => data });
+    if (u.includes('whatsapp_events')) return ok([{ occurred_at: '2026-11-04T15:00:00Z', channel: 'general', customer_name: 'Ana', customer_wa_id: '5491100001234', text_body: 'Hola Ana' }]);
+    if (u.includes('gmail_sends')) return ok([{ sent_at: '2026-11-04T14:00:00Z', from_email: 'felipe@grupopoliplast.com.ar', to_email: 'x@y.com', company: 'Y', step: 1, reply_kind: null }]);
+    return ok([]);
+  };
+  const authAdmin = async () => ({ id: 'u', email: 'felipe@grupopoliplast.com.ar' });
+  const result = await automationPauseAdmin({ body: { op: 'activity' } }, ENV, http, { authenticate: authAdmin, isAdmin: () => true });
+  assert.equal(result.body.whatsapp[0].wa, '1234');
+  assert.equal(result.body.gmail[0].to, 'x@y.com');
+  assert.equal((await automationPauseAdmin({ body: { op: 'activity' } }, ENV, http, { authenticate: authAdmin, isAdmin: () => false })).status, 403);
+});
+
+import { assistantAi, DAILY_AI_LIMIT } from '../lib/assistant-ai.mjs';
+test('el asistente tiene tope diario por persona (no por administradores)', async () => {
+  const day = arToday();
+  const make = (email) => async (url, options = {}) => {
+    const u = String(url);
+    const ok = (data) => ({ ok: true, status: 200, json: async () => data });
+    if (u.endsWith('/auth/v1/user')) return ok({ id: 'u', email, email_confirmed_at: '2026-01-01T00:00:00Z' });
+    if (u.includes('assistant-usage') && options.method !== 'POST') return ok([{ detail: { day, counts: { [email]: DAILY_AI_LIMIT } } }]);
+    if (u.includes('crm_system_status')) return ok([]);
+    if (u.includes('anthropic')) return ok({ content: [{ type: 'text', text: 'hola' }], stop_reason: 'end_turn', usage: {} });
+    return ok([]);
+  };
+  const req = { headers: { authorization: 'Bearer t' }, body: { question: 'hola' } };
+  const env = { ...ENV, ANTHROPIC_API_KEY: 'k' };
+  const user = await assistantAi(req, env, make('brenda@grupopoliplast.com.ar'));
+  assert.equal(user.body.reason, 'tope');
+  const admin = await assistantAi(req, env, make('felipe@grupopoliplast.com.ar'));
+  assert.notEqual(admin.body.reason, 'tope');
+});

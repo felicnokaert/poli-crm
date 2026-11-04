@@ -39,7 +39,7 @@ test('arma la ficha del cliente: última compra, cantidad, frecuencia, estado, g
     fc('CARROCERIAS NORTE', '2026-01-10', '100.000,00'),
     fc('Carrocerías Norte S.A.', '2026-03-10', '120.000,00', 'POLIPLAST'),
     fc('CARROCERIAS NORTE', '2026-05-10', '110.000,00'),
-    fc('CARROCERIAS NORTE', '2026-05-12', '500,00', 'COMARG', 'NCA'), // nota de crédito: no es compra
+    fc('CARROCERIAS NORTE', '2026-05-12', '500,00', 'COMARG', 'NCA'), // nota de crédito: no es compra y se resta del total
     fc('Juan Pérez', '2026-10-01', '5.000,00'),
     fc('Frío Sur SRL', '2023-01-01', '9.000,00'),
     fc('Alguien que no está en el CRM', '2026-10-01', '1.000,00'),
@@ -53,7 +53,7 @@ test('arma la ficha del cliente: última compra, cantidad, frecuencia, estado, g
   assert.equal(norte.recurrent, true);
   assert.equal(norte.big, true);
   assert.equal(norte.frequencyDays, 60);
-  assert.equal(norte.total24, 330000);
+  assert.equal(norte.total24, 329500);
   assert.deepEqual(norte.razonesSociales, ['CARROCERIAS NORTE', 'Carrocerías Norte S.A.']);
   assert.deepEqual(norte.companies, ['COMARG', 'POLIPLAST']);
   assert.equal(byClient.get('c2').status, 'activo');

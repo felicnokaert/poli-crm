@@ -141,9 +141,11 @@ function sameNumbers(answers, relevant) {
     group.texts.push(parts.join(' '));
     groups.set(signature, group);
   }
-  const best = [...groups.values()].sort((a, b) => b.uses - a.uses)[0];
+  const ranked = [...groups.values()].sort((a, b) => b.uses - a.uses);
+  const best = ranked[0];
   if (!best || best.uses < 2) return null;
-  return { text: best.texts.sort((a, b) => a.length - b.length)[0], uses: best.uses };
+  const rival = ranked[1] && ranked[1].uses >= 2 ? ranked[1] : null;
+  return { text: best.texts.sort((a, b) => a.length - b.length)[0], uses: best.uses, rival: rival ? { uses: rival.uses, text: rival.texts.sort((a, b) => a.length - b.length)[0] } : null };
 }
 
 // La respuesta que el equipo más repite: frases que aparecen en varias respuestas, en su orden.
@@ -161,7 +163,9 @@ export function teamAnswer(rows = [], intent) {
   const top = ranked[0][1];
   // Misma respuesta con otras palabras ("rinde 2m2 en 2cm" = "2 m² en 20 mm"): se agrupan por los números.
   const byNumbers = sameNumbers(answers, relevant);
-  if (byNumbers && byNumbers.uses > top) return { ...byNumbers, total: answers.length };
+  // Si el equipo dio DOS respuestas con números distintos y las dos se repiten (2 dicen 1 kg/m², 3 dicen 5 kg/m²), no se presenta una como «la del equipo»: se muestran las dos (4/11).
+  if (byNumbers?.rival) return { varied: true, examples: [byNumbers.text, byNumbers.rival.text].map((text) => text.slice(0, 260)), uses: 0, total: answers.length, conflict: true };
+  if (byNumbers && byNumbers.uses >= top) return { text: byNumbers.text, uses: byNumbers.uses, total: answers.length };
   // Si ninguna frase se repite, no hay "respuesta del equipo": se muestran las distintas que se dieron.
   if (top < 2) {
     // Solo las frases con el dato (números con horas, kilos por m², etc.), de respuestas distintas.

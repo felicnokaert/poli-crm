@@ -17,17 +17,34 @@ export function normalizeValue(kind, value = '') {
 const entryId = (kind, value) => `${kind}:${value}`;
 const GENERIC_DOMAINS = /^(gmail|hotmail|outlook|yahoo|live|icloud|msn|fibertel|arnet|speedy|facebook|instagram|wa)\./;
 
-// Valores que identifican a una persona o empresa (cartera o prospecto).
+// Dominios de plataformas compartidas: bloquearlos dejaría afuera a todos los que los usan (sites.google.com/view/pepe y /view/otro).
+const PLATFORM_DOMAINS = /(^|\.)(sites\.google\.com|linktr\.ee|wixsite\.com|wix\.com|webnode\.[a-z.]+|blogspot\.com|wordpress\.com|weebly\.com|mercadoshops\.com\.ar|mercadolibre\.com\.ar|tiendanube\.com|mitiendanube\.com|shopify\.com|myshopify\.com|business\.site|carrd\.co|godaddysites\.com|google\.com|youtube\.com|linkedin\.com|tiktok\.com|twitter\.com|x\.com)$/;
+const isSharedDomain = (domain) => GENERIC_DOMAINS.test(`${domain}.`) || PLATFORM_DOMAINS.test(domain);
+
+// Valores que identifican a una persona o empresa (cartera o prospecto): mail, teléfonos, contactos de la ficha, mails extra
+// («otro contacto» de Gmail), dominio del sitio o del mail (salvo gmail y plataformas compartidas) y nombre.
 export function identifiers(record = {}) {
   const out = [];
-  const mail = normalizeValue('mail', record.email || record.mail);
-  if (mail.includes('@')) out.push(['mail', mail]);
-  for (const phone of [record.phone, record.whatsapp, record.mobile, record.telefono]) {
-    const value = normalizeValue('telefono', phone);
-    if (value) out.push(['telefono', value]);
+  const mails = new Set();
+  const addMail = (value) => { const mail = normalizeValue('mail', value); if (mail.includes('@')) mails.add(mail); };
+  addMail(record.email || record.mail);
+  (Array.isArray(record.extraEmails) ? record.extraEmails : []).forEach(addMail);
+  const phones = [record.phone, record.whatsapp, record.mobile, record.telefono];
+  for (const contact of Array.isArray(record.contacts) ? record.contacts : []) {
+    addMail(contact?.email);
+    phones.push(contact?.phone, contact?.whatsappId, contact?.whatsapp);
   }
-  const domain = normalizeValue('dominio', record.website || (mail.includes('@') ? '' : ''));
-  if (domain && !GENERIC_DOMAINS.test(`${domain}.`)) out.push(['dominio', domain]);
+  for (const mail of mails) out.push(['mail', mail]);
+  const seenPhones = new Set();
+  for (const phone of phones) {
+    const value = normalizeValue('telefono', phone);
+    if (value && !seenPhones.has(value)) { seenPhones.add(value); out.push(['telefono', value]); }
+  }
+  const domains = new Set();
+  const siteDomain = normalizeValue('dominio', record.website);
+  if (siteDomain && !isSharedDomain(siteDomain)) domains.add(siteDomain);
+  for (const mail of mails) { const domain = mail.split('@')[1] || ''; if (domain && !isSharedDomain(domain)) domains.add(domain); }
+  for (const domain of domains) out.push(['dominio', domain]);
   const name = normalizeValue('nombre', record.company || record.name || record.nombre);
   if (name.length >= 4) out.push(['nombre', name]);
   return out;

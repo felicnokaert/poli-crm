@@ -19,16 +19,20 @@ const groupKey = (row) => { const cuit = cuitKey(row.cuit); return cuit ? `grupo
 
 export function quoteConversion(rows = [], { today, months = 12 } = {}) {
   const since = new Date(Date.parse(today) - months * 30.4 * DAY).toISOString().slice(0, 10);
+  // Cada factura cierra UNA sola cotización (4/11): antes una factura cerraba todas las cotizaciones del cliente en 60 días (3 COT + 1 FC = 100 %).
   const invoices = new Map();
+  let invoiceId = 0;
+  const usedInvoices = new Set();
   for (const row of rows) {
     if (!/^FC/.test(row.tipo || '')) continue;
+    invoiceId += 1;
     for (const key of [...clientKeys(row), groupKey(row)].filter(Boolean)) {
       if (!invoices.has(key)) invoices.set(key, []);
-      invoices.get(key).push(day(row.fecha));
+      invoices.get(key).push({ when: day(row.fecha), id: invoiceId });
     }
   }
-  for (const list of invoices.values()) list.sort();
-  const quotes = rows.filter((row) => row.tipo === 'COT' && day(row.fecha) >= since && day(row.fecha) <= today);
+  for (const list of invoices.values()) list.sort((a, b) => a.when.localeCompare(b.when));
+  const quotes = rows.filter((row) => row.tipo === 'COT' && day(row.fecha) >= since && day(row.fecha) <= today).sort((a, b) => day(a.fecha).localeCompare(day(b.fecha)));
   const byCompany = new Map();
   const byMonth = new Map();
   const closedDays = [];
@@ -40,7 +44,12 @@ export function quoteConversion(rows = [], { today, months = 12 } = {}) {
   for (const quote of quotes) {
     const date = day(quote.fecha);
     const age = daysBetween(date, today);
-    const within = (keys) => keys.flatMap((key) => invoices.get(key) || []).filter((when) => when >= date && daysBetween(date, when) <= CLOSE_WINDOW_DAYS).sort()[0];
+    const within = (keys) => {
+      const pick = keys.flatMap((key) => invoices.get(key) || []).filter((entry) => !usedInvoices.has(entry.id) && entry.when >= date && daysBetween(date, entry.when) <= CLOSE_WINDOW_DAYS).sort((a, b) => a.when.localeCompare(b.when))[0];
+      if (!pick) return undefined;
+      usedInvoices.add(pick.id);
+      return pick.when;
+    };
     const sameCompany = within(clientKeys(quote));
     const otherCompany = sameCompany ? undefined : within([groupKey(quote)].filter(Boolean));
     const invoice = sameCompany || otherCompany;

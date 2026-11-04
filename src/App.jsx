@@ -11,6 +11,7 @@ import {
 } from "./app-shared";
 import { Tasks, TaskDetail, TaskForm } from "./Tasks";
 import { WhatsAppDerivations } from "./WhatsAppDerivations";
+import { AutomationPause } from "./AutomationPause.jsx";
 // Tras una publicación nueva, la parte pedida puede llegar vacía ("Cannot read properties of undefined (reading 'Clients')"):
 // se reintenta una vez y, si sigue sin venir, se recarga la página una sola vez para tomar la versión nueva.
 const lazyNamed = (loader, name) => lazy(async () => {
@@ -726,6 +727,7 @@ export default function App() {
         )}
         {view === "inbox" && (
           <Suspense fallback={<Splash text="Cargando bandeja…" />}>
+            {onlineConfigured && session && isChannelAdmin(session?.user?.email) && <AutomationPause />}
             {onlineConfigured && session && (
               <WhatsAppDerivations
                 supabase={supabase}

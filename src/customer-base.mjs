@@ -104,7 +104,7 @@ export function buildCustomerBase(rows = [], clients = [], { today = new Date().
   const acc = new Map();
   const unmatched = new Set();
   const touch = (clientId) => {
-    if (!acc.has(clientId)) acc.set(clientId, { sales: [], credits: 0, names: new Set(), quotes: [] });
+    if (!acc.has(clientId)) acc.set(clientId, { sales: [], credits: [], names: new Set(), quotes: [] });
     return acc.get(clientId);
   };
   for (const row of rows) {
@@ -120,7 +120,7 @@ export function buildCustomerBase(rows = [], clients = [], { today = new Date().
     const date = day(row.fecha);
     if (!date) continue;
     if (isSale) entry.sales.push({ date, amount: comprobanteAmount(row), company: row.company });
-    else if (isCredit) entry.credits += comprobanteAmount(row);
+    else if (isCredit) entry.credits.push({ date, amount: comprobanteAmount(row) });
     else entry.quotes.push({ date, amount: comprobanteAmount(row), company: row.company });
   }
 
@@ -131,7 +131,9 @@ export function buildCustomerBase(rows = [], clients = [], { today = new Date().
     const recent = entry.sales.filter((sale) => sale.date >= since24);
     const lastPurchase = dates.length ? dates[dates.length - 1] : '';
     const daysSince = lastPurchase ? daysBetween(lastPurchase, today) : null;
-    const total24 = recent.reduce((sum, sale) => sum + sale.amount, 0);
+    // Las notas de crédito de los últimos 24 meses se RESTAN (antes se ignoraban y «cliente grande» sumaba facturas ya anuladas) (4/11).
+    const credits24 = entry.credits.filter((credit) => credit.date >= since24).reduce((sum, credit) => sum + credit.amount, 0);
+    const total24 = Math.max(0, recent.reduce((sum, sale) => sum + sale.amount, 0) - credits24);
     result.set(clientId, {
       clientId,
       razonesSociales: [...entry.names].filter(Boolean).sort(),

@@ -6,7 +6,7 @@ import { adminFetch } from "./admin-api.mjs";
 const when = (iso) => new Date(iso).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
 export function WhatsAppAutoReply() {
-  const [state, setState] = useState({ loaded: false, enabled: false, mode: "lista", contacts: [], log: [], tokenLoaded: true });
+  const [state, setState] = useState({ loaded: false, enabled: false, mode: "lista", contacts: [], channels: ["general"], log: [], tokenLoaded: true });
   const [number, setNumber] = useState("");
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
@@ -18,14 +18,15 @@ export function WhatsAppAutoReply() {
       const response = await adminFetch({ action: "whatsapp-auto", ...body });
       const data = await response.json().catch(() => null);
       if (!response.ok || data?.error) { setMessage(data?.error || "No se pudo."); return null; }
-      setState({ loaded: true, enabled: data.enabled, mode: data.mode || "lista", contacts: data.contacts || [], log: data.log || [], tokenLoaded: data.tokenLoaded !== false });
+      setState({ loaded: true, enabled: data.enabled, mode: data.mode || "lista", contacts: data.contacts || [], channels: data.channels || ["general"], log: data.log || [], tokenLoaded: data.tokenLoaded !== false });
       if (data.test) setMessage(`Prueba de envío: ${data.test}`);
       return data;
     } catch { setMessage("Sin conexión con el servidor."); return null; } finally { setBusy(false); }
   }
   useEffect(() => { call({ op: "status" }); /* eslint-disable-next-line */ }, []);
 
-  const save = (patch) => call({ op: "save", enabled: state.enabled, mode: state.mode, contacts: state.contacts, ...patch });
+  const save = (patch) => call({ op: "save", enabled: state.enabled, mode: state.mode, contacts: state.contacts, channels: state.channels, ...patch });
+  const toggleChannel = (key) => save({ channels: state.channels.includes(key) ? state.channels.filter((item) => item !== key) : [...state.channels, key] });
   const addContact = () => {
     if (!number.replace(/\D/g, "")) return;
     save({ contacts: [...state.contacts, { wa: number, name }] }).then(() => { setNumber(""); setName(""); });
@@ -42,6 +43,13 @@ export function WhatsAppAutoReply() {
           <option value="todos">Todos los contactos, menos los marcados «no comercial»</option>
         </select>
       </label>
+      <fieldset className="channel-picks">
+        <legend>En qué líneas contesta</legend>
+        {[["general", "General"], ["penosil", "Penosil"], ["rapyp", "RAPYP"]].map(([key, label]) => (
+          <label key={key}><input type="checkbox" checked={state.channels.includes(key)} disabled={busy} onChange={() => toggleChannel(key)} /> {label}</label>
+        ))}
+        <span className="muted small">Una línea nueva no contesta sola hasta que la tildes. Penosil y RAPYP todavía no están conectadas a Meta.</span>
+      </fieldset>
       <label><input type="checkbox" checked={state.enabled} disabled={busy} onChange={(e) => save({ enabled: e.target.checked })} /> <strong>{state.enabled ? "Prendida" : "Apagada"}</strong></label>
       <ul>{state.contacts.map((contact, index) => (
         <li key={contact.wa}>{contact.name || "Contacto"} · +{contact.wa} <button type="button" className="danger-link" onClick={() => save({ contacts: state.contacts.filter((_, i) => i !== index) })}>Quitar</button></li>

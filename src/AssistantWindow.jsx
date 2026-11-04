@@ -584,6 +584,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
     // Sin IA: la pregunta vuelve al cuadro para ver lo que encontró el buscador.
     setChat((current) => current.slice(0, -1));
     setQuery(asked);
+    if (reply.reason === "tope") { setAi("off"); setAiError(reply.error || "Llegaste al tope diario de la IA."); return; }
     if (reply.reason === "sin-clave" || reply.reason === "sin-credito" || reply.reason === "clave") { setAi("off"); setAiError(isAdmin && reply.error ? reply.error : "La IA no está disponible ahora; te muestro lo que hay cargado."); return; }
     setAiError(`${reply.error || "La IA no pudo responder ahora. Probá de nuevo."}${reply.detail ? ` Detalle: ${reply.detail}` : reply.reason && reply.reason !== "red" ? ` (${reply.reason})` : ""}`);
   }

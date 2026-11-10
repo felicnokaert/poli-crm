@@ -3,7 +3,7 @@ import { ExternalLink } from 'lucide-react';
 import { buildCustomerBase, coverageByCompany } from './customer-base.mjs';
 import { useBillingCustomers } from './hooks/useBillingCustomers.js';
 import { useComprobantes, argentinaToday } from './CustomerBasePanel.jsx';
-import { QUEUE_SIZE, logClientContact, matchesFamily, queueFamilies, newProspectsQueue, overdueMessage, overdueQueue, quoteMessage, quotedQueue, reactivationMessage, reactivationQueue } from './daily-queues.mjs';
+import { QUEUE_SIZE, SURPRISE_SIZE, logClientContact, matchesFamily, queueFamilies, newProspectsQueue, overdueMessage, overdueQueue, quoteMessage, quotedQueue, reactivationMessage, reactivationQueue, surpriseMessage, surpriseQueue } from './daily-queues.mjs';
 import { blankTask } from './app-shared';
 import { buildOutreachDraft } from './prospect-outreach.mjs';
 import { outreachVariant, REJECTION_REASONS, possibleWhatsAppLink } from './prospect-model.mjs';
@@ -159,6 +159,7 @@ export function DailyQueues({ rules, supabase, clients: allClients = [], prospec
   const reactivar = useMemo(() => reactivationQueue({ clients, base: byClient, today }), [clients, byClient, today]);
   const cotizaron = useMemo(() => quotedQueue({ clients, base: byClient, today }), [clients, byClient, today]);
   const atrasados = useMemo(() => overdueQueue({ clients, base: byClient, today }), [clients, byClient, today]);
+  const sorpresas = useMemo(() => surpriseQueue({ clients, base: byClient, today }), [clients, byClient, today]);
   const billingCustomers = useBillingCustomers(supabase);
   const nuevos = useMemo(() => newProspectsQueue({ prospects, checks, skipped, rules, customers: billingCustomers }), [prospects, checks, skipped, rules, billingCustomers]);
   const coverage = useMemo(() => coverageByCompany(rows), [rows]);
@@ -177,11 +178,11 @@ export function DailyQueues({ rules, supabase, clients: allClients = [], prospec
   function recordResult(clientId, queue, result) {
     const found = clients.find((client) => client.id === clientId);
     setData((current) => ({ ...current, clients: (current.clients || []).map((client) => (client.id === clientId ? logClientContact(client, { queue, outcome: result, user: userEmail }) : client)) }));
-    setNote(`${found?.company || 'Cliente'}: ${result}. No vuelve a aparecer por 14 días.`);
+    setNote(`${found?.company || 'Cliente'}: ${result}. No vuelve a aparecer por ${queue === 'sorpresa' ? 60 : 14} días.`);
   }
 
-  const tabs = [['atrasados', 'Se pasaron de su frecuencia', atrasados.length], ['reactivar', 'Reactivar', reactivar.length], ['cotizaron', 'Cotizaron y no compraron', cotizaron.length], ['nuevos', 'Prospectos nuevos', nuevos.length], ['aprendido', 'Qué aprendimos', learning.contacted]];
-  const needsData = ['atrasados', 'reactivar', 'cotizaron'].includes(view);
+  const tabs = [['sorprender', 'Momentos de sorpresa', sorpresas.length], ['atrasados', 'Se pasaron de su frecuencia', atrasados.length], ['reactivar', 'Reactivar', reactivar.length], ['cotizaron', 'Cotizaron y no compraron', cotizaron.length], ['nuevos', 'Prospectos nuevos', nuevos.length], ['aprendido', 'Qué aprendimos', learning.contacted]];
+  const needsData = ['sorprender', 'atrasados', 'reactivar', 'cotizaron'].includes(view);
   return (
     <div className="daily-queues">
       <p className="muted">Lo que conviene contactar hoy: hasta {QUEUE_SIZE} por lista, con el mensaje listo para copiar y editar. El CRM no envía nada: lo mandás vos y anotás qué respondieron para que el sistema aprenda por qué falla cada mensaje.</p>
@@ -209,6 +210,15 @@ export function DailyQueues({ rules, supabase, clients: allClients = [], prospec
           {syncing.length > 0 && ` Todavía se está copiando el historial de ${syncing.join(', ')}: los estados pueden cambiar.`}
           {' '}Activo: compró hace 90 días o menos · dormido: hasta 1 año · inactivo: más de 1 año.
         </p>
+      )}
+
+      {view === 'sorprender' && status === 'ready' && (
+        <>
+          <p className="muted small">Hasta {SURPRISE_SIZE} por semana: clientes en un momento que vale un detalle (compra grande, aniversario, primera compra, vuelta). No es una venta: un agradecimiento o un consejo, sin precios ni promesas. Si lo trabajás, no vuelve por 60 días.</p>
+          {sorpresas.length === 0
+            ? <p className="muted">Esta semana no hay clientes en un momento de sorpresa (o ya los trabajaste).</p>
+            : sorpresas.map((item) => <ClientQueueCard key={item.client.id} item={item} queue="sorpresa" message={surpriseMessage(item, sender)} onOpenClient={onOpenClient} onResult={recordResult} />)}
+        </>
       )}
 
       {view === 'atrasados' && status === 'ready' && (atrasados.length === 0

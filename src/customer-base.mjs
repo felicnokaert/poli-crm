@@ -140,6 +140,7 @@ export function buildCustomerBase(rows = [], clients = [], { today = new Date().
       purchaseCount: dates.length,
       purchases24: recent.length,
       firstPurchase: dates[0] || '',
+      previousPurchase: dates.length > 1 ? dates[dates.length - 2] : '',
       lastPurchase,
       daysSince,
       status: customerStatus(daysSince),

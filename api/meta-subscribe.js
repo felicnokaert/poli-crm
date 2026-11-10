@@ -2,6 +2,7 @@ import { authenticatedCorporateUser } from '../lib/corporate-auth.mjs';
 import { isAdminEmail } from '../lib/admin-users.mjs';
 import { diagnoseMeta, repairWebhook, webhookStatus } from '../lib/meta-diagnose.mjs';
 import { recentWebhookCalls } from '../lib/webhook-log.mjs';
+import { requestPhoneCode, verifyPhoneCode, registerPhone } from '../lib/meta-register.mjs';
 
 const WABAS = {
   general: '1620643669067135',
@@ -26,6 +27,8 @@ const DIAGNOSE_ONLY = {
 const WEBHOOK_URL = 'https://poli-crm.vercel.app/api/whatsapp-webhook';
 // App "Agente Poliplast", la que recibe los webhooks de WhatsApp.
 const WABA_APP_ID = '857121580457426';
+// Número General (+54 9 11 5262-7555).
+const GENERAL_PHONE_ID = '1168807706304960';
 
 export default async function handler(request, response) {
   if (request.method !== 'POST') return response.status(405).json({ error: 'Método no permitido.' });
@@ -40,6 +43,17 @@ export default async function handler(request, response) {
     const webhook = await webhookStatus({ appId: report.token?.appId, appSecret: process.env.META_APP_SECRET, expectedUrl: WEBHOOK_URL });
     const webhookCalls = await recentWebhookCalls();
     return response.status(200).json({ ok: true, ...report, webhook, webhookCalls });
+  }
+
+  // 10/11: devolver el número General a la API (código por SMS o llamada → verificar → registrar con PIN).
+  if (['phone-code', 'phone-verify', 'phone-register'].includes(request.body?.action)) {
+    const phoneId = process.env.WHATSAPP_GENERAL_PHONE_ID || GENERAL_PHONE_ID;
+    const token = process.env.META_SYSTEM_USER_TOKEN;
+    const result = request.body.action === 'phone-code' ? await requestPhoneCode({ phoneId, token, method: request.body.method })
+      : request.body.action === 'phone-verify' ? await verifyPhoneCode({ phoneId, token, code: request.body.code })
+        : await registerPhone({ phoneId, wabaId: WABAS.general, token, pin: request.body.pin });
+    if (!result.ok) return response.status(502).json({ error: result.error });
+    return response.status(200).json({ ok: true, subscribed: result.subscribed, subscribeError: result.subscribeError || null });
   }
 
   // Deja el webhook de la app apuntando de nuevo al CRM (URL + campo `messages`).

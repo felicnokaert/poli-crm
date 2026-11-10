@@ -1,4 +1,5 @@
 import { memo, useState } from "react";
+import MetaRegisterNumber from "./MetaRegisterNumber.jsx";
 import {
   CircleAlert,
   Database,
@@ -405,6 +406,7 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
                     Reparar recepción de mensajes
                   </button>
                 </p>
+                <MetaRegisterNumber session={session} />
                 {diagnosis && <pre className="muted" style={{ whiteSpace: "pre-wrap", userSelect: "all" }}>{diagnosis}</pre>}
               </>
             )}

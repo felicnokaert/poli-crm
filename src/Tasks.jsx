@@ -1,4 +1,5 @@
 import { memo, useEffect, useState } from "react";
+import { GROUPS, groupCounts, suggestHigh, taskGroup } from "./task-groups.mjs";
 import { Bot, CheckCircle2, Download, Plus, Search, Upload, X } from "lucide-react";
 import { formatDate } from "./utils.mjs";
 import { Empty, Fact } from "./ui-primitives";
@@ -112,10 +113,12 @@ function TrelloImport({ items, onImportTasks }) {
   );
 }
 
-function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, onNavigate, onImportPlan, onImportTasks, onAddEvent, onPostpone, personal = true, plan = [], automations, onAutomationsChange }) {
+function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, onNavigate, onImportPlan, onImportTasks, onAddEvent, onPostpone, onUpdateTask, personal = true, plan = [], automations, onAutomationsChange }) {
   const [tab, setTab] = useState("tareas");
   const [filter, setFilter] = useState("pending");
   const [query, setQuery] = useState("");
+  const [group, setGroup] = useState("all");
+  const [skipped, setSkipped] = useState([]);
   const ordered = [...items].sort(
     (a, b) =>
       Number(a.done) - Number(b.done) ||
@@ -128,10 +131,13 @@ function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, o
       // tareas completadas que nunca hizo, 16/10).
       !closedBySystem(task, stamps) &&
       (filter === "all" || (filter === "pending" ? !task.done : task.done)) &&
+      (group === "all" || taskGroup(task, today()) === group) &&
       `${task.title || ""} ${task.company || ""} ${task.trigger || ""}`
         .toLowerCase()
         .includes(query.toLowerCase()),
   );
+  const counts = groupCounts(items, today());
+  const proposals = onUpdateTask ? suggestHigh(items, today(), 5).filter((entry) => !skipped.includes(entry.task.id)) : [];
   const tabs = (
     <div className="segmented routine-tabs" role="tablist" aria-label="Tareas y rutina">
       <button type="button" role="tab" aria-selected={tab === "tareas"} className={tab === "tareas" ? "selected" : ""} onClick={() => setTab("tareas")}>Tareas</button>
@@ -210,6 +216,14 @@ function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, o
             Todas
           </button>
         </div>
+        <div className="segmented" role="group" aria-label="Grupo de tareas">
+          <button type="button" className={group === "all" ? "selected" : ""} onClick={() => setGroup("all")}>Todos los grupos</button>
+          {GROUPS.map((entry) => (
+            <button key={entry.key} type="button" className={group === entry.key ? "selected" : ""} onClick={() => setGroup(entry.key)}>
+              {entry.label} · {counts[entry.key]}
+            </button>
+          ))}
+        </div>
         <button
           className="secondary"
           type="button"
@@ -220,6 +234,21 @@ function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, o
           <Download size={15} /> Exportar CSV
         </button>
       </div>
+      {filter === "pending" && proposals.length > 0 && (
+        <div className="panel" style={{ margin: "8px 0" }} role="region" aria-label="Propuesta de prioridad Alta">
+          <strong>Propuesta: estas {proposals.length} conviene marcarlas como Alta</strong>
+          <p className="muted small">Son las vencidas o de hoy, primero las de clientes. Vos decidís: no cambia nada hasta que toques el botón.</p>
+          <ul>
+            {proposals.map(({ task, group: taskGroupKey }) => (
+              <li key={task.id} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <span style={{ flex: "1 1 240px" }}>{task.title} <span className="muted small">· {GROUPS.find((entry) => entry.key === taskGroupKey)?.label}{task.dueDate ? ` · ${task.dueDate}` : ""}</span></span>
+                <button type="button" className="secondary" onClick={() => onUpdateTask({ id: task.id, priority: "Alta" })}>Marcar Alta</button>
+                <button type="button" className="ghost" onClick={() => setSkipped((current) => [...current, task.id])}>Ahora no</button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <TaskList
         items={filtered}
         onToggle={onToggle}

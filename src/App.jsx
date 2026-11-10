@@ -782,6 +782,7 @@ export default function App() {
             onImportTasks={importTrelloTasks}
             plan={trelloPlan}
             onPostpone={postponeTaskTo}
+            onUpdateTask={updateTask}
             personal={isFelipeTools}
             onAddEvent={addEvent}
             automations={data.automations}

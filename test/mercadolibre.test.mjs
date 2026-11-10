@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mercadoLibreAdmin, itemRow, questionRow } from '../lib/mercadolibre.mjs';
+import { mercadoLibreAdmin, itemRow, questionRow, getItems } from '../lib/mercadolibre.mjs';
 import { withMercadoLibre, searchKnowledge } from '../src/knowledge-search.mjs';
 
 const env = { SUPABASE_URL: 'https://db', SUPABASE_SERVICE_ROLE_KEY: 'svc', ML_CLIENT_ID: '123', ML_CLIENT_SECRET: 'sec' };
@@ -106,4 +106,24 @@ test('itemRow guarda todas las fotos en https (hasta 10) para sumarlas a Shopify
   assert.deepEqual(row.picture_urls, ['https://a/1.jpg', 'https://a/2.jpg']);
   assert.equal(row.picture_url, 'https://a/1.jpg');
   assert.deepEqual(itemRow({ id: 'MLA2', title: 't' }, '1').picture_urls, []);
+});
+
+test('si Mercado Libre niega /items?ids (deprecated), pide las publicaciones de a una', async () => {
+  const calls = [];
+  const http = async (url) => {
+    calls.push(url);
+    const reply = (status, body) => ({ ok: status < 400, status, json: async () => body, text: async () => JSON.stringify(body) });
+    if (url.includes('/items?ids=')) return reply(403, { message: 'Resource deprecated - client no longer allowed to consume this resource' });
+    if (url.includes('/items/MLA2')) return reply(404, { message: 'not found' });
+    return reply(200, { id: url.match(/items\/(MLA\d+)/)[1], title: 'Uno' });
+  };
+  const out = await getItems(['MLA1', 'MLA2', 'MLA3'], 'tok', http);
+  assert.deepEqual(out.map((entry) => entry.code), [200, 404, 200]);
+  assert.equal(out[0].body.id, 'MLA1');
+  assert.ok(calls.some((url) => url.includes('/items/MLA3')));
+});
+
+test('un error que no es de deprecación sigue siendo error', async () => {
+  const http = async () => ({ ok: false, status: 500, json: async () => ({}), text: async () => 'boom' });
+  await assert.rejects(() => getItems(['MLA1'], 'tok', http), /Mercado Libre/);
 });

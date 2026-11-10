@@ -66,3 +66,12 @@ test('el chequeo completo consulta a Meta, evalúa y guarda el resultado', async
   assert.equal(saved[0].ok, false);
   assert.equal(r.saved, true);
 });
+
+test('número CONNECTED pero en la aplicación de WhatsApp Business (ON_PREMISE) se marca', () => {
+  const account = { ...good.report.accounts[0], phoneNumbers: [{ number: '+54 9 11 5262-7555', status: 'CONNECTED', platformType: 'ON_PREMISE', webhookOverride: null }] };
+  const r = evaluateWhatsAppHealth({ ...good, report: { ...good.report, accounts: [account] } });
+  assert.equal(r.ok, false);
+  assert.match(r.problems[0], /aplicación de WhatsApp Business/);
+  const cloud = { ...account, phoneNumbers: [{ ...account.phoneNumbers[0], platformType: 'CLOUD_API' }] };
+  assert.equal(evaluateWhatsAppHealth({ ...good, report: { ...good.report, accounts: [cloud] } }).ok, true);
+});

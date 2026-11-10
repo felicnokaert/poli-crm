@@ -2,12 +2,47 @@ import { useMemo, useState } from "react";
 import { DayReview } from "./DayReview.jsx";
 import { MAX_ROCKS, chosenRocks, rockCandidates, rockKey, sierraKey } from "./big-rocks.mjs";
 import { planSummary, tasksForDay } from "./trello-plan-import.mjs";
+import { PERSONAL_PURPOSE_KEY, PURPOSE_KEY, readPurpose, writePurpose } from "./purpose.mjs";
 import { CheckCircle2, Circle, ArrowRight, Flame } from "lucide-react";
 import {
   WEEKLY_TARGETS, hoursLabel, routineForDate, routineKey, routineProgress, routineStreak, weekDates,
 } from "./routine.mjs";
 
 const DAY_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie"];
+
+// Propósito arriba de la Rutina: el de la empresa (opción 1 del bootcamp) y una línea personal opcional. Se guarda en este navegador.
+function Purpose() {
+  const store = typeof window !== "undefined" ? window.localStorage : null;
+  const [company, setCompany] = useState(() => readPurpose(store));
+  const [personal, setPersonal] = useState(() => readPurpose(store, PERSONAL_PURPOSE_KEY, ""));
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState({ company: "", personal: "" });
+  const start = () => { setDraft({ company, personal }); setEditing(true); };
+  const save = (event) => {
+    event.preventDefault();
+    setCompany(writePurpose(store, PURPOSE_KEY, draft.company) || readPurpose(null));
+    setPersonal(writePurpose(store, PERSONAL_PURPOSE_KEY, draft.personal));
+    setEditing(false);
+  };
+  return (
+    <div className="routine-purpose" role="region" aria-label="Propósito" style={{ borderLeft: "4px solid var(--brand, #ed1c24)", padding: "8px 12px", margin: "0 0 12px", background: "var(--surface-2, rgba(0,0,0,.03))", borderRadius: 8 }}>
+      {editing ? (
+        <form onSubmit={save} style={{ display: "grid", gap: 6 }}>
+          <label className="small muted">Propósito de Poliplast<input value={draft.company} onChange={(event) => setDraft({ ...draft, company: event.target.value })} maxLength={160} style={{ width: "100%" }} /></label>
+          <label className="small muted">Mi propósito (opcional)<input value={draft.personal} onChange={(event) => setDraft({ ...draft, personal: event.target.value })} maxLength={160} placeholder="Por qué hago lo que hago" style={{ width: "100%" }} /></label>
+          <span><button type="submit" className="primary">Guardar</button>{" "}<button type="button" className="ghost" onClick={() => setEditing(false)}>Cancelar</button></span>
+        </form>
+      ) : (
+        <>
+          <span className="eyebrow">Para qué trabajamos</span>
+          <p style={{ margin: "2px 0", fontWeight: 600 }}>{company}</p>
+          {personal && <p className="muted small" style={{ margin: "2px 0" }}>Mío: {personal}</p>}
+          <button type="button" className="ghost" onClick={start}>Editar</button>
+        </>
+      )}
+    </div>
+  );
+}
 
 // Las 3 piedras grandes del día y «afilar la sierra» de la semana (los 7 hábitos: primero lo importante).
 function BigRocks({ date, planChecks, tasks, onToggle, onToggleTask }) {
@@ -76,6 +111,8 @@ export function Routine({ date, planChecks = {}, onToggle, onNavigate, tasks = [
           </div>
         )}
       </div>
+
+      <Purpose />
 
       {!day.weekend && <BigRocks date={date} planChecks={planChecks} tasks={tasks} onToggle={onToggle} onToggleTask={onToggleTask} />}
 

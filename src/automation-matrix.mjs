@@ -69,11 +69,48 @@ export const SEED_IDEAS = [
   { id: 'stock-sync', name: 'Sincronizar stock entre Mercado Libre y Shopify', area: 'Shopify', impact: 3, ease: 2, cost: 1, risk: true, status: 'pendiente' },
 ];
 
+
+// 10/11 (Felipe: «quiero ordenarme»): qué está construido, dónde se ve y qué falta. Estado real al 10/11; Felipe puede cambiarlo.
+export const IDEA_DETAILS = {
+  'wa-alerta-linea': { status: 'hecho', where: 'Inicio y Por revisar (chequeo diario)', missing: 'Desde el 10/11 también avisa si el número quedó en la aplicación (ON_PREMISE).' },
+  'wa-reparto': { status: 'en-curso', where: 'Por revisar → «El asistente derivó N conversaciones»', missing: 'El reparto sale de lo que deriva el asistente; falta repartir solo cada mensaje nuevo.' },
+  'wa-clasificar': { status: 'hecho', where: 'Por revisar (familia, intención y «Compra N/10», sin IA)', missing: '' },
+  'wa-tarea-cotizacion': { status: 'pendiente', where: '', missing: 'Hoy la tarea se crea a mano desde «Crear tarea» en una derivación.' },
+  'wa-sugerida': { status: 'hecho', where: 'Por revisar → «Sugerir respuesta»', missing: 'No recibe del número General hasta devolverlo a la API.' },
+  'wa-bot': { status: 'en-curso', where: 'Es la misma idea que la respuesta automática (más abajo)', missing: 'Apagada.' },
+  'redes-leer': { status: 'en-curso', where: 'Receptor de Instagram y Facebook en la misma URL de WhatsApp', missing: 'Apagado: falta la lista de páginas y cuentas por marca y suscribir la app en Meta.' },
+  'redes-agente': { status: 'pendiente', where: '', missing: 'Depende de poder leer primero.' },
+  'prosp-senales': { status: 'hecho', where: 'Prospección → Reglas → Señales', missing: '' },
+  'prosp-nocontactar': { status: 'hecho', where: 'Prospección → No contactar', missing: '' },
+  'prosp-mail-borrador': { status: 'hecho', where: 'Prospección → Bandeja de salida', missing: '' },
+  'prosp-mail-envio': { status: 'en-curso', where: 'Bandeja de salida → «Enviar ahora» y envío automático (Gmail)', missing: 'Sin probar con una cuenta real; 0 envíos al 31/10.' },
+  'prosp-respuestas': { status: 'en-curso', where: 'Bandeja de salida → pestaña «Respondieron»', missing: 'Lee sin IA; falta la lectura con IA.' },
+  'cotiz-seguimiento': { status: 'hecho', where: 'Cotizador → tarea en el CRM a 2 días hábiles', missing: '' },
+  'cola-reactivar': { status: 'hecho', where: 'Prospección → Cola del día', missing: '' },
+  'resumen-semana': { status: 'hecho', where: 'Inicio → Resumen de la semana', missing: '' },
+  'plan-trello': { status: 'hecho', where: 'Cron 8:55 → tarjeta «Plan del día» en Trello', missing: '' },
+  'ml-reputacion': { status: 'hecho', where: 'Inicio → Qué atender hoy y Mercado Libre → Resumen', missing: '' },
+  'ml-preguntas': { status: 'pendiente', where: '', missing: 'Escribe en Mercado Libre: decidirlo con Felipe. Hoy las atiende Brenda.' },
+  'ml-clips': { status: 'en-curso', where: 'Mercado Libre → Publicaciones → columna Clip', missing: 'Falta que Felipe cargue cuáles tienen clip (jueves 12/11).' },
+  'shopify-carritos': { status: 'pendiente', where: 'Hoy solo la alerta de carritos abandonados', missing: 'Activar el mail de recuperación en Shopify; los carritos no traen datos de contacto.' },
+  'shopify-descripciones': { status: 'en-curso', where: 'Shopify → Faltan en Shopify y borradores con metacampos', missing: 'Quedan productos sin texto y el tema de la tienda (en Shopify).' },
+  'shopify-precios': { status: 'hecho', where: 'Shopify → Precios vs ML', missing: 'Aplicado el 26/10 con tu OK; sigue habiendo variantes fuera de la regla.' },
+  'wa-auto': { status: 'en-curso', where: 'Más → Datos → Conexiones → Respuesta automática', missing: 'Apagada. Felipe prefiere por ahora solo recibir en Por revisar.' },
+  'gmail-envio': { status: 'en-curso', where: 'Es la misma idea que el envío de mails (más arriba)', missing: 'Sin probar con una cuenta real.' },
+  'gmail-respuestas': { status: 'hecho', where: 'Bandeja de salida (frena los recordatorios)', missing: '' },
+  'asistente-evaluacion': { status: 'hecho', where: 'Más → Datos → Asistente → Evaluación con juez', missing: 'Última medición: 33 % correctas y 63 % le sirven (100 preguntas).' },
+  'stock-sync': { status: 'en-curso', where: 'Alerta de sobreventa y reposición (Qué atender hoy)', missing: 'Falta sincronizar el stock solo: escribiría en Shopify.' },
+};
+
+export function statusCounts(ideas = []) {
+  return Object.fromEntries(Object.keys(STATUSES).map((key) => [key, ideas.filter((idea) => idea.status === key).length]));
+}
+
 const text = (value, max) => String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
 
 // Une las ideas de partida con lo que Felipe editó o agregó. saved: { [id]: { ...campos, custom?: true, removed?: true } }.
 export function mergeIdeas(saved = {}) {
-  const base = SEED_IDEAS.map((idea) => ({ ...idea, ...(saved[idea.id] || {}), id: idea.id, custom: false }));
+  const base = SEED_IDEAS.map((idea) => ({ ...idea, ...(IDEA_DETAILS[idea.id] || {}), ...(saved[idea.id] || {}), id: idea.id, custom: false }));
   const custom = Object.entries(saved || {})
     .filter(([id, row]) => row?.custom && !SEED_IDEAS.some((idea) => idea.id === id))
     .map(([id, row]) => ({ id, name: text(row.name, 140) || 'Idea sin nombre', area: text(row.area, 40) || 'Otras', impact: 3, ease: 3, cost: 1, status: 'pendiente', ...row, custom: true }));

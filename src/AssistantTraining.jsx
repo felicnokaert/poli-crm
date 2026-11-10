@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { GraduationCap, Play } from "lucide-react";
 import { askAi, TeachForm } from "./AssistantWindow.jsx";
 import { matchTaught } from "./assistant-answer.mjs";
+import { draftCandidates } from "./assistant-draft.mjs";
 import { appendEvalHistory, conflictingAnswers, evalSummary, familySiblings, pickQuestions, realAnswer, suggestTeachings, trainingContext, trainingQuestion, VERDICT_LABEL } from "./assistant-training.mjs";
 
 // Más → Datos → Asistente (solo Felipe, 21/10). Toma preguntas reales ya respondidas en Mercado Libre, se
@@ -93,6 +94,8 @@ export function AssistantTraining({ supabase }) {
   const [usage, setUsage] = useState({ input: 0, output: 0 });
   const [suggested, setSuggested] = useState(null);
   const [conflicts, setConflicts] = useState(null);
+  const [drafts, setDrafts] = useState(null);
+  const [draftCount, setDraftCount] = useState(20);
   const [teachingId, setTeachingId] = useState("");
   const [evalCount, setEvalCount] = useState(40);
   const [summary, setSummary] = useState(null);
@@ -204,6 +207,39 @@ export function AssistantTraining({ supabase }) {
     setSuggested([]); pool.current = null;
     setStatus(`Listo: ${rows.length} respuestas guardadas. Desde ahora van primero para todo el equipo.`);
   }
+  // Redactar con IA (10/11): junta lo que el equipo respondió en Mercado Libre para el mismo producto y tema en UNA respuesta,
+  // sin agregar datos. Cuesta centavos por tema; nada se guarda hasta que se aprueba.
+  async function redact() {
+    try {
+      setRunning(true); stop.current = false; setDrafts([]); setStatus("Buscando temas con varias respuestas del equipo…");
+      const { questions, titles, taught } = await load();
+      const list = draftCandidates(questions, titles, { taught, max: draftCount });
+      if (!list.length) { setStatus("No encontré temas nuevos con 2 o más respuestas del equipo."); setRunning(false); return; }
+      let done = 0; let next = 0; let fatal = false;
+      await Promise.all(Array.from({ length: Math.min(4, list.length) }, async () => {
+        while (next < list.length && !stop.current && !fatal) {
+          const entry = list[next]; next += 1;
+          const reply = await askAi(supabase, { mode: "redactar", question: `${entry.product} · ${entry.intent}`, product: entry.product, topic: entry.intent, pairs: entry.pairs }).catch(() => ({ ok: false, reason: "red" }));
+          if (!reply.ok && ["sin-clave", "sin-credito", "clave"].includes(reply.reason)) { fatal = true; setStatus(`${reply.error || "La IA no está disponible."}${reply.detail ? ` (${reply.detail})` : ""}`); return; }
+          if (reply.usage) setUsage((current) => ({ input: current.input + (reply.usage.input || 0), output: current.output + (reply.usage.output || 0) }));
+          done += 1; setStatus(`Redactadas ${done} de ${list.length}…`);
+          setDrafts((current) => [...(current || []), { ...entry, state: reply.ok ? reply.state : "insuficiente", answer: reply.ok ? reply.answer : "", note: reply.ok ? reply.note : `La IA no respondió: ${reply.error || reply.reason}` }]);
+        }
+      }));
+      if (!fatal) setStatus(stop.current ? "Pausado." : `Listo: ${done} temas revisados. Mirá cada uno y aprobá los que estén bien.`);
+    } catch (error) { setStatus(`Se cortó: ${error?.message || error}`); }
+    setRunning(false);
+  }
+  async function approveDrafts() {
+    const clear = (drafts || []).filter((entry) => entry.state === "clara" && entry.answer);
+    if (!clear.length || !window.confirm(`Guardar las ${clear.length} respuestas redactadas como validadas? Revisalas antes: salen de lo que el equipo respondió, pero las junta la IA.`)) return;
+    const now = new Date().toISOString();
+    const { error } = await supabase.from("assistant_knowledge").insert(clear.map((entry) => ({ question: entry.question.trim(), product: String(entry.product || "").trim(), answer: entry.answer.trim(), updated_at: now })));
+    if (error) { setStatus("No se pudieron guardar. Probá de nuevo."); return; }
+    const ids = new Set(clear.map((entry) => entry.id));
+    setDrafts((current) => (current || []).filter((entry) => !ids.has(entry.id))); pool.current = null;
+    setStatus(`Listo: ${clear.length} respuestas guardadas.`);
+  }
   // Respuestas que no coinciden: mismo producto y tema, números distintos. Felipe elige la correcta.
   async function findConflicts() {
     setStatus("Buscando respuestas que no coinciden…");
@@ -214,6 +250,7 @@ export function AssistantTraining({ supabase }) {
   function saved() {
     setTeach(null); pool.current = null;
     if (teachingId) setSuggested((current) => (current || []).filter((entry) => entry.id !== teachingId));
+    if (teachingId) setDrafts((current) => (current ? current.filter((entry) => entry.id !== teachingId) : current));
     if (teachingId) setConflicts((current) => (current || []).filter((entry) => entry.id !== teachingId));
     setTeachingId("");
     setStatus("Guardado: desde ahora va primero para todo el equipo.");
@@ -236,6 +273,8 @@ export function AssistantTraining({ supabase }) {
         <button type="button" className="secondary" disabled={running} onClick={check}>¿Anda la IA?</button>
         <button type="button" className="secondary" disabled={running} onClick={suggest}><GraduationCap size={15} /> Ver respuestas sugeridas</button>
         <button type="button" className="secondary" disabled={running} onClick={findConflicts}>Respuestas que no coinciden</button>
+        <select aria-label="Cuántos temas redactar" value={draftCount} disabled={running} onChange={(event) => setDraftCount(Number(event.target.value))}>{[20, 50, 100, 200].map((n) => <option key={n} value={n}>{n} temas</option>)}</select>
+        <button type="button" className="secondary" disabled={running} onClick={redact}><GraduationCap size={15} /> Redactar con IA</button>
         {status && <span className="muted small" role="status">{status}</span>}
       </div>
       <div className="assistant-teach-actions" aria-label="Evaluación automática">
@@ -279,6 +318,23 @@ export function AssistantTraining({ supabase }) {
                 </div>
               ))}
               <span className="muted small">Si ninguna está bien, elegí la más cercana y corregila antes de guardar.</span>
+            </article>
+          ))}
+        </div>
+      )}
+      {drafts && (
+        <div className="training-list">
+          <strong>Respuestas redactadas con IA ({drafts.length}) · juntan lo que respondió el equipo, sin agregar datos</strong>
+          <p className="muted small">«Clara»: se puede aprobar. «Conflicto»: el equipo se contradice, elegí vos la correcta. «Insuficiente»: no alcanza para contestar.</p>
+          {drafts.some((entry) => entry.state === "clara") && <button type="button" className="primary" onClick={approveDrafts}>Aprobar las {drafts.filter((entry) => entry.state === "clara").length} claras</button>}
+          {drafts.map((entry) => (
+            <article key={entry.id} className="training-row">
+              <span className="muted small">{entry.intent} · {entry.total} respuestas del equipo · <em className={entry.state === "clara" ? "badge ok" : "badge warn"}>{entry.state === "clara" ? "Clara" : entry.state === "conflicto" ? "Conflicto" : "Insuficiente"}</em></span>
+              <strong>{entry.product}</strong>
+              {entry.answer ? <p>{entry.answer}</p> : null}
+              {entry.note ? <span className="muted small">{entry.note}</span> : null}
+              <details><summary className="muted small">Ver lo que respondió el equipo</summary>{entry.pairs.map((pair, index) => <p key={index} className="small">• {pair.answer}</p>)}</details>
+              <button type="button" className="link-button" onClick={() => { setTeachingId(entry.id); setTeach({ question: entry.question, product: entry.product, answer: entry.answer || entry.pairs[0]?.answer || "" }); }}><GraduationCap size={14} /> Revisar y aprobar</button>
             </article>
           ))}
         </div>

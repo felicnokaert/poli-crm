@@ -132,6 +132,68 @@ export function quotedQueue({ clients = [], base = new Map(), today, limit = QUE
   return items.slice(0, limit);
 }
 
+// Momentos de sorpresa (10/11, Felipe tras el bootcamp de servicio: «clientes sorprendidos, no solo satisfechos»; Disney + Girard):
+// 5 por semana a lo sumo, de clientes en un momento que vale un detalle: compra grande, aniversario, primera compra y vuelta
+// después de mucho tiempo. Es un saludo o un consejo, no una venta: sin precios, descuentos ni promesas. Lo trabajado no vuelve por 60 días.
+export const SURPRISE_SIZE = 5;
+export const SURPRISE_COOLDOWN_DAYS = 60;
+export const SURPRISE_KINDS = {
+  grande: { label: 'Compra grande', idea: 'Llamalo en vez de escribirle: agradecé y preguntá cómo viene la obra.' },
+  aniversario: { label: 'Aniversario como cliente', idea: 'Un saludo corto y sincero, sin ofrecer nada. Preguntá qué podemos hacer mejor.' },
+  primera: { label: 'Primera compra', idea: 'Mandale con el mensaje la ficha técnica o un consejo de aplicación del producto que compró.' },
+  volvio: { label: 'Volvió después de mucho tiempo', idea: 'Preguntale qué cambió y pedile una foto de cómo quedó el trabajo.' },
+};
+const SURPRISE_ORDER = ['grande', 'aniversario', 'primera', 'volvio'];
+
+function anniversaryYears(firstPurchase, today) {
+  const first = day(firstPurchase);
+  if (!first) return 0;
+  const [fy, fm, fd] = first.split('-').map(Number);
+  const year = Number(day(today).slice(0, 4));
+  const years = year - fy;
+  if (years < 1) return 0;
+  const date = new Date(Date.UTC(year, fm - 1, fd));
+  const near = Math.abs(daysBetween(date.toISOString().slice(0, 10), today)) <= 3;
+  return near ? years : 0;
+}
+
+export function surpriseMoment(info = {}, today) {
+  if (!info?.lastPurchase || info.daysSince == null) return null;
+  if (info.big && info.daysSince <= 10) return { kind: 'grande' };
+  const years = anniversaryYears(info.firstPurchase, today);
+  if (years) return { kind: 'aniversario', years };
+  if (info.purchaseCount === 1 && info.daysSince >= 2 && info.daysSince <= 14) return { kind: 'primera' };
+  if (info.previousPurchase && info.daysSince <= 14 && daysBetween(info.previousPurchase, info.lastPurchase) >= 180) return { kind: 'volvio', months: Math.round(daysBetween(info.previousPurchase, info.lastPurchase) / 30) };
+  return null;
+}
+
+export function surpriseQueue({ clients = [], base = new Map(), today, limit = SURPRISE_SIZE } = {}) {
+  const items = [];
+  for (const client of clients) {
+    const info = base.get(client.id);
+    if (!info) continue;
+    const moment = surpriseMoment(info, today);
+    if (!moment) continue;
+    if (recentlyWorked(client, 'sorpresa', today, SURPRISE_COOLDOWN_DAYS)) continue;
+    const kind = SURPRISE_KINDS[moment.kind];
+    const extra = moment.kind === 'aniversario' ? ` (${moment.years} ${moment.years === 1 ? 'año' : 'años'})` : moment.kind === 'volvio' ? ` (${moment.months} meses sin comprar)` : '';
+    items.push({ client, info, moment, reason: `${kind.label}${extra} · ${kind.idea}`, rank: SURPRISE_ORDER.indexOf(moment.kind) });
+  }
+  items.sort((a, b) => a.rank - b.rank || b.info.total24 - a.info.total24);
+  return items.slice(0, limit);
+}
+
+export function surpriseMessage(item = {}, sender = '') {
+  const { client = {}, info = {}, moment = {} } = item;
+  const who = sender || '[tu nombre]';
+  const name = firstName(client) || client.company || 'equipo';
+  const head = `Hola ${name}, soy ${who} de Grupo Poliplast.`;
+  if (moment.kind === 'grande') return `${head} Quería agradecerte personalmente por el último pedido: gracias por elegirnos. ¿Cómo les fue con el producto? Cualquier cosa que necesiten para la obra, escribime y lo resolvemos.`;
+  if (moment.kind === 'aniversario') return `${head} Esta semana se cumple${moment.years === 1 ? ' un año' : `n ${moment.years} años`} desde que empezamos a trabajar juntos (la primera compra fue en ${monthYear(info.firstPurchase)}). Gracias por la confianza. ¿Hay algo que podamos hacer mejor?`;
+  if (moment.kind === 'primera') return `${head} Vi que hace unos días nos hicieron su primer pedido y quería agradecerte por confiar en nosotros. ¿Les llegó todo bien? Si me contás para qué lo van a usar, te paso un consejo de aplicación que puede servirles.`;
+  return `${head} ¡Qué gusto volver a trabajar con ustedes! Gracias por elegirnos otra vez. ¿Cambió algo de lo que necesitan desde la última vez? Si querés, mandame una foto de cómo quedó el trabajo.`;
+}
+
 // Prospectos nuevos: la cola de Prospección (ya sube a los de encaje, zona y puntaje altos).
 export function newProspectsQueue({ prospects = [], checks = new Map(), skipped = [], limit = QUEUE_SIZE, rules, customers = null } = {}) {
   const ids = buildQueue(prospects, checks, { skipped, rules, customers }).slice(0, limit);

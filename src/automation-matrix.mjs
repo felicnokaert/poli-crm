@@ -66,6 +66,7 @@ export const SEED_IDEAS = [
   { id: 'gmail-envio', name: 'Enviar mails de prospección desde el CRM con Gmail (aprobados, con baja y límites)', area: 'Prospección', impact: 4, ease: 3, cost: 0, risk: true, status: 'en-curso' },
   { id: 'gmail-respuestas', name: 'Detectar respuestas de los mails enviados y frenar los recordatorios', area: 'Prospección', impact: 4, ease: 4, cost: 0, status: 'hecho' },
   { id: 'asistente-evaluacion', name: 'Evaluar al asistente con 40 a 100 preguntas reales y un juez (mide el avance)', area: 'Asistente', impact: 4, ease: 4, cost: 1, status: 'hecho' },
+  { id: 'sorpresa-semanal', name: 'Momentos de sorpresa: 5 clientes por semana para agradecer o saludar (compra grande, aniversario, primera compra, vuelta)', area: 'Ventas', impact: 4, ease: 4, cost: 0, human: true, status: 'hecho' },
   { id: 'stock-sync', name: 'Sincronizar stock entre Mercado Libre y Shopify', area: 'Shopify', impact: 3, ease: 2, cost: 1, risk: true, status: 'pendiente' },
 ];
 
@@ -99,6 +100,7 @@ export const IDEA_DETAILS = {
   'gmail-envio': { status: 'en-curso', where: 'Es la misma idea que el envío de mails (más arriba)', missing: 'Sin probar con una cuenta real.' },
   'gmail-respuestas': { status: 'hecho', where: 'Bandeja de salida (frena los recordatorios)', missing: '' },
   'asistente-evaluacion': { status: 'hecho', where: 'Más → Datos → Asistente → Evaluación con juez', missing: 'Última medición: 33 % correctas y 63 % le sirven (100 preguntas).' },
+  'sorpresa-semanal': { status: 'hecho', where: 'Prospección → Cola del día → Momentos de sorpresa', missing: 'Sin probar con datos reales de toda la cartera: depende de la facturación de Contabilium.' },
   'stock-sync': { status: 'en-curso', where: 'Alerta de sobreventa y reposición (Qué atender hoy)', missing: 'Falta sincronizar el stock solo: escribiría en Shopify.' },
 };
 

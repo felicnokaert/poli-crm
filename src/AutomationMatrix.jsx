@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { Plus, RotateCcw, Trash2 } from "lucide-react";
-import { COSTS, STATUSES, VERDICTS, VERDICT_ORDER, bubblePositions, mergeIdeas, newIdea, patchIdea, sortIdeas, verdictCounts } from "./automation-matrix.mjs";
+import { COSTS, STATUSES, VERDICTS, VERDICT_ORDER, bubblePositions, mergeIdeas, newIdea, patchIdea, sortIdeas, statusCounts, verdictCounts } from "./automation-matrix.mjs";
 
 const SCALE = [1, 2, 3, 4, 5];
 
 // Sección Automatizaciones (dentro de Tareas, solo Felipe): qué conviene automatizar, con impacto × facilidad × costo.
 export function AutomationMatrix({ automations = {}, onChange }) {
   const [selected, setSelected] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [draft, setDraft] = useState({ name: "", area: "Otras" });
   const ideas = sortIdeas(mergeIdeas(automations));
   const counts = verdictCounts(ideas);
+  const states = statusCounts(ideas);
+  const shown = statusFilter === "all" ? ideas : ideas.filter((idea) => idea.status === statusFilter);
   const positions = bubblePositions(ideas);
   const byId = Object.fromEntries(positions.map((item) => [item.id, item]));
   const change = (id, patch) => onChange?.(patchIdea(automations, id, patch));
@@ -65,13 +68,21 @@ export function AutomationMatrix({ automations = {}, onChange }) {
 
       <section className="panel">
         <div className="panel-head"><div><span className="eyebrow">Lista</span><h2>Ideas ordenadas por conveniencia</h2></div></div>
+        <div className="segmented" role="group" aria-label="Estado de la idea" style={{ marginBottom: 8 }}>
+          <button type="button" className={statusFilter === "all" ? "selected" : ""} onClick={() => setStatusFilter("all")}>Todas · {ideas.length}</button>
+          {Object.entries(STATUSES).map(([value, label]) => (
+            <button key={value} type="button" className={statusFilter === value ? "selected" : ""} onClick={() => setStatusFilter(value)}>{label} · {states[value]}</button>
+          ))}
+        </div>
         <div className="matrix-list">
-          {ideas.map((idea) => (
+          {shown.map((idea) => (
             <article key={idea.id} className={`matrix-row${selected === idea.id ? " active" : ""}`} onClick={() => setSelected(idea.id)}>
               <span className="matrix-num" style={{ background: VERDICTS[idea.verdict].color }}>{byId[idea.id].number}</span>
               <div className="matrix-main">
                 <strong>{idea.name}</strong>
-                <small>{idea.area} · {STATUSES[idea.status]} · <b style={{ color: VERDICTS[idea.verdict].color }}>{VERDICTS[idea.verdict].label}</b></small>
+                <small>{idea.area} · <b>{STATUSES[idea.status]}</b> · <b style={{ color: VERDICTS[idea.verdict].color }}>{VERDICTS[idea.verdict].label}</b></small>
+                {idea.where && <small className="muted">Dónde: {idea.where}</small>}
+                {idea.missing && <small className="muted">Falta: {idea.missing}</small>}
               </div>
               <div className="matrix-controls" onClick={(event) => event.stopPropagation()}>
                 <label>Impacto<select value={idea.impact} onChange={(event) => change(idea.id, { impact: event.target.value })}>{SCALE.map((n) => <option key={n}>{n}</option>)}</select></label>

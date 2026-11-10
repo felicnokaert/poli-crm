@@ -48,3 +48,14 @@ test('lo editado sobrevive a la sincronización del espacio de trabajo', () => {
   const merged = mergeWorkspaceState({ automations: { 'ml-clips': { impact: 5 } } }, { automations: { 'wa-bot': { cost: 1 } } });
   assert.deepEqual(Object.keys(merged.automations).sort(), ['ml-clips', 'wa-bot']);
 });
+
+test('cada idea de partida tiene estado y dónde se ve; lo editado por Felipe gana', async () => {
+  const { mergeIdeas, statusCounts, SEED_IDEAS, IDEA_DETAILS } = await import('../src/automation-matrix.mjs');
+  for (const idea of SEED_IDEAS) assert.ok(IDEA_DETAILS[idea.id], `falta el detalle de ${idea.id}`);
+  const ideas = mergeIdeas({});
+  const counts = statusCounts(ideas);
+  assert.equal(counts.hecho + counts['en-curso'] + counts.pendiente, ideas.length);
+  assert.equal(ideas.find((idea) => idea.id === 'wa-sugerida').status, 'hecho');
+  const edited = mergeIdeas({ 'wa-sugerida': { status: 'pendiente' } });
+  assert.equal(edited.find((idea) => idea.id === 'wa-sugerida').status, 'pendiente');
+});

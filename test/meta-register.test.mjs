@@ -41,3 +41,11 @@ test('registrar usa el PIN y después suscribe la app a la cuenta', async () => 
   assert.match(calls[1], /\/999\/subscribed_apps$/);
   assert.equal((await registerPhone({ phoneId: '111', wabaId: '999', token: 'tok', pin: '12', http })).ok, false);
 });
+
+test('el error de Meta muestra el motivo real y el código', async () => {
+  const { describeError } = await import('../lib/meta-register.mjs');
+  const text = describeError({ message: 'Request code error', error_user_msg: 'Este número está registrado en la aplicación.', code: 136024, error_subcode: 2388001 }, 400);
+  assert.match(text, /registrado en la aplicación/);
+  assert.match(text, /136024\/2388001/);
+  assert.match(describeError(null, 500), /500/);
+});

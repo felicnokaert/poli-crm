@@ -9,6 +9,7 @@ export const MODULES = [
   { id: 'tasks', label: 'Tareas' },
   { id: 'sales', label: 'Ventas' },
   { id: 'quoter', label: 'Cotizador' },
+  { id: 'entregas', label: 'Entregas' },
   { id: 'prospecting', label: 'Prospección' },
   { id: 'conversations', label: 'Historial' },
   { id: 'mejoras', label: 'Centro de mejoras' },

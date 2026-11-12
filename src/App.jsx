@@ -35,6 +35,7 @@ const lazyNamed = (loader, name) => lazy(async () => {
 const TechnicalDocumentsAdmin = lazyNamed(() => import("./TechnicalDocuments"), "TechnicalDocumentsAdmin");
 const MapaCobertura = lazyNamed(() => import("./MapaCobertura"), "MapaCobertura");
 const CotizadorFrame = lazyNamed(() => import("./CotizadorFrame"), "CotizadorFrame");
+const EntregasFrame = lazyNamed(() => import("./EntregasFrame"), "EntregasFrame");
 // Único de los cinco named exports de Academy.jsx que se usa acá - los
 // otros (CommercialKnowledge, Coach, QuickReplies, Training) son internos,
 // consumidos solo por el propio <Academy> - así que separarla en su propio
@@ -128,7 +129,7 @@ function loadState() {
 }
 
 const VIEW_KEY = "poliplast-current-view";
-const SAVED_VIEWS = new Set(["dashboard", "conversations", "inbox", "tasks", "sales", "clients", "prospecting", "mercadolibre", "shopify", "mejoras", "academy", "quoter", "map", "techdocs", "profile", "settings"]);
+const SAVED_VIEWS = new Set(["dashboard", "conversations", "inbox", "tasks", "sales", "clients", "prospecting", "mercadolibre", "shopify", "mejoras", "academy", "quoter", "entregas", "map", "techdocs", "profile", "settings"]);
 function readSavedView() {
   try {
     const saved = sessionStorage.getItem(VIEW_KEY);
@@ -877,6 +878,11 @@ export default function App() {
         {view === "quoter" && (
           <Suspense fallback={<Splash text="Cargando cotizador…" />}>
             <CotizadorFrame session={session} client={quoterClient} />
+          </Suspense>
+        )}
+        {view === "entregas" && (
+          <Suspense fallback={<Splash text="Cargando entregas…" />}>
+            <EntregasFrame session={session} />
           </Suspense>
         )}
         {view === "map" && (

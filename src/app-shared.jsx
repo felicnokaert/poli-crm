@@ -219,3 +219,10 @@ export function cotizadorUrl(company = "", phone = "", { embed = false } = {}) {
   const query = params.toString();
   return query ? `${COTIZADOR_URL}?${query}` : COTIZADOR_URL;
 }
+
+// Poli-Entregas: aplicación aparte (remitos, despachos y entregas; misma base). Usa rutas con hash.
+// VITE_ENTREGAS_URL solo para probar con Entregas local. Entregas solo le habla a poli-crm.vercel.app y a
+// localhost:5173 (Entregas/src/lib/embed.ts): si el CRM local corre en otro puerto, no recibe la sesión.
+export const ENTREGAS_URL = import.meta.env?.VITE_ENTREGAS_URL || "https://poli-entregas.vercel.app/";
+export const ENTREGAS_ORIGIN = new URL(ENTREGAS_URL).origin;
+export const ENTREGAS_EMBED_URL = `${ENTREGAS_URL}?embed=1#/`;

@@ -26,6 +26,8 @@ import { applyEnrichment } from './prospect-enrich-apply.mjs';
 import { DAILY_TARGET, currentFocus, scopeDescription, zoneStatus } from './prospect-plan.mjs';
 
 import { DoNotContactPanel } from './DoNotContactPanel.jsx';
+import { ProspectCleanup } from './ProspectCleanup.jsx';
+import { discardMany, keepMany } from './prospect-cleanup.mjs';
 import { addBlock, blockedBy, filterAllowed } from './do-not-contact.mjs';
 import { useBillingCustomers } from './hooks/useBillingCustomers.js';
 import { OutboxPanel } from './OutboxPanel.jsx';
@@ -226,6 +228,21 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     setImportText('');
     if (job) setJobText((current) => ({ ...current, [job.id]: '' }));
     setImportJobId(null);
+  }
+
+  // Limpieza (12/11): descartar o dejar varios a la vez, con un solo «Deshacer».
+  function discardProspects(ids, outcome) {
+    const before = prospects.filter((item) => ids.includes(item.id));
+    if (!before.length) return;
+    setData((current) => discardMany(current, ids, { outcome, user: userEmail }).state);
+    setUndo({
+      id: crypto.randomUUID(),
+      text: `${before.length === 1 ? before[0].company : `${before.length} prospectos`}: descartado${before.length === 1 ? '' : 's'} (${outcome}).`,
+      apply: (current) => ({ ...current, prospects: (current.prospects || []).map((item) => before.find((old) => old.id === item.id) || item) }),
+    });
+  }
+  function keepProspects(ids) {
+    setData((current) => keepMany(current, ids));
   }
 
   function mark(prospectId, nextState, outcome) {
@@ -645,7 +662,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       </div>
 
       <div className="segmented prospect-tabs" role="tablist" aria-label="Secciones de Prospección">
-        {[['hoy', 'Cola del día'], ['prospectos', 'Prospectos'], ['buscar', 'Buscar con IA'], ['respuestas', 'Respuestas rápidas'], ['reglas', 'Reglas'], ['salida', 'Bandeja de salida'], ['nocontactar', 'No contactar']].map(([key, label]) => (
+        {[['hoy', 'Cola del día'], ['prospectos', 'Prospectos'], ['limpieza', 'Limpieza'], ['buscar', 'Buscar con IA'], ['respuestas', 'Respuestas rápidas'], ['reglas', 'Reglas'], ['salida', 'Bandeja de salida'], ['nocontactar', 'No contactar']].map(([key, label]) => (
           <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? 'selected' : ''} onClick={() => setTab(key)}>{label}</button>
         ))}
       </div>
@@ -664,6 +681,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       {tab === 'respuestas' && <QuickReplies defaultSender={senderName} supabase={supabase} />}
       {tab === 'reglas' && <ProspectRulesPanel rules={data.prospectRules} onChange={(prospectRules) => setData((current) => ({ ...current, prospectRules }))} />}
 
+      {tab === 'limpieza' && <ProspectCleanup prospects={prospects} onDiscard={discardProspects} onKeep={keepProspects} />}
       {tab === 'buscar' && (<>
       <details className="panel research-panel" open>
         <summary><strong>Investigación profunda: Claude investiga por vos en la web</strong></summary>

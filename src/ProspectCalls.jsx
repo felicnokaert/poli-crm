@@ -33,7 +33,7 @@ export function ProspectCalls({ prospects, blockList, onResult }) {
           <summary><strong>{zone.name}</strong> <span className="muted small">· {zone.total} para llamar</span></summary>
           {zone.cities.map((city) => (
             <div key={`${city.city}|${city.province}`} className="call-city">
-              <h4>{city.city} <span className="muted small">{city.province ? `${city.province} · ` : ""}{city.count}</span></h4>
+              <h4>{city.city} <span className="muted small">{city.province && city.province !== city.city ? `${city.province} · ` : ""}{city.count}</span></h4>
               {city.items.map(({ prospect, contact, attempts }) => {
                 const phone = normalizePhoneAR(prospect.phone);
                 const wa = contact === "celular" ? possibleWhatsAppLink(phone.e164 || prospect.phone) : "";

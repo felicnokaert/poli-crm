@@ -54,7 +54,7 @@ export function ProspectCleanup({ prospects, onDiscard, onKeep }) {
           <span className="eyebrow">Qué prospectos sirven</span>
           <h2><Eraser size={18} aria-hidden="true" /> Limpieza de prospectos</h2>
           <p className="muted small">
-            Ordena los {summary.pending} prospectos sin contactar. Los {summary.clients} que ya son clientes y los {summary.inProgress + summary.closed} que ya trabajaste no aparecen acá.
+            Ordena los {summary.pending} prospectos sin contactar. No aparecen acá los que ya son clientes ({summary.clients}) ni los que ya trabajaste ({summary.inProgress + summary.closed}).
             Criterio de Resinplast: vendemos fraccionado, así que el perfil es reparación, parchado, carpintería y talleres; el fabricante de piletas o de lanchas compra por tambor y queda «para bajar».
           </p>
         </div>

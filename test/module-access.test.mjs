@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canSee, deniedSet, filterNav, firstAllowedView, accessChange } from '../src/module-access.mjs';
+import { MODULES, canSee, deniedSet, filterNav, firstAllowedView, accessChange } from '../src/module-access.mjs';
 
 const member = 'ezequiel@grupopoliplast.com.ar';
 const rows = [{ module: 'shopify', allowed: false }, { module: 'mercadolibre.dinero', allowed: false }, { module: 'tasks', allowed: true }];
@@ -38,4 +38,10 @@ test('el menú saca los grupos vacíos y la pantalla cae en otra permitida', () 
 test('al volver a permitir se borra la excepción', () => {
   assert.deepEqual(accessChange('A@x.com', 'shopify', true), { op: 'delete', email: 'a@x.com', module: 'shopify' });
   assert.equal(accessChange('A@x.com', 'shopify', false).row.allowed, false);
+});
+
+test('Entregas es un módulo: todo el equipo lo ve y se puede quitar', () => {
+  assert.ok(MODULES.some((m) => m.id === 'entregas'));
+  assert.equal(canSee(member, deniedSet([]), 'entregas'), true);
+  assert.equal(canSee(member, deniedSet([{ module: 'entregas', allowed: false }]), 'entregas'), false);
 });

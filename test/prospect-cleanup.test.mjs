@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { classifyProspect, cleanupSummary, cleanupCsv, classifyAll, discardMany, keepMany, resinplastFit, volumeFit } from '../src/prospect-cleanup.mjs';
+import { classifyProspect, cleanupSummary, cleanupCsv, classifyAll, discardMany, keepMany, resinplastFit, volumeFit, penosilFit } from '../src/prospect-cleanup.mjs';
 import { blankProspect, REJECTION_REASONS } from '../src/prospect-model.mjs';
 
 const make = (fields) => blankProspect({ id: fields.id || fields.company, ...fields });
@@ -30,7 +30,7 @@ test('estado de trabajo: cliente, cerrado, en curso y pendiente', () => {
 });
 
 test('otras familias no se juzgan y lo conservado deja de sugerirse', () => {
-  assert.equal(classifyProspect(make({ company: 'A', family: 'Penosil', rubro: 'Corralón' })).fit, 'normal');
+  assert.equal(classifyProspect(make({ company: 'A', family: 'Carrozados', rubro: 'Carrocerías' })).fit, 'normal');
   const piletas = make({ company: 'P', family: 'Resinplast', rubro: 'Piscinas de fibra (fabricante)' });
   assert.equal(classifyProspect(piletas).fit, 'bajar');
   assert.equal(classifyProspect({ ...piletas, cleanupKept: true }).fit, 'conservado');
@@ -40,7 +40,7 @@ test('el resumen cuenta solo lo pendiente y aparta clientes y cerrados', () => {
   const list = [
     make({ company: 'a', family: 'Resinplast', rubro: 'Piscinas', phone: '+54 291 426-6676' }),
     make({ company: 'b', family: 'Resinplast', rubro: 'Reparación de piscinas', phone: '+54 9 11 5555-1234' }),
-    make({ company: 'c', family: 'Penosil', rubro: 'Corralón', phone: '' }),
+    make({ company: 'c', family: 'Carrozados', rubro: 'Carrocerías', phone: '' }),
     make({ company: 'd', linkedClientId: 'x', state: 'Contactado' }),
     make({ company: 'e', state: 'Sin interés' }),
   ];
@@ -93,4 +93,12 @@ test('Poliuretano y Planchas: el que revende se baja, el que aísla es prioridad
 test('classifyProspect usa la regla de volumen en Poliuretano y Planchas', () => {
   assert.equal(classifyProspect(make({ company: 'X', family: 'Poliuretano', rubro: 'Calderas (fabricante)' })).fit, 'alta');
   assert.equal(classifyProspect(make({ company: 'Y', family: 'Planchas', rubro: 'Refrigeración (venta)' })).outcome, 'Es revendedor (no es perfil)');
+});
+
+test('Penosil: corralón y ferretería son el perfil, lo ajeno se revisa', () => {
+  assert.equal(penosilFit('Corralón/ferretería').fit, 'alta');
+  assert.equal(penosilFit('Ferretería industrial').fit, 'alta');
+  assert.equal(penosilFit('Materiales de construcción en seco').fit, 'alta');
+  assert.equal(penosilFit('Distribuidor agropecuario').fit, 'revisar');
+  assert.equal(classifyProspect(make({ company: 'Z', family: 'Penosil', rubro: 'Corralón' })).fit, 'alta');
 });

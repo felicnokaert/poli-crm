@@ -57,6 +57,16 @@ export function volumeFit(family, rubro = '') {
   return { fit: 'revisar', reason: 'Rubro poco claro para esta familia. Mirar a mano.' };
 }
 
+// Penosil se vende a quien revende: corralones, ferreterías, materiales y pinturerías (los rubros que ya tiene la familia en
+// PROSPECT_FAMILIES). Lo que no es de ese mundo (por ejemplo, agropecuarias) se marca para revisar.
+export function penosilFit(rubro = '') {
+  const text = plain(rubro);
+  if (/corralon|ferreter|material|construccion|pintureri|bulon|sanitari/.test(text)) {
+    return { fit: 'alta', reason: 'Corralón, ferretería o materiales: es el perfil de Penosil (revende).' };
+  }
+  return { fit: 'revisar', reason: 'No es corralón ni ferretería: ver si vende adhesivos y selladores. Mirar a mano.' };
+}
+
 // Estado de trabajo del prospecto.
 function workStatus(prospect) {
   if (prospect.linkedClientId) return 'cliente';
@@ -82,6 +92,9 @@ export function classifyProspect(prospect = {}) {
   } else if (prospect.family === 'Resinplast') {
     const result = resinplastFit(prospect.rubro);
     fit = result.fit; reason = result.reason; outcome = result.outcome || '';
+  } else if (prospect.family === 'Penosil') {
+    const result = penosilFit(prospect.rubro);
+    fit = result.fit; reason = result.reason; outcome = '';
   } else if (prospect.family === 'Poliuretano' || prospect.family === 'Planchas') {
     const result = volumeFit(prospect.family, prospect.rubro);
     fit = result.fit; reason = result.reason; outcome = result.outcome || '';

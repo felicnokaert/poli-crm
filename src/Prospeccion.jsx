@@ -27,6 +27,8 @@ import { DAILY_TARGET, currentFocus, scopeDescription, zoneStatus } from './pros
 
 import { DoNotContactPanel } from './DoNotContactPanel.jsx';
 import { ProspectCleanup } from './ProspectCleanup.jsx';
+import { ProspectCalls } from './ProspectCalls.jsx';
+import { noteCall } from './prospect-calls.mjs';
 import { discardMany, keepMany } from './prospect-cleanup.mjs';
 import { addBlock, blockedBy, filterAllowed } from './do-not-contact.mjs';
 import { useBillingCustomers } from './hooks/useBillingCustomers.js';
@@ -240,6 +242,12 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       text: `${before.length === 1 ? before[0].company : `${before.length} prospectos`}: descartado${before.length === 1 ? '' : 's'} (${outcome}).`,
       apply: (current) => ({ ...current, prospects: (current.prospects || []).map((item) => before.find((old) => old.id === item.id) || item) }),
     });
+  }
+  // Orden de llamada (12/11): una llamada anotada en un toque. «Hablé» y «No le sirve» reusan mark (conversión a Empresa, tarea de seguimiento y Deshacer).
+  function recordCallResult(id, result, extra = {}) {
+    setData((current) => noteCall(current, id, result, { user: userEmail, email: extra.email }));
+    if (result === 'hablamos') mark(id, 'Contactado', 'Llamada');
+    else if (result === 'sin-interes') mark(id, 'Sin interés', extra.outcome || 'No le interesa');
   }
   function keepProspects(ids) {
     setData((current) => keepMany(current, ids));
@@ -662,7 +670,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       </div>
 
       <div className="segmented prospect-tabs" role="tablist" aria-label="Secciones de Prospección">
-        {[['hoy', 'Cola del día'], ['prospectos', 'Prospectos'], ['limpieza', 'Limpieza'], ['buscar', 'Buscar con IA'], ['respuestas', 'Respuestas rápidas'], ['reglas', 'Reglas'], ['salida', 'Bandeja de salida'], ['nocontactar', 'No contactar']].map(([key, label]) => (
+        {[['hoy', 'Cola del día'], ['prospectos', 'Prospectos'], ['limpieza', 'Limpieza'], ['llamadas', 'Orden de llamada'], ['buscar', 'Buscar con IA'], ['respuestas', 'Respuestas rápidas'], ['reglas', 'Reglas'], ['salida', 'Bandeja de salida'], ['nocontactar', 'No contactar']].map(([key, label]) => (
           <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? 'selected' : ''} onClick={() => setTab(key)}>{label}</button>
         ))}
       </div>
@@ -681,6 +689,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       {tab === 'respuestas' && <QuickReplies defaultSender={senderName} supabase={supabase} />}
       {tab === 'reglas' && <ProspectRulesPanel rules={data.prospectRules} onChange={(prospectRules) => setData((current) => ({ ...current, prospectRules }))} />}
 
+      {tab === 'llamadas' && <ProspectCalls prospects={prospects} blockList={blockList} onResult={recordCallResult} />}
       {tab === 'limpieza' && <ProspectCleanup prospects={prospects} onDiscard={discardProspects} onKeep={keepProspects} />}
       {tab === 'buscar' && (<>
       <details className="panel research-panel" open>

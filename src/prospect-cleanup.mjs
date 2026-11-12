@@ -8,6 +8,7 @@ import { normalizePhoneAR } from './prospect-contact.mjs';
 import { isCompetitor } from './prospect-model.mjs';
 
 export const FABRICANTE_OUTCOME = 'Fabricante (no es perfil)';
+export const REVENDEDOR_OUTCOME = 'Es revendedor (no es perfil)';
 
 function plain(value = '') {
   return String(value).toLocaleLowerCase('es-AR').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
@@ -29,6 +30,31 @@ export function resinplastFit(rubro = '') {
     return { fit: 'bajar', reason: 'Piletas de fibra: el fabricante compra por volumen directo, no fraccionado.', outcome: FABRICANTE_OUTCOME };
   }
   return { fit: 'revisar', reason: 'Rubro poco claro para Resinplast. Mirar a mano.' };
+}
+
+// Poliuretano y Planchas (12/11): se vende por volumen, así que el perfil es quien FABRICA o aísla con poliuretano; el que solo revende
+// no es perfil (regla de Felipe del 3/11). PROPUESTA a confirmar con Felipe: aislación de calderas, termotanques y equipos de frío,
+// cámaras, paneles y módulos = prioridad; colchones, sillones y aberturas = revisar (compran espuma ya hecha o usan poca cantidad).
+export function volumeFit(family, rubro = '') {
+  const raw = String(rubro);
+  const text = plain(raw);
+  const makes = /fabric/.test(text);
+  if (!/pesquera/.test(text) && !makes && (/distribuidor|mayorista|comercio|cadena/.test(text) || /\(venta\)/i.test(raw))) {
+    return { fit: 'bajar', reason: 'Revende: no fabrica ni aísla con poliuretano.', outcome: REVENDEDOR_OUTCOME };
+  }
+  if (family === 'Poliuretano' && /caldera|termotanque|calefactor|heladera|freezer|exhibidora|camara|frio|refrigera|equipos termicos|salamandra/.test(text)) {
+    return { fit: 'alta', reason: 'Aísla con poliuretano inyectado (calderas, termotanques, equipos de frío): compra por volumen. A confirmar con Felipe.' };
+  }
+  if (family === 'Planchas' && /refrigera|camara|frio|frigorific|heladera|panel|modul|container|prefabric|vivienda|casas|aislant|aislacion|furgon|utilitario|construccion/.test(text)) {
+    return { fit: 'alta', reason: 'Frío, paneles o módulos aislados: usa planchas o paneles de poliuretano. A confirmar con Felipe.' };
+  }
+  if (family === 'Poliuretano' && /colchon|sommier|sillon|sofa|silla|mueble|tapiceria|almohad|butaca|asiento/.test(text)) {
+    return { fit: 'revisar', reason: 'Colchones, sillones y muebles: hay que ver si compran espuma ya hecha o los químicos. Mirar a mano.' };
+  }
+  if (family === 'Poliuretano' && /abertura|puerta|ventana|porton|persiana/.test(text)) {
+    return { fit: 'revisar', reason: 'Aberturas y portones: pueden usar espuma o relleno de poliuretano, en poca cantidad. Mirar a mano.' };
+  }
+  return { fit: 'revisar', reason: 'Rubro poco claro para esta familia. Mirar a mano.' };
 }
 
 // Estado de trabajo del prospecto.
@@ -55,6 +81,9 @@ export function classifyProspect(prospect = {}) {
     fit = 'bajar'; reason = 'Es competencia.'; outcome = 'No le interesa';
   } else if (prospect.family === 'Resinplast') {
     const result = resinplastFit(prospect.rubro);
+    fit = result.fit; reason = result.reason; outcome = result.outcome || '';
+  } else if (prospect.family === 'Poliuretano' || prospect.family === 'Planchas') {
+    const result = volumeFit(prospect.family, prospect.rubro);
     fit = result.fit; reason = result.reason; outcome = result.outcome || '';
   }
   if (prospect.cleanupKept && fit !== 'normal') { fit = 'conservado'; reason = 'La dejaste a propósito.'; outcome = ''; }

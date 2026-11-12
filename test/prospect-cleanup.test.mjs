@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { classifyProspect, cleanupSummary, cleanupCsv, classifyAll, discardMany, keepMany, resinplastFit } from '../src/prospect-cleanup.mjs';
+import { classifyProspect, cleanupSummary, cleanupCsv, classifyAll, discardMany, keepMany, resinplastFit, volumeFit } from '../src/prospect-cleanup.mjs';
 import { blankProspect, REJECTION_REASONS } from '../src/prospect-model.mjs';
 
 const make = (fields) => blankProspect({ id: fields.id || fields.company, ...fields });
@@ -71,4 +71,26 @@ test('el motivo nuevo está entre los de rechazo y el CSV escapa comillas', () =
   const csv = cleanupCsv(rows);
   assert.match(csv, /"Casa ""Norte"""/);
   assert.match(csv, /Fijo/);
+});
+
+test('Poliuretano y Planchas: el que revende se baja, el que aísla es prioridad, el resto se revisa', () => {
+  assert.equal(volumeFit('Poliuretano', 'Aberturas (distribuidor)').fit, 'bajar');
+  assert.equal(volumeFit('Poliuretano', 'Aberturas (distribuidor)').outcome, 'Es revendedor (no es perfil)');
+  assert.equal(volumeFit('Poliuretano', 'Almohadas y colchones (comercio)').fit, 'bajar');
+  assert.equal(volumeFit('Planchas', 'Refrigeración (venta)').fit, 'bajar');
+  assert.equal(volumeFit('Planchas', 'Distribuidor de aislantes').fit, 'bajar');
+  assert.equal(volumeFit('Planchas', 'Refrigeración (fabricante y venta)').fit, 'alta');
+  assert.equal(volumeFit('Poliuretano', 'Calderas y tanques industriales (fabricante)').fit, 'alta');
+  assert.equal(volumeFit('Poliuretano', 'Heladeras y exhibidoras (fabricante)').fit, 'alta');
+  assert.equal(volumeFit('Planchas', 'Cámaras frigoríficas (fabricante)').fit, 'alta');
+  assert.equal(volumeFit('Planchas', 'Casas container').fit, 'alta');
+  assert.equal(volumeFit('Poliuretano', 'Colchones (fábrica)').fit, 'revisar');
+  assert.equal(volumeFit('Poliuretano', 'Aberturas de aluminio (fabricante)').fit, 'revisar');
+  assert.equal(volumeFit('Poliuretano', 'Pesquera y mayorista').fit, 'revisar');
+  assert.equal(volumeFit('Planchas', 'Metalúrgica').fit, 'revisar');
+});
+
+test('classifyProspect usa la regla de volumen en Poliuretano y Planchas', () => {
+  assert.equal(classifyProspect(make({ company: 'X', family: 'Poliuretano', rubro: 'Calderas (fabricante)' })).fit, 'alta');
+  assert.equal(classifyProspect(make({ company: 'Y', family: 'Planchas', rubro: 'Refrigeración (venta)' })).outcome, 'Es revendedor (no es perfil)');
 });

@@ -1573,3 +1573,17 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
   .cleanup-filters { grid-template-columns: minmax(0, 1fr); }
   .cleanup-row { flex-direction: column; align-items: stretch; }
 }
+
+/* Prospección → Orden de llamada (12/11) */
+.call-zone { border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-panel-bg); margin: 10px 0; padding: 0 12px 8px; }
+.call-zone > summary { cursor: pointer; padding: 10px 0; }
+.call-city h4 { margin: 12px 0 4px; font-size: 0.95rem; }
+.call-row { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--color-border-light); }
+.call-main { display: grid; gap: 2px; min-width: 0; }
+.call-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; flex-shrink: 0; }
+.call-actions input { width: 150px; }
+@media (max-width: 760px) {
+  .call-row { flex-direction: column; align-items: stretch; }
+  .call-actions { justify-content: flex-start; }
+  .call-actions input { width: 100%; }
+}

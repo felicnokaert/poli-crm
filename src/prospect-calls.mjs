@@ -34,7 +34,7 @@ export function zoneOf(prospect = {}) {
 // Los barrios de CABA se juntan en una sola «ciudad»: «CABA (Mataderos)» y «CABA (Almagro)» van seguidas.
 export const cityLabel = (prospect = {}) => (/^caba\b/i.test(String(prospect.city || '')) ? 'CABA' : String(prospect.city || 'Sin ciudad').replace(/\s*\(.*\)\s*$/, '').trim() || 'Sin ciudad');
 
-const FAMILY_ORDER = { Penosil: 1, Planchas: 2, Resinplast: 3 };
+const FAMILY_ORDER = { Poliuretano: 1, Planchas: 2, Carrozados: 3, Penosil: 4, Resinplast: 5 };
 
 export function callPlan(prospects = [], { today = arToday(), blocked = () => false } = {}) {
   const zones = new Map(ZONES.map((zone) => [zone.id, { ...zone, total: 0, cities: new Map() }]));

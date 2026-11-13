@@ -18,7 +18,7 @@ test('zonas: CABA y GBA juntos, el resto por provincia', () => {
   assert.equal(cityLabel({ city: 'Paso del Rey (Moreno)' }), 'Paso del Rey');
 });
 
-test('el orden: zona fija, ciudad con más prospectos primero y Penosil antes que Planchas', () => {
+test('el orden: zona fija, ciudad con más prospectos primero y Planchas antes que Penosil', () => {
   const list = [
     make({ company: 'P1', province: 'Santa Fe', city: 'Rosario' }),
     make({ company: 'P2', province: 'Santa Fe', city: 'Rosario', family: 'Planchas', rubro: 'Cámaras frigoríficas (fabricante)' }),
@@ -29,7 +29,7 @@ test('el orden: zona fija, ciudad con más prospectos primero y Penosil antes qu
   const plan = callPlan(list, { today: '2026-11-12' });
   assert.deepEqual(plan.zones.map((zone) => zone.id), ['amba', 'santafe']);
   assert.deepEqual(plan.zones[1].cities.map((city) => city.city), ['Rosario', 'Rafaela']);
-  assert.deepEqual(plan.zones[1].cities[0].items.map((item) => item.prospect.company), ['P1', 'P2']);
+  assert.deepEqual(plan.zones[1].cities[0].items.map((item) => item.prospect.company), ['P2', 'P1']);
   assert.equal(plan.zones[0].cities.length, 1);
   assert.equal(plan.total, 5);
 });

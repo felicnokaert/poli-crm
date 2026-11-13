@@ -48,11 +48,16 @@ export function volumeFit(family, rubro = '') {
   if (family === 'Planchas' && /refrigera|camara|frio|frigorific|heladera|panel|modul|container|prefabric|vivienda|casas|aislant|aislacion|furgon|utilitario|construccion/.test(text)) {
     return { fit: 'alta', reason: 'Frío, paneles o módulos aislados: usa planchas o paneles de poliuretano. A confirmar con Felipe.' };
   }
+  // 13/11 (reunión): el poliuretano ya se vende mucho a aplicadores de spray; el foco nuevo es colchones, sillones, inyección y aberturas
+  // (y piezas ortopédicas). Vendemos dosificado (poliol e isocianato por kilo).
   if (family === 'Poliuretano' && /colchon|sommier|sillon|sofa|silla|mueble|tapiceria|almohad|butaca|asiento/.test(text)) {
-    return { fit: 'revisar', reason: 'Colchones, sillones y muebles: hay que ver si compran espuma ya hecha o los químicos. Mirar a mano.' };
+    return { fit: 'alta', reason: 'Colchones, sillones y muebles: foco nuevo del poliuretano (se vende dosificado).' };
   }
   if (family === 'Poliuretano' && /abertura|puerta|ventana|porton|persiana/.test(text)) {
-    return { fit: 'revisar', reason: 'Aberturas y portones: pueden usar espuma o relleno de poliuretano, en poca cantidad. Mirar a mano.' };
+    return { fit: 'alta', reason: 'Aberturas: inyección de poliuretano rígido, foco nuevo (se vende dosificado).' };
+  }
+  if (family === 'Poliuretano' && /ortop|protesis|plantilla|calzado|kinesi/.test(text)) {
+    return { fit: 'alta', reason: 'Piezas ortopédicas: foco nuevo del poliuretano (se vende dosificado).' };
   }
   return { fit: 'revisar', reason: 'Rubro poco claro para esta familia. Mirar a mano.' };
 }

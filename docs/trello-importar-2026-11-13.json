@@ -1,0 +1,103 @@
+{
+ "name": "CRM — Vender: 13/11 en adelante",
+ "lists": [
+  {
+   "id": "h",
+   "name": "Vie 13/11 · A VENDER (9:30 a 15:25)",
+   "closed": false
+  },
+  {
+   "id": "s",
+   "name": "Sáb 14 y Dom 15 (a decidir)",
+   "closed": false
+  },
+  {
+   "id": "l",
+   "name": "Lun 16/11 · Arrancar a full",
+   "closed": false
+  }
+ ],
+ "cards": [
+  {
+   "id": "crm-13nov-01",
+   "idList": "h",
+   "name": "09:30–11:00 Llamar poliuretano con el foco nuevo: aberturas, colchones, sillones y inyección (30 a 40)",
+   "desc": "Prospección → Orden de llamada (los de poliuretano salen primero). Pitch: no es spray, es poliol + isocianato DOSIFICADO por kilo, sin pedir tambor. Marcar cada uno: Hablé / No atendió / No le sirve. Hay ~140 con teléfono.",
+   "due": "2026-11-13T18:25:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-13nov-02",
+   "idList": "h",
+   "name": "11:00–12:00 Llamar carroceros, frío y módulos: PRFV importado y planchas de poliuretano (20 a 30)",
+   "desc": "Prospección → Orden de llamada (Planchas y Carrozados). Pitch: PRFV de importación y planchas de poliuretano, margen más alto. Preguntar qué espesores y cuántas planchas por mes.",
+   "due": "2026-11-13T18:25:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-13nov-03",
+   "idList": "h",
+   "name": "12:00–13:00 Cola del día: Reactivar + Cotizaron y no compraron (10 + 10 mensajes)",
+   "desc": "Prospección → Cola del día. Mensajes listos para copiar. Ofrecer dosificado a los clientes que dejaron de comprar resina o poliuretano.",
+   "due": "2026-11-13T18:25:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-13nov-04",
+   "idList": "h",
+   "name": "13:30–14:15 Rollos de cortina Cristal: avisar a quienes compraron cortinas / bandas PVC",
+   "desc": "Cola del día o Empresas: clientes con cortina PVC, bandas o cinta. Mensaje corto con precio por rollo (cargar precio de lista) y mínimo.",
+   "due": "2026-11-13T18:25:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-13nov-05",
+   "idList": "h",
+   "name": "14:15–15:25 Pasar resultados, tareas de seguimiento y cierre del día",
+   "desc": "Anotar cada resultado en el CRM (genera seguimiento a 2 días hábiles). Cierre del día en Tareas → Rutina.",
+   "due": "2026-11-13T18:25:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-13nov-06",
+   "idList": "h",
+   "name": "Definir con Juan: precio por kilo dosificado (poliol e isocianato) y resinas fraccionadas para ofrecer HOY",
+   "desc": "Sin precio claro no se puede ofrecer dosificado. Pedirle a Claude que arme el texto de WhatsApp apenas esté.",
+   "due": "2026-11-13T18:25:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-13nov-07",
+   "idList": "s",
+   "name": "Decidir si se trabaja sábado y domingo (llamadas, ML, Shopify)",
+   "desc": "Mirar cuántos pasaron a Contactado hoy y cuántos pidieron cotización.",
+   "due": "2026-11-14T15:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-13nov-08",
+   "idList": "l",
+   "name": "Lunes: día de clips (lista de tomas: docs/LISTA_TOMAS_CLIPS_2026-11-12.md)",
+   "desc": "Después de grabar, volver a llamadas por la tarde.",
+   "due": "2026-11-16T18:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-13nov-09",
+   "idList": "l",
+   "name": "Lunes: segunda vuelta a los que no atendieron y seguimiento de cotizaciones",
+   "desc": "Orden de llamada vuelve a ofrecer los 'No atendió' al día siguiente.",
+   "due": "2026-11-16T20:00:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  }
+ ]
+}

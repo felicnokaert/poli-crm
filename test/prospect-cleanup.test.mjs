@@ -84,8 +84,8 @@ test('Poliuretano y Planchas: el que revende se baja, el que aísla es prioridad
   assert.equal(volumeFit('Poliuretano', 'Heladeras y exhibidoras (fabricante)').fit, 'alta');
   assert.equal(volumeFit('Planchas', 'Cámaras frigoríficas (fabricante)').fit, 'alta');
   assert.equal(volumeFit('Planchas', 'Casas container').fit, 'alta');
-  assert.equal(volumeFit('Poliuretano', 'Colchones (fábrica)').fit, 'revisar');
-  assert.equal(volumeFit('Poliuretano', 'Aberturas de aluminio (fabricante)').fit, 'revisar');
+  assert.equal(volumeFit('Poliuretano', 'Colchones (fábrica)').fit, 'alta');
+  assert.equal(volumeFit('Poliuretano', 'Aberturas de aluminio (fabricante)').fit, 'alta');
   assert.equal(volumeFit('Poliuretano', 'Pesquera y mayorista').fit, 'revisar');
   assert.equal(volumeFit('Planchas', 'Metalúrgica').fit, 'revisar');
 });

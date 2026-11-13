@@ -3,6 +3,7 @@
 // condiciones; primero se entiende (Escuchar-Confirmar-Explorar) y recién después se responde y se acuerda.
 // {nombre} se reemplaza por el nombre del contacto; {yo} por el de quien escribe.
 export const QUICK_GROUPS = Object.freeze([
+  ['foco', 'Foco de venta (poliuretano, PRFV, planchas, cortina)'],
   ['apertura', 'Abrir la charla'],
   ['diagnostico', 'Entender qué necesita'],
   ['objecion', 'Objeciones (E-C-E-R-A)'],
@@ -16,6 +17,15 @@ export const QUICK_GROUPS = Object.freeze([
 const r = (group, title, text, tip = '') => ({ id: `${group}-${title}`.toLowerCase().replace(/[^a-z0-9áéíóúñ]+/g, '-'), group, title, text, tip });
 
 export const QUICK_REPLIES = Object.freeze([
+  // Foco de venta (13/11, reunión de Felipe): poliuretano para colchones, sillones, inyección y aberturas; dosificado; PRFV; planchas; cortina Cristal
+  r('foco', 'Poliuretano dosificado (colchones, sillones, muebles)', 'Hola {nombre}, soy {yo} de Grupo Poliplast. Les vendemos poliol e isocianato por kilo, dosificado, sin tener que comprar un tambor entero. ¿Hoy fabrican espuma propia para colchones o sillones, o la compran ya hecha?', 'Pregunta clave: si hace su espuma, es cliente; si la compra hecha, no.'),
+  r('foco', 'Poliuretano rígido por kilo (inyección: heladeras, frío, aberturas)', 'Hola {nombre}, soy {yo} de Grupo Poliplast. Tenemos sistema de poliuretano rígido para inyección (aislación de heladeras, equipos de frío, aberturas), y lo vendemos por kilo, en la cantidad que necesiten. ¿Qué usan hoy para inyectar y cuánto consumen por mes?', 'Producto + consumo mensual = calificado.'),
+  r('foco', 'Poliuretano para piezas ortopédicas', 'Hola {nombre}, soy {yo} de Grupo Poliplast. Vendemos poliuretano en pequeñas cantidades para hacer piezas y plantillas ortopédicas. ¿Con qué material trabajan hoy y qué volumen usan por mes?', ''),
+  r('foco', 'Resinas fraccionadas (epoxi, poliéster)', 'Hola {nombre}, soy {yo} de Grupo Poliplast. Vendemos resinas (epoxi y poliéster) fraccionadas, desde kilos, en baldes y envases chicos. ¿Qué trabajos hacen (reparación, moldes, fibra) y cuánto resina usan por mes?', 'Somos revendedores: nuestro fuerte es lo fraccionado, no el tambor.'),
+  r('foco', 'PRFV importado (carroceros, remolques)', 'Hola {nombre}, soy {yo} de Grupo Poliplast. Importamos placas de PRFV para carrocerías y cajas. ¿Cuánto PRFV usan por mes y de qué espesores? Te cuento qué tenemos.', ''),
+  r('foco', 'Planchas de poliuretano (carrozados, frío, módulos)', 'Hola {nombre}, soy {yo} de Grupo Poliplast. Tenemos planchas de poliuretano para cajas aisladas, frío y módulos. ¿Qué espesores y cuántas planchas usan por mes?', ''),
+  r('foco', 'Rollos de cortina Cristal', 'Hola {nombre}, soy {yo} de Grupo Poliplast. Tenemos rollos de cortina de PVC Cristal. ¿Hoy compran cortina para frío, divisiones o portones? Te cuento medidas y espesores que tenemos.', 'Para quienes ya compraron cortinas o bandas PVC.'),
+  r('foco', 'Reactivar cliente con dosificado', 'Hola {nombre}, ¿cómo andás? Soy {yo} de Grupo Poliplast. Hace tiempo que no nos comprás y quería contarte que ahora vendemos poliuretano y resinas dosificado, por kilo. ¿Te sirve para lo que estás haciendo?', ''),
   // Abrir la charla
   r('apertura', 'Primer contacto (aplicador / fabricante)', 'Hola {nombre}, soy {yo} de Grupo Poliplast. Vi que trabajan con espumas, resinas y sistemas de poliuretano y quería preguntarte algo rápido: ¿hoy compran ese tipo de materiales o los trabajan con otro proveedor?', 'Una sola pregunta y fácil de contestar.'),
   r('apertura', 'Primer contacto (revendedor)', 'Hola {nombre}, soy {yo} de Grupo Poliplast. Vi que venden productos de este rubro. ¿Tienen una línea de resinas, selladores o espumas, o les interesaría sumar productos con rotación?', 'Si no fabrica, no es su cliente directo: se lo trata como revendedor.'),

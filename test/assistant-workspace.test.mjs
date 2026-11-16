@@ -45,3 +45,11 @@ test('último precio aunque la pregunta tenga palabras de más ("dame", "con pis
   const [block] = workspaceAnswer('Dame el ultimo precio de easy spray x 12 con pistola y limpiador', { sales });
   assert.match(block.lines[0], /KIT X 12 Easyspray.*324\.000 \+ IVA el 09\/10\/2026/);
 });
+
+test('con muchas tareas llegan todas las de hoy (no solo 8) y un resumen por tipo', () => {
+  const tasks = Array.from({ length: 38 }, (_, index) => ({ id: `t${index}`, title: `Seguimiento a Empresa ${index}`, dueDate: '2026-11-16', source: index < 30 ? 'prospect-followup' : '' }));
+  const answer = workspaceAnswer('qué hago hoy', { tasks, today: '2026-11-16' });
+  const block = answer.find((item) => item.key === 'tareas');
+  assert.equal(block.lines.filter((line) => line.startsWith('Hoy:')).length, 38);
+  assert.ok(block.lines.some((line) => line.includes('30 seguimientos de prospectos')));
+});

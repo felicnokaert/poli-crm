@@ -568,12 +568,21 @@ function BusinessUnitsPanel({ businessUnits, onSave, onDelete }) {
     setPointDraft('');
   }
   function removePoint(point) {
-    setEditing({ ...editing, invoicePoints: editing.invoicePoints.filter((item) => item !== point) });
+    const { [point]: _removed, ...rest } = editing.pointRates || {};
+    setEditing({ ...editing, invoicePoints: editing.invoicePoints.filter((item) => item !== point), pointRates: rest });
+  }
+  function setPointRate(point, value) {
+    setEditing({ ...editing, pointRates: { ...(editing.pointRates || {}), [point]: value } });
   }
   function save(event) {
     event.preventDefault();
     if (!editing.name.trim()) return;
-    onSave({ ...editing, name: editing.name.trim(), ratePct: Number(editing.ratePct) || 0 });
+    const pointRates = {};
+    for (const point of editing.invoicePoints) {
+      const value = editing.pointRates?.[point];
+      if (value !== '' && value !== undefined && value !== null && Number.isFinite(Number(value))) pointRates[point] = Number(value);
+    }
+    onSave({ ...editing, name: editing.name.trim(), ratePct: Number(editing.ratePct) || 0, pointRates });
     setEditing(null);
   }
 
@@ -588,7 +597,7 @@ function BusinessUnitsPanel({ businessUnits, onSave, onDelete }) {
             <div>
               <strong>{unit.name}</strong>
               <span>{unit.legalName || 'Sin razón social'}{unit.cuit ? ` · CUIT ${unit.cuit}` : ''}</span>
-              <span>{unit.ratePct}% comisión · puntos de venta: {unit.invoicePoints?.length ? unit.invoicePoints.join(', ') : 'sin definir'}</span>
+              <span>{unit.ratePct}% comisión · puntos de venta: {unit.invoicePoints?.length ? unit.invoicePoints.map((point) => (unit.pointRates?.[point] !== undefined && unit.pointRates[point] !== '' ? `${point} (${unit.pointRates[point]}%)` : point)).join(', ') : 'sin definir'}</span>
             </div>
             <div className="unit-card-actions">
               <button type="button" className="secondary" onClick={() => startEdit(unit)}>Editar</button>
@@ -606,10 +615,12 @@ function BusinessUnitsPanel({ businessUnits, onSave, onDelete }) {
           <label>CUIT<input value={editing.cuit} onChange={(e) => setEditing({ ...editing, cuit: e.target.value })} placeholder="30-12345678-9"/></label>
           <label>Comisión (%)<input type="number" min="0" step="0.01" value={editing.ratePct} onChange={(e) => setEditing({ ...editing, ratePct: e.target.value })}/></label>
           <label className="span-2">
-            Puntos de venta
+            Puntos de venta y su comisión (vacío = la de la unidad)
             <div className="unit-points-editor">
               {editing.invoicePoints.map((point) => (
-                <span className="unit-point-tag" key={point}>{point}<button type="button" onClick={() => removePoint(point)} aria-label={`Quitar ${point}`}><X size={11}/></button></span>
+                <span className="unit-point-tag" key={point}>{point}
+                  <input type="number" min="0" step="0.01" className="unit-point-rate" value={editing.pointRates?.[point] ?? ''} onChange={(e) => setPointRate(point, e.target.value)} placeholder={`${editing.ratePct || 0}`} aria-label={`Comisión del punto de venta ${point} (%)`} title="Comisión de este punto de venta (%). Vacío = la de la unidad."/>%
+                  <button type="button" onClick={() => removePoint(point)} aria-label={`Quitar ${point}`}><X size={11}/></button></span>
               ))}
               <input value={pointDraft} onChange={(e) => setPointDraft(e.target.value)} placeholder="0006" maxLength={4}/>
               <button type="button" className="secondary" onClick={addPoint}>Agregar</button>

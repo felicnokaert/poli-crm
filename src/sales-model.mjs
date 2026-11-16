@@ -34,6 +34,16 @@ export function unitByCuitFrom(businessUnits) {
   return map;
 }
 
+export function pointRatesFrom(pointRates) {
+  const map = {};
+  for (const [point, value] of Object.entries(pointRates && typeof pointRates === 'object' ? pointRates : {})) {
+    if (value === '' || value === null || value === undefined) continue;
+    const pct = Number(value);
+    if (point && Number.isFinite(pct) && pct >= 0) map[point] = pct / 100;
+  }
+  return map;
+}
+
 export function unitsMapFrom(businessUnits) {
   // Cada usuario define sus propias unidades: una cuenta nueva arranca sin
   // ninguna (antes heredaba Poliplast y Poliocho, que son de Felipe).
@@ -44,6 +54,8 @@ export function unitsMapFrom(businessUnits) {
     map[unit.name] = {
       rate: (Number(unit.ratePct) || 0) / 100,
       invoicePoints: unit.invoicePoints?.length ? unit.invoicePoints : [''],
+      // Comisión propia de un punto de venta (ej. Poliocho: 0003 al 1 % y 0008 al 3 %). Se guarda en porcentaje y acá pasa a fracción.
+      pointRates: pointRatesFrom(unit.pointRates),
     };
   }
   return map;
@@ -65,7 +77,9 @@ export function saleCommission(sale, units = SALES_UNITS) {
   // unidades pueden tener businessUnits=[] aun cuando ya contienen ventas.
   // Para las dos unidades historicas conservamos las tasas oficiales; una
   // configuracion explicita sigue teniendo prioridad.
-  const rate = units?.[sale?.unit]?.rate ?? SALES_UNITS[sale?.unit]?.rate ?? 0;
+  // Si el punto de venta de la factura tiene su propia comisión, manda esa por sobre la de la unidad.
+  const pointRate = units?.[sale?.unit]?.pointRates?.[sale?.pointOfSale];
+  const rate = pointRate ?? units?.[sale?.unit]?.rate ?? SALES_UNITS[sale?.unit]?.rate ?? 0;
   return netAmountInArs(sale) * rate;
 }
 

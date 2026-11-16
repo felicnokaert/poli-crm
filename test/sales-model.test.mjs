@@ -121,3 +121,11 @@ test('goal progress respects the quarter period type', () => {
   const q3Count = computeGoalProgress(sales, { periodType: 'quarter', period: '2026-Q3', metric: 'count', unit: 'Todas', pointOfSale: 'Todas' });
   assert.equal(q3Count, 2);
 });
+
+test('la comisión de un punto de venta manda sobre la de la unidad (Poliocho: 0003 al 1 %, 0008 al 3 %)', async () => {
+  const { unitsMapFrom, saleCommission } = await import('../src/sales-model.mjs');
+  const units = unitsMapFrom([{ name: 'Poliocho', ratePct: 3, invoicePoints: ['0003', '0008'], pointRates: { '0003': 1 } }]);
+  assert.equal(saleCommission({ unit: 'Poliocho', pointOfSale: '0003', netAmount: 1000, currency: 'ARS' }, units), 10);
+  assert.equal(saleCommission({ unit: 'Poliocho', pointOfSale: '0008', netAmount: 1000, currency: 'ARS' }, units), 30);
+  assert.equal(saleCommission({ unit: 'Poliocho', pointOfSale: '', netAmount: 1000, currency: 'ARS' }, units), 30);
+});

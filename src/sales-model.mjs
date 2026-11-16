@@ -24,6 +24,16 @@ export function pointOfSaleMapFrom(units = {}) {
   return map;
 }
 
+// {CUIT sin guiones: nombre de unidad}, para reconocer la unidad de una factura cuyo punto de venta todavía no está cargado.
+export function unitByCuitFrom(businessUnits) {
+  const map = {};
+  for (const unit of Array.isArray(businessUnits) ? businessUnits : []) {
+    const digits = String(unit?.cuit || '').replace(/\D/g, '');
+    if (unit?.name && digits.length === 11) map[digits] = unit.name;
+  }
+  return map;
+}
+
 export function unitsMapFrom(businessUnits) {
   // Cada usuario define sus propias unidades: una cuenta nueva arranca sin
   // ninguna (antes heredaba Poliplast y Poliocho, que son de Felipe).

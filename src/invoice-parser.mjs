@@ -44,7 +44,7 @@ const NON_INVOICE_TYPES = [
   ['Recibo', /\bRecibo\b/i],
 ];
 
-export function parseInvoiceText(text = '', pointOfSaleUnit = {}) {
+export function parseInvoiceText(text = '', pointOfSaleUnit = {}, unitByCuit = {}) {
   const clean = String(text).replace(/\r/g, '');
   const detectedNonInvoiceType = NON_INVOICE_TYPES.find(([, pattern]) => pattern.test(clean));
   const numberMatch = clean.match(/N[°ºo]?:?\s*(\d{4})-(\d+)/i);
@@ -60,7 +60,12 @@ export function parseInvoiceText(text = '', pointOfSaleUnit = {}) {
 
   const pointOfSale = numberMatch ? numberMatch[1] : '';
   const documentNumber = numberMatch ? numberMatch[2].slice(-5).padStart(5, '0') : '';
-  const unit = pointOfSaleUnit[pointOfSale] || POINT_OF_SALE_UNIT[pointOfSale] || '';
+  // Si el punto de venta todavía no está cargado en ninguna unidad (una unidad nueva sin puntos de venta definidos),
+  // se reconoce por el CUIT del que emite la factura: es el primero que aparece en el encabezado.
+  const issuerCuitMatch = clean.match(/CUIT:\s*([\d-]{11,13})/i);
+  const issuerCuit = issuerCuitMatch ? issuerCuitMatch[1].replace(/\D/g, '') : '';
+  const unitFromPoint = pointOfSaleUnit[pointOfSale] || POINT_OF_SALE_UNIT[pointOfSale] || '';
+  const unit = unitFromPoint || (issuerCuit && unitByCuit[issuerCuit]) || '';
 
   const items = [];
   let match;
@@ -108,6 +113,7 @@ export function parseInvoiceText(text = '', pointOfSaleUnit = {}) {
     currency,
     exchangeRate: exchangeRateMatch ? toNumber(exchangeRateMatch[1]) : null,
     items,
+    unitByCuitUsed: Boolean(unit && !unitFromPoint),
     documentTypeRejected: detectedNonInvoiceType ? detectedNonInvoiceType[0] : '',
     // Ni siquiera un documento con número y punto de venta válidos cuenta
     // como reconocido si es un Remito/Nota de crédito/Recibo, o si no se

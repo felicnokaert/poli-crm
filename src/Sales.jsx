@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CalendarCheck, CheckCircle2, Download, FileUp, Pencil, Plus, ReceiptText, Target, Trash2, X } from 'lucide-react';
-import { blankSale, computeGoalProgress, duplicateSale, GOAL_METRICS, netAmountInArs, normalizedSale, pointOfSaleMapFrom, quarterKey, saleCommission, salesToCsv, unitsMapFrom } from './sales-model.mjs';
+import { blankSale, computeGoalProgress, duplicateSale, GOAL_METRICS, netAmountInArs, normalizedSale, pointOfSaleMapFrom, quarterKey, saleCommission, salesToCsv, unitByCuitFrom, unitsMapFrom } from './sales-model.mjs';
 import { FAMILIES } from './families.mjs';
 import { useConfirm } from './ConfirmDialog';
 import { SalesHistory } from './SalesHistory.jsx';
@@ -258,11 +258,13 @@ function SalesBase({ items, goals, businessUnits, clients, onSaveGoal, onDeleteG
         // resolver ni rechazar la promesa; sin este límite, un solo archivo
         // roto trababa todo el lote y ninguno de los demás se procesaba.
         const text = await withTimeout(extractPdfText(file), PDF_TIMEOUT_MS);
-        const parsed = parseInvoiceText(text, pointOfSaleMapFrom(units));
+        const parsed = parseInvoiceText(text, pointOfSaleMapFrom(units), unitByCuitFrom(businessUnits));
         if (parsed.recognized) {
           drafts.push(draftFromParsedInvoice(parsed, file.name, units));
         } else if (parsed.documentTypeRejected) {
           failed.push({ name: file.name, reason: `es un ${parsed.documentTypeRejected}, no una Factura` });
+        } else if (parsed.pointOfSale && parsed.documentNumber && parsed.items.length && !parsed.unit) {
+          failed.push({ name: file.name, reason: `el punto de venta ${parsed.pointOfSale} no está cargado en ninguna unidad (agregalo en la unidad, o cargá su CUIT)` });
         } else {
           failed.push({ name: file.name, reason: 'no pude leer los datos (punto de venta, número o ítems)' });
         }

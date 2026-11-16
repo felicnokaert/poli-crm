@@ -220,3 +220,14 @@ Algún texto sin renglones de productos.
   assert.equal(result.recognized, false);
   assert.equal(result.documentTypeRejected, '');
 });
+
+test('reconoce la unidad por el CUIT del emisor cuando el punto de venta no está cargado', () => {
+  const text = `FACTURA\nNº: 0008-00000009\nPOLIOCHO ARG S.A.\nFecha: 13/11/2026\nCUIT: 30718361865\nRazón social: SERDECO S. A. S.\nCUIT: 30717541312\n12 PG-CL4193-NG PIGMENTO NEGRO 40,00 21,00 % 15,00 % 408,00\nImporte Neto Gravado: U$S408,00`;
+  const sinCuit = parseInvoiceText(text, {});
+  assert.equal(sinCuit.recognized, false);
+  assert.equal(sinCuit.unit, '');
+  const conCuit = parseInvoiceText(text, {}, { '30718361865': 'Poliocho' });
+  assert.equal(conCuit.unit, 'Poliocho');
+  assert.equal(conCuit.recognized, true);
+  assert.equal(conCuit.pointOfSale, '0008');
+});

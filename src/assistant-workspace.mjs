@@ -60,10 +60,20 @@ export function workspaceAnswer(query, { tasks = [], sales = [], interactions = 
     const late = open.filter((task) => task.dueDate && task.dueDate < today);
     const now = open.filter((task) => task.dueDate === today);
     const soon = open.filter((task) => task.dueDate && task.dueDate > today && task.dueDate <= week);
+    // 16/11: antes solo llegaban 6 vencidas, 8 de hoy y 6 de la semana: con 38 tareas el asistente decía «solo me llegó el detalle de 8».
+    // Ahora llegan hasta 40 de hoy, 20 vencidas y 15 de la semana (títulos cortos) y un resumen por tipo de tarea.
+    const short = (task) => String(task.title || '').replace(/\s+/g, ' ').slice(0, 110);
+    const bySource = new Map();
+    for (const task of [...late, ...now]) {
+      const kind = task.source === 'prospect-followup' ? 'seguimientos de prospectos' : task.source === 'quote-followup' ? 'seguimientos de cotizaciones' : task.source === 'cola-atrasados' ? 'clientes atrasados' : 'otras';
+      bySource.set(kind, (bySource.get(kind) || 0) + 1);
+    }
     const lines = [
-      ...late.slice(0, 6).map((task) => `Vencida (${dmy(task.dueDate)}): ${task.title}${task.company ? ` · ${task.company}` : ''}`),
-      ...now.slice(0, 8).map((task) => `Hoy: ${task.title}${task.company ? ` · ${task.company}` : ''}`),
-      ...soon.slice(0, 6).map((task) => `${dmy(task.dueDate)}: ${task.title}${task.company ? ` · ${task.company}` : ''}`),
+      ...late.slice(0, 20).map((task) => `Vencida (${dmy(task.dueDate)}): ${short(task)}${task.company ? ` · ${task.company}` : ''}`),
+      ...now.slice(0, 40).map((task) => `Hoy: ${short(task)}${task.company ? ` · ${task.company}` : ''}`),
+      ...soon.slice(0, 15).map((task) => `${dmy(task.dueDate)}: ${short(task)}${task.company ? ` · ${task.company}` : ''}`),
+      ...(late.length + now.length >= 6 ? [`Resumen de vencidas y de hoy: ${[...bySource].map(([kind, count]) => `${count} ${kind}`).join(', ')}`] : []),
+      ...(late.length > 20 || now.length > 40 || soon.length > 15 ? [`(Hay más: ${Math.max(0, late.length - 20) + Math.max(0, now.length - 40) + Math.max(0, soon.length - 15)} tareas sin listar)`] : []),
     ];
     if (!lines.length && anyNamed) lines.push(...open.slice(0, 5).map((task) => `${task.dueDate ? dmy(task.dueDate) : 'Sin fecha'}: ${task.title}`));
     blocks.push({ key: 'tareas', label: `Tareas pendientes · ${late.length} vencidas, ${now.length} para hoy, ${soon.length} esta semana`, lines: lines.length ? lines : ['No hay tareas pendientes con eso.'] });

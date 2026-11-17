@@ -36,7 +36,7 @@ export function groupCounts(tasks, today) {
 // Candidatas a «Alta»: vencidas o de hoy, las de clientes primero. Máximo `limit` y nunca las que ya son Alta.
 export function suggestHigh(tasks, today, limit = 5) {
   const scored = tasks
-    .filter((task) => !task.done && String(task.priority || '').toLowerCase() !== 'alta')
+    .filter((task) => !task.done && String(task.priority || '').toLowerCase() !== 'alta' && !/plan del d[ií]a/i.test(String(task.title || '')))
     .map((task) => {
       const days = dayDiff(task.dueDate, today);
       const group = taskGroup(task, today);

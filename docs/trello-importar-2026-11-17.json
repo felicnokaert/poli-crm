@@ -1,0 +1,175 @@
+{
+ "name": "CRM — Semana del 17/11 (sin dejar pendientes)",
+ "lists": [
+  {
+   "id": "mi",
+   "name": "Mié 18/11",
+   "closed": false
+  },
+  {
+   "id": "ju",
+   "name": "Jue 19/11",
+   "closed": false
+  },
+  {
+   "id": "vi",
+   "name": "Vie 20/11 · Cierre de semana",
+   "closed": false
+  }
+ ],
+ "cards": [
+  {
+   "id": "crm-17nov-01",
+   "idList": "mi",
+   "name": "Seguimiento de los 35 contactados el 13/11 (celular: llamar o WhatsApp desde Prospección → Prospectos → Contactado)",
+   "desc": "Hacer primero. Anotar cada resultado.",
+   "due": "2026-11-18T19:30:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-17nov-02",
+   "idList": "mi",
+   "name": "Corralones de Penosil: terminar los 20 (Orden de llamada)",
+   "desc": "Los de seguimiento vencido van primero.",
+   "due": "2026-11-18T19:30:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-17nov-03",
+   "idList": "mi",
+   "name": "Shopify: entender la caída de ventas (-67 %) y los 35 carritos abandonados (Operación)",
+   "desc": "Mirar el embudo y los carritos de más de $100.000.",
+   "due": "2026-11-18T19:30:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-17nov-04",
+   "idList": "mi",
+   "name": "Shopify: fotos de Bisagras y Herrajes / Herraje Cajas Térmicas, y precio/stock de 8 SKUs",
+   "desc": "Venció el 17/11.",
+   "due": "2026-11-18T19:30:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-17nov-05",
+   "idList": "mi",
+   "name": "ML: duplicados de SKU (Espuma 810 ml PS-810ML-1 y Pistola Penosil C1 PS-PPC1-1)",
+   "desc": "",
+   "due": "2026-11-18T19:30:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-17nov-06",
+   "idList": "mi",
+   "name": "POLIPLAST: Colecta y Flex en exposición muy mala (ME1 51,4 %) y Platinum 10 días al 27/11",
+   "desc": "",
+   "due": "2026-11-18T19:30:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-17nov-07",
+   "idList": "ju",
+   "name": "Los 9 de poliuretano que faltaban (Orden de llamada) + mensaje de dosificado a los 48 con teléfono",
+   "desc": "",
+   "due": "2026-11-19T19:30:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-17nov-08",
+   "idList": "ju",
+   "name": "Mails de dosificado a los 87 clientes con mail (Bandeja de salida)",
+   "desc": "",
+   "due": "2026-11-19T19:30:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-17nov-09",
+   "idList": "ju",
+   "name": "Fursan y Carrocerías Culpina: decidir si son competencia o clientes posibles",
+   "desc": "Si son clientes, se sacan de la lista de competidores.",
+   "due": "2026-11-19T19:30:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-17nov-10",
+   "idList": "ju",
+   "name": "Boyas: seguimiento al cliente y confirmar con Juan el 770-IR o el 770-IM",
+   "desc": "Pedir densidad y resistencia que exige el proyecto.",
+   "due": "2026-11-19T19:30:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-17nov-11",
+   "idList": "ju",
+   "name": "ML: conseguir el export actualizado y revisar la campaña Cyber Monday pausada (ACOS 6,8 %)",
+   "desc": "",
+   "due": "2026-11-19T19:30:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-17nov-12",
+   "idList": "ju",
+   "name": "Shopify: subproductos EPP/3M (productType genérico EPP)",
+   "desc": "",
+   "due": "2026-11-19T19:30:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-17nov-13",
+   "idList": "vi",
+   "name": "Seguridad (10 min): contraseña mínima de 8 en Supabase, cambiar la contraseña compartida, borrar WHATSAPP_BRIDGE_TOKEN en Vercel",
+   "desc": "Quedó pendiente desde el 4/11.",
+   "due": "2026-11-20T19:30:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-17nov-14",
+   "idList": "vi",
+   "name": "Probar «Redactar con IA» con 20 temas (el crédito vence el 25/11)",
+   "desc": "Más → Datos → Asistente.",
+   "due": "2026-11-20T19:30:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-17nov-15",
+   "idList": "vi",
+   "name": "Decidir el WhatsApp General (volver a registrarlo en la API)",
+   "desc": "Hoy no entra nada desde el 4/11.",
+   "due": "2026-11-20T19:30:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-17nov-16",
+   "idList": "vi",
+   "name": "Clips de la semana (procesar y subir)",
+   "desc": "",
+   "due": "2026-11-20T19:30:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  },
+  {
+   "id": "crm-17nov-17",
+   "idList": "vi",
+   "name": "Cierre de la semana: revisar la hoja, pasar lo que no se hizo a la hoja de la semana próxima o tacharlo",
+   "desc": "Que no quede nada flotando.",
+   "due": "2026-11-20T19:30:00.000Z",
+   "dueComplete": false,
+   "closed": false
+  }
+ ]
+}

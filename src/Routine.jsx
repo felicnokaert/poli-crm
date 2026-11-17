@@ -3,7 +3,7 @@ import { DayReview } from "./DayReview.jsx";
 import { MAX_ROCKS, chosenRocks, rockCandidates, rockKey, sierraKey } from "./big-rocks.mjs";
 import { planSummary, tasksForDay } from "./trello-plan-import.mjs";
 import { PERSONAL_PURPOSE_KEY, PURPOSE_KEY, readPurpose, writePurpose } from "./purpose.mjs";
-import { CheckCircle2, Circle, ArrowRight, Flame } from "lucide-react";
+import { BookOpen, CheckCircle2, Circle, ArrowRight, Flame } from "lucide-react";
 import {
   WEEKLY_TARGETS, hoursLabel, routineForDate, routineKey, routineProgress, routineStreak, weekDates,
 } from "./routine.mjs";
@@ -79,6 +79,18 @@ function BigRocks({ date, planChecks, tasks, onToggle, onToggleTask }) {
         <div>
           <strong>Afilar la sierra (esta semana)</strong>
           <p className="muted small">Una hora para vos: leer, capacitarte o mejorar tu método. Lo que te hace más efectivo sin que lo pida nadie.</p>
+        </div>
+      </div>
+      <div className="routine-block sierra">
+        <span className="task-check" aria-hidden="true"><BookOpen size={22} /></span>
+        <div>
+          <strong>Para leer: síntesis de 6 libros (Covey como marco)</strong>
+          <p className="muted small">Hábitos Atómicos, El Poder de los Hábitos, Céntrate, Esencialismo, Lo Único y Principios, en un solo sistema. Se lee bien en el celular.</p>
+          <p className="small" style={{ margin: "4px 0 0" }}>
+            <a href="/lecturas/sintesis-6-libros.html" target="_blank" rel="noopener noreferrer">Leer</a>
+            {" · "}
+            <a href="/lecturas/sintesis-6-libros.pdf" target="_blank" rel="noopener noreferrer">Abrir el PDF</a>
+          </p>
         </div>
       </div>
     </section>

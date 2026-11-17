@@ -26,6 +26,8 @@ import { AssistantKrypton } from "./AssistantKrypton.jsx";
 import { kryptonContext, kryptonFor } from "./assistant-krypton.mjs";
 import { AssistantFoam } from "./AssistantFoam.jsx";
 import { foamContext, foamFor } from "./assistant-foam.mjs";
+import { AssistantSpray } from "./AssistantSpray.jsx";
+import { sprayContext, sprayFor } from "./assistant-spray.mjs";
 import { extraContext, invoiceLine, invoiceNumbersOf, purchaseLine, purchaseNameWords, purchaseSummary, rivalsFor } from "./assistant-extra.mjs";
 
 // Ventana del asistente (21/10): flotante, abajo a la derecha (en el celular ocupa la pantalla). Por ahora
@@ -477,6 +479,8 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   const krypton = useMemo(() => (typed ? kryptonFor(typed) : null), [typed]);
   // 16/11: cuánto poliol e isocianato hace falta para llenar N piezas (densidad moldeada y relación de mezcla de la ficha).
   const foam = useMemo(() => (typed ? foamFor(typed, techDocs) : null), [typed, techDocs]);
+  // 17/11: material para spray (m² + extra del sustrato × rinde, relación de la ficha, tambores cerrados).
+  const spray = useMemo(() => (typed ? sprayFor(typed, techDocs) : null), [typed, techDocs]);
   // Si se pregunta antes de que llegue la facturación, se espera y se pregunta solo (así no dice "no tengo el dato").
   // 23/10: qué mejorar en Mercado Libre (calidad y experiencia de compra), se lee la primera vez que se pregunta.
   const wantsImprove = Boolean(typed && asksMlImprove(typed));
@@ -512,7 +516,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   const routes = typed ? routeFor(typed) : [];
   const learning = typed && asksLearning(typed) ? prospectLearning({ prospects: workspace.prospects || [], clients }) : null;
   const learningText = learning ? learningContext(learning) : "";
-  const hasExtra = Boolean(rivals || purchases.length || invoices.length || mine.length || clientsFound.length || rapyp || notes.length || learningText || listPrices.entries.length || businessShown.length || krypton || foam || opsText);
+  const hasExtra = Boolean(rivals || purchases.length || invoices.length || mine.length || clientsFound.length || rapyp || notes.length || learningText || listPrices.entries.length || businessShown.length || krypton || foam || spray || opsText);
   const hasAnswer = Boolean(taught.length || (intent && (facts.length || team)) || helpAnswer);
   useEffect(() => { setShowAll(false); }, [typed]);
   const [chat, setChat] = useState([]);
@@ -575,7 +579,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
     const purchasesNow = purchaseState.ready ? purchases : purchaseSummary(await purchaseState.fetchNow().catch(() => []));
     const invoicesNow = invoiceState.ready ? invoices : await invoiceState.fetchNow().catch(() => []);
     const pricesNow = listPrices.key && !listPrices.ready ? await loadListPrices(supabase, listPrices.words, isoToday()).catch(() => []) : listPrices.entries;
-    const context = [rulesContext({ rules, competitors: competitors || [], rapyp }), routesContext(), wantsBusiness ? businessContext(business) : "", kryptonContext(kryptonFor(asked)), foamContext(foamFor(asked, techDocs)), mlText, opsText, pricesContext(pricesNow), teamNotesContext(notes), learningText, clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases: purchasesNow, invoices: invoicesNow }), buildAiContext({ intent, facts, team: teamNow, result, mlRows: mlNow, taught: withEarlier(taught) })].filter(Boolean).join("\n");
+    const context = [rulesContext({ rules, competitors: competitors || [], rapyp }), routesContext(), wantsBusiness ? businessContext(business) : "", kryptonContext(kryptonFor(asked)), foamContext(foamFor(asked, techDocs)), sprayContext(sprayFor(asked, techDocs)), mlText, opsText, pricesContext(pricesNow), teamNotesContext(notes), learningText, clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases: purchasesNow, invoices: invoicesNow }), buildAiContext({ intent, facts, team: teamNow, result, mlRows: mlNow, taught: withEarlier(taught) })].filter(Boolean).join("\n");
     const reply = await askAi(supabase, { question: asked, context, history, today: isoToday(), userName: firstName }).catch(() => ({ ok: false, reason: "red" }));
     setThinking(false);
     if (reply.ok) {
@@ -662,6 +666,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
         ))}
         <AssistantKrypton quote={krypton} />
         <AssistantFoam quote={foam} />
+        <AssistantSpray quote={spray} />
         {waitingBusiness && <p className="muted small" role="status">{wantsMl ? "Leyendo Mercado Libre…" : "Leyendo la facturación de Contabilium…"}</p>}
         {businessShown.length > 0 && (
           <section className="assistant-answer" aria-label="Números del negocio">

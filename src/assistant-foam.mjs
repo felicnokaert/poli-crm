@@ -47,13 +47,16 @@ export function fichaMixData(doc) {
   const ratio = /(\d{2,3})\s*:\s*(\d{2,3})\s*(?:gramos|gr\b|g\b|kg|en peso|peso)/i.exec(flat);
   const molded = /Densidad\s+Moldeada[^\d]{0,40}(\d+(?:[.,]\d+)?)\s*[–—-]\s*(\d+(?:[.,]\d+)?)/i.exec(flat);
   const free = /Densidad\s+Libre[^\d]{0,30}(\d+(?:[.,]\d+)?)\s*[–—-]\s*(\d+(?:[.,]\d+)?)/i.exec(flat);
+  const global = /Densidad\s+Global[^\d]{0,40}(\d+(?:[.,]\d+)?)\s*[–—-]\s*(\d+(?:[.,]\d+)?)/i.exec(flat);
+  const core = /Densidad\s+N[uú]cleo[^\d]{0,40}(\d+(?:[.,]\d+)?)\s*[–—-]\s*(\d+(?:[.,]\d+)?)/i.exec(flat);
   const drums = [...flat.matchAll(/Tambor\s+Met[aá]lico\s+x\s*(\d+)\s*Kg/gi)].map((m) => Number(m[1]));
-  if (!ratio && !molded) return null;
+  if (!ratio && !molded && !global) return null;
   return {
     title: doc.title || doc.product || 'Ficha técnica',
     ratio: ratio ? { poliol: Number(ratio[1]), iso: Number(ratio[2]) } : null,
     densityMin: molded ? num(molded[1]) : null, densityMax: molded ? num(molded[2]) : null,
     freeMin: free ? num(free[1]) : null, freeMax: free ? num(free[2]) : null,
+    globalMin: global ? num(global[1]) : null, globalMax: global ? num(global[2]) : null, coreMin: core ? num(core[1]) : null, coreMax: core ? num(core[2]) : null,
     drumPoliol: drums[0] || null, drumIso: drums[1] || null,
   };
 }

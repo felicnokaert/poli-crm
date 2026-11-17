@@ -39,3 +39,9 @@ test('la propuesta de Alta pone primero lo de clientes, máximo 5, sin repetir l
   assert.ok(!picks.includes('[ML] Duplicado SKU: algo'));
   assert.ok(picks.length <= 5);
 });
+
+test('los «Plan del día» no se proponen como Alta', async () => {
+  const { suggestHigh } = await import('../src/task-groups.mjs');
+  const tasks = [{ id: 'a', title: '🎯 Plan del día 2026-10-24', dueDate: '2026-10-24', done: false, priority: 'Media' }];
+  assert.equal(suggestHigh(tasks, '2026-11-17').length, 0);
+});

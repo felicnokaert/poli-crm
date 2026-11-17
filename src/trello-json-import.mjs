@@ -1,3 +1,4 @@
+import { arToday } from './ar-date.mjs';
 // "Importar tareas de Trello" para todo el equipo (Felipe incluido desde el 19/10): lee el JSON que exporta
 // Trello (Menú del tablero → Imprimir, exportar y compartir → Exportar como JSON). Suma las tarjetas nuevas
 // y actualiza las que ya estaban (mismo id `trello-<id>`, también las del plan de Felipe).
@@ -9,6 +10,21 @@
 //   pisan las fechas del plan repartido por día ni lo que se postergó en el CRM. La primera vez solo se
 //   anota la fecha de Trello, salvo que la tarea no tuviera fecha.
 
+// Las tarjetas «Plan del día 2026-10-24» (🎯, 🛍️ Shopify, 🎯 ML) las crea el cron del plan de Trello todos los días:
+// las de días pasados no son tareas, son el registro de lo que se propuso ese día.
+const DAILY_PLAN = /plan del d[ií]a\s+(\d{4}-\d{2}-\d{2})/i;
+export const isOldDailyPlan = (title, today) => {
+  const match = DAILY_PLAN.exec(String(title || ''));
+  return Boolean(match && match[1] < today);
+};
+
+// Para el botón «Cerrar los planes del día viejos»: pasa a hechas las que quedaron pendientes de días pasados.
+export function staleDailyPlanUpdates(tasks = [], today, stamp = new Date().toISOString()) {
+  return (tasks || [])
+    .filter((task) => task && !task.done && !task.deleted && !task.deletedAt && isOldDailyPlan(task.title, today))
+    .map((task) => ({ id: task.id, patch: { done: true, updatedAt: stamp }, changes: ['hecha'] }));
+}
+
 function parseBoard(json) {
   const board = typeof json === 'string' ? JSON.parse(json) : json;
   if (!board || !Array.isArray(board.cards)) throw new Error('No parece un JSON exportado de Trello.');
@@ -17,6 +33,7 @@ function parseBoard(json) {
 
 export function trelloJsonSync(json, existingTasks = [], stamp = new Date().toISOString()) {
   const board = parseBoard(json);
+  const today = arToday(Date.parse(stamp) || Date.now());
   const lists = new Map((board.lists || []).map((list) => [list.id, list]));
   const byId = new Map((existingTasks || []).map((task) => [task.id, task]));
   const seen = new Set();
@@ -36,6 +53,7 @@ export function trelloJsonSync(json, existingTasks = [], stamp = new Date().toIS
       const changes = [];
       if (current.title !== title) { patch.title = title; changes.push('nombre'); }
       if (card.dueComplete && !current.done) { patch.done = true; changes.push('hecha'); }
+      else if ((card.closed || list?.closed) && !current.done) { patch.done = true; changes.push('archivada en Trello'); }
       if (current.trelloDue === undefined) {
         patch.trelloDue = due;
         if (due && !current.dueDate) { patch.dueDate = due; changes.push('fecha'); }
@@ -47,6 +65,7 @@ export function trelloJsonSync(json, existingTasks = [], stamp = new Date().toIS
       continue;
     }
     if (card.closed || list?.closed) continue;
+    if (isOldDailyPlan(title, today)) continue;
     added.push({
       id,
       clientId: '',

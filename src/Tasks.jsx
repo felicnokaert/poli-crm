@@ -1,4 +1,5 @@
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
+import { arToday } from "./ar-date.mjs";
 import { GROUPS, groupCounts, suggestHigh, taskGroup } from "./task-groups.mjs";
 import { Bot, CheckCircle2, Download, Plus, Search, Upload, X } from "lucide-react";
 import { formatDate } from "./utils.mjs";
@@ -7,7 +8,7 @@ import { Routine } from "./Routine.jsx";
 import { Calendar } from "./Calendar.jsx";
 import { AutomationMatrix } from "./AutomationMatrix.jsx";
 import { DayReview } from "./DayReview.jsx";
-import { trelloJsonSync } from "./trello-json-import.mjs";
+import { staleDailyPlanUpdates, trelloJsonSync } from "./trello-json-import.mjs";
 import { batchStamps, closedBySystem } from "./day-review.mjs";
 import { addDaysToToday, googleCalendarUrl, today, TRELLO_BOARD_URL, useModalEscape } from "./app-shared";
 
@@ -89,6 +90,12 @@ function taskListEmptyText({ items, filtered, filter, query }) {
 
 function TrelloImport({ items, onImportTasks }) {
   const [message, setMessage] = useState("");
+  const stale = useMemo(() => staleDailyPlanUpdates(items, arToday()), [items]);
+  function closeStale() {
+    if (!window.confirm(`Se van a marcar como hechas ${stale.length} tarjetas «Plan del día» de días anteriores. ¿Seguimos?`)) return;
+    onImportTasks([], stale);
+    setMessage(`Listo: se cerraron ${stale.length} planes del día viejos.`);
+  }
   async function onFile(event) {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -108,6 +115,11 @@ function TrelloImport({ items, onImportTasks }) {
         <Upload size={16} /> Importar tareas de Trello
         <input type="file" accept=".json,application/json" hidden onChange={onFile} />
       </label>
+      {stale.length > 0 && (
+        <button type="button" className="secondary" onClick={closeStale} title="Son las tarjetas «Plan del día» de días anteriores: el cron las crea todos los días y ya pasaron">
+          Cerrar los {stale.length} planes del día viejos
+        </button>
+      )}
       {message && <div className="system-message">{message}</div>}
     </>
   );

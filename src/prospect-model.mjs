@@ -42,6 +42,7 @@ export const PROSPECT_FAMILIES = [
   { key: 'Poliurea', crmFamily: 'Poliurea', active: true, rubros: ['aplicador de poliurea', 'impermeabilización', 'pintura industrial'] },
   { key: 'Poliuretano', crmFamily: 'Poliuretano', active: true, rubros: ['colchones', 'tapicería', 'aplicador de poliuretano'] },
   { key: 'Baldes', crmFamily: 'Baldes', active: false, rubros: ['heladería', 'cervecería', 'destilería', 'café de especialidad', 'panadería', 'dulces y conservas', 'growshop', 'hidroponia'] },
+  { key: 'Adheplast', crmFamily: 'Otra', active: true, rubros: ['maderera', 'carpintería', 'fábrica de muebles', 'mueblería', 'aberturas de madera', 'laminadora de placas'] },
   { key: 'Química', crmFamily: 'Otra', active: true, rubros: ['industria con tambores', 'mantas calefactoras', 'agitadores'] },
   { key: 'EPP', crmFamily: 'EPP', active: true, venta_cruzada: true, rubros: [] },
   { key: 'Pisos', crmFamily: 'Pisos', active: false, rubros: [] },
@@ -157,6 +158,7 @@ const FAMILY_ALIASES = {
   prfv: 'Resinplast', 'fibra de vidrio': 'Resinplast', 'planchas de pur': 'Planchas', 'plancha de poliuretano': 'Planchas',
   'planchas de poliuretano': 'Planchas', plancha: 'Planchas', poliuretanos: 'Poliuretano', quimica: 'Química',
   'carrozados sin imperpur': 'Carrozados Imperpur', imperpur: 'Carrozados Imperpur',
+  madereras: 'Adheplast', maderera: 'Adheplast', muebles: 'Adheplast', carpinteria: 'Adheplast',
 };
 
 export function prospectFamilyKey(value = '') {

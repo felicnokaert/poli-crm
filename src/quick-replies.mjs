@@ -3,7 +3,7 @@
 // condiciones; primero se entiende (Escuchar-Confirmar-Explorar) y recién después se responde y se acuerda.
 // {nombre} se reemplaza por el nombre del contacto; {yo} por el de quien escribe.
 export const QUICK_GROUPS = Object.freeze([
-  ['foco', 'Foco de venta (poliuretano, PRFV, planchas, cortina)'],
+  ['foco', 'Foco de venta (poliuretano, PRFV, planchas, cortina, Adheplast)'],
   ['apertura', 'Abrir la charla'],
   ['diagnostico', 'Entender qué necesita'],
   ['objecion', 'Objeciones (E-C-E-R-A)'],
@@ -26,6 +26,7 @@ export const QUICK_REPLIES = Object.freeze([
   r('foco', 'Planchas de poliuretano (carrozados, frío, módulos)', 'Hola {nombre}, soy {yo} de Grupo Poliplast. Tenemos planchas de poliuretano para cajas aisladas, frío y módulos. ¿Qué espesores y cuántas planchas usan por mes?', ''),
   r('foco', 'Rollos de cortina Cristal', 'Hola {nombre}, soy {yo} de Grupo Poliplast. Tenemos rollos de cortina de PVC Cristal. ¿Hoy compran cortina para frío, divisiones o portones? Te cuento medidas y espesores que tenemos.', 'Para quienes ya compraron cortinas o bandas PVC.'),
   r('foco', 'Reactivar cliente con dosificado', 'Hola {nombre}, ¿cómo andás? Soy {yo} de Grupo Poliplast. Hace tiempo que no nos comprás y quería contarte que ahora vendemos poliuretano y resinas dosificado, por kilo. ¿Te sirve para lo que estás haciendo?', ''),
+  r('foco', 'Adheplast para madereras y fábricas de muebles', 'Hola {nombre}, soy {yo} de Grupo Poliplast. Tenemos Adheplast, un adhesivo monocomponente para carpintería y muebles. Un cliente que lo cambió por la cola que usaba nos contó que nunca había tenido tan buenos resultados. ¿Qué cola o pegamento usan hoy y cuánto consumen por mes?', 'Primero entender qué usa hoy y si está conforme; después ofrecer una prueba. Sin prometer precio ni plazos.'),
   // Abrir la charla
   r('apertura', 'Primer contacto (aplicador / fabricante)', 'Hola {nombre}, soy {yo} de Grupo Poliplast. Vi que trabajan con espumas, resinas y sistemas de poliuretano y quería preguntarte algo rápido: ¿hoy compran ese tipo de materiales o los trabajan con otro proveedor?', 'Una sola pregunta y fácil de contestar.'),
   r('apertura', 'Primer contacto (revendedor)', 'Hola {nombre}, soy {yo} de Grupo Poliplast. Vi que venden productos de este rubro. ¿Tienen una línea de resinas, selladores o espumas, o les interesaría sumar productos con rotación?', 'Si no fabrica, no es su cliente directo: se lo trata como revendedor.'),

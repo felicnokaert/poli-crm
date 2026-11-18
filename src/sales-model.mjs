@@ -206,3 +206,61 @@ export function normalizedSale(sale, units = SALES_UNITS) {
     collected: Boolean(sale.collected),
   };
 }
+
+// Piso de comisión (18/11, Felipe): la comisión empieza a cobrarse recién cuando lo vendido del mes llega a un piso.
+// floor = { enabled, amount, currency: 'USD'|'ARS', fallbackRate, units: [nombres] (vacío = todas),
+//           exempt: [{ unit, point }] (puntos de venta a los que el piso NO afecta: cobran siempre y no suman al piso) }.
+// Si el mes llega al piso, se cobra la comisión de TODAS las ventas del mes (igual que sin piso); si no llega, cero.
+export function normalizeCommissionFloor(floor) {
+  const source = floor && typeof floor === 'object' ? floor : {};
+  return {
+    enabled: Boolean(source.enabled) && Number(source.amount) > 0,
+    amount: Number(source.amount) > 0 ? Number(source.amount) : 0,
+    currency: source.currency === 'ARS' ? 'ARS' : 'USD',
+    fallbackRate: Number(source.fallbackRate) > 0 ? Number(source.fallbackRate) : 0,
+    units: Array.isArray(source.units) ? source.units.filter(Boolean) : [],
+    exempt: (Array.isArray(source.exempt) ? source.exempt : []).filter((item) => item?.unit && item?.point).map((item) => ({ unit: item.unit, point: String(item.point) })),
+  };
+}
+
+function isExemptFromFloor(sale, floor) {
+  return floor.exempt.some((item) => item.unit === sale?.unit && item.point === String(sale?.pointOfSale || ''));
+}
+
+// ¿Esta venta está sujeta al piso? (unidad incluida y punto de venta no exento)
+export function floorApplies(sale, floorInput) {
+  const floor = normalizeCommissionFloor(floorInput);
+  if (!floor.enabled || isExemptFromFloor(sale, floor)) return false;
+  return !floor.units.length || floor.units.includes(sale?.unit);
+}
+
+function floorAmountOf(sale, floor) {
+  return floor.currency === 'USD' ? netAmountInUsd(sale, floor.fallbackRate) : netAmountInArs(sale);
+}
+
+// {'2026-11': { total, reached, missing }} con lo vendido por mes que cuenta para el piso.
+export function commissionFloorMonths(sales = [], floorInput) {
+  const floor = normalizeCommissionFloor(floorInput);
+  const months = {};
+  if (!floor.enabled) return months;
+  for (const sale of sales) {
+    if (!floorApplies(sale, floor)) continue;
+    const key = monthKeyOf(sale.date);
+    if (!key) continue;
+    months[key] = months[key] || { total: 0 };
+    months[key].total += floorAmountOf(sale, floor);
+  }
+  for (const entry of Object.values(months)) {
+    entry.reached = entry.total >= floor.amount;
+    entry.missing = Math.max(0, floor.amount - entry.total);
+  }
+  return months;
+}
+
+// Comisión de una venta con el piso aplicado. `months` sale de commissionFloorMonths (se calcula una sola vez para todas las ventas).
+export function saleCommissionWithFloor(sale, units, floorInput, months) {
+  const base = saleCommission(sale, units);
+  if (!floorApplies(sale, floorInput)) return base;
+  const entry = months?.[monthKeyOf(sale.date)];
+  return entry?.reached ? base : 0;
+}

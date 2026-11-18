@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CalendarCheck, CheckCircle2, Download, FileUp, Pencil, Plus, ReceiptText, Target, Trash2, X } from 'lucide-react';
-import { blankSale, computeGoalProgress, duplicateSale, GOAL_METRICS, netAmountInArs, normalizedSale, pointOfSaleMapFrom, quarterKey, saleCommission, salesToCsv, unitByCuitFrom, unitsMapFrom } from './sales-model.mjs';
+import CommissionFloorPanel from './CommissionFloorPanel.jsx';
+import { blankSale, computeGoalProgress, duplicateSale, GOAL_METRICS, netAmountInArs, normalizedSale, pointOfSaleMapFrom, quarterKey, saleCommission, salesToCsv, unitByCuitFrom, unitsMapFrom, commissionFloorMonths, saleCommissionWithFloor } from './sales-model.mjs';
 import { FAMILIES } from './families.mjs';
 import { useConfirm } from './ConfirmDialog';
 import { SalesHistory } from './SalesHistory.jsx';
@@ -203,7 +204,7 @@ function GoalsPanel({ goals, sales, businessUnits, currentMonth, currentQuarter,
   );
 }
 
-function SalesBase({ items, goals, businessUnits, clients, onSaveGoal, onDeleteGoal, onSaveBusinessUnit, onDeleteBusinessUnit, onSave, onSaveMany, onDelete, onDeleteMany }) {
+function SalesBase({ items, goals, businessUnits, clients, commissionFloor, onChangeCommissionFloor, onSaveGoal, onDeleteGoal, onSaveBusinessUnit, onDeleteBusinessUnit, onSave, onSaveMany, onDelete, onDeleteMany }) {
   const currentMonth = new Date().toISOString().slice(0, 7);
   const units = unitsMapFrom(businessUnits);
   const unitNames = Object.keys(units);
@@ -236,8 +237,10 @@ function SalesBase({ items, goals, businessUnits, clients, onSaveGoal, onDeleteG
     ).sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
   }, [items, month, unit, periodMode, quarter, search]);
   const net = filtered.reduce((sum, item) => sum + netAmountInArs(item), 0);
-  const commission = filtered.reduce((sum, item) => sum + saleCommission(item, units), 0);
-  const collectedCommission = filtered.filter((item) => item.collected).reduce((sum, item) => sum + saleCommission(item, units), 0);
+  const floorMonths = useMemo(() => commissionFloorMonths(items, commissionFloor), [items, commissionFloor]);
+  const commissionOf = (item) => saleCommissionWithFloor(item, units, commissionFloor, floorMonths);
+  const commission = filtered.reduce((sum, item) => sum + commissionOf(item), 0);
+  const collectedCommission = filtered.filter((item) => item.collected).reduce((sum, item) => sum + commissionOf(item), 0);
 
   async function handlePdfSelected(event) {
     const files = [...(event.target.files || [])];
@@ -347,6 +350,7 @@ function SalesBase({ items, goals, businessUnits, clients, onSaveGoal, onDeleteG
     }}/>
     <PriceMemory sales={items} />
     <BusinessUnitsPanel businessUnits={businessUnits} onSave={onSaveBusinessUnit} onDelete={onDeleteBusinessUnit}/>
+    <CommissionFloorPanel floor={commissionFloor} units={units} months={floorMonths} month={month} onChange={(next) => onChangeCommissionFloor?.(next)}/>
     <section className="panel" id="ventas-realizadas">
       <div className="panel-head">
         <div><span className="eyebrow">Resultado comercial</span><h2>Ventas realizadas</h2><p>Registro manual de Facturas y COT, o subí uno o varios PDF: los vas a poder revisar y editar todos juntos en una tabla antes de guardar. La comisión se calcula sobre el importe neto sin IVA (sin impuesto interno) convertido a pesos si la factura vino en dólares.</p></div>
@@ -411,7 +415,7 @@ function SalesBase({ items, goals, businessUnits, clients, onSaveGoal, onDeleteG
           <button type="button" className="sale-row-main" onClick={() => setEditing(item)}>
             <div><strong>{item.customer}</strong><span>{item.unit} · {item.documentType}{item.pointOfSale ? ` ${item.pointOfSale}-${item.documentNumber}` : ` ${item.documentNumber}`}</span></div>
             <span className="opportunity-stage">{item.date}</span>
-            <div><strong>{item.currency === 'USD' ? `USD ${item.netAmount}` : money(item.netAmount)}</strong><span>Comisión {money(saleCommission(item, units))}{item.collected ? ' · Cobrada' : ''}</span></div>
+            <div><strong>{item.currency === 'USD' ? `USD ${item.netAmount}` : money(item.netAmount)}</strong><span>Comisión {money(commissionOf(item))}{item.collected ? ' · Cobrada' : ''}</span></div>
           </button>
         </div>
       ))}{!filtered.length && <div className="empty-opportunities"><ReceiptText/><p>No hay ventas registradas en este período.</p></div>}</div>

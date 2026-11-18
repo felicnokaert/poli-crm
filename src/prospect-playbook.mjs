@@ -29,6 +29,12 @@ export const PLAYBOOKS = {
     exclude: ['Fabricantes de piscinas chicas residenciales.', 'Revendedores o distribuidores de insumos de PRFV o resina: buscamos usuarios finales.', 'Carrocería Argentina, Termax, La Carrocera, Metalúrgica Bonano, Piscinas IPC (ya contactadas).'],
     extra: 'Si mencionan competidores directos (Servifibras, Advance Coat), anotalo.',
   },
+  Adheplast: {
+    audience: 'Madereras, carpinterías y fábricas de muebles o aberturas de madera que hoy pegan con cola u otro adhesivo y podrían pasar a ADHEPLAST, adhesivo monocomponente.',
+    signals: ['Fabrican muebles, placas, aberturas o piezas encoladas (carpintería, MDF, laminados) con producción propia.', 'Compra recurrente de adhesivo o cola: mediana o grande.', 'Menciona en su sitio o redes el tipo de pegamento que usa.'],
+    exclude: ['Corralones y ferreterías que solo revenden: buscamos usuarios finales (si venden, van por Penosil).', 'Clientes que ya compran Adheplast.'],
+    extra: 'Anotá qué cola o adhesivo usan hoy y si están conformes: es el punto de partida del mensaje.',
+  },
   Química: {
     audience: 'Empresas de industria química, petroquímica, pinturas, adhesivos, aceites/lubricantes o alimenticia (por ejemplo miel) que almacenan o procesan líquidos viscosos en tambores de 200 L o IBC de 1.000 L: candidatas a mantas y bandas calefactoras, válvula ardilla de bronce y agitadores neumáticos.',
     signals: ['Evidencia de tambores de 200 L o IBC (ficha técnica, catálogo, foto, nota de prensa).', 'Mediana o grande, con compra recurrente de insumos industriales.', 'Aparece como cliente público de distribuidores de estos accesorios (por ejemplo Transitflow).'],

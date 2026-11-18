@@ -12,7 +12,7 @@ export default function CommissionFloorPanel({ floor, units, months, month, onCh
   const toggleExempt = (unit, point) => set({ exempt: isExempt(unit, point) ? value.exempt.filter((item) => !(item.unit === unit && item.point === point)) : [...value.exempt, { unit, point }] });
   const entry = months?.[month];
   return (
-    <section className="panel" id="piso-comision">
+    <section className="panel floor-panel" id="piso-comision">
       <div className="panel-head">
         <div>
           <span className="eyebrow">Configuración</span>
@@ -20,20 +20,20 @@ export default function CommissionFloorPanel({ floor, units, months, month, onCh
           <p>Desde cuánto vendido en el mes empezás a cobrar. Por debajo del piso la comisión es cero; al llegar, cobrás la comisión de todas las ventas del mes con el mismo porcentaje de siempre.</p>
         </div>
       </div>
-      <label className="check-row"><input type="checkbox" checked={!!floor?.enabled} onChange={(event) => set({ enabled: event.target.checked })}/> Usar piso de comisión</label>
-      <div className="form-grid">
+      <label className="floor-switch"><input type="checkbox" checked={!!floor?.enabled} onChange={(event) => set({ enabled: event.target.checked })}/><span>Usar piso de comisión</span></label>
+      <div className="floor-fields">
         <label>Piso mensual<input type="number" min="0" step="1" value={floor?.amount ?? ''} onChange={(event) => set({ amount: event.target.value })} placeholder="Ej. 10000"/></label>
         <label>En<select value={value.currency} onChange={(event) => set({ currency: event.target.value })}><option value="USD">Dólares (neto sin IVA)</option><option value="ARS">Pesos (neto sin IVA)</option></select></label>
         {value.currency === 'USD' && <label>Dólar para ventas en pesos<input type="number" min="0" step="1" value={floor?.fallbackRate ?? ''} onChange={(event) => set({ fallbackRate: event.target.value })} placeholder="Solo si hay ventas en pesos"/></label>}
       </div>
-      <fieldset className="unit-fieldset">
+      <fieldset className="floor-group">
         <legend>Unidades a las que se les aplica (ninguna tildada = todas)</legend>
-        {unitNames.map((name) => <label key={name} className="check-row"><input type="checkbox" checked={value.units.includes(name)} onChange={() => toggleUnit(name)}/> {name}</label>)}
+        {unitNames.map((name) => <label key={name} className="floor-chip"><input type="checkbox" checked={value.units.includes(name)} onChange={() => toggleUnit(name)}/><span>{name}</span></label>)}
       </fieldset>
-      <fieldset className="unit-fieldset">
+      <fieldset className="floor-group">
         <legend>Puntos de venta que NO cuentan para el piso (cobran siempre)</legend>
         {unitNames.flatMap((name) => (units[name].invoicePoints || []).filter(Boolean).map((point) => (
-          <label key={`${name}-${point}`} className="check-row"><input type="checkbox" checked={isExempt(name, point)} onChange={() => toggleExempt(name, point)}/> {name} · {point}</label>
+          <label key={`${name}-${point}`} className="floor-chip"><input type="checkbox" checked={isExempt(name, point)} onChange={() => toggleExempt(name, point)}/><span>{name} · {point}</span></label>
         )))}
       </fieldset>
       {floor?.enabled && value.enabled && (

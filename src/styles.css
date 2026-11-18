@@ -1588,3 +1588,19 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
   .call-actions input { width: 100%; }
 }
 .unit-point-rate { width: 58px; padding: 2px 4px; margin: 0 2px 0 6px; font-size: 12px; }
+
+/* Piso de comisión (Ventas): campos en una fila y casillas como etiquetas */
+.floor-panel .panel-head p { max-width: 640px; }
+.floor-switch { display: inline-flex; align-items: center; gap: 10px; margin: 6px 0 14px; font-weight: 700; font-size: 14px; cursor: pointer; }
+.floor-switch input { width: 18px; height: 18px; accent-color: var(--brand-red, #ed1c24); }
+.floor-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px; }
+.floor-fields label { display: grid; gap: 6px; font-size: 12px; font-weight: 700; color: var(--color-text-dark); }
+.floor-fields input, .floor-fields select { width: 100%; padding: 9px 11px; border: 1px solid var(--color-border-input); border-radius: var(--radius-md); background: var(--color-input-bg); font-size: 14px; }
+.floor-group { border: 0; padding: 0; margin: 0 0 16px; min-width: 0; }
+.floor-group legend { padding: 0; margin-bottom: 8px; font-size: 12px; font-weight: 700; color: var(--color-text-dark); }
+.floor-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.floor-group legend { width: 100%; }
+.floor-chip { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid var(--color-border-input); border-radius: 999px; background: var(--color-input-bg); font-size: 13px; cursor: pointer; }
+.floor-chip input { width: 16px; height: 16px; margin: 0; accent-color: var(--brand-red, #ed1c24); }
+.floor-chip:has(input:checked) { border-color: var(--brand-red, #ed1c24); background: #ed1c2412; font-weight: 700; }
+@media (max-width: 760px) { .floor-fields { grid-template-columns: minmax(0, 1fr); } }

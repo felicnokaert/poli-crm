@@ -797,6 +797,8 @@ export default function App() {
               goals={data.salesGoals || EMPTY_ARRAY}
               businessUnits={data.businessUnits}
               clients={data.clients || EMPTY_ARRAY}
+              commissionFloor={data.commissionFloor}
+              onChangeCommissionFloor={(commissionFloor) => setData((current) => ({ ...current, commissionFloor }))}
               onSaveGoal={saveSalesGoal}
               onDeleteGoal={deleteSalesGoal}
               onSaveBusinessUnit={saveBusinessUnit}

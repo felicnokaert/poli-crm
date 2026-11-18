@@ -160,6 +160,7 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
     ...(local.prospectRules || remote.prospectRules ? { prospectRules: { ...(remote.prospectRules || {}), ...(local.prospectRules || {}) } } : {}),
     // Matriz de automatizaciones (solo lo que Felipe editó o agregó, por idea): gana lo de este navegador.
     ...(local.automations || remote.automations ? { automations: Object.fromEntries(Object.entries({ ...(remote.automations || {}), ...(local.automations || {}) }).filter(([, row]) => row)) } : {}),
+    ...(local.commissionFloor || remote.commissionFloor ? { commissionFloor: local.commissionFloor || remote.commissionFloor } : {}),
     ...(local.weeklyTargets || remote.weeklyTargets ? { weeklyTargets: local.weeklyTargets || remote.weeklyTargets } : {}),
     ...(local.welcomeDismissed || remote.welcomeDismissed ? { welcomeDismissed: true } : {}),
     mergeLogs: mergeRecords(local.mergeLogs, remote.mergeLogs),

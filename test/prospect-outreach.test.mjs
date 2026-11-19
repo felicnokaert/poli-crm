@@ -35,3 +35,18 @@ test('nombra las líneas del catálogo y ofrece un seguimiento sin "alguna noved
   assert.match(draft.followUp, /Ferretería Norte/);
   assert.doesNotMatch(draft.followUp, /novedad/i);
 });
+
+test('Adheplast arma su propio mensaje (muebles, aberturas) sin precios ni líneas de otras familias', () => {
+  const muebles = buildOutreachDraft({ company: 'Muebles Sur', family: 'Adheplast', rubro: 'fábrica de muebles' }, { sender: 'Felipe', variant: 'A' });
+  assert.match(muebles.whatsapp, /Soy Felipe, de Grupo Poliplast/);
+  assert.match(muebles.whatsapp, /Vi que fabrican muebles en Muebles Sur/);
+  assert.match(muebles.whatsapp, /encolado de cantos, tarugos o enchapados/);
+  assert.match(muebles.whatsapp, /monocomponente/);
+  assert.doesNotMatch(muebles.whatsapp, /\$|precio|descuento|poliuretano|fibra de vidrio|\d+%/i);
+  const corto = buildOutreachDraft({ company: 'X', family: 'Adheplast', rubro: 'carpintería' }, { sender: 'Felipe', variant: 'B' });
+  assert.match(corto.whatsapp, /Vi que trabajan en carpintería/);
+  const puertas = buildOutreachDraft({ company: 'Y', family: 'Adheplast', rubro: 'fábrica de aberturas de madera' }, { sender: 'Felipe' });
+  assert.match(puertas.whatsapp, /aberturas de madera/);
+  assert.doesNotMatch(puertas.whatsapp, /tarugos/);
+  assert.match(muebles.email.body, /monocomponente/);
+});

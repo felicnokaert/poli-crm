@@ -187,6 +187,15 @@ export function MercadoLibreSync({ supabase, session }) {
 
   // Reportes de competencia pegados desde Mercado Libre (Métricas → Competencia / mejores vendedores).
   const [reports, setReports] = useState([]);
+  // Prueba temporal del control de etiquetas (19/11): busca un envío en cada cuenta y muestra qué devuelve ML. Se borra cuando esté la app de preparación.
+  const [labelsProbe, setLabelsProbe] = useState({ open: false, shipmentId: "", busy: false, results: null, error: "" });
+  async function runLabelsProbe() {
+    setLabelsProbe((current) => ({ ...current, busy: true, results: null, error: "" }));
+    try {
+      const body = await callApi(session, { op: "labels-probe", shipmentId: labelsProbe.shipmentId });
+      setLabelsProbe((current) => ({ ...current, busy: false, results: body.results || [] }));
+    } catch (failure) { setLabelsProbe((current) => ({ ...current, busy: false, error: failure.message || "No se pudo probar." })); }
+  }
   const [report, setReport] = useState({ open: false, account: "", section: "Competencia", content: "" });
   useEffect(() => {
     if (!supabase?.from) return;
@@ -263,6 +272,24 @@ export function MercadoLibreSync({ supabase, session }) {
           <ul className="assistant-rivals">
             {reports.map((item) => <li key={item.id} className="small">{new Date(item.created_at).toLocaleDateString("es-AR")} · {item.section}{item.account ? ` · ${item.account}` : ""} · {item.content.length.toLocaleString("es-AR")} caracteres <button type="button" className="link-button" onClick={() => removeReport(item.id)}>Borrar</button></li>)}
           </ul>
+        )}
+      </div>
+      <div className="ml-clips">
+        <button type="button" className="link-button" onClick={() => setLabelsProbe((current) => ({ ...current, open: !current.open }))}>{labelsProbe.open ? "Cerrar prueba de etiquetas" : "Prueba temporal: etiquetas y envíos"}</button>
+        {labelsProbe.open && (
+          <div className="ml-clips-form">
+            <p className="muted small">Busca un envío en cada cuenta y muestra qué devuelve Mercado Libre (estado, tipo, productos, historial). Solo lee y no muestra datos del comprador. El número de envío es el que trae el código de barras de la etiqueta.</p>
+            <input value={labelsProbe.shipmentId} onChange={(event) => setLabelsProbe((current) => ({ ...current, shipmentId: event.target.value }))} placeholder="Número de envío, ej. 48485907441" aria-label="Número de envío" />
+            <button type="button" className="primary" disabled={labelsProbe.busy} onClick={runLabelsProbe}>{labelsProbe.busy ? "Probando…" : "Probar"}</button>
+            {labelsProbe.error && <div className="system-message error">{labelsProbe.error}</div>}
+            {labelsProbe.results && (
+              <ul className="assistant-rivals">
+                {labelsProbe.results.map((row, index) => (
+                  <li key={index} className="small"><strong>{row.ok ? "✔" : "✖"} {row.name}</strong> · {row.status} · {row.detail}{row.sample ? <pre style={{ whiteSpace: "pre-wrap", margin: "4px 0" }}>{JSON.stringify(row.sample, null, 1)}</pre> : null}</li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
       </div>
       {message && <div className="system-message">{message}</div>}

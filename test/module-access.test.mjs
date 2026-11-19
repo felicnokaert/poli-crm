@@ -40,8 +40,6 @@ test('al volver a permitir se borra la excepción', () => {
   assert.equal(accessChange('A@x.com', 'shopify', false).row.allowed, false);
 });
 
-test('Entregas es un módulo: todo el equipo lo ve y se puede quitar', () => {
-  assert.ok(MODULES.some((m) => m.id === 'entregas'));
-  assert.equal(canSee(member, deniedSet([]), 'entregas'), true);
-  assert.equal(canSee(member, deniedSet([{ module: 'entregas', allowed: false }]), 'entregas'), false);
+test('Entregas ya no es un módulo del CRM (vive en su propia app y en la de conteo)', () => {
+  assert.ok(!MODULES.some((m) => m.id === 'entregas'));
 });

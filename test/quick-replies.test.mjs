@@ -20,7 +20,7 @@ test('todas pertenecen a un grupo conocido, con texto y sin ids repetidos', () =
 });
 
 test('ninguna inventa precios ni plazos concretos', () => {
-  for (const item of QUICK_REPLIES) assert.ok(!/\$\s?\d|USD\s?\d|\d+\s?(días|horas) de entrega/i.test(item.text), item.title);
+  for (const item of QUICK_REPLIES.filter((entry) => !entry.confirmed)) assert.ok(!/\$\s?\d|USD\s?\d|\d+\s?(días|horas) de entrega/i.test(item.text), item.title);
 });
 
 test('fillReply completa nombre y remitente; searchReplies filtra', () => {

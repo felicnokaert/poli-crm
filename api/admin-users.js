@@ -12,6 +12,7 @@ import { runIntegrationCron } from '../lib/integration-crons.mjs';
 import { contabiliumAdmin, contabiliumCron } from '../lib/contabilium.mjs';
 import { assistantAi } from '../lib/assistant-ai.mjs';
 import { shopifyAdmin, shopifyCron } from '../lib/shopify.mjs';
+import { etiquetasHandler } from '../lib/etiquetas.mjs';
 import { gmailAdmin, gmailAutoSendCron, gmailCallback } from '../lib/gmail-service.mjs';
 
 // Una sola función para las tareas de administrador (el plan de Vercel limita la cantidad de funciones):
@@ -43,6 +44,8 @@ const CRONS = {
 export default async function handler(request, response) {
   // Vuelta de Google al conectar Gmail: /api/gmail-callback se reescribe a /api/admin-users?gmail=callback (vercel.json).
   if (request.method === 'GET' && request.query?.gmail === 'callback') return gmailCallback(request, response);
+  // Control de etiquetas (19/11): /api/etiquetas/<ruta> se reescribe a ?etiquetas=<ruta> (vercel.json). Solo consulta, con clave X-Api-Key.
+  if (request.query?.etiquetas) return etiquetasHandler(request, response);
   const cron = request.method === 'GET' ? CRONS[request.query?.cron] : null;
   if (cron) {
     const result = await runIntegrationCron(request.query.cron, (req) => cron(req), request);

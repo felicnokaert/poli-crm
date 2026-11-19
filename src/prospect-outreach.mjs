@@ -55,9 +55,33 @@ function lower(text = '') {
   return text ? text.charAt(0).toLocaleLowerCase('es-AR') + text.slice(1) : '';
 }
 
+// Adheplast (18/11, mensaje de Felipe 19/11): madereras, carpinterías y fábricas de muebles o aberturas. Contexto de su trabajo, una pregunta
+// concreta sobre el pegamento que usan hoy y una salida simple. Sin precios, plazos ni promesas.
+export function isAdheplast(prospect = {}) { return plain(prospect.family) === 'adheplast'; }
+
+function adheplastDraft(prospect, { who, variant }) {
+  const rubro = plain(prospect.rubro);
+  const company = String(prospect.company || '').trim();
+  const doors = /abertura|puerta|ventana/.test(rubro);
+  const seen = /mueble|mueblerias?/.test(rubro) ? 'fabrican muebles' : doors ? 'fabrican aberturas de madera' : /carpinter/.test(rubro) ? 'trabajan en carpintería' : 'trabajan con madera';
+  const ask = doors ? '¿Qué pegamento usan hoy para el encolado de las piezas?' : '¿Usan algún pegamento para el encolado de cantos, tarugos o enchapados?';
+  const product = 'Tenemos uno monocomponente que podría servirles.';
+  const whatsapp = variant === 'B'
+    ? `Hola, soy ${who} de Grupo Poliplast. Vi que ${seen}. ${ask} ${product} Si les interesa, les paso la info y lo vemos.`
+    : `Hola, ¿cómo estás? Soy ${who}, de Grupo Poliplast. Vi que ${seen}${company ? ` en ${company}` : ''}. ${ask} ${product} Si te interesa, te paso la info y lo vemos.`;
+  const email = {
+    subject: `Grupo Poliplast · adhesivo monocomponente para ${company || 'su carpintería'}`.slice(0, 90),
+    body: ['Hola, buenos días.', '', `Soy ${who} de Grupo Poliplast. Vi que ${seen}.`, ask, product, '', 'Si les interesa, les paso la información y lo vemos.', '', 'Quedo atento.', who].join('\n'),
+  };
+  const call = [`1) Presentate: ${who} de Grupo Poliplast, y por qué llamás (vi que ${seen}).`, '2) Preguntá qué pegamento o cola usan hoy y si están conformes. No hables de precios primero.', '3) Si ya tienen proveedor: no discutas, preguntá qué les gustaría mejorar.', '4) Próximo paso sugerido: pasarles la información y ofrecer una prueba.'].join('\n');
+  const followUp = `Hola, ${who} de Grupo Poliplast otra vez. Te escribí hace unos días por el pegamento monocomponente. ¿Lo vemos? Si ahora no es momento, decime cuándo te conviene que retome y listo.`;
+  return { variant, followUp, playbook: null, whatsapp, email, call, usesResearch: false, missing: [!prospect.rubro && 'rubro', !prospect.city && 'ciudad'].filter(Boolean) };
+}
+
 // Versión A: presentación completa (motivo, líneas, valor y pregunta). Versión B: directa, una sola pregunta.
 // Se alternan por empresa para medir cuál responde más (ver `history` de cada prospecto).
 export function buildOutreachDraft(prospect = {}, { sender = '', variant = outreachVariant(prospect) } = {}) {
+  if (isAdheplast(prospect)) return adheplastDraft(prospect, { who: String(sender || '').trim() || '[tu nombre]', variant });
   const book = playbookFor(prospect);
   const company = String(prospect.company || '').trim() || 'su empresa';
   const where = String(prospect.city || '').trim();

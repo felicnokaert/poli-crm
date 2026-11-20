@@ -148,8 +148,10 @@ function finishRow(row) {
   row.questions = row.ml.reduce((sum, listing) => sum + listing.questions, 0);
   row.inQuoter = Boolean(row.productId);
   row.channels = channelsFor(row);
-  row.best = row.channels.filter((channel) => channel.net != null).sort((a, b) => b.net - a.net)[0] || null;
   row.alerts = alertsFor(row);
+  // Con ⚠ precio raro la lista no es confiable: no se la toma como «el canal que deja más».
+  row.rarePrice = row.alerts.some((alert) => alert.key === 'precio-raro');
+  row.best = row.channels.filter((channel) => channel.net != null && !(row.rarePrice && channel.key === 'directo')).sort((a, b) => b.net - a.net)[0] || null;
   row.advice = adviceFor(row);
   return row;
 }
@@ -202,7 +204,8 @@ export function alertsFor(row) {
 
 export function adviceFor(row) {
   const lines = [];
-  const priced = row.channels.filter((channel) => channel.net != null).sort((a, b) => b.net - a.net);
+  const priced = row.channels.filter((channel) => channel.net != null && !(row.rarePrice && channel.key === 'directo')).sort((a, b) => b.net - a.net);
+  if (row.rarePrice) lines.push('La lista del cotizador no cierra con Mercado Libre (⚠ precio raro): no se usa para comparar canales hasta corregirla.');
   if (priced.length >= 2) {
     const [first, second] = priced;
     const diff = first.net - second.net;
@@ -265,7 +268,7 @@ export function findInHub(rows, query, { max = 3 } = {}) {
 
 export function productHubContext(rows, { title = 'PRODUCTO POR SKU (cotizador + Mercado Libre + Shopify)' } = {}) {
   if (!rows?.length) return '';
-  const money = (value) => (value == null ? 'sin dato' : `$ ${Number(value).toLocaleString('es-AR')}`);
+  const money = (value) => (value == null ? 'sin dato' : `$\u00a0${Number(value).toLocaleString('es-AR')}`);
   const out = [`${title}; precios finales con IVA; «queda» = precio − comisión real de 30 días − envío:`];
   for (const row of rows) {
     out.push(`- ${row.sku} · ${row.name}${row.list ? ` · lista ${row.list.currency} ${row.list.gross} (${money(row.list.ars)})` : ' · no está en el cotizador'} · vendidas 30 días en ML: ${row.units30}`);

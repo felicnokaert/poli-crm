@@ -81,7 +81,7 @@ test('filtros, búsqueda y contexto para el asistente', () => {
   assert.ok(asksProductHub('¿conviene en cuotas?') && asksProductHub('ficha del RE-608-1') && !asksProductHub('hola'));
   const text = productHubContext(findInHub(rows, 'RE-608-1'));
   assert.match(text, /Mercado Libre Clásica/);
-  assert.match(text, /queda \$ 38\.500/);
+  assert.match(text, /queda \$\s38\.500/);
 });
 
 test('tendencia: necesita dos palabras del producto en el título', () => {
@@ -94,4 +94,11 @@ test('dólar BNA: lee la venta de billetes y no la de divisas', () => {
   const html = `<div id="billetes"><table><thead><tr><th class="fechaCot">20/11/2026</th></tr></thead><tbody><tr><td class="tit">Dolar U.S.A</td><td>1480,00</td><td>1530,00</td></tr></tbody></table></div><div id="divisas"><table><tr><td class="tit">Dolar U.S.A</td><td>1499</td><td>1508</td></tr></table></div>`;
   assert.deepEqual(parseBnaHtml(html), { rate: 1530, quotationDate: '20/11/2026' });
   assert.equal(parseBnaHtml('<html></html>'), null);
+});
+
+test('con ⚠ precio raro la lista no cuenta como el canal que deja más', () => {
+  const chica = buildProductHub(base()).find((row) => row.sku === 'RE-608-0.450');
+  assert.ok(chica.rarePrice);
+  assert.notEqual(chica.best?.key, 'directo');
+  assert.ok(chica.advice.some((line) => /no cierra con Mercado Libre/.test(line)));
 });

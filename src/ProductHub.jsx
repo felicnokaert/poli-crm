@@ -5,7 +5,7 @@ import { loadProductHub } from "./product-hub-data.js";
 
 // 20/11: Productos = una ficha por SKU que junta cotizador, Mercado Libre y Shopify, con dónde conviene venderlo
 // y avisos (⚠ precio raro, catálogo perdido, calidad, tendencia). Solo mira: no cambia nada en ningún canal.
-const money = (value) => (value == null ? "—" : `$ ${Number(value).toLocaleString("es-AR")}`);
+const money = (value) => (value == null ? "—" : `$\u00a0${Number(value).toLocaleString("es-AR")}`);
 const PAGE = 40;
 
 function Photo({ url, name }) {

@@ -41,6 +41,7 @@ const EntregasFrame = lazyNamed(() => import("./EntregasFrame"), "EntregasFrame"
 // consumidos solo por el propio <Academy> - así que separarla en su propio
 // chunk no arrastra nada que este archivo necesite.
 const ImprovementCenter = lazyNamed(() => import("./ImprovementCenter"), "ImprovementCenter");
+const ProductHub = lazyNamed(() => import("./ProductHub"), "ProductHub");
 const ShopifyBoard = lazyNamed(() => import("./ShopifyBoard"), "ShopifyBoard");
 const MercadoLibreBoard = lazyNamed(() => import("./MercadoLibreBoard"), "MercadoLibreBoard");
 const Academy = lazyNamed(() => import("./Academy"), "Academy");
@@ -129,7 +130,7 @@ function loadState() {
 }
 
 const VIEW_KEY = "poliplast-current-view";
-const SAVED_VIEWS = new Set(["dashboard", "conversations", "inbox", "tasks", "sales", "clients", "prospecting", "mercadolibre", "shopify", "mejoras", "academy", "quoter", "entregas", "map", "techdocs", "profile", "settings"]);
+const SAVED_VIEWS = new Set(["dashboard", "conversations", "inbox", "tasks", "sales", "clients", "prospecting", "mercadolibre", "shopify", "mejoras", "productos", "academy", "quoter", "entregas", "map", "techdocs", "profile", "settings"]);
 function readSavedView() {
   try {
     const saved = sessionStorage.getItem(VIEW_KEY);
@@ -853,6 +854,11 @@ export default function App() {
         {view === "mercadolibre" && (
           <Suspense fallback={<Splash text="Cargando Mercado Libre…" />}>
             <MercadoLibreBoard hiddenTabs={deniedModules} email={session?.user?.email} supabase={supabase} session={session} isAdmin={isChannelAdmin(session?.user?.email)} canSeeAds={isFelipeTools} ads={data.mlAds || {}} onAdsChange={(next) => setData((current) => ({ ...current, mlAds: next }))} />
+          </Suspense>
+        )}
+        {view === "productos" && (
+          <Suspense fallback={<Splash text="Cargando Productos…" />}>
+            <ProductHub supabase={supabase} />
           </Suspense>
         )}
         {view === "mejoras" && (

@@ -28,6 +28,8 @@ import { AssistantFoam } from "./AssistantFoam.jsx";
 import { foamContext, foamFor } from "./assistant-foam.mjs";
 import { AssistantSpray } from "./AssistantSpray.jsx";
 import { sprayContext, sprayFor } from "./assistant-spray.mjs";
+import { asksProductHub, findInHub, productHubContext } from "./product-hub.mjs";
+import { loadProductHub } from "./product-hub-data.js";
 import { extraContext, invoiceLine, invoiceNumbersOf, purchaseLine, purchaseNameWords, purchaseSummary, rivalsFor } from "./assistant-extra.mjs";
 
 // Ventana del asistente (21/10): flotante, abajo a la derecha (en el celular ocupa la pantalla). Por ahora
@@ -492,6 +494,13 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   useEffect(() => { if (wantsOps) setOpsOn(true); }, [wantsOps]);
   const opsRows = useOpsAlerts(opsOn ? supabase : null);
   const opsText = wantsOps && opsRows ? opsContext(opsRows, { tacos: asksTacos(typed) }) : "";
+  // 20/11: ficha por SKU (cotizador + ML + Shopify, dónde conviene, ⚠ precio raro): se lee una vez, al preguntar.
+  const hubRef = useRef(null);
+  const productHub = () => {
+    if (!supabase?.from) return Promise.resolve(null);
+    if (!hubRef.current) hubRef.current = loadProductHub(supabase).catch(() => { hubRef.current = null; return null; });
+    return hubRef.current;
+  };
   const wantsMl = wantsImprove || wantsCompetition || wantsEconomics;
   const [mlOn, setMlOn] = useState(false);
   const [competitionOn, setCompetitionOn] = useState(false);
@@ -579,7 +588,9 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
     const purchasesNow = purchaseState.ready ? purchases : purchaseSummary(await purchaseState.fetchNow().catch(() => []));
     const invoicesNow = invoiceState.ready ? invoices : await invoiceState.fetchNow().catch(() => []);
     const pricesNow = listPrices.key && !listPrices.ready ? await loadListPrices(supabase, listPrices.words, isoToday()).catch(() => []) : listPrices.entries;
-    const context = [rulesContext({ rules, competitors: competitors || [], rapyp }), routesContext(), wantsBusiness ? businessContext(business) : "", kryptonContext(kryptonFor(asked)), foamContext(foamFor(asked, techDocs)), sprayContext(sprayFor(asked, techDocs)), mlText, opsText, pricesContext(pricesNow), teamNotesContext(notes), learningText, clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases: purchasesNow, invoices: invoicesNow }), buildAiContext({ intent, facts, team: teamNow, result, mlRows: mlNow, taught: withEarlier(taught) })].filter(Boolean).join("\n");
+    const hub = asksProductHub(asked) ? await productHub() : null;
+    const hubText = hub ? productHubContext(findInHub(hub.rows, asked)) : "";
+    const context = [rulesContext({ rules, competitors: competitors || [], rapyp }), routesContext(), wantsBusiness ? businessContext(business) : "", kryptonContext(kryptonFor(asked)), foamContext(foamFor(asked, techDocs)), sprayContext(sprayFor(asked, techDocs)), mlText, opsText, hubText, pricesContext(pricesNow), teamNotesContext(notes), learningText, clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases: purchasesNow, invoices: invoicesNow }), buildAiContext({ intent, facts, team: teamNow, result, mlRows: mlNow, taught: withEarlier(taught) })].filter(Boolean).join("\n");
     const reply = await askAi(supabase, { question: asked, context, history, today: isoToday(), userName: firstName }).catch(() => ({ ok: false, reason: "red" }));
     setThinking(false);
     if (reply.ok) {

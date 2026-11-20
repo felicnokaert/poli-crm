@@ -1,4 +1,4 @@
-import { Building2, Calculator, ChevronRight, Menu, X, ClipboardList, Database, FileCheck2, GraduationCap, Inbox, LayoutDashboard, ListChecks, MapPin, MessageCircle, ReceiptText, Search, ShoppingBag, Store, Truck, UserCog } from "lucide-react";
+import { Boxes, Building2, Calculator, ChevronRight, Menu, X, ClipboardList, Database, FileCheck2, GraduationCap, Inbox, LayoutDashboard, ListChecks, MapPin, MessageCircle, ReceiptText, Search, ShoppingBag, Store, Truck, UserCog } from "lucide-react";
 import { useEffect, useState } from "react";
 import { onlineConfigured } from "./online";
 import { filterNav } from "./module-access.mjs";
@@ -19,6 +19,7 @@ export const NAV_GROUPS = [
   ]],
   ["Canales online", [
     ["mejoras", "Centro de mejoras", ListChecks],
+    ["productos", "Productos", Boxes],
     ["mercadolibre", "Mercado Libre", Store],
     ["shopify", "Shopify", ShoppingBag],
   ]],

@@ -50,7 +50,8 @@ export function contar(pedidos: Pedido[], expresos: Map<string, Expreso>, config
     const falt = faltantesDe(p, e)
     if (falt.includes('guia')) c.sinGuia += 1
     if (falt.includes('comprobante')) c.sinComprobante += 1
-    if (p.fecha_despacho === hoy && p.estado !== 'cancelado') c.despachadosHoy += 1
+    // Solo los que siguen afuera: si se volvió atrás (a cargado/impreso) la fecha de despacho queda guardada.
+    if (p.fecha_despacho === hoy && (p.estado === 'despachado' || p.estado === 'entregado' || p.estado === 'incidencia')) c.despachadosHoy += 1
     if (p.estado === 'entregado' && p.fecha_entrega && p.fecha_entrega >= mes[0] && p.fecha_entrega <= mes[1]) c.entregadosMes += 1
     const carga = p.created_at.slice(0, 10)
     if (carga >= mes[0] && carga <= mes[1]) c.cargadosMes += 1

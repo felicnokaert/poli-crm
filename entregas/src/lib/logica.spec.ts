@@ -256,6 +256,10 @@ describe('filtros e indicadores', () => {
     expect(c.entregadosMes).toBe(1)
     expect(c.sinComprobante).toBe(1)
   })
+  it('"Salieron hoy" no cuenta los que volvieron a la cola', () => {
+    const vuelto = pedido({ id: 'd', estado: 'impreso', fecha_despacho: '2026-11-12' })
+    expect(contar([...lista, vuelto], mapa, CONFIG_DEFAULT, JUEVES).despachadosHoy).toBe(1)
+  })
 })
 
 describe('cierre del día', () => {

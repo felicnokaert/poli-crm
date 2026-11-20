@@ -95,3 +95,14 @@ test('lookup: publicación con variaciones y sin SKU en el espejo se completa pr
   const out = await lookup(['777'], { http, store: noMirror, tokenFor, accounts: [accounts[0]] });
   assert.deepEqual(out[0].lines, [{ sku: 'PISONEGRO', qty: 2, item_id: 'MLA5' }]);
 });
+
+import { shipmentDates } from '../lib/etiquetas.mjs';
+test('shipmentDates: límite de despacho y cancelación sin inventar', () => {
+  const ready = shipmentDates({ status: 'ready_to_ship', lead_time: { estimated_handling_limit: { date: '2026-11-20T23:59:59.000-03:00' } } });
+  assert.match(ready.dispatch_by, /^2026-11-20T23:59:59/);
+  assert.equal(ready.cancelled_at, null);
+  const cancelled = shipmentDates({ status: 'cancelled', status_history: { date_cancelled: '2026-11-19T10:00:00.000-03:00' } });
+  assert.match(cancelled.cancelled_at, /^2026-11-19T10:00/);
+  assert.equal(shipmentDates({ status: 'cancelled' }).cancelled_at, null);
+  assert.equal(shipmentDates({}).dispatch_by, null);
+});

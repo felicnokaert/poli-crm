@@ -48,3 +48,20 @@ test('no le pasa la sesión a un mensaje de otro origen', async () => {
     assert.equal(sent.length, 0);
   } finally { cleanup(); }
 });
+
+test('si la app de adentro avisa «lista» otra vez (se recargó), le vuelve a mandar la sesión', async () => {
+  try {
+    const origin = 'https://app.example.com';
+    const { container } = render(React.createElement(EmbeddedAppFrame, {
+      session: { access_token: 'acc', refresh_token: 'ref' },
+      src: `${origin}/?embed=1`, origin, readyType: 'app:listo', title: 'Prueba', bare: true,
+    }));
+    const frame = container.querySelector('iframe');
+    const sent = [];
+    frame.contentWindow.postMessage = (data) => sent.push(data);
+    await act(async () => { window.dispatchEvent(message({ tipo: 'app:listo' }, origin, frame.contentWindow)); });
+    await act(async () => { window.dispatchEvent(message({ tipo: 'app:listo' }, origin, frame.contentWindow)); });
+    assert.equal(sent.length, 2);
+    assert.equal(sent[1].tipo, 'crm:sesion');
+  } finally { cleanup(); }
+});

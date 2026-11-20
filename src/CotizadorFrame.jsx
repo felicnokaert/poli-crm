@@ -10,6 +10,7 @@ export function CotizadorFrame({ session, client }) {
       src={cotizadorUrl(client?.company || "", client?.phone || "", { embed: true })}
       origin={COTIZADOR_ORIGIN}
       readyType="cotizador:listo"
+      heightType="cotizador:alto"
       openUrl={cotizadorUrl(client?.company || "", client?.phone || "")}
       title="Cotizador comercial"
       allow="clipboard-write"

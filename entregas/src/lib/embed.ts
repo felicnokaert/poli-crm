@@ -37,17 +37,30 @@ export function origenesCrm(): string[] {
   return MAQUETA_LOCAL ? ['*'] : CRM_ORIGINS
 }
 
-/** Escucha la sesión que manda el CRM y avisa que la pestaña está lista. Devuelve la función para dejar de escuchar. */
+/**
+ * Escucha la sesión que manda el CRM y avisa que la pestaña está lista. Devuelve la función para dejar de escuchar.
+ * El aviso «lista» se repite cada 0,8 s hasta que llega la sesión (máx. 10 veces): si el primero se pierde (el CRM
+ * todavía no escuchaba), no hay que esperar los 5 s del respaldo con «Cargando…» en pantalla.
+ */
 export function escucharSesionDelCrm(onSesion: (accessToken: string, refreshToken: string) => void): () => void {
+  let avisos = 0
+  let timer: ReturnType<typeof setInterval> | null = null
+  const avisar = () => {
+    avisos += 1
+    for (const origin of origenesCrm()) {
+      try { window.parent.postMessage({ tipo: 'entregas:listo' }, origin) } catch { /* otro origen */ }
+    }
+    if (avisos >= 10 && timer) { clearInterval(timer); timer = null }
+  }
   const onMessage = (event: MessageEvent) => {
     if (!isCrmOrigin(event.origin) || event.source !== window.parent) return
     const data = event.data as { tipo?: string; access_token?: string; refresh_token?: string }
     if (data?.tipo !== 'crm:sesion' || !data.access_token || !data.refresh_token) return
+    if (timer) { clearInterval(timer); timer = null }
     onSesion(data.access_token, data.refresh_token)
   }
   window.addEventListener('message', onMessage)
-  for (const origin of origenesCrm()) {
-    try { window.parent.postMessage({ tipo: 'entregas:listo' }, origin) } catch { /* otro origen */ }
-  }
-  return () => window.removeEventListener('message', onMessage)
+  avisar()
+  timer = setInterval(avisar, 800)
+  return () => { window.removeEventListener('message', onMessage); if (timer) clearInterval(timer) }
 }

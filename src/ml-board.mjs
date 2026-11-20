@@ -82,8 +82,8 @@ export function countQuestions(rows = []) {
   return counts;
 }
 
-// 23/10 (Felipe: "marcar con un color cada empresa de Mercado Libre"): POLIPLAST rojo, FOAMFACTORY azul, COMARG ámbar.
+// 23/10 (Felipe: "marcar con un color cada empresa de Mercado Libre"): POLIPLAST rojo, FOAMFACTORY azul, COMARG ámbar; 20/11: FOAMHOME verde, HOMEARG1 violeta, PURMAC verde petróleo.
 // Se reconoce por el apodo de la cuenta; cualquier otra queda gris.
-const ACCOUNT_TONES = [[/poliplast/i, 'poliplast'], [/foam/i, 'foam'], [/comarg/i, 'comarg']];
-export const ACCOUNT_COLORS = { poliplast: '#ed1c24', foam: '#2563eb', comarg: '#d97706', other: '#6b7280' };
+const ACCOUNT_TONES = [[/poliplast/i, 'poliplast'], [/foamhome/i, 'foamhome'], [/foam/i, 'foam'], [/comarg/i, 'comarg'], [/homearg/i, 'homearg'], [/purmac/i, 'purmac']];
+export const ACCOUNT_COLORS = { poliplast: '#ed1c24', foam: '#2563eb', comarg: '#d97706', foamhome: '#16a34a', homearg: '#7c3aed', purmac: '#0f766e', other: '#6b7280' };
 export const accountTone = (nickname = '') => ACCOUNT_TONES.find(([pattern]) => pattern.test(String(nickname)))?.[1] || 'other';

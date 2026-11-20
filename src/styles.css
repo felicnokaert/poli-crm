@@ -1192,12 +1192,15 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .ml-competition-add .panel-head-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 
 /* 23/10: Mercado Libre, rediseño (Felipe: "la sección está fea: gráficas, botones, vista y transiciones; un color por cuenta") */
-:root { --acct-poliplast: #ed1c24; --acct-foam: #2563eb; --acct-comarg: #d97706; --acct-other: #6b7280; }
+:root { --acct-poliplast: #ed1c24; --acct-foam: #2563eb; --acct-comarg: #d97706; --acct-foamhome: #16a34a; --acct-homearg: #7c3aed; --acct-purmac: #0f766e; --acct-other: #6b7280; }
 .acct-tag { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; white-space: nowrap; }
 .acct-tag i, .ml-account-chip i { width: 9px; height: 9px; border-radius: 50%; background: var(--acct-other); flex: none; }
 .acct-poliplast i, .acct-bar.acct-poliplast { background: var(--acct-poliplast); }
 .acct-foam i, .acct-bar.acct-foam { background: var(--acct-foam); }
 .acct-comarg i, .acct-bar.acct-comarg { background: var(--acct-comarg); }
+.acct-foamhome i, .acct-bar.acct-foamhome { background: var(--acct-foamhome); }
+.acct-homearg i, .acct-bar.acct-homearg { background: var(--acct-homearg); }
+.acct-purmac i, .acct-bar.acct-purmac { background: var(--acct-purmac); }
 .acct-bar.acct-other { background: var(--acct-other); }
 
 /* Encabezado: pestañas con subrayado y cuentas como chips de color */
@@ -1214,6 +1217,9 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .ml-account-chip.acct-poliplast.selected { background: var(--acct-poliplast); border-color: var(--acct-poliplast); }
 .ml-account-chip.acct-foam.selected { background: var(--acct-foam); border-color: var(--acct-foam); }
 .ml-account-chip.acct-comarg.selected { background: var(--acct-comarg); border-color: var(--acct-comarg); }
+.ml-account-chip.acct-foamhome.selected { background: var(--acct-foamhome); border-color: var(--acct-foamhome); }
+.ml-account-chip.acct-homearg.selected { background: var(--acct-homearg); border-color: var(--acct-homearg); }
+.ml-account-chip.acct-purmac.selected { background: var(--acct-purmac); border-color: var(--acct-purmac); }
 .ml-account-chip.selected i { background: #fff; }
 
 /* Entrada suave de cada pestaña y de las tarjetas */

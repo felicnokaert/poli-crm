@@ -1,0 +1,114 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Ajustes } from './components/Ajustes'
+import { Calendario } from './components/Calendario'
+import { Expedicion } from './components/Expedicion'
+import { ImpresionProvider } from './components/Impresion'
+import { Inicio } from './components/Inicio'
+import { Layout } from './components/Layout'
+import { Login } from './components/Login'
+import { NuevoRemito } from './components/NuevoRemito'
+import { PedidoDetalle } from './components/PedidoDetalle'
+import { Pedidos } from './components/Pedidos'
+import { QuienSos } from './components/QuienSos'
+import { ToastProvider } from './components/ui'
+import { mensajeError, SinAcceso } from './lib/api'
+import { api } from './lib/cliente'
+import { DatosProvider } from './lib/datos'
+import { altoAutomaticoEnCrm } from './lib/altoCrm'
+import { escucharSesionDelCrm, isEmbeddedInApp, isEmbeddedInCrm } from './lib/embed'
+import { alCambiarOperador, depositoActual, operadorActual, tomarPersonaDeLaUrl } from './lib/operador'
+import { useRuta } from './lib/ruta'
+import type { Usuario } from './lib/types'
+
+type Sesion = { estado: 'cargando' } | { estado: 'fuera' } | { estado: 'sin_acceso'; email: string } | { estado: 'dentro'; yo: Usuario }
+
+export default function App() {
+  const [sesion, setSesion] = useState<Sesion>({ estado: 'cargando' })
+  const [error, setError] = useState<string | null>(null)
+  const [operador, setOperadorEstado] = useState(operadorActual())
+  // El depósito también avisa por acá: se fuerza a redibujar aunque la persona sea la misma.
+  const [, setCambios] = useState(0)
+  useEffect(() => alCambiarOperador(() => { setOperadorEstado(operadorActual()); setCambios((n) => n + 1) }), [])
+
+  const comprobar = useCallback(async () => {
+    try {
+      const yo = await api.usuarioActual()
+      if (yo) { setSesion({ estado: 'dentro', yo }); return }
+      setSesion({ estado: 'fuera' })
+    } catch (e) {
+      if (e instanceof SinAcceso) { setSesion({ estado: 'sin_acceso', email: e.email }); return }
+      setError(mensajeError(e))
+      setSesion({ estado: 'fuera' })
+    }
+  }, [])
+
+  useEffect(() => {
+    // Pestaña del CRM: espera la sesión del CRM (y sus renovaciones). Si no llega en unos segundos, login normal.
+    if (isEmbeddedInCrm()) {
+      document.documentElement.classList.add('embebido')
+      let recibida = false
+      const dejar = escucharSesionDelCrm((access, refresh) => {
+        recibida = true
+        void api.recibirSesion?.(access, refresh).then(comprobar).catch((e) => setError(mensajeError(e)))
+      })
+      const t = window.setTimeout(() => { if (!recibida) void comprobar() }, 5000)
+      const dejarAlto = altoAutomaticoEnCrm()
+      // Si la sesión del CRM no llegó y se entra con el login propio, también hay que enterarse.
+      const dejarCambios = api.alCambiarSesion(() => void comprobar())
+      return () => { dejar(); dejarAlto(); dejarCambios(); window.clearTimeout(t) }
+    }
+    // Sección de la app de conteo: se ve integrada y arranca en Expedición; el login es el propio.
+    if (isEmbeddedInApp()) {
+      document.documentElement.classList.add('embebido', 'en-app')
+      tomarPersonaDeLaUrl()
+      if (!window.location.hash || window.location.hash === '#/') window.history.replaceState(null, '', '#/expedicion')
+    }
+    void comprobar()
+    return api.alCambiarSesion(() => void comprobar())
+  }, [comprobar])
+
+  // En la cuenta compartida de expedición, la persona que usa el dispositivo pasa a ser "yo".
+  const yo = useMemo(() => {
+    if (sesion.estado !== 'dentro') return null
+    const u = sesion.yo
+    return u.compartida && operador ? { ...u, nombre: operador, operador } : u
+  }, [sesion, operador])
+
+  if (sesion.estado === 'cargando') return <div className="centrado">Cargando…</div>
+  if (sesion.estado === 'sin_acceso') return <Login sinAcceso={sesion.email || 'actual'} onSalir={() => void api.cerrarSesion()} />
+  if (sesion.estado === 'fuera') return (
+    <>
+      {error && <div className="aviso err" style={{ margin: 16 }}>{error}</div>}
+      <Login />
+    </>
+  )
+
+  if (!yo) return null
+  // La cuenta compartida necesita la persona y el depósito de este dispositivo.
+  if (yo.compartida && (!yo.operador || !depositoActual())) return <QuienSos />
+
+  return (
+    <ToastProvider>
+      <DatosProvider yo={yo}>
+        <ImpresionProvider>
+          <Rutas />
+        </ImpresionProvider>
+      </DatosProvider>
+    </ToastProvider>
+  )
+}
+
+function Rutas() {
+  const ruta = useRuta()
+  let pagina
+  switch (ruta.pagina) {
+    case 'pedidos': pagina = <Pedidos query={ruta.query} />; break
+    case 'nuevo': pagina = <NuevoRemito />; break
+    case 'pedido': pagina = <PedidoDetalle key={ruta.param} idOCodigo={ruta.param} />; break
+    case 'expedicion': pagina = <Expedicion />; break
+    case 'calendario': pagina = <Calendario />; break
+    case 'ajustes': pagina = <Ajustes />; break
+    default: pagina = <Inicio />
+  }
+  return <Layout ruta={ruta}>{pagina}</Layout>
+}

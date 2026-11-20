@@ -11,6 +11,7 @@ export function EntregasFrame({ session }) {
       src={ENTREGAS_EMBED_URL}
       origin={ENTREGAS_ORIGIN}
       readyType="entregas:listo"
+      heightType="entregas:alto"
       title="Entregas"
       allow="clipboard-write"
       bare

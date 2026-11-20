@@ -7,6 +7,12 @@
       "runtimeArgs": ["run", "dev"],
       "port": 5173,
       "autoPort": true
+    },
+    {
+      "name": "entregas-maqueta",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "entregas", "run", "maqueta", "--", "--port", "5180", "--strictPort"],
+      "port": 5180
     }
   ]
 }

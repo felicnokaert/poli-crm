@@ -893,6 +893,7 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 /* Otra aplicación del grupo como sección del CRM (Entregas): sin marco, ocupa el resto de la pantalla. */
 .embedded-app { display: block; width: 100%; height: calc(100dvh - 150px); min-height: 520px; border: 0; background: transparent; color-scheme: normal; }
 @media (max-width: 760px) { .embedded-app { height: calc(100dvh - 190px); min-height: 440px; } }
+.embedded-app.auto-height { min-height: 0; overflow: hidden; }
 
 /* Red de seguridad de errores (ErrorBoundary.jsx). */
 .error-boundary { border-color: var(--color-danger-bg); }

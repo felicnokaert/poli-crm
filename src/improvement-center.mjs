@@ -12,6 +12,7 @@ const ML_CLEAN = new Set(['sin-clip', 'pocas-fotos', 'sin-descripcion', 'calidad
 const SHOPIFY_CLEAN = new Set(['sin_descripcion', 'sin_seo', 'sin_foto', 'stock_cero', 'sin_sku', 'sku_repetido', 'sin_peso', 'precio_cero']);
 
 const ML_WHY = {
+  'sin-sku': 'Sin SKU no se puede cruzar con el catálogo, Contabilium, Shopify ni la etiqueta del preparador.',
   'sin-clip': 'Mercado Libre dice que los clips traen más visitas y ventas.',
   'pocas-fotos': 'Con menos de 3 fotos se vende menos y baja la calidad.',
   'sin-descripcion': 'Sin descripción pierde posicionamiento y genera preguntas.',

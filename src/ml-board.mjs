@@ -16,6 +16,9 @@ export const statusLabel = (status) => ({ active: 'Activa', paused: 'Pausada', c
 const detailed = (item) => Boolean(item.item_updated_at);
 
 export const ML_ISSUES = [
+  // 20/11: sin SKU ni en la publicación ni en sus variaciones (el SKU de las publicaciones con colores o talles vive en cada variación).
+  // Solo cuenta si la fila trae las columnas sku/variation_skus (sin ellas no se sabe).
+  ['sin-sku', 'Sin SKU', (item) => typeof item.sku === 'string' && !item.sku && !(Array.isArray(item.variation_skus) && item.variation_skus.length)],
   ['sin-clip', 'Sin clip', (item) => item.clips_count === 0],
   ['pocas-fotos', 'Menos de 3 fotos', (item) => typeof item.pictures_count === 'number' && item.pictures_count < 3],
   ['sin-descripcion', 'Sin descripción', (item) => (Number(item.description_length) || 0) < 30],

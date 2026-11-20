@@ -73,3 +73,25 @@ test('handler: 401 sin clave, 400 sin ids, health y límite 429', async () => {
   for (let i = 0; i < 125; i += 1) rateLimited('otra', 0);
   assert.ok(rateLimited('otra', 1000));
 });
+
+test('pickSku: variación vendida, SKU único compartido o varios sin elegir', async () => {
+  const { pickSku } = await import('../lib/etiquetas.mjs');
+  assert.deepEqual(pickSku({ sku: 'A-1' }, '9'), { sku: 'A-1', options: [] });
+  const row = { sku: '', variation_skus: [{ id: '1', sku: 'PISO-GRIS' }, { id: '2', sku: 'PISO-NEGRO' }] };
+  assert.equal(pickSku(row, '2').sku, 'PISO-NEGRO');
+  assert.deepEqual(pickSku(row, ''), { sku: null, options: ['PISO-GRIS', 'PISO-NEGRO'] });
+  assert.equal(pickSku({ sku: '', variation_skus: [{ id: '1', sku: 'X' }, { id: '2', sku: 'X' }] }).sku, 'X');
+  assert.deepEqual(pickSku({ sku: '', variation_skus: [] }), { sku: null, options: [] });
+});
+
+test('lookup: publicación con variaciones y sin SKU en el espejo se completa preguntando a Mercado Libre', async () => {
+  const noMirror = { select: async () => [{ id: 'MLA5', sku: '', title: 'Piso', variation_skus: [] }] };
+  const http = async (url) => {
+    if (url.includes('/shipments/777/items')) return reply(200, [{ item_id: 'MLA5', quantity: 2, variation_id: 222 }]);
+    if (url.includes('/shipments/777')) return reply(200, { id: 777, status: 'ready_to_ship', substatus: 'printed', logistic_type: 'self_service' });
+    if (url.includes('/items/MLA5')) return reply(200, { id: 'MLA5', attributes: [], variations: [{ id: 111, seller_custom_field: 'piso-gris' }, { id: 222, attributes: [{ id: 'SELLER_SKU', value_name: 'piso negro' }] }] });
+    return reply(403, {});
+  };
+  const out = await lookup(['777'], { http, store: noMirror, tokenFor, accounts: [accounts[0]] });
+  assert.deepEqual(out[0].lines, [{ sku: 'PISONEGRO', qty: 2, item_id: 'MLA5' }]);
+});

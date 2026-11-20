@@ -18,7 +18,7 @@ import { MlAds } from "./MlAds.jsx";
 // reputación y qué atender, en 7/14/30 días contra el período anterior) y Publicaciones de las 3 cuentas.
 // Solo muestra lo que se trajo de Mercado Libre (actualización diaria y Más → Datos); no cambia nada allá.
 const PAGE = 100;
-const COLUMNS = "id,seller_id,title,permalink,status,price,currency,sold_quantity,available_quantity,pictures_count,health,thumbnail,description_length,item_updated_at,visits_7d,visits_30d,clips_count";
+const COLUMNS = "id,seller_id,title,permalink,status,price,currency,sold_quantity,available_quantity,pictures_count,health,thumbnail,description_length,item_updated_at,visits_7d,visits_30d,clips_count,sku,variation_skus";
 const money = (value, currency) => (typeof value === "number" ? value.toLocaleString("es-AR", { style: "currency", currency: currency || "ARS", maximumFractionDigits: 0 }) : "—");
 const number = (value) => (typeof value === "number" ? value.toLocaleString("es-AR") : "—");
 const percent = (value) => (typeof value === "number" ? `${(value * 100).toLocaleString("es-AR", { maximumFractionDigits: 2 })} %` : "—");
@@ -353,7 +353,7 @@ function Listings({ items, accounts, nickname, questionCounts, seller, issue, se
                 <td>
                   <a className="ml-board-title" href={item.permalink} target="_blank" rel="noreferrer">
                     {item.thumbnail && <img src={item.thumbnail} alt="" width="40" height="40" loading="lazy" />}
-                    <span>{item.title}<small className="muted"> · {item.id}</small></span>
+                    <span>{item.title}<small className="muted"> · {item.id}{item.sku ? ` · ${item.sku}` : Array.isArray(item.variation_skus) && item.variation_skus.length ? ` · SKU por variación (${item.variation_skus.length})` : ""}</small></span>
                   </a>
                 </td>
                 <td><AccountTag name={nickname[item.seller_id] || item.seller_id} /></td>

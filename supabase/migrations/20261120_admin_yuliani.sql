@@ -1,0 +1,4 @@
+-- 20/11 (Felipe): Yuliani (jefa de ventas) es administradora. Se suma a las dos funciones SQL de administración (aplicada con apply_migration).
+-- is_poliplast_crm_admin ya incluía a Juan, Diego y cowork en la base; se conservan.
+create or replace function public.is_poliplast_channel_admin() returns boolean language sql stable set search_path to 'public' as $$ select lower(coalesce(auth.jwt() ->> 'email', '')) in ('felipecnokaert@gmail.com', 'felipe@grupopoliplast.com.ar', 'yuliani@grupopoliplast.com.ar'); $$;
+create or replace function public.is_poliplast_crm_admin() returns boolean language sql stable set search_path to 'public' as $$ select lower(coalesce(auth.jwt() ->> 'email', '')) in ('felipecnokaert@gmail.com', 'felipe@grupopoliplast.com.ar', 'juan@grupopoliplast.com.ar', 'diego@grupopoliplast.com.ar', 'cowork@grupopoliplast.com.ar', 'yuliani@grupopoliplast.com.ar'); $$;

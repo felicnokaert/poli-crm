@@ -18,12 +18,27 @@ export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, 
   const frameRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [height, setHeight] = useState(null);
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+  const sentRef = useRef("");
+  function sendSession(current) {
+    if (!current?.access_token) return;
+    frameRef.current?.contentWindow?.postMessage(
+      { tipo: "crm:sesion", access_token: current.access_token, refresh_token: current.refresh_token },
+      origin,
+    );
+    sentRef.current = current.access_token;
+  }
 
   useEffect(() => {
     function onMessage(event) {
       if (event.origin !== origin || event.source !== frameRef.current?.contentWindow) return;
       const tipo = event.data?.tipo;
-      if (tipo === readyType) setReady(true);
+      if (tipo === readyType) {
+        setReady(true);
+        // Cada aviso de «lista» recibe la sesión: si la app de adentro se recargó sola, no se queda en «Cargando…».
+        sendSession(sessionRef.current);
+      }
       if (heightType && tipo === heightType) {
         const alto = Number(event.data.alto);
         if (Number.isFinite(alto) && alto > 0) setHeight(Math.min(Math.ceil(alto), 100000));
@@ -40,11 +55,9 @@ export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, 
   // Pasarle la sesión del CRM cuando la app de adentro avisa que está lista, y de nuevo cada vez que el CRM la renueva.
   // (20/11: este paso se había perdido y el cotizador y Entregas volvían a pedir usuario y contraseña.)
   useEffect(() => {
-    if (!ready || !session?.access_token) return;
-    frameRef.current?.contentWindow?.postMessage(
-      { tipo: "crm:sesion", access_token: session.access_token, refresh_token: session.refresh_token },
-      origin,
-    );
+    if (!ready || !session?.access_token || sentRef.current === session.access_token) return;
+    sendSession(session);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, origin, session?.access_token, session?.refresh_token]);
 
   // Con alto automático, contarle a la app de adentro qué parte suya se ve (al desplazar, al cambiar el tamaño).
@@ -81,7 +94,7 @@ export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, 
     };
   }, [heightType, height, origin]);
 
-  useEffect(() => { setReady(false); setHeight(null); }, [src]);
+  useEffect(() => { setReady(false); setHeight(null); sentRef.current = ""; }, [src]);
 
   if (bare) {
     return (

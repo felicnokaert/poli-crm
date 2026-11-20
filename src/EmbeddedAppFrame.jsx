@@ -37,6 +37,16 @@ export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, 
     return () => window.removeEventListener("message", onMessage);
   }, [origin, readyType, heightType]);
 
+  // Pasarle la sesión del CRM cuando la app de adentro avisa que está lista, y de nuevo cada vez que el CRM la renueva.
+  // (20/11: este paso se había perdido y el cotizador y Entregas volvían a pedir usuario y contraseña.)
+  useEffect(() => {
+    if (!ready || !session?.access_token) return;
+    frameRef.current?.contentWindow?.postMessage(
+      { tipo: "crm:sesion", access_token: session.access_token, refresh_token: session.refresh_token },
+      origin,
+    );
+  }, [ready, origin, session?.access_token, session?.refresh_token]);
+
   // Con alto automático, contarle a la app de adentro qué parte suya se ve (al desplazar, al cambiar el tamaño).
   useEffect(() => {
     if (!heightType || height == null) return undefined;

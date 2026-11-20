@@ -734,3 +734,10 @@
 :root[data-theme="dark"] .integration-state.ok { color: #7fd99a; }
 :root[data-theme="dark"] .integration-state.warn { color: #f5c46b; }
 :root[data-theme="dark"] .integration-state.bad { color: #ff9b9b; }
+:root[data-theme="dark"] .product-hub .ph-row { background: #1c1c1f; border-color: #2c2c31; }
+:root[data-theme="dark"] .product-hub .ph-photo { background: #26262a; }
+:root[data-theme="dark"] .product-hub .badge.danger, :root[data-theme="dark"] .product-hub .ph-alert.ph-alta { background: #3b1414; color: #ffb4b4; }
+:root[data-theme="dark"] .product-hub .badge.ph-trend { background: #12301e; color: #9be3b5; }
+:root[data-theme="dark"] .product-hub .ph-alert, :root[data-theme="dark"] .product-hub .ph-alert.ph-media { background: #2a2416; color: #f3d38c; }
+:root[data-theme="dark"] .product-hub .ph-best td { background: #12301e; }
+:root[data-theme="dark"] .product-hub .ph-detail { border-color: #2c2c31; }

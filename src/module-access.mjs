@@ -13,6 +13,7 @@ export const MODULES = [
   { id: 'prospecting', label: 'Prospección' },
   { id: 'conversations', label: 'Historial' },
   { id: 'mejoras', label: 'Centro de mejoras' },
+  { id: 'productos', label: 'Productos (por SKU)' },
   {
     id: 'mercadolibre', label: 'Mercado Libre',
     children: [['resumen', 'Resumen'], ['publicaciones', 'Publicaciones'], ['mercado', 'Mercado (competencia y tendencias)'], ['dinero', 'Dinero (stock, ganancia y publicidad)']],

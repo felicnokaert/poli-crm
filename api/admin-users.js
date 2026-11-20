@@ -14,6 +14,7 @@ import { assistantAi } from '../lib/assistant-ai.mjs';
 import { shopifyAdmin, shopifyCron } from '../lib/shopify.mjs';
 import { etiquetasHandler } from '../lib/etiquetas.mjs';
 import { entregasApiHandler } from '../lib/entregas-api.mjs';
+import { bnaDollarHandler } from '../lib/bna-dollar.mjs';
 import { gmailAdmin, gmailAutoSendCron, gmailCallback } from '../lib/gmail-service.mjs';
 
 // Una sola función para las tareas de administrador (el plan de Vercel limita la cantidad de funciones):
@@ -55,6 +56,7 @@ export default async function handler(request, response) {
   if (request.query?.etiquetas) return etiquetasHandler(request, response);
   // Entregas para expedición sin login (20/11): /api/entregas/<ruta> → ?entregas=<ruta>. Clave ENTREGAS_API_KEY en X-Api-Key.
   if (request.query?.entregas) return entregasApiHandler(request, response);
+  if (request.query?.dolar) return bnaDollarHandler(request, response);
   const cron = request.method === 'GET' ? CRONS[request.query?.cron] : null;
   if (cron) {
     const result = await runIntegrationCron(request.query.cron, (req) => cron(req), request);

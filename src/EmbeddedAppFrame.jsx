@@ -37,6 +37,15 @@ export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, 
     return () => window.removeEventListener("message", onMessage);
   }, [origin, readyType, heightType]);
 
+  // La sesión del CRM: apenas la app avisa que está lista, y otra vez cada vez que el CRM la renueva.
+  useEffect(() => {
+    if (!ready || !session?.access_token) return;
+    frameRef.current?.contentWindow?.postMessage(
+      { tipo: "crm:sesion", access_token: session.access_token, refresh_token: session.refresh_token },
+      origin,
+    );
+  }, [ready, origin, session?.access_token, session?.refresh_token]);
+
   // Con alto automático, contarle a la app de adentro qué parte suya se ve (al desplazar, al cambiar el tamaño).
   useEffect(() => {
     if (!heightType || height == null) return undefined;

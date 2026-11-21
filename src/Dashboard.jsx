@@ -517,8 +517,9 @@ function DashboardBase({
   // hacemos fallback al cálculo client-side de siempre para no romper nada.
   const signalsAreFresh = dailySignals && String(dailySignals.calculatedAt || "").slice(0, 10) === now;
   const repurchaseRadar = (signalsAreFresh ? dailySignals.repurchase : buildRepurchaseRadar(sales)).slice(0, 6);
-  const coldQuotes = (signalsAreFresh ? dailySignals.coldQuotes : findColdQuotes(inbox, sales)).slice(0, 6);
-  const hotLeads = (signalsAreFresh ? dailySignals.hotLeads : findStaleHotLeads(inbox)).slice(0, 6);
+  // Salen de «Por revisar» (WhatsApp), que desde el 21/11 es solo de administradores: el resto no las ve.
+  const coldQuotes = isAdmin ? (signalsAreFresh ? dailySignals.coldQuotes : findColdQuotes(inbox, sales)).slice(0, 6) : [];
+  const hotLeads = isAdmin ? (signalsAreFresh ? dailySignals.hotLeads : findStaleHotLeads(inbox)).slice(0, 6) : [];
   // Lo guardado por el proceso de las 6 de la mañana puede nombrar empresas que después se limpiaron o
   // se sacaron del pipeline (le pasó a Juan, 16/10): solo se muestran las que siguen activas hoy.
   const workedClientIds = new Set(clients.filter((client) => client.pipelineActive !== false).map((client) => client.id));
@@ -603,7 +604,7 @@ function DashboardBase({
       {supabase && isAdmin && <AutomationPause />}
       {supabase && isAdmin && <AttentionPanel supabase={supabase} session={session} isAdmin={isAdmin} onNavigate={onNavigate} compact />}
       {supabase && <OverdueCard supabase={supabase} clients={clients} onNavigate={onNavigate} />}
-      <AlertsPanel hotLeads={hotLeads} coldQuotes={coldQuotes} expiredQuotes={expiredQuotes} staleClients={staleClients} repurchaseRadar={repurchaseRadar} onNavigate={onNavigate} />
+      <AlertsPanel showInbox={isAdmin} hotLeads={hotLeads} coldQuotes={coldQuotes} expiredQuotes={expiredQuotes} staleClients={staleClients} repurchaseRadar={repurchaseRadar} onNavigate={onNavigate} />
       <AutomationSummary tasks={tasks} cronStatus={cronStatus} />
       {supabase && isAdmin && <IntegrationsAlert supabase={supabase} onNavigate={onNavigate} />}
     </div>
@@ -685,15 +686,15 @@ function WeeklySummaryBody({ supabase, clients, prospects, tasks, isAdmin }) {
 
 // Inicio (16/10): las cinco alertas que antes eran cinco paneles sueltos van en uno solo con pestañas,
 // cada una con su cantidad. Arranca en la primera que tenga algo.
-function AlertsPanel({ hotLeads, coldQuotes, expiredQuotes, staleClients, repurchaseRadar, onNavigate }) {
+function AlertsPanel({ showInbox = true, hotLeads, coldQuotes, expiredQuotes, staleClients, repurchaseRadar, onNavigate }) {
   const tabs = [
     ["hot", "Calientes sin responder", hotLeads, "Mensajes en «Por revisar» que suenan urgentes y comerciales, con más de 2 días sin tocar."],
     ["cold", "Cotizaciones frías", coldQuotes, "Pidieron precio por WhatsApp y no volvieron."],
     ["expired", "Cotizaciones vencidas", expiredQuotes, "Marcaste «Coticé hoy» hace 15 días o más y no hay venta."],
     ["stale", "Clientes sin contacto", staleClients, "Empresas en seguimiento sin venta ni mensaje en 30 días o más."],
     ["repurchase", "Para reponer", repurchaseRadar, "Por su ritmo de compra, ya deberían haber vuelto a comprar."],
-  ];
-  const firstWithItems = tabs.find(([, , items]) => items.length)?.[0] || "hot";
+  ].filter(([key]) => showInbox || (key !== "hot" && key !== "cold"));
+  const firstWithItems = tabs.find(([, , items]) => items.length)?.[0] || tabs[0][0];
   const [tab, setTab] = useState(firstWithItems);
   const [key, label, items, help] = tabs.find(([k]) => k === tab) || tabs[0];
   const total = tabs.reduce((sum, [, , list]) => sum + list.length, 0);

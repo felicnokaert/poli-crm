@@ -4,7 +4,7 @@ import { adminFetch } from "./admin-api.mjs";
 // Entrenamiento intensivo (21/11, Felipe: «que labure a full hasta el 25 sin que yo tenga que revisar»). Un interruptor: el servidor
 // aprende solo cada ~90 minutos (respuestas del equipo en Mercado Libre y fichas técnicas) y guarda lo aprendido marcado
 // «aprendido solo». Se puede apagar o deshacer todo de una vez.
-const COUNT_LABELS = [["repetidas", "respuestas repetidas del equipo"], ["juntadas", "temas juntados por la IA"], ["de-fichas", "respuestas sacadas de fichas"], ["fichas", "fichas leídas"], ["conflictos", "temas con respuestas que se contradicen (no se guardaron)"], ["insuficientes", "temas sin datos suficientes (no se guardaron)"], ["errores", "errores"]];
+const COUNT_LABELS = [["repetidas", "respuestas repetidas del equipo"], ["juntadas", "temas juntados por la IA"], ["de-fichas", "respuestas sacadas de fichas"], ["fichas", "fichas leídas"], ["conflictos", "temas con respuestas que se contradicen (no se guardaron)"], ["insuficientes", "temas sin datos suficientes (no se guardaron)"], ["con-precio", "respuestas con precios (no se guardan: el precio va por el cotizador)"], ["genericos", "nombres de producto demasiado genéricos (no se guardaron)"], ["errores", "errores"]];
 const usd = (value) => `US$ ${Number(value || 0).toFixed(2)}`;
 
 export function IntensiveTraining({ supabase }) {

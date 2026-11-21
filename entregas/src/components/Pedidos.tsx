@@ -10,7 +10,7 @@ import {
   aplicarFiltros, FILTROS_DEFAULT, ordenar, PERIODO_LABEL, VISTA_LABEL, type CampoFecha, type Filtros, type Orden, type Periodo, type Vista,
 } from '../lib/filtros'
 import type { Estado, Pedido, Pelota } from '../lib/types'
-import { Empty, EstadoChip, Faltantes, PelotaTag } from './ui'
+import { Empty, EstadoChip, Faltantes, Listos, PelotaTag } from './ui'
 
 function filtrosDesdeQuery(q: URLSearchParams, yoId: string, esVendedor: boolean): Filtros {
   const f: Filtros = { ...FILTROS_DEFAULT, vendedorId: esVendedor ? yoId : '' }
@@ -185,7 +185,7 @@ export function PedidoFila({ pedido: p, compacta }: { pedido: Pedido; compacta?:
         <span className="sub"><span className="mono">{p.n_remito}</span> · {[p.localidad, p.provincia].filter(Boolean).join(', ') || 'Sin localidad'}{p.vendedor_id !== yo.id ? ` · ${nombre(p.vendedor_id, p.vendedor_email)}` : ''}</span>
       </div>
       <div className="cell">
-        <div className="row" style={{ gap: 5 }}><EstadoChip pedido={p} corto /> <Faltantes lista={falt} /></div>
+        <div className="row" style={{ gap: 5 }}><EstadoChip pedido={p} corto /> <Faltantes lista={falt} /> <Listos pedido={p} /></div>
         {alerta ? <span className="alerta-txt"><AlertCircle size={12} /> {alerta.texto}</span> : <span className="sub">{dias === 0 ? 'desde hoy' : `hace ${dias} ${dias === 1 ? 'día' : 'días'}`}</span>}
       </div>
       <div className="cell envio">

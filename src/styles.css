@@ -1641,3 +1641,11 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
   .product-hub .ph-head { grid-template-columns: 44px minmax(0, 1fr) auto; gap: 8px; }
   .product-hub .ph-photo { width: 44px; height: 44px; }
 }
+
+/* 21/11: la P del CRM tapa la app de adentro (Entregas, cotizador) mientras arranca. */
+.embedded-loading-wrap { position: relative; }
+.embedded-loading-wrap.loading { min-height: 70vh; }
+.embedded-loading-wrap.loading > iframe { opacity: 0; }
+.embedded-loading-wrap > iframe { transition: opacity .25s ease; }
+.embedded-splash { position: absolute; inset: 0; z-index: 2; }
+.embedded-splash .login-shell { min-height: 70vh; background: transparent; }

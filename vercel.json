@@ -43,7 +43,17 @@
     { "path": "/api/admin-users?cron=entrenamiento-13", "schedule": "10 6 * * *" },
     { "path": "/api/admin-users?cron=entrenamiento-14", "schedule": "40 7 * * *" },
     { "path": "/api/admin-users?cron=entrenamiento-15", "schedule": "20 9 * * *" },
-    { "path": "/api/admin-users?cron=entrenamiento-16", "schedule": "50 10 * * *" }
+    { "path": "/api/admin-users?cron=entrenamiento-16", "schedule": "50 10 * * *" },
+    { "path": "/api/admin-users?cron=mercadolibre-clips-1", "schedule": "5 3 * * *" },
+    { "path": "/api/admin-users?cron=mercadolibre-clips-2", "schedule": "35 3 * * *" },
+    { "path": "/api/admin-users?cron=mercadolibre-clips-3", "schedule": "5 4 * * *" },
+    { "path": "/api/admin-users?cron=mercadolibre-clips-4", "schedule": "35 4 * * *" },
+    { "path": "/api/admin-users?cron=mercadolibre-clips-5", "schedule": "5 5 * * *" },
+    { "path": "/api/admin-users?cron=mercadolibre-clips-6", "schedule": "35 5 * * *" },
+    { "path": "/api/admin-users?cron=mercadolibre-clips-7", "schedule": "5 6 * * *" },
+    { "path": "/api/admin-users?cron=mercadolibre-clips-8", "schedule": "35 6 * * *" },
+    { "path": "/api/admin-users?cron=mercadolibre-clips-9", "schedule": "5 7 * * *" },
+    { "path": "/api/admin-users?cron=mercadolibre-clips-10", "schedule": "35 7 * * *" }
   ],
   "functions": {
     "api/prospeccion.js": { "maxDuration": 60 },

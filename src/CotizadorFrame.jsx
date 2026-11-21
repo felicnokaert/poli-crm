@@ -14,6 +14,7 @@ export function CotizadorFrame({ session, client }) {
       openUrl={cotizadorUrl(client?.company || "", client?.phone || "")}
       title="Cotizador comercial"
       allow="clipboard-write"
+      loadingText="Cargando cotizador"
       bare
     />
   );

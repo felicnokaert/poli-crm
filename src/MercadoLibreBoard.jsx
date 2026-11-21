@@ -341,7 +341,7 @@ function Listings({ items, accounts, nickname, questionCounts, seller, issue, se
           {ML_SORTS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
         </select>
       </label>
-      <p className="muted small">Los números de "qué les falta" cuentan solo las activas. Las visitas de cada publicación se completan de a poco cada mañana (o con "Solo visitas" en Más → Datos). Los clips se marcan a mano porque Mercado Libre no deja leerlos: tocá la columna Clip de cada publicación, o pegá una lista en Más → Datos → Mercado Libre.</p>
+      <p className="muted small">Los números de "qué les falta" cuentan solo las activas. Las visitas se completan de a poco cada mañana (o con "Actualizar todo" en Más → Datos). El clip se lee solo de la calidad de cada publicación: las que no tienen se revisan cada madrugada; la columna Clip queda para corregir a mano.</p>
 
       {items.length > 0 && shown.length === 0 && <Empty text="No hay publicaciones con ese filtro." />}
       {page.length > 0 && (

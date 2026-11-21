@@ -8,7 +8,7 @@ import { trainingAdmin, trainingCron } from '../lib/ai-training.mjs';
 import { cleanupWorkspaces } from '../lib/workspace-cleanup-admin.mjs';
 import { technicalAdmin } from '../lib/technical-admin.mjs';
 import { listClientErrors, logClientError } from '../lib/error-log.mjs';
-import { mercadoLibreAccountCron, mercadoLibreAdmin, mercadoLibreAdsCron, mercadoLibreCron, mercadoLibreMarketCron, mercadoLibreSalesCron } from '../lib/mercadolibre.mjs';
+import { mercadoLibreAccountCron, mercadoLibreAdmin, mercadoLibreAdsCron, mercadoLibreCron, mercadoLibreMarketCron, mercadoLibreClipsCron, mercadoLibreSalesCron } from '../lib/mercadolibre.mjs';
 import { runIntegrationCron } from '../lib/integration-crons.mjs';
 import { contabiliumAdmin, contabiliumCron } from '../lib/contabilium.mjs';
 import { assistantAi } from '../lib/assistant-ai.mjs';
@@ -36,6 +36,16 @@ const CRONS = {
   'mercadolibre-5': mercadoLibreAccountCron(4),
   'mercadolibre-6': mercadoLibreAccountCron(5),
   'mercadolibre-mercado': mercadoLibreMarketCron,
+  'mercadolibre-clips-1': mercadoLibreClipsCron,
+  'mercadolibre-clips-2': mercadoLibreClipsCron,
+  'mercadolibre-clips-3': mercadoLibreClipsCron,
+  'mercadolibre-clips-4': mercadoLibreClipsCron,
+  'mercadolibre-clips-5': mercadoLibreClipsCron,
+  'mercadolibre-clips-6': mercadoLibreClipsCron,
+  'mercadolibre-clips-7': mercadoLibreClipsCron,
+  'mercadolibre-clips-8': mercadoLibreClipsCron,
+  'mercadolibre-clips-9': mercadoLibreClipsCron,
+  'mercadolibre-clips-10': mercadoLibreClipsCron,
   'mercadolibre-ventas-1': mercadoLibreSalesCron(0),
   'mercadolibre-ventas-2': mercadoLibreSalesCron(1),
   'mercadolibre-ventas-3': mercadoLibreSalesCron(2),

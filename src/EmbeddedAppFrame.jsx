@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { visibleSlice } from "./embedded-frame-view.mjs";
+import { Splash } from "./ui-primitives";
 
 // Otra aplicación del grupo (cotizador, entregas) mostrada como pestaña del CRM, con la misma sesión.
 // Contrato: la aplicación de adentro avisa `{ tipo: readyType }` cuando está lista y el CRM le contesta
@@ -14,9 +15,13 @@ import { visibleSlice } from "./embedded-frame-view.mjs";
 // Como adentro ya no hay desplazamiento, el CRM le manda `{ tipo: "crm:vista", top, alto }` = la parte del
 // iframe que se ve en pantalla, para que ubique ahí sus ventanas y avisos. `{ tipo: "app:subir" }` lleva la
 // página al principio del iframe (al cambiar de pantalla adentro).
-export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, openUrl, title, allow, bare = false }) {
+// 21/11 (Felipe: «Entregas sigue con el "Cargando…" en vez de nuestra P»): mientras la app de adentro arranca y toma la
+// sesión, se ve la misma animación de la P que en el resto del CRM (loadingText); se destapa poco después de pasarle la
+// sesión, o a los 6 s si la app no avisa (por ejemplo, si muestra su propio login).
+export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, openUrl, title, allow, bare = false, loadingText = "" }) {
   const frameRef = useRef(null);
   const [ready, setReady] = useState(false);
+  const [revealed, setRevealed] = useState(!loadingText);
   const [height, setHeight] = useState(null);
   const sessionRef = useRef(session);
   sessionRef.current = session;
@@ -28,6 +33,7 @@ export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, 
       origin,
     );
     sentRef.current = current.access_token;
+    if (loadingText) setTimeout(() => setRevealed(true), 700);
   }
 
   useEffect(() => {
@@ -94,10 +100,15 @@ export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, 
     };
   }, [heightType, height, origin]);
 
-  useEffect(() => { setReady(false); setHeight(null); sentRef.current = ""; }, [src]);
+  useEffect(() => { setReady(false); setHeight(null); sentRef.current = ""; setRevealed(!loadingText); }, [src, loadingText]);
+  useEffect(() => {
+    if (revealed) return undefined;
+    const timer = setTimeout(() => setRevealed(true), 6000);
+    return () => clearTimeout(timer);
+  }, [revealed]);
 
   if (bare) {
-    return (
+    const frame = (
       <iframe
         ref={frameRef}
         key={src}
@@ -108,6 +119,13 @@ export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, 
         title={title}
         allow={allow}
       />
+    );
+    if (!loadingText) return frame;
+    return (
+      <div className={`embedded-loading-wrap${revealed ? "" : " loading"}`}>
+        {frame}
+        {!revealed && <div className="embedded-splash"><Splash text={loadingText} /></div>}
+      </div>
     );
   }
 

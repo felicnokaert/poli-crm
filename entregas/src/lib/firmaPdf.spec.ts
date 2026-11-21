@@ -35,3 +35,35 @@ describe('buscarHueco (lugar en blanco para la firma)', () => {
     expect(h.y + h.h).toBeLessThanOrEqual(500 - 20)
   })
 })
+
+import { anclaRecibi, tintaOscura } from './firmaPdf'
+
+describe('anclaRecibi («Recibí conforme ____» del remito)', () => {
+  const it_ = (str: string, x: number, y: number, w: number) => ({ str, transform: [10, 0, 0, 10, x, y], width: w, height: 10 })
+  it('Contabilium: texto y raya juntos', () => {
+    const a = anclaRecibi([it_('Cantidad total: 2', 27, 172, 72), it_('Recibí conforme_________________________', 353, 46.6, 217)])!
+    expect(a.x).toBe(353)
+    expect(a.base).toBe(46.6)
+    expect(a.xFin).toBe(570)
+    expect(a.xRaya).toBeGreaterThan(400) // la raya empieza después de «Recibí conforme»
+    expect(a.xRaya).toBeLessThan(450)
+  })
+  it('raya como texto aparte', () => {
+    const a = anclaRecibi([it_('Recibí conforme:', 300, 60, 80), it_('______________', 385, 60.5, 150)])!
+    expect(a.xRaya).toBe(385)
+    expect(a.xFin).toBe(535)
+  })
+  it('sin «Recibí conforme» → null (se busca un lugar en blanco)', () => {
+    expect(anclaRecibi([it_('Transporte: Retira el cliente', 40, 395, 150)])).toBeNull()
+  })
+})
+
+describe('tintaOscura', () => {
+  it('el fondo gris no cuenta, el texto sí', () => {
+    const g = new Uint8Array(100 * 100).fill(240) // fondo gris claro
+    expect(tintaOscura(g, 100, 100, 0, 0, 100, 100)).toBe(0)
+    g[50 * 100 + 50] = 20
+    expect(tintaOscura(g, 100, 100, 40, 40, 20, 20)).toBe(1)
+    expect(tintaOscura(g, 100, 100, 0, 0, 30, 30)).toBe(0)
+  })
+})

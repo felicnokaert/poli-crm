@@ -232,7 +232,7 @@ export function MercadoLibreSync({ supabase, session }) {
       <p className="muted small">"Actualizar todo" hace, para cada cuenta, publicaciones, preguntas, visitas, calidad y el resumen (ventas, comisiones y envíos), y después la competencia y las tendencias. Tarda varios minutos: dejá la pestaña abierta. Todos los días a la mañana se hace solo una versión más corta.</p>
       <p className="muted small">Para conectar otra cuenta (por ejemplo FOAM), primero cerrá sesión en Mercado Libre o entrá con esa cuenta; Mercado Libre conecta la que esté abierta.</p>
       <div className="ml-clips">
-        <button type="button" className="link-button" onClick={() => setClipOpen(!clipOpen)}>{clipOpen ? "Cerrar clips" : "Cargar qué publicaciones tienen clip"}</button>
+        <button type="button" className="link-button" onClick={() => setClipOpen(!clipOpen)}>{clipOpen ? "Cerrar clips" : "Cargar a mano qué publicaciones tienen clip (respaldo: ya se lee solo de la calidad)"}</button>
         {clipOpen && (
           <div className="ml-clips-form">
             <p className="muted small">Mercado Libre no deja leer los clips desde el CRM. En Mercado Libre → Publicaciones, filtrá Activas y "Sin videos publicados" (o las que tienen), copiá cada página (Ctrl+A, Ctrl+C) y pegalas todas acá, una abajo de la otra. Se reconocen los códigos (#…, MLA…), los links y los títulos.</p>

@@ -72,3 +72,16 @@ test('apagado no gasta nada', async () => {
   assert.equal(result.skipped, 'apagado');
   assert.equal(fake.calls(), 0);
 });
+
+import { cleanProduct, usableProduct, hasPrice } from '../lib/ai-training.mjs';
+test('no guarda precios ni productos genéricos o cortados', () => {
+  assert.equal(cleanProduct('Prfv (plástico'), 'Prfv');
+  assert.equal(usableProduct('Resina'), false);
+  assert.equal(usableProduct('Resina epoxi'), true);
+  assert.equal(usableProduct('770-IR'), true);
+  assert.equal(usableProduct('Easyspray'), true);
+  assert.equal(usableProduct('Prfv'), false);
+  assert.ok(hasPrice('necesitarías 1 m2 (el valor publicado de $53.993)'));
+  assert.ok(hasPrice('sale USD 120'));
+  assert.ok(!hasPrice('rinde 200 gramos por m2'));
+});

@@ -451,7 +451,7 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
   const [teach, setTeach] = useState(null); // datos del formulario "Enseñarle" abierto
   useEffect(() => {
     if (!supabase?.from) return;
-    Promise.resolve(supabase.from("assistant_knowledge").select("id,question,product,answer,updated_at")).then(({ data }) => setTaughtAll(data || []), () => {});
+    Promise.resolve(supabase.from("assistant_knowledge").select("id,question,product,answer,updated_at,created_by_email")).then(({ data }) => setTaughtAll(data || []), () => {});
   }, [supabase]);
   const taught = typed ? matchTaught(taughtAll, typed) : [];
   // 23/10: si la pregunta es de la competencia en Mercado Libre, no se mezcla con la de ventas directas.

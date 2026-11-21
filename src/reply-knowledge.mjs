@@ -12,7 +12,7 @@ export async function loadReplyKnowledge(supabase, text, { today, loadPrices = n
   const intent = detectIntent(query);
   const [mlRows, taughtAll, prices] = await Promise.all([
     intent && supabase.rpc ? safe(supabase.rpc('search_ml_knowledge', { q: mlQuery(query, intent), max_rows: 40 }).then(({ data, error }) => (error ? [] : data || [])), []) : [],
-    supabase.from ? safe(Promise.resolve(supabase.from('assistant_knowledge').select('id,question,product,answer,updated_at')).then(({ data }) => data || []), []) : [],
+    supabase.from ? safe(Promise.resolve(supabase.from('assistant_knowledge').select('id,question,product,answer,updated_at,created_by_email')).then(({ data }) => data || []), []) : [],
     loadPrices && asksPrice(query) ? safe(loadPrices(supabase, priceWords(query), today), []) : [],
   ]);
   // Las reglas de la empresa ya van en el prompt; acá solo lo enseñado sobre el tema.

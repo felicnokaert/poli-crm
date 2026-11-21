@@ -203,7 +203,14 @@ export function listingContext(item = {}, { maxDescription = 1500, maxAttributes
 export function buildAiContext({ intent = null, facts = [], team = null, result = null, mlRows = [], taught = [], listing = '' } = {}) {
   const lines = [];
   if (intent) lines.push(`Tema detectado: ${intent.label}`);
-  if (taught.length) lines.push('Respuestas validadas por Felipe (son las oficiales: usalas antes que todo lo demás):', ...taught.map((entry) => `- P: ${entry.question}${entry.product ? ` [${entry.product}]` : ''} | R: ${entry.answer}`));
+  // 21/11: lo que aprendió solo el entrenamiento intensivo (created_by_email 'ia-entrenamiento') va aparte: sale de respuestas
+  // del equipo y de fichas, pero nadie lo revisó; lo de Felipe manda si se contradicen.
+  const learnedAlone = (entry) => /^ia-/.test(String(entry.created_by_email || ''));
+  const official = taught.filter((entry) => !learnedAlone(entry));
+  const learned = taught.filter(learnedAlone);
+  const line = (entry) => `- P: ${entry.question}${entry.product ? ` [${entry.product}]` : ''} | R: ${entry.answer}`;
+  if (official.length) lines.push('Respuestas validadas por Felipe (son las oficiales: usalas antes que todo lo demás):', ...official.map(line));
+  if (learned.length) lines.push('Aprendido solo de las respuestas del equipo y de las fichas técnicas (sin revisar; si contradice lo validado por Felipe, manda lo de Felipe):', ...learned.map(line));
   if (team && !team.varied) lines.push(`Respuesta del equipo en Mercado Libre (la que más repetimos, ${team.uses} de ${team.total} respuestas; es la válida): ${team.text}`);
   if (team?.varied) lines.push('En Mercado Libre respondimos distinto según el producto:', ...team.examples.map((text) => `- ${text}`));
   if (listing) lines.push(listing);

@@ -1,4 +1,5 @@
 // Idea de Felipe (21/11; mismo código en la app de conteo): la firma digital se ESTAMPA en el PDF del remito, en un lugar en blanco de la hoja,
+// si el remito la tiene (Contabilium); si no, en un lugar en blanco de la hoja,
 // con la aclaración, el DNI, la fecha y quién entregó. Así el «remito firmado» es el mismo remito con la firma encima.
 // Si en ninguna hoja hay lugar libre, se agrega una hoja al final con la firma (nunca se tapa nada escrito).
 import type { DatosConstancia } from './firma'
@@ -69,6 +70,37 @@ export function lineasSello(d: DatosConstancia): string[] {
   ].map(seguro)
 }
 
+/** Texto de una hoja tal como lo da pdfjs (lo mínimo que se usa). */
+export interface ItemTexto { str: string; transform: number[]; width: number; height: number }
+
+/**
+ * Busca el «Recibí conforme ______» que traen los remitos (Contabilium lo pone abajo a la derecha).
+ * Devuelve dónde empieza la texto, y dónde empieza y termina la raya, en puntos del PDF (y = renglón de base). Null si no hay.
+ */
+export function anclaRecibi(items: ItemTexto[]): { x: number; xRaya: number; xFin: number; base: number; alto: number } | null {
+  const it = items.find((i) => /recib[ií]\s*conforme/i.test(i.str))
+  if (!it) return null
+  const x = it.transform[4]; const base = it.transform[5]; const alto = it.height || 10
+  const s = it.str.replace(/\s+$/, '')
+  const iRaya = s.indexOf('_')
+  // ancho de la raya: proporcional a los caracteres (el guion bajo y las letras miden parecido en Helvetica/Arial)
+  let xRaya = iRaya > 0 ? x + it.width * (iRaya / s.length) : x + it.width
+  let xFin = x + it.width
+  if (iRaya < 0) { // la raya puede venir como otro texto pegado a la derecha
+    const raya = items.find((i) => /^_{5,}$/.test(i.str.trim()) && Math.abs(i.transform[5] - base) < 3 && i.transform[4] >= x)
+    if (raya) { xRaya = raya.transform[4]; xFin = raya.transform[4] + raya.width } else { xFin = Math.max(xRaya + 120, xFin) }
+  }
+  return { x, xRaya, xFin, base, alto }
+}
+
+/** Cuenta píxeles oscuros (texto o líneas: no los fondos grises) en un rectángulo de la imagen de la hoja. */
+export function tintaOscura(gris: Uint8Array | Uint8ClampedArray, ancho: number, alto: number, x: number, y: number, w: number, h: number, umbral = 170): number {
+  let n = 0
+  const x0 = Math.max(0, Math.floor(x)); const y0 = Math.max(0, Math.floor(y)); const x1 = Math.min(ancho, Math.ceil(x + w)); const y1 = Math.min(alto, Math.ceil(y + h))
+  for (let j = y0; j < y1; j++) for (let i = x0; i < x1; i++) if (gris[j * ancho + i] < umbral) n++
+  return n
+}
+
 export interface ResultadoSello { pdf: Uint8Array; pagina: number; hojaNueva: boolean; vista: string }
 
 /**
@@ -86,6 +118,7 @@ export async function estamparFirma(remito: Uint8Array, lienzo: HTMLCanvasElemen
   const ESCALA = 2 // 2 píxeles por punto: la letra chica y clara se ve (con 1 se perdía)
   const lector = await pdfjs.getDocument({ data: remito.slice() }).promise
   let elegido: { pagina: number; x: number; yPdf: number; w: number; h: number } | null = null
+  let anclado: { pagina: number; ancla: NonNullable<ReturnType<typeof anclaRecibi>>; altoF: number; anchoDatos: number; tam: number } | null = null
   for (let n = lector.numPages; n >= 1 && !elegido; n--) {
     const pag = await lector.getPage(n)
     const vista = pag.getViewport({ scale: ESCALA })
@@ -97,6 +130,23 @@ export async function estamparFirma(remito: Uint8Array, lienzo: HTMLCanvasElemen
     const rgba = ctx.getImageData(0, 0, c.width, c.height).data
     const gris = new Uint8Array(c.width * c.height)
     for (let i = 0; i < gris.length; i++) gris[i] = (rgba[i * 4] * 3 + rgba[i * 4 + 1] * 6 + rgba[i * 4 + 2]) / 10
+    // 1° el «Recibí conforme ____» del remito: la firma va sobre la raya y los datos a su izquierda (como en papel)
+    const ancla = anclaRecibi((await pag.getTextContent()).items as unknown as ItemTexto[])
+    if (ancla) {
+      const n0 = lineas.length; const tamA = 9; const altoDatos = n0 * (tamA + 2.2)
+      const anchoDatos = Math.min(230, ancla.x - 8 - 20)
+      const libre = (x: number, yBase: number, w: number, h: number) => { // (x, yBase) abajo a la izquierda, en puntos del PDF
+        const [px, py] = vista.convertToViewportPoint(x, yBase + h)
+        return tintaOscura(gris, c.width, c.height, px, py, w * ESCALA, h * ESCALA) <= 2
+      }
+      let altoF = 0
+      for (const hf of [64, 54, 44, 34]) if (libre(ancla.xRaya, ancla.base + ancla.alto * 0.9, ancla.xFin - ancla.xRaya, hf)) { altoF = hf; break }
+      if (altoF && anchoDatos >= 150 && libre(ancla.x - 8 - anchoDatos, ancla.base - 3, anchoDatos, altoDatos + 3)) {
+        anclado = { pagina: n - 1, ancla, altoF, anchoDatos, tam: tamA }
+        elegido = { pagina: n - 1, x: ancla.xRaya, yPdf: ancla.base, w: ancla.xFin - ancla.xRaya, h: altoF }
+        break
+      }
+    }
     for (const t of TAMANOS) {
       const h = buscarHueco(gris, c.width, c.height, Math.round(t.w * ESCALA), Math.round(t.h * ESCALA))
       if (h) {
@@ -119,6 +169,20 @@ export async function estamparFirma(remito: Uint8Array, lienzo: HTMLCanvasElemen
   const pagina = doc.getPage(elegido.pagina)
   const fuente = await doc.embedFont(StandardFonts.Helvetica)
   const imagen = await doc.embedPng(firma.png)
+  if (anclado) {
+    const { ancla, altoF, anchoDatos, tam: tamA } = anclado
+    const esc = Math.min((ancla.xFin - ancla.xRaya - 4) / firma.w, altoF / firma.h)
+    const fw = firma.w * esc; const fh = firma.h * esc
+    // la firma apoyada sobre la raya
+    pagina.drawImage(imagen, { x: ancla.xRaya + (ancla.xFin - ancla.xRaya - fw) / 2, y: ancla.base + ancla.alto * 0.9, width: fw, height: fh })
+    // los datos a la izquierda de «Recibí conforme», alineados a la derecha, el último renglón a la altura de la raya
+    const xDer = ancla.x - 8
+    lineas.forEach((l, i) => {
+      let t = l
+      while (t.length > 4 && fuente.widthOfTextAtSize(t, tamA) > anchoDatos) t = t.slice(0, -2) + '…'
+      pagina.drawText(t, { x: xDer - fuente.widthOfTextAtSize(t, tamA), y: ancla.base + (lineas.length - 1 - i) * (tamA + 2.2), size: tamA, font: fuente, color: rgb(0.08, 0.08, 0.08) })
+    })
+  } else {
   const { x, yPdf: y, w, h } = elegido
   const tam = Math.max(8, Math.min(10.5, h / 12)) // legible impreso y en el celular (Felipe, 21/11)
   const altoTexto = lineas.length * (tam + 2.2) + 4
@@ -133,6 +197,7 @@ export async function estamparFirma(remito: Uint8Array, lienzo: HTMLCanvasElemen
     while (t.length > 4 && fuente.widthOfTextAtSize(t, tam) > w - 8) t = t.slice(0, -2) + '…'
     pagina.drawText(t, { x: x + 4, y: y + altoTexto - (i + 1) * (tam + 2.2), size: tam, font: fuente, color: rgb(0.08, 0.08, 0.08) })
   })
+  }
   const pdf = await doc.save()
 
   // vista previa de la hoja firmada (para que quien entrega vea dónde quedó antes de guardar)

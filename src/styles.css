@@ -1649,3 +1649,8 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .embedded-loading-wrap > iframe { transition: opacity .25s ease; }
 .embedded-splash { position: absolute; inset: 0; z-index: 2; }
 .embedded-splash .login-shell { min-height: 70vh; background: transparent; }
+
+/* 21/11 Ayuda: guía del CRM arriba de los atajos */
+.shortcuts-guide { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 14px; }
+.shortcuts-guide a.primary { align-self: flex-start; text-decoration: none; padding: 9px 14px; border-radius: 10px; }
+.shortcuts-title { font-size: 14px; margin: 0 0 6px; }

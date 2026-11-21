@@ -92,3 +92,11 @@ test('respuesta sugerida: sin nota queda el borrador solo; el prompt prohíbe in
   assert.match(REPLY_PROMPT, /NUNCA inventes precios/);
   assert.match(buildReplyMessages({ context: 'x', transcript: 'a', message: 'b' })[0].content, /ÚLTIMO MENSAJE DEL CLIENTE: b/);
 });
+
+test('thinkingFor: Haiku 5.5 sin herramientas no piensa; con herramientas piensa poco; Opus 5.5 solo baja el esfuerzo', async () => {
+  const { thinkingFor } = await import('../lib/assistant-ai.mjs');
+  assert.deepEqual(thinkingFor('claude-haiku-5-5'), { thinking: { type: 'disabled' } });
+  assert.deepEqual(thinkingFor('claude-haiku-5-5', { tools: true }), { output_config: { effort: 'low' } });
+  assert.deepEqual(thinkingFor('claude-opus-5-5'), { output_config: { effort: 'low' } });
+  assert.deepEqual(thinkingFor('claude-haiku-4-5'), {});
+});

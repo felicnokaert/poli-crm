@@ -113,7 +113,8 @@ export function buildCustomerBase(rows = [], clients = [], { today = new Date().
     const isCredit = CREDIT.test(tipo);
     const isQuote = tipo === QUOTE;
     if (!isSale && !isCredit && !isQuote) continue;
-    const clientId = byKey.get(nameKey(row.cliente)) || byKey.get(cuitKey(row.cuit)) || byKey.get(phoneKey(row.tel));
+    // 21/11 (QA): el CUIT manda sobre el nombre (dos empresas con nombre parecido no se mezclan).
+    const clientId = byKey.get(cuitKey(row.cuit)) || byKey.get(nameKey(row.cliente)) || byKey.get(phoneKey(row.tel));
     if (!clientId) { if (isSale) unmatched.add(row.cliente); continue; }
     const entry = touch(clientId);
     entry.names.add(String(row.cliente || '').trim());

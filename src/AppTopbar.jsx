@@ -93,8 +93,8 @@ export function AppTopbar({ title, myChannels, primaryChannel, readiness, syncSt
         <button
           type="button"
           className="icon-button"
-          aria-label="Ver atajos de teclado"
-          title="Atajos de teclado"
+          aria-label="Ayuda: guía del CRM y atajos"
+          title="Ayuda: guía del CRM y atajos"
           onClick={onOpenShortcuts}
         >
           <HelpCircle size={18} />

@@ -135,3 +135,12 @@ test('lo trabajado a la noche (después de las 21:00 argentinas, ya es el día s
   assert.equal(recentlyWorked(worked, 'reactivar', '2026-11-04'), true);
   assert.equal(recentlyWorked(worked, 'reactivar', '2026-11-06'), false);
 });
+
+test('el CUIT manda sobre el nombre al emparejar comprobantes', async () => {
+  const { buildCustomerBase } = await import('../src/customer-base.mjs');
+  const clients = [{ id: 'a', company: 'Aislaciones Sur', cuit: '20-11111111-1' }, { id: 'b', company: 'Aislaciones del Sur', cuit: '30-22222222-2' }];
+  const rows = [{ company: 'POLIPLAST', tipo: 'FCA', fecha: '2026-11-01', cliente: 'Aislaciones Sur', cuit: '30222222222', total: 100 }];
+  const { byClient } = buildCustomerBase(rows, clients, { today: '2026-11-21' });
+  assert.ok(byClient.has('b'));
+  assert.ok(!byClient.has('a'));
+});

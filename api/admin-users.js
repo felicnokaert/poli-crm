@@ -4,6 +4,7 @@ import { deleteUser, isAdminEmail } from '../lib/admin-users.mjs';
 import { authenticatedCorporateUser } from '../lib/corporate-auth.mjs';
 import { whatsappAutoAdmin } from '../lib/whatsapp-autoreply.mjs';
 import { automationPauseAdmin } from '../lib/automation-pause.mjs';
+import { trainingAdmin, trainingCron } from '../lib/ai-training.mjs';
 import { cleanupWorkspaces } from '../lib/workspace-cleanup-admin.mjs';
 import { technicalAdmin } from '../lib/technical-admin.mjs';
 import { listClientErrors, logClientError } from '../lib/error-log.mjs';
@@ -47,6 +48,23 @@ const CRONS = {
   alertas: alertsCron,
   'trello-plan': trelloPlanCron,
   'gmail-envios': gmailAutoSendCron,
+  // 21/11: entrenamiento intensivo del asistente (hasta el 25/11), una tanda por horario.
+  'entrenamiento-1': trainingCron,
+  'entrenamiento-2': trainingCron,
+  'entrenamiento-3': trainingCron,
+  'entrenamiento-4': trainingCron,
+  'entrenamiento-5': trainingCron,
+  'entrenamiento-6': trainingCron,
+  'entrenamiento-7': trainingCron,
+  'entrenamiento-8': trainingCron,
+  'entrenamiento-9': trainingCron,
+  'entrenamiento-10': trainingCron,
+  'entrenamiento-11': trainingCron,
+  'entrenamiento-12': trainingCron,
+  'entrenamiento-13': trainingCron,
+  'entrenamiento-14': trainingCron,
+  'entrenamiento-15': trainingCron,
+  'entrenamiento-16': trainingCron,
 };
 
 export default async function handler(request, response) {
@@ -76,6 +94,7 @@ export default async function handler(request, response) {
     : action === 'whatsapp-auto' ? await whatsappAutoAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'automation-pause' ? await automationPauseAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'gmail' ? await gmailAdmin(request)
+    : action === 'training' ? await trainingAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'assistant' ? await assistantAi(request)
     : await deleteUser(request);
   return response.status(result.status).json(result.body);

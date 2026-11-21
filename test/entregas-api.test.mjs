@@ -74,3 +74,57 @@ test('cambiar estado usa la función de expedición con operario y depósito; re
   assert.equal(r.code, 409);
   assert.match(r.body.error, /No podés pasar/);
 });
+
+const PID = '11111111-2222-3333-4444-555555555555';
+function richHttp() {
+  const calls = [];
+  const http = async (url, options = {}) => {
+    calls.push({ url, options });
+    if (url.includes('entregas_config')) return reply(200, CONFIG);
+    if (url.includes('entregas_api_log')) return reply(201, null);
+    if (url.includes('entregas_expresos')) return reply(200, [{ id: 'x1', nombre: 'OCA' }]);
+    if (url.includes('entregas_pedidos')) return reply(200, [{ id: PID, cliente: 'Cliente', expreso_id: 'x1', estado: 'despachado' }]);
+    if (url.includes('entregas_eventos')) return reply(200, [{ pedido_id: PID, a_estado: 'despachado', operador: 'Neyen', created_at: '2026-11-20T14:00:00Z' }]);
+    if (url.includes('entregas_archivos')) return reply(200, [{ pedido_id: PID, tipo: 'guia', storage_path: `${PID}/guia-1.pdf` }, { pedido_id: PID, tipo: 'remito', storage_path: `${PID}/remito.pdf` }]);
+    if (url.includes('/storage/v1/object/sign/')) return reply(200, { signedURL: '/object/sign/entregas/x?token=t' });
+    return reply(404, {});
+  };
+  return { http, calls };
+}
+
+test('hoy suma quién despachó, cuándo y si tiene guía o comprobante', async () => {
+  const { http } = richHttp();
+  const r = res();
+  await entregasApiHandler({ method: 'GET', headers: { 'x-api-key': KEY }, query: { entregas: 'hoy', operador: 'Marcos', deposito: 'Villa Domínico' } }, r, env, http, NOW);
+  assert.equal(r.code, 200);
+  const [row] = r.body.pedidos;
+  assert.equal(row.despacho_operador, 'Neyen');
+  assert.equal(row.despacho_at, '2026-11-20T14:00:00Z');
+  assert.equal(row.tiene_guia_archivo, true);
+  assert.equal(row.tiene_comprobante, false);
+  assert.equal(row.archivos, 2);
+});
+
+test('pedido: historial y archivos con link firmado, sin la ruta interna', async () => {
+  const { http } = richHttp();
+  const r = res();
+  await entregasApiHandler({ method: 'GET', headers: { 'x-api-key': KEY }, query: { entregas: 'pedido', id: PID, operador: 'Marcos', deposito: 'Villa Domínico' } }, r, env, http, NOW);
+  assert.equal(r.code, 200);
+  assert.equal(r.body.eventos.length, 1);
+  assert.equal(r.body.archivos[0].url, 'https://x.supabase.co/storage/v1/object/sign/entregas/x?token=t');
+  assert.equal(r.body.archivos[0].storage_path, undefined);
+  const bad = res();
+  await entregasApiHandler({ method: 'GET', headers: { 'x-api-key': KEY }, query: { entregas: 'pedido', id: 'x', operador: 'Marcos', deposito: 'Villa Domínico' } }, bad, env, http, NOW);
+  assert.equal(bad.code, 400);
+});
+
+test('operario de sistema «Resumen diario»: puede leer, no puede cambiar estados', async () => {
+  const { http } = richHttp();
+  const r = res();
+  await entregasApiHandler({ method: 'GET', headers: { 'x-api-key': KEY }, query: { entregas: 'hoy', operador: 'Resumen diario' } }, r, env, http, NOW);
+  assert.equal(r.code, 200);
+  const w = res();
+  await entregasApiHandler({ method: 'POST', headers: { 'x-api-key': KEY }, query: { entregas: 'estado' }, body: { pedido: PID, estado: 'entregado', operador: 'Resumen diario', deposito: 'Todos' } }, w, env, http, NOW);
+  assert.equal(w.code, 400);
+  assert.match(w.body.error, /solo puede consultar/);
+});

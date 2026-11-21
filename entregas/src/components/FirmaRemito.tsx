@@ -4,6 +4,7 @@ import { Eraser, PenLine } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { mensajeError } from '../lib/api'
 import { api } from '../lib/cliente'
+import { estamparFirma } from '../lib/firmaPdf' // la firma va ESTAMPADA en el PDF del remito (Felipe, 21/11)
 import { useDatos } from '../lib/datos'
 import { dniValido, firmaSuficiente, lineasConstancia, nombreArchivoFirma, nombreValido } from '../lib/firma'
 import { depositoActual, operadorActual } from '../lib/operador'
@@ -67,6 +68,8 @@ export function FirmaRemito({ pedido, onClose, onHecho, alFirmar }: {
   const [modo, setModo] = useState<'retiro' | 'entrega'>(alFirmar?.retiro ? 'retiro' : 'entrega')
   const [cerrar, setCerrar] = useState(Boolean(alFirmar))
   const [guardando, setGuardando] = useState(false)
+  // remito con la firma estampada, para mirarlo antes de guardar
+  const [previa, setPrevia] = useState<{ archivo: File; vista: string; pagina: number; hojaNueva: boolean } | null>(null)
 
   // El lienzo toma el ancho de la pantalla (el celular de costado firma mejor).
   useEffect(() => {
@@ -112,15 +115,49 @@ export function FirmaRemito({ pedido, onClose, onHecho, alFirmar }: {
   const dniOk = dniValido(dni)
   const listo = Boolean(nombreOk && dniOk && firmaSuficiente(puntos))
 
-  async function guardar() {
+  /** busca el PDF del remito del pedido (null si no tiene). */
+  async function bajarRemito(): Promise<Uint8Array | null> {
+    const det = await api.obtenerPedido(pedido.id)
+    const r = det?.archivos.find((a) => a.tipo === 'remito' && ((a.mime ?? '').includes('pdf') || /\.pdf$/i.test(a.nombre)))
+    if (!r) return null
+    const resp = await fetch(await api.urlArchivo(r))
+    if (!resp.ok) throw new Error('No pude bajar el PDF del remito. Probá de nuevo.')
+    return new Uint8Array(await resp.arrayBuffer())
+  }
+
+  const datosFirma = () => ({ pedido, nombre: nombreOk!, dni: dniOk!, entrego: yo.operador || operadorActual() || yo.nombre, deposito: depositoActual(), momento: new Date(), modo })
+
+  /** Paso 1: arma el remito firmado (o la constancia si el pedido no tiene PDF) y lo muestra. */
+  async function preparar() {
     if (!listo || !lienzo.current || !nombreOk || !dniOk) return
     setGuardando(true)
     try {
-      const entrego = yo.operador || operadorActual() || yo.nombre
-      const blob = await armarConstancia(lienzo.current, { pedido, nombre: nombreOk, dni: dniOk, entrego, deposito: depositoActual(), momento: new Date(), modo })
-      const archivo = new File([blob], nombreArchivoFirma(pedido.n_remito), { type: 'image/jpeg' })
-      await api.subirArchivo(pedido.id, 'remito_firmado', archivo)
-      await api.comentar(pedido.id, `Firmó ${modo === 'retiro' ? 'el retiro' : 'la recepción'}: ${nombreOk}, DNI ${dniOk} (firma digital).`)
+      const datos = datosFirma()
+      const remito = await bajarRemito().catch(() => null)
+      if (remito) {
+        const r = await estamparFirma(remito, lienzo.current, datos)
+        const archivo = new File([new Uint8Array(r.pdf)], nombreArchivoFirma(pedido.n_remito).replace(/\.jpg$/, '.pdf'), { type: 'application/pdf' })
+        setPrevia({ archivo, vista: r.vista, pagina: r.pagina, hojaNueva: r.hojaNueva })
+      } else {
+        const blob = await armarConstancia(lienzo.current, datos)
+        const archivo = new File([blob], nombreArchivoFirma(pedido.n_remito), { type: 'image/jpeg' })
+        setPrevia({ archivo, vista: URL.createObjectURL(blob), pagina: 0, hojaNueva: false })
+      }
+    } catch (e) {
+      avisar(mensajeError(e), true)
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  /** Paso 2: guarda lo que se vio. */
+  async function guardar() {
+    if (!previa || !nombreOk || !dniOk) return
+    setGuardando(true)
+    try {
+      const nota = `Firmó ${modo === 'retiro' ? 'el retiro' : 'la recepción'}: ${nombreOk}, DNI ${dniOk} (firma digital${previa.pagina ? ' estampada en el remito' : ''}).`
+      await api.subirArchivo(pedido.id, 'remito_firmado', previa.archivo)
+      await api.comentar(pedido.id, nota)
       if (cerrar && alFirmar) await alFirmar.hacer()
       avisar('Remito firmado guardado')
       await onHecho()
@@ -132,14 +169,26 @@ export function FirmaRemito({ pedido, onClose, onHecho, alFirmar }: {
     }
   }
 
+
   return (
     <Modal titulo="Firma del remito" subtitulo={`Remito ${pedido.n_remito} · ${pedido.cliente}. Pasale el celular al cliente para que firme.`} onClose={onClose}
       pie={(
         <>
-          <button className="btn" onClick={onClose} disabled={guardando}>Cancelar</button>
-          <button className="btn btn-primary" onClick={() => void guardar()} disabled={!listo || guardando}><PenLine size={16} /> {guardando ? 'Guardando…' : 'Guardar remito firmado'}</button>
+          {previa
+            ? <button className="btn" onClick={() => setPrevia(null)} disabled={guardando}>Volver a firmar</button>
+            : <button className="btn" onClick={onClose} disabled={guardando}>Cancelar</button>}
+          {previa
+            ? <button className="btn btn-primary" onClick={() => void guardar()} disabled={guardando}><PenLine size={16} /> {guardando ? 'Guardando…' : 'Guardar remito firmado'}</button>
+            : <button className="btn btn-primary" onClick={() => void preparar()} disabled={!listo || guardando}><PenLine size={16} /> {guardando ? 'Preparando…' : 'Ver cómo queda'}</button>}
         </>
       )}>
+      {previa && (
+        <div className="firma-previa">
+          <div className="aviso info small">{previa.pagina ? (previa.hojaNueva ? 'El remito no tenía lugar libre: la firma va en una hoja nueva al final.' : `Así queda el remito firmado (hoja ${previa.pagina}). Revisalo y tocá «Guardar».`) : 'Este pedido no tiene el PDF del remito: se guarda una constancia firmada.'}</div>
+          <img src={previa.vista} alt="Remito firmado" style={{ width: '100%', border: '1px solid #ddd', borderRadius: 8 }} />
+        </div>
+      )}
+      <div style={{ display: previa ? 'none' : undefined }}>
       <div className="segmentado" role="group" aria-label="Cómo se entrega">
         <button type="button" className={`btn btn-sm${modo === 'retiro' ? ' btn-dark' : ''}`} onClick={() => setModo('retiro')}>Retira en el depósito</button>
         <button type="button" className={`btn btn-sm${modo === 'entrega' ? ' btn-dark' : ''}`} onClick={() => setModo('entrega')}>Lo recibe en destino</button>
@@ -161,6 +210,7 @@ export function FirmaRemito({ pedido, onClose, onHecho, alFirmar }: {
           <input type="checkbox" checked={cerrar} onChange={(e) => setCerrar(e.target.checked)} /> {alFirmar.label}
         </label>
       )}
+      </div>
     </Modal>
   )
 }

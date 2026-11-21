@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ExternalLink } from "lucide-react";
-import { visibleSlice } from "./embedded-frame-view.mjs";
+import { resolvedTheme, visibleSlice, withTheme } from "./embedded-frame-view.mjs";
 import { Splash } from "./ui-primitives";
 
 // Otra aplicación del grupo (cotizador, entregas) mostrada como pestaña del CRM, con la misma sesión.
@@ -22,6 +22,12 @@ export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, 
   const frameRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [revealed, setRevealed] = useState(!loadingText);
+  // 21/11: el tema va en la dirección al abrir (sin parpadeo) y después por mensaje cada vez que cambia.
+  const [initialTheme] = useState(resolvedTheme);
+  const frameSrc = withTheme(src, initialTheme);
+  function sendTheme() {
+    frameRef.current?.contentWindow?.postMessage({ tipo: "crm:tema", tema: resolvedTheme() }, origin);
+  }
   const [height, setHeight] = useState(null);
   const sessionRef = useRef(session);
   sessionRef.current = session;
@@ -42,6 +48,7 @@ export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, 
       const tipo = event.data?.tipo;
       if (tipo === readyType) {
         setReady(true);
+        sendTheme();
         // Cada aviso de «lista» recibe la sesión: si la app de adentro se recargó sola, no se queda en «Cargando…».
         sendSession(sessionRef.current);
       }
@@ -100,6 +107,16 @@ export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, 
     };
   }, [heightType, height, origin]);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    const observer = typeof MutationObserver === "function" ? new MutationObserver(sendTheme) : null;
+    observer?.observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+    const media = window.matchMedia?.("(prefers-color-scheme: dark)");
+    media?.addEventListener?.("change", sendTheme);
+    return () => { observer?.disconnect(); media?.removeEventListener?.("change", sendTheme); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [origin]);
+
   useEffect(() => { setReady(false); setHeight(null); sentRef.current = ""; setRevealed(!loadingText); }, [src, loadingText]);
   useEffect(() => {
     if (revealed) return undefined;
@@ -115,7 +132,7 @@ export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, 
         className={`embedded-app${height != null ? " auto-height" : ""}`}
         style={height != null ? { height } : undefined}
         scrolling={height != null ? "no" : undefined}
-        src={src}
+        src={frameSrc}
         title={title}
         allow={allow}
       />
@@ -134,7 +151,7 @@ export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, 
       <div className="cotizador-frame-bar">
         <a className="secondary" href={openUrl} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Abrir en otra pestaña</a>
       </div>
-      <iframe ref={frameRef} key={src} className="cotizador-frame" src={src} title={title} allow={allow} />
+      <iframe ref={frameRef} key={src} className="cotizador-frame" src={frameSrc} title={title} allow={allow} />
     </div>
   );
 }

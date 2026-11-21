@@ -23,7 +23,7 @@ test('el CRM le pasa la sesión a la app de adentro cuando avisa que está lista
     }));
     const frame = container.querySelector('iframe');
     const sent = [];
-    frame.contentWindow.postMessage = (data, target) => sent.push({ data, target });
+    frame.contentWindow.postMessage = (data, target) => { if (data.tipo === 'crm:sesion') sent.push({ data, target }); };
     await act(async () => {
       window.dispatchEvent(message({ tipo: 'app:listo' }, origin, frame.contentWindow));
     });
@@ -41,7 +41,7 @@ test('no le pasa la sesión a un mensaje de otro origen', async () => {
     }));
     const frame = container.querySelector('iframe');
     const sent = [];
-    frame.contentWindow.postMessage = (data) => sent.push(data);
+    frame.contentWindow.postMessage = (data) => { if (data.tipo === 'crm:sesion') sent.push(data); };
     await act(async () => {
       window.dispatchEvent(message({ tipo: 'app:listo' }, 'https://otro.example.com', frame.contentWindow));
     });
@@ -58,7 +58,7 @@ test('si la app de adentro avisa «lista» otra vez (se recargó), le vuelve a m
     }));
     const frame = container.querySelector('iframe');
     const sent = [];
-    frame.contentWindow.postMessage = (data) => sent.push(data);
+    frame.contentWindow.postMessage = (data) => { if (data.tipo === 'crm:sesion') sent.push(data); };
     await act(async () => { window.dispatchEvent(message({ tipo: 'app:listo' }, origin, frame.contentWindow)); });
     await act(async () => { window.dispatchEvent(message({ tipo: 'app:listo' }, origin, frame.contentWindow)); });
     assert.equal(sent.length, 2);
@@ -77,4 +77,21 @@ test('con loadingText muestra la P del CRM hasta pasarle la sesión', async () =
     await act(async () => { window.dispatchEvent(message({ tipo: 'app:listo' }, origin, frame.contentWindow)); });
     await waitFor(() => assert.ok(!container.querySelector('.embedded-splash')), { timeout: 2000 });
   } finally { cleanup(); }
+});
+
+// 21/11: el tema del CRM viaja a la app de adentro (en la dirección y por mensaje).
+test('le pasa el tema del CRM en la dirección y por mensaje', async () => {
+  try {
+    document.documentElement.dataset.theme = 'dark';
+    const origin = 'https://app.example.com';
+    const { container } = render(React.createElement(EmbeddedAppFrame, { session: { access_token: 'a', refresh_token: 'r' }, src: `${origin}/?embed=1`, origin, readyType: 'app:listo', title: 'App', bare: true }));
+    const frame = container.querySelector('iframe');
+    assert.match(frame.getAttribute('src'), /tema=dark/);
+    const sent = [];
+    frame.contentWindow.postMessage = (data) => { sent.push(data); };
+    await act(async () => { window.dispatchEvent(message({ tipo: 'app:listo' }, origin, frame.contentWindow)); });
+    assert.ok(sent.some((data) => data.tipo === 'crm:tema' && data.tema === 'dark'));
+    await act(async () => { document.documentElement.dataset.theme = 'light'; await new Promise((resolve) => setTimeout(resolve, 20)); });
+    assert.ok(sent.some((data) => data.tipo === 'crm:tema' && data.tema === 'light'), 'al cambiar el tema lo vuelve a mandar');
+  } finally { cleanup(); delete document.documentElement.dataset.theme; }
 });

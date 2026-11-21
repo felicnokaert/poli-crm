@@ -13,3 +13,18 @@ export function visibleSlice({ rect, viewportHeight, viewportWidth = Infinity, t
   const alto = Math.max(0, Math.round(to - from));
   return { top, alto };
 }
+
+// 21/11: el tema que ve la persona en el CRM (Más → Perfil: automático, claro u oscuro) para pasárselo a Entregas y al cotizador.
+export function resolvedTheme(root = globalThis.document?.documentElement, win = globalThis.window) {
+  const chosen = root?.dataset?.theme;
+  if (chosen === 'dark' || chosen === 'light') return chosen;
+  try { return win?.matchMedia?.('(prefers-color-scheme: dark)')?.matches ? 'dark' : 'light'; } catch { return 'light'; }
+}
+
+export function withTheme(src, theme) {
+  try {
+    const url = new URL(src);
+    url.searchParams.set('tema', theme);
+    return url.toString();
+  } catch { return src; }
+}

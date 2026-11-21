@@ -665,3 +665,90 @@ textarea.control { min-height: 70px; resize: vertical; }
   .alto-auto .lote-pie { position: fixed; left: 0; right: 0; bottom: auto; padding: 8px 12px; top: calc(var(--vista-top, 0px) + var(--vista-alto, 100vh)); transform: translateY(-100%); }
   .alto-auto .bulk-bar { left: 12px; right: 12px; }
 }
+
+
+/* ---------------------------------------------------------------- Modo oscuro (21/11)
+   Dentro del CRM sigue el tema del CRM (data-theme en <html>, lo manda el CRM con crm:tema); suelta sigue al
+   dispositivo. Dentro de la app de conteo (.en-app) no cambia: esa app es clara. */
+:root[data-theme="dark"] {
+  --ink: #e7e7e9; --graphite: #c4c5c8; --steel: #a3a4a8; --mist: #26262a; --line: #34343a; --line-soft: #2c2c31;
+  --panel: #1c1c1f; --page: #121214; --focus: #6aa6cf;
+  --t-pendiente-bg: #3a2e14; --t-pendiente: #f0c46c;
+  --t-info-bg: #1d2c3b; --t-info: #8ec1ec;
+  --t-alerta-bg: #3b2a17; --t-alerta: #f4a35a;
+  --t-transito-bg: #29243f; --t-transito: #b3a7f0;
+  --t-ok-bg: #17302a; --t-ok: #6cc3a6;
+  --t-peligro-bg: #3d1f1c; --t-peligro: #f19a8e;
+  --t-neutro-bg: #2a2a2e; --t-neutro: #b4b5b9;
+  --shadow: 0 1px 2px #00000040, 0 6px 22px #00000059; --shadow-lg: 0 20px 60px #00000099;
+  color-scheme: dark;
+}
+:root[data-theme="dark"] .btn:hover:not(:disabled), :root[data-theme="dark"] .control:hover, :root[data-theme="dark"] .chip-btn:hover, :root[data-theme="dark"] .kpi:hover, :root[data-theme="dark"] .expreso-opt:hover { border-color: #4a4a50; }
+:root[data-theme="dark"] .btn-dark, :root[data-theme="dark"] .chip-btn[aria-pressed='true'], :root[data-theme="dark"] .exp-tab[aria-pressed='true'], :root[data-theme="dark"] .timeline .dot.estado, :root[data-theme="dark"] .toast, :root[data-theme="dark"] .bulk-bar { color: #141416; }
+:root[data-theme="dark"] .btn-dark:hover:not(:disabled) { background: #ffffff; border-color: #ffffff; }
+:root[data-theme="dark"] .exp-tab[aria-pressed='true'] span { color: #3d3e41; }
+:root[data-theme="dark"] .toast.err { background: #f19a8e; }
+:root[data-theme="dark"] .control { background: #1d1d20; }
+:root[data-theme="dark"] .control:focus { background: #222226; box-shadow: 0 0 0 3px #6aa6cf33; }
+:root[data-theme="dark"] .fila:hover, :root[data-theme="dark"] .expreso-opt[aria-pressed='true'], :root[data-theme="dark"] .drop:hover, :root[data-theme="dark"] .drop.over { background: #232327; }
+:root[data-theme="dark"] .drop { background: #1d1d20; border-color: #3b3b41; }
+:root[data-theme="dark"] .kpi.hot, :root[data-theme="dark"] .lote-item.mal { border-color: #5a2a28; }
+:root[data-theme="dark"] .kpi.zero .k-val, :root[data-theme="dark"] .fila .chev, :root[data-theme="dark"] .empty svg, :root[data-theme="dark"] .cal-d.fuera .n, :root[data-theme="dark"] .dato dd.vacio { color: #6f7075; }
+:root[data-theme="dark"] .timeline .dot.comentario { background: var(--t-info-bg); color: var(--t-info); }
+:root[data-theme="dark"] .lote-item.ok { background: #17302a; }
+:root[data-theme="dark"] .mensaje-preview { background: #17302a; border-color: #24493d; }
+:root[data-theme="dark"] .cal-d.fuera { background: #18181b; }
+:root[data-theme="dark"] .skeleton { background: linear-gradient(90deg, #26262a 0%, #303035 50%, #26262a 100%); background-size: 200% 100%; }
+:root[data-theme="dark"] .bottom-nav { background: #1c1c1f; }
+:root[data-theme="dark"] .pelota.p-expedicion { color: var(--t-pendiente); }
+:root[data-theme="dark"] .pelota.p-vendedor { color: var(--t-peligro); }
+:root[data-theme="dark"] .pelota.p-expreso { color: var(--t-transito); }
+:root[data-theme="dark"] .overlay { background: #000000a6; }
+:root[data-theme="dark"].embebido .sidebar { background: #121214ee; }
+:root[data-theme="dark"].embebido .nav { background: #26262a; }
+:root[data-theme="dark"].embebido .nav a { color: #a9aaae; }
+:root[data-theme="dark"].embebido .nav a:hover { background: #ffffff14; }
+:root[data-theme="dark"].embebido .nav a[aria-current='page'] { background: #34343a; box-shadow: 0 2px 8px #00000066; }
+:root[data-theme="dark"].embebido .nav-badge { background: #34343a; color: #e2e2e4; }
+@media (prefers-color-scheme: dark) {
+:root:not([data-theme="light"]):not(.en-app) {
+  --ink: #e7e7e9; --graphite: #c4c5c8; --steel: #a3a4a8; --mist: #26262a; --line: #34343a; --line-soft: #2c2c31;
+  --panel: #1c1c1f; --page: #121214; --focus: #6aa6cf;
+  --t-pendiente-bg: #3a2e14; --t-pendiente: #f0c46c;
+  --t-info-bg: #1d2c3b; --t-info: #8ec1ec;
+  --t-alerta-bg: #3b2a17; --t-alerta: #f4a35a;
+  --t-transito-bg: #29243f; --t-transito: #b3a7f0;
+  --t-ok-bg: #17302a; --t-ok: #6cc3a6;
+  --t-peligro-bg: #3d1f1c; --t-peligro: #f19a8e;
+  --t-neutro-bg: #2a2a2e; --t-neutro: #b4b5b9;
+  --shadow: 0 1px 2px #00000040, 0 6px 22px #00000059; --shadow-lg: 0 20px 60px #00000099;
+  color-scheme: dark;
+}
+:root:not([data-theme="light"]):not(.en-app) .btn:hover:not(:disabled), :root:not([data-theme="light"]):not(.en-app) .control:hover, :root:not([data-theme="light"]):not(.en-app) .chip-btn:hover, :root:not([data-theme="light"]):not(.en-app) .kpi:hover, :root:not([data-theme="light"]):not(.en-app) .expreso-opt:hover { border-color: #4a4a50; }
+:root:not([data-theme="light"]):not(.en-app) .btn-dark, :root:not([data-theme="light"]):not(.en-app) .chip-btn[aria-pressed='true'], :root:not([data-theme="light"]):not(.en-app) .exp-tab[aria-pressed='true'], :root:not([data-theme="light"]):not(.en-app) .timeline .dot.estado, :root:not([data-theme="light"]):not(.en-app) .toast, :root:not([data-theme="light"]):not(.en-app) .bulk-bar { color: #141416; }
+:root:not([data-theme="light"]):not(.en-app) .btn-dark:hover:not(:disabled) { background: #ffffff; border-color: #ffffff; }
+:root:not([data-theme="light"]):not(.en-app) .exp-tab[aria-pressed='true'] span { color: #3d3e41; }
+:root:not([data-theme="light"]):not(.en-app) .toast.err { background: #f19a8e; }
+:root:not([data-theme="light"]):not(.en-app) .control { background: #1d1d20; }
+:root:not([data-theme="light"]):not(.en-app) .control:focus { background: #222226; box-shadow: 0 0 0 3px #6aa6cf33; }
+:root:not([data-theme="light"]):not(.en-app) .fila:hover, :root:not([data-theme="light"]):not(.en-app) .expreso-opt[aria-pressed='true'], :root:not([data-theme="light"]):not(.en-app) .drop:hover, :root:not([data-theme="light"]):not(.en-app) .drop.over { background: #232327; }
+:root:not([data-theme="light"]):not(.en-app) .drop { background: #1d1d20; border-color: #3b3b41; }
+:root:not([data-theme="light"]):not(.en-app) .kpi.hot, :root:not([data-theme="light"]):not(.en-app) .lote-item.mal { border-color: #5a2a28; }
+:root:not([data-theme="light"]):not(.en-app) .kpi.zero .k-val, :root:not([data-theme="light"]):not(.en-app) .fila .chev, :root:not([data-theme="light"]):not(.en-app) .empty svg, :root:not([data-theme="light"]):not(.en-app) .cal-d.fuera .n, :root:not([data-theme="light"]):not(.en-app) .dato dd.vacio { color: #6f7075; }
+:root:not([data-theme="light"]):not(.en-app) .timeline .dot.comentario { background: var(--t-info-bg); color: var(--t-info); }
+:root:not([data-theme="light"]):not(.en-app) .lote-item.ok { background: #17302a; }
+:root:not([data-theme="light"]):not(.en-app) .mensaje-preview { background: #17302a; border-color: #24493d; }
+:root:not([data-theme="light"]):not(.en-app) .cal-d.fuera { background: #18181b; }
+:root:not([data-theme="light"]):not(.en-app) .skeleton { background: linear-gradient(90deg, #26262a 0%, #303035 50%, #26262a 100%); background-size: 200% 100%; }
+:root:not([data-theme="light"]):not(.en-app) .bottom-nav { background: #1c1c1f; }
+:root:not([data-theme="light"]):not(.en-app) .pelota.p-expedicion { color: var(--t-pendiente); }
+:root:not([data-theme="light"]):not(.en-app) .pelota.p-vendedor { color: var(--t-peligro); }
+:root:not([data-theme="light"]):not(.en-app) .pelota.p-expreso { color: var(--t-transito); }
+:root:not([data-theme="light"]):not(.en-app) .overlay { background: #000000a6; }
+:root:not([data-theme="light"]):not(.en-app).embebido .sidebar { background: #121214ee; }
+:root:not([data-theme="light"]):not(.en-app).embebido .nav { background: #26262a; }
+:root:not([data-theme="light"]):not(.en-app).embebido .nav a { color: #a9aaae; }
+:root:not([data-theme="light"]):not(.en-app).embebido .nav a:hover { background: #ffffff14; }
+:root:not([data-theme="light"]):not(.en-app).embebido .nav a[aria-current='page'] { background: #34343a; box-shadow: 0 2px 8px #00000066; }
+:root:not([data-theme="light"]):not(.en-app).embebido .nav-badge { background: #34343a; color: #e2e2e4; }
+}

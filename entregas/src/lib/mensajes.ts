@@ -208,3 +208,21 @@ export function linkWhatsApp(telefono: string | null, texto: string): string {
   if (d && !d.startsWith('54')) d = `549${d.replace(/^0/, '')}`
   return `https://wa.me/${d}?text=${encodeURIComponent(texto)}`
 }
+
+/** El mismo mensaje sin el formato de WhatsApp (*negrita*), para el mail. */
+export function textoPlano(texto: string): string {
+  return texto.replace(/\*([^*\n]+)\*/g, '$1')
+}
+
+/** Asunto del mail al cliente según el estado. */
+export function asuntoCliente(p: Pick<Pedido, 'n_remito' | 'estado'>): string {
+  if (p.estado === 'despachado') return `Tu pedido salió · remito ${p.n_remito}`
+  if (p.estado === 'entregado') return `Tu pedido fue entregado · remito ${p.n_remito}`
+  return `Estado de tu pedido · remito ${p.n_remito}`
+}
+
+/** Link para abrir el mail con asunto y texto (el adjunto se agrega a mano o desde «Compartir»). */
+export function linkMail(destino: string | null, asunto: string, texto: string): string {
+  const to = (destino ?? '').trim()
+  return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(textoPlano(texto))}`
+}

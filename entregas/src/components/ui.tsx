@@ -49,6 +49,18 @@ export function Faltantes({ lista }: { lista: Faltante[] }) {
   )
 }
 
+/** Lo que ya está resuelto (21/11): el vendedor ve en la lista que su pedido tiene guía o remito firmado sin entrar ni preguntar. */
+export function Listos({ pedido: p }: { pedido: Pick<Pedido, 'n_guia' | 'tiene_guia_archivo' | 'tiene_comprobante' | 'estado'> }) {
+  const guia = Boolean(p.n_guia || p.tiene_guia_archivo)
+  if (!guia && !p.tiene_comprobante) return null
+  return (
+    <>
+      {guia && <span className="chip tono-ok" title="Ya tiene número de guía o el archivo de la guía">Guía lista</span>}
+      {p.tiene_comprobante && <span className="chip tono-ok" title="Tiene el remito firmado o el comprobante">Firmado</span>}
+    </>
+  )
+}
+
 export function Empty({ icono: Icono, titulo, children }: { icono: LucideIcon; titulo: string; children?: ReactNode }) {
   return (
     <div className="empty">

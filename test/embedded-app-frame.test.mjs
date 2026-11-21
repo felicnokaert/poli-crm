@@ -78,7 +78,6 @@ test('con loadingText muestra la P del CRM hasta pasarle la sesión', async () =
     await waitFor(() => assert.ok(!container.querySelector('.embedded-splash')), { timeout: 2000 });
   } finally { cleanup(); }
 });
-<<<<<<< HEAD
 
 // 21/11: el tema del CRM viaja a la app de adentro (en la dirección y por mensaje).
 test('le pasa el tema del CRM en la dirección y por mensaje', async () => {
@@ -96,5 +95,3 @@ test('le pasa el tema del CRM en la dirección y por mensaje', async () => {
     assert.ok(sent.some((data) => data.tipo === 'crm:tema' && data.tema === 'light'), 'al cambiar el tema lo vuelve a mandar');
   } finally { cleanup(); delete document.documentElement.dataset.theme; }
 });
-=======
->>>>>>> origin/claude/stoic-shannon-ev5nma

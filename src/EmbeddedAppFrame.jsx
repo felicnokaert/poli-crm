@@ -1,10 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ExternalLink } from "lucide-react";
-<<<<<<< HEAD
 import { resolvedTheme, visibleSlice, withTheme } from "./embedded-frame-view.mjs";
-=======
-import { visibleSlice } from "./embedded-frame-view.mjs";
->>>>>>> origin/claude/stoic-shannon-ev5nma
 import { Splash } from "./ui-primitives";
 
 // Otra aplicación del grupo (cotizador, entregas) mostrada como pestaña del CRM, con la misma sesión.
@@ -26,15 +22,12 @@ export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, 
   const frameRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [revealed, setRevealed] = useState(!loadingText);
-<<<<<<< HEAD
   // 21/11: el tema va en la dirección al abrir (sin parpadeo) y después por mensaje cada vez que cambia.
   const [initialTheme] = useState(resolvedTheme);
   const frameSrc = withTheme(src, initialTheme);
   function sendTheme() {
     frameRef.current?.contentWindow?.postMessage({ tipo: "crm:tema", tema: resolvedTheme() }, origin);
   }
-=======
->>>>>>> origin/claude/stoic-shannon-ev5nma
   const [height, setHeight] = useState(null);
   const sessionRef = useRef(session);
   sessionRef.current = session;
@@ -114,7 +107,6 @@ export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, 
     };
   }, [heightType, height, origin]);
 
-<<<<<<< HEAD
   useEffect(() => {
     const root = document.documentElement;
     const observer = typeof MutationObserver === "function" ? new MutationObserver(sendTheme) : null;
@@ -125,8 +117,6 @@ export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [origin]);
 
-=======
->>>>>>> origin/claude/stoic-shannon-ev5nma
   useEffect(() => { setReady(false); setHeight(null); sentRef.current = ""; setRevealed(!loadingText); }, [src, loadingText]);
   useEffect(() => {
     if (revealed) return undefined;

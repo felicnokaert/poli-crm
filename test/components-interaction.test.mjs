@@ -290,7 +290,8 @@ describe("ShortcutsHelp.jsx - interacción real", () => {
   test("muestra los 3 atajos documentados", async () => {
     const mod = await loadJsxModule("src/ShortcutsHelp.jsx");
     render(React.createElement(mod.ShortcutsHelp, { onClose: () => {} }));
-    assert.ok(screen.getByText("Atajos de teclado"));
+    assert.ok(screen.getByText("Atajos de teclado (compu)"));
+    assert.equal(screen.getByText("Abrir la guía del CRM").getAttribute("href"), "/guia/");
     assert.ok(screen.getByText("Buscar en la pantalla actual"));
     assert.ok(screen.getByText("Nueva tarea"));
     assert.ok(screen.getByText("Cerrar el formulario o ficha abierta"));
@@ -316,7 +317,7 @@ describe("ShortcutsHelp.jsx - interacción real", () => {
     const mod = await loadJsxModule("src/ShortcutsHelp.jsx");
     let closeCalls = 0;
     render(React.createElement(mod.ShortcutsHelp, { onClose: () => closeCalls++ }));
-    fireEvent.click(screen.getByText("Atajos de teclado"));
+    fireEvent.click(screen.getByText("Atajos de teclado (compu)"));
     assert.equal(closeCalls, 0, "un click dentro del modal no debería cerrarlo");
 
     const backdrop = document.querySelector(".modal-backdrop");

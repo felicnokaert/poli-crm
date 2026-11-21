@@ -26,7 +26,7 @@ export function ShortcutsHelp({ onClose }) {
         <div className="modal-head">
           <div>
             <span className="eyebrow">Ayuda</span>
-            <h2>Atajos de teclado</h2>
+            <h2>Guía y atajos</h2>
           </div>
           <button
             type="button"
@@ -37,6 +37,12 @@ export function ShortcutsHelp({ onClose }) {
             <X />
           </button>
         </div>
+        {/* 21/11: la guía del CRM a un toque (en el celular los atajos de teclado no sirven). */}
+        <p className="shortcuts-guide">
+          <a className="primary" href="/guia/" target="_blank" rel="noreferrer">Abrir la guía del CRM</a>
+          <span>Qué hace cada sección y cómo usarla. Si una sección no te sirve, avisale a Felipe y te la saca.</span>
+        </p>
+        <h3 className="shortcuts-title">Atajos de teclado (compu)</h3>
         <dl className="shortcuts-list">
           {shortcuts.map(([key, description]) => (
             <div key={key}>

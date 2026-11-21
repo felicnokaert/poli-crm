@@ -1,4 +1,7 @@
-import { CalendarDays, ClipboardList, Home, LogOut, Plus, Settings, UserRound, Warehouse } from 'lucide-react'
+import { BookOpen, CalendarDays, ClipboardList, Home, LogOut, Plus, Settings, UserRound, Warehouse } from 'lucide-react'
+
+/** Guía de uso para comerciales (página del CRM, 21/11): siempre a un toque, sin buscar el PDF. */
+export const GUIA_URL = 'https://poli-crm.vercel.app/guia/'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { api, MAQUETA } from '../lib/cliente'
 import { useDatos } from '../lib/datos'
@@ -50,12 +53,14 @@ export function Layout({ ruta, children }: { ruta: Ruta; children: ReactNode }) 
               {Boolean(l.badge) && <span className={`nav-badge${l.hot ? ' hot' : ''}`}>{l.badge}</span>}
             </a>
           ))}
+          <a className="nav-guia" href={GUIA_URL} target="_blank" rel="noreferrer"><BookOpen size={16} /> Guía</a>
         </nav>
         <div className="sidebar-foot">
           <div>
             <div className="who">{yo.nombre}</div>
             <div className="role">{ROL_LABEL[yo.rol]}{MAQUETA ? ' · maqueta' : ''}</div>
             <SelectorDeposito />
+            <a className="link-btn" href={GUIA_URL} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', gap: 4, marginTop: 6 }}><BookOpen size={13} /> Guía</a>
           </div>
           {yo.compartida
             ? <button className="link-btn" onClick={() => setOperador(null)}><UserRound size={13} /> No soy {yo.nombre}</button>
@@ -67,6 +72,7 @@ export function Layout({ ruta, children }: { ruta: Ruta; children: ReactNode }) 
         <img src="/poliplast-isotipo-blanco.png" alt="" />
         <b>Entregas</b>
         <span className="spacer" />
+        <a href={GUIA_URL} target="_blank" rel="noreferrer" aria-label="Guía de uso" style={{ color: '#c7c7c9', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, marginRight: 10 }}><BookOpen size={18} /> Guía</a>
         {yo.rol === 'admin' && <a href="#/ajustes" aria-label="Ajustes" style={{ color: '#c7c7c9' }}><Settings size={19} /></a>}
         {yo.compartida
           ? <button className="link-btn" onClick={() => setOperador(null)} aria-label="Cambiar de persona o depósito"><UserRound size={16} /> {yo.nombre}{depositoActual() ? ` · ${depositoActual()}` : ''}</button>

@@ -456,6 +456,9 @@ textarea.control { min-height: 70px; resize: vertical; }
   background: #f5f5f6ee; color: var(--ink); border-bottom: 1px solid var(--line); backdrop-filter: blur(8px);
 }
 .embebido .brand, .embebido .sidebar-foot, .embebido .mobile-top { display: none; }
+/* «Guía» como pestaña solo dentro del CRM (afuera está abajo en la barra lateral y arriba en el celular). */
+.nav-guia { display: none !important; }
+.embebido .nav-guia { display: inline-flex !important; align-items: center; gap: 6px; }
 .embebido .nav { display: flex; gap: 4px; overflow-x: auto; padding: 3px; border-radius: 10px; background: #eeeeef; order: 1; }
 .embebido .nav a { color: #64656a; font-weight: 700; padding: 6px 10px; white-space: nowrap; }
 .embebido .nav a:hover { background: #ffffffa0; color: var(--ink); }

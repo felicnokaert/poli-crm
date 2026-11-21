@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guía de Entregas</title>
+<meta name="description" content="Guía para comerciales: cargar remitos, seguir pedidos y avisar al cliente con la guía.">
+<link rel="icon" href="/icon-192.png">
+<style>
+  :root { --bg:#f6f6f7; --card:#fff; --text:#1d1d1f; --muted:#5f6066; --line:#e4e4e7; --red:#ed1c24; --ok:#15803d; --okbg:#e7f6ec; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#111214; --card:#1b1c1f; --text:#f2f2f3; --muted:#a3a4aa; --line:#2c2d31; --okbg:#173322; --ok:#4ade80; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { background:#1d1d1f; color:#fff; padding:22px 16px 26px; }
+  header .wrap { max-width:760px; margin:0 auto; }
+  header img { width:34px; height:34px; vertical-align:middle; margin-right:8px; }
+  header h1 { font-size:24px; margin:10px 0 6px; }
+  header p { margin:0; color:#c9c9cf; }
+  main { max-width:760px; margin:0 auto; padding:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; margin:0 0 16px; }
+  h2 { font-size:19px; margin:0 0 8px; display:flex; gap:10px; align-items:center; }
+  .n { flex:0 0 28px; height:28px; border-radius:50%; background:var(--red); color:#fff; font-size:15px; display:grid; place-items:center; }
+  p, li { color:var(--text); }
+  .muted { color:var(--muted); font-size:14px; }
+  ul { padding-left:20px; margin:8px 0; }
+  li { margin:4px 0; }
+  figure { margin:12px 0 0; }
+  figure img { width:100%; max-width:340px; display:block; margin:0 auto; border-radius:14px; border:1px solid var(--line); }
+  figcaption { text-align:center; font-size:13px; color:var(--muted); margin-top:6px; }
+  .chip { display:inline-block; padding:1px 9px; border-radius:999px; font-size:13px; font-weight:600; background:var(--okbg); color:var(--ok); }
+  .links a { display:block; padding:12px 14px; margin:8px 0; border-radius:12px; background:var(--red); color:#fff; text-decoration:none; font-weight:600; text-align:center; }
+  .links a.sec { background:transparent; color:var(--text); border:1px solid var(--line); }
+  .faq b { display:block; margin-top:10px; }
+  footer { text-align:center; color:var(--muted); font-size:13px; padding:10px 16px 40px; }
+  nav.indice a { color:var(--text); }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <img src="/poliplast-isotipo-blanco.png" alt=""> <strong>Grupo Poliplast</strong>
+  <h1>Guía de Entregas para comerciales</h1>
+  <p>Cargar el remito, seguir el pedido y avisarle al cliente. Todo queda en la app: se terminan los «¿ya salió?».</p>
+</div></header>
+<main>
+
+<section class="card links">
+  <h2>Dónde entrar</h2>
+  <p>Desde el CRM: <b>Menú → Ventas → Entregas</b>. Es la misma app que también podés abrir sola.</p>
+  <a href="https://poli-crm.vercel.app" target="_blank" rel="noopener">Abrir el CRM</a>
+  <a class="sec" href="https://poli-entregas.vercel.app" target="_blank" rel="noopener">Abrir Entregas sola (poli-entregas.vercel.app)</a>
+  <p class="muted">Entrás con tu mail y contraseña del CRM. Si no te deja entrar, avisale a Felipe.</p>
+  <p class="muted"><b>Fechas:</b> prueba del martes 24/11 al domingo 30/11. Desde el <b>lunes 01/12</b> es obligatorio en los dos depósitos (Villa Domínico y Mar del Plata).</p>
+</section>
+
+<section class="card indice">
+  <h2>En esta guía</h2>
+  <ol>
+    <li><a href="#inicio">El inicio: qué pasa con tus pedidos</a></li>
+    <li><a href="#cargar">Cargar un remito</a></li>
+    <li><a href="#pedidos">Seguir tus pedidos</a></li>
+    <li><a href="#detalle">El detalle del pedido</a></li>
+    <li><a href="#avisar">Avisarle al cliente con la guía</a></li>
+    <li><a href="#firma">Firma digital del remito</a></li>
+    <li><a href="#dudas">Preguntas frecuentes</a></li>
+  </ol>
+</section>
+
+<section class="card" id="inicio">
+  <h2><span class="n">1</span> El inicio</h2>
+  <p>Al entrar ves tus pedidos agrupados: <b>por salir</b>, <b>sin stock</b>, <b>en viaje</b>, <b>sin guía o firma</b>, <b>con problema</b> y <b>entregados</b>. Tocá cualquier cuadro para ver cuáles son.</p>
+  <ul>
+    <li>«Mis pedidos» muestra los tuyos; «Todos», los de todo el equipo.</li>
+    <li>Abajo están las <b>Novedades</b>: cuando expedición imprime, despacha, sube la guía o el remito firmado, te aparece acá.</li>
+  </ul>
+  <figure><img src="img/1-inicio.png" alt="Pantalla de inicio de Entregas"><figcaption>Inicio con tus pedidos agrupados</figcaption></figure>
+</section>
+
+<section class="card" id="cargar">
+  <h2><span class="n">2</span> Cargar un remito</h2>
+  <p>Cuando hacés una venta que sale por expreso o la retira el cliente:</p>
+  <ul>
+    <li>Tocá <b>Cargar remito</b> y subí el PDF del remito de Contabilium (también acepta una foto). Podés subir varios juntos.</li>
+    <li>Los datos del cliente se completan solos. Revisá que estén bien, sobre todo <b>teléfono y dirección</b>.</li>
+    <li>Elegí <b>por dónde va</b> (expreso o «Retira el cliente») y <b>desde qué depósito sale</b>.</li>
+    <li>Guardá. Expedición lo ve en el momento: no hace falta avisar por el grupo.</li>
+  </ul>
+  <figure><img src="img/2-cargar.png" alt="Pantalla Cargar remito"><figcaption>Cargar remito: subís el PDF y elegís expreso y depósito</figcaption></figure>
+</section>
+
+<section class="card" id="pedidos">
+  <h2><span class="n">3</span> Seguir tus pedidos</h2>
+  <p>En <b>Pedidos</b> ves cada uno con su estado: Cargado → Impreso → Despachado → Entregado (o Frenado / Con problema, con el motivo).</p>
+  <ul>
+    <li><span class="chip">Guía lista</span> ya tiene número de guía o la foto de la guía.</li>
+    <li><span class="chip">Firmado</span> ya tiene el remito firmado.</li>
+    <li>A la derecha dice <b>a quién le toca</b>: vendedor, expedición o expreso.</li>
+    <li>Arriba podés buscar por cliente, remito o guía y filtrar por fecha.</li>
+  </ul>
+  <figure><img src="img/3-pedidos.png" alt="Lista de pedidos"><figcaption>Lista de pedidos con estado y «Guía lista»</figcaption></figure>
+</section>
+
+<section class="card" id="detalle">
+  <h2><span class="n">4</span> El detalle del pedido</h2>
+  <p>Tocá un pedido para ver todo: cuándo salió, por qué expreso, el <b>número de guía</b> con el link para seguirlo, quién lo despachó y desde qué depósito, y el historial completo.</p>
+  <ul>
+    <li><b>Copiar link</b>: para pasarle el pedido a un compañero.</li>
+    <li>En <b>Historial y comentarios</b> escribís una consulta para expedición: reemplaza el ida y vuelta del grupo.</li>
+    <li>En <b>Archivos</b> están el remito, la guía y el remito firmado.</li>
+  </ul>
+  <figure><img src="img/4-detalle.png" alt="Detalle de un pedido"><figcaption>Detalle: estado, guía y seguimiento</figcaption></figure>
+</section>
+
+<section class="card" id="avisar">
+  <h2><span class="n">5</span> Avisarle al cliente con la guía</h2>
+  <p>Cuando el pedido sale, aparece <b>«Ya salió: avisale al cliente»</b>. Tocá <b>Preparar mensaje</b>:</p>
+  <ul>
+    <li>El mensaje ya viene armado con el expreso, el número de guía, los bultos y el link de seguimiento. Lo podés editar.</li>
+    <li><b>Enviar por WhatsApp</b> abre el chat del cliente con el texto.</li>
+    <li><b>Mail</b> abre tu correo con asunto y texto.</li>
+    <li><b>Compartir con la guía</b> (en el celular): elegís WhatsApp o mail y va con la foto de la guía adjunta.</li>
+  </ul>
+  <figure><img src="img/5-avisar.png" alt="Aviso Ya salió"><figcaption>El aviso aparece solo cuando el pedido salió</figcaption></figure>
+  <figure><img src="img/6-mensaje.png" alt="Mensaje para el cliente"><figcaption>Mensaje listo para WhatsApp o mail</figcaption></figure>
+</section>
+
+<section class="card" id="firma">
+  <h2><span class="n">6</span> Firma digital del remito</h2>
+  <p>Si el cliente retira o recibe y no hay papel a mano, se puede firmar en el celular (lo usa sobre todo expedición, pero también podés hacerlo vos):</p>
+  <ul>
+    <li>En el pedido, <b>Archivos → Firmar el remito en el celular</b>.</li>
+    <li>El cliente firma con el dedo y se cargan su <b>nombre y DNI</b>.</li>
+    <li><b>Ver cómo queda</b> muestra el remito con la firma puesta sobre «Recibí conforme», con la fecha, la aclaración y el DNI. Después, <b>Guardar</b>.</li>
+    <li>Imprimir sigue siendo opcional: si el transporte pide papel, se imprime como siempre.</li>
+  </ul>
+  <figure><img src="img/7-firma.png" alt="Firma en el celular"><figcaption>El cliente firma y se completan nombre y DNI</figcaption></figure>
+</section>
+
+<section class="card faq" id="dudas">
+  <h2><span class="n">?</span> Preguntas frecuentes</h2>
+  <b>¿Tengo que seguir avisando por el grupo de WhatsApp?</b>
+  <p>No. Al cargar el remito, expedición ya lo ve. Si hay algo especial, escribilo en el comentario del pedido.</p>
+  <b>¿Cómo sé si ya salió?</b>
+  <p>En Pedidos dice «Despachado» con la fecha, y si aparece <span class="chip">Guía lista</span> ya podés mandarle la guía al cliente.</p>
+  <b>Un pedido está «Frenado», ¿qué hago?</b>
+  <p>Mirá el motivo (sin stock, falta pago, datos incompletos). Si dice que te toca a vos, resolvelo y avisá en el comentario.</p>
+  <b>Me equivoqué en un dato.</b>
+  <p>En el detalle, <b>Datos de envío → Editar</b>.</p>
+  <b>Algo no anda o veo algo raro.</b>
+  <p>Mandale una captura a Felipe por WhatsApp.</p>
+</section>
+
+</main>
+<footer>Grupo Poliplast · Guía de Entregas para comerciales · actualizada el 21/11/2026</footer>
+</body>
+</html>

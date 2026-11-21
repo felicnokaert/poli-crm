@@ -12,7 +12,7 @@ export interface Hueco { x: number; y: number; w: number; h: number }
  * Prefiere el más bajo de la hoja (donde suele ir «recibí conforme») y, a igual altura, el de la derecha.
  * Deja un margen de la hoja sin usar. Devuelve null si no hay ninguno.
  */
-export function buscarHueco(gris: Uint8Array | Uint8ClampedArray, ancho: number, alto: number, w: number, h: number, margen = 0.04): Hueco | null {
+export function buscarHueco(gris: Uint8Array | Uint8ClampedArray, ancho: number, alto: number, w: number, h: number, margen = 0.04, blanco = 246): Hueco | null {
   if (w > ancho || h > alto) return null
   // tabla de sumas de «tinta» (1 si el píxel no es casi blanco) para contar rápido cualquier rectángulo
   const W = ancho + 1
@@ -20,14 +20,14 @@ export function buscarHueco(gris: Uint8Array | Uint8ClampedArray, ancho: number,
   for (let y = 0; y < alto; y++) {
     let fila = 0
     for (let x = 0; x < ancho; x++) {
-      fila += gris[y * ancho + x] < 235 ? 1 : 0
+      fila += gris[y * ancho + x] < blanco ? 1 : 0 // 21/11: el gris claro (fondos, letra chica de Contabilium) también cuenta como ocupado
       suma[(y + 1) * W + (x + 1)] = suma[y * W + (x + 1)] + fila
     }
   }
   const tinta = (x: number, y: number) => suma[(y + h) * W + (x + w)] - suma[y * W + (x + w)] - suma[(y + h) * W + x] + suma[y * W + x]
   const mx = Math.round(ancho * margen); const my = Math.round(alto * margen)
   const paso = Math.max(2, Math.round(Math.min(w, h) / 12))
-  const tolerancia = Math.round(w * h * 0.0015) // alguna mota suelta del escaneo no cuenta
+  const tolerancia = Math.round(w * h * 0.0002) // casi nada: antes 0,15 % dejaba pisar letras chicas
   for (let y = alto - my - h; y >= my; y -= paso) {
     for (let x = ancho - mx - w; x >= mx; x -= paso) {
       if (tinta(x, y) <= tolerancia) return { x, y, w, h }
@@ -82,8 +82,8 @@ export async function estamparFirma(remito: Uint8Array, lienzo: HTMLCanvasElemen
   const lineas = lineasSello(datos)
 
   // Tamaños del sello en puntos de PDF (1 pt = 1/72"): se prueba grande y se achica si no entra.
-  const TAMANOS = [{ w: 230, h: 104 }, { w: 200, h: 92 }, { w: 170, h: 80 }]
-  const ESCALA = 1 // 1 píxel = 1 punto: alcanza para ver blancos
+  const TAMANOS = [{ w: 290, h: 136 }, { w: 255, h: 120 }, { w: 230, h: 108 }, { w: 200, h: 96 }]
+  const ESCALA = 2 // 2 píxeles por punto: la letra chica y clara se ve (con 1 se perdía)
   const lector = await pdfjs.getDocument({ data: remito.slice() }).promise
   let elegido: { pagina: number; x: number; yPdf: number; w: number; h: number } | null = null
   for (let n = lector.numPages; n >= 1 && !elegido; n--) {
@@ -120,19 +120,18 @@ export async function estamparFirma(remito: Uint8Array, lienzo: HTMLCanvasElemen
   const fuente = await doc.embedFont(StandardFonts.Helvetica)
   const imagen = await doc.embedPng(firma.png)
   const { x, yPdf: y, w, h } = elegido
-  const tam = Math.max(6.5, Math.min(8.5, h / 12))
-  const altoTexto = lineas.length * (tam + 1.6) + 4
-  // firma arriba (proporcional), renglones abajo; un recuadro fino para que se vea como sello
+  const tam = Math.max(8, Math.min(10.5, h / 12)) // legible impreso y en el celular (Felipe, 21/11)
+  const altoTexto = lineas.length * (tam + 2.2) + 4
+  // firma arriba (proporcional), una línea fina como la de «firma» y los renglones abajo, sin recuadro (Felipe, 21/11)
   const altoFirma = h - altoTexto - 6
   const esc = Math.min((w - 8) / firma.w, altoFirma / firma.h)
   const fw = firma.w * esc; const fh = firma.h * esc
-  pagina.drawRectangle({ x, y, width: w, height: h, borderColor: rgb(0.55, 0.57, 0.6), borderWidth: 0.6, color: rgb(1, 1, 1), opacity: 0, borderOpacity: 1 })
   pagina.drawImage(imagen, { x: x + (w - fw) / 2, y: y + altoTexto + 3 + (altoFirma - fh) / 2, width: fw, height: fh })
   pagina.drawLine({ start: { x: x + 6, y: y + altoTexto + 1 }, end: { x: x + w - 6, y: y + altoTexto + 1 }, thickness: 0.4, color: rgb(0.6, 0.6, 0.6) })
   lineas.forEach((l, i) => {
     let t = l
     while (t.length > 4 && fuente.widthOfTextAtSize(t, tam) > w - 8) t = t.slice(0, -2) + '…'
-    pagina.drawText(t, { x: x + 4, y: y + altoTexto - (i + 1) * (tam + 1.6), size: tam, font: fuente, color: rgb(0.08, 0.08, 0.08) })
+    pagina.drawText(t, { x: x + 4, y: y + altoTexto - (i + 1) * (tam + 2.2), size: tam, font: fuente, color: rgb(0.08, 0.08, 0.08) })
   })
   const pdf = await doc.save()
 

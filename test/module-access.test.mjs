@@ -32,7 +32,7 @@ test('el menú saca los grupos vacíos y la pantalla cae en otra permitida', () 
   const denied = deniedSet([{ module: 'shopify', allowed: false }, { module: 'tasks', allowed: false }]);
   assert.deepEqual(filterNav(groups, member, denied).map(([name, items]) => [name, items.length]), [['Hoy', 1]]);
   assert.equal(firstAllowedView(member, denied, 'shopify'), 'dashboard');
-  assert.equal(firstAllowedView(member, deniedSet([{ module: 'dashboard', allowed: false }]), 'dashboard'), 'inbox');
+  assert.equal(firstAllowedView(member, deniedSet([{ module: 'dashboard', allowed: false }]), 'dashboard'), 'tasks');
 });
 
 test('al volver a permitir se borra la excepción', () => {
@@ -44,4 +44,12 @@ test('Entregas es un módulo: todo el equipo lo ve y se puede quitar', () => {
   assert.ok(MODULES.some((m) => m.id === 'entregas'));
   assert.equal(canSee(member, deniedSet([]), 'entregas'), true);
   assert.equal(canSee(member, deniedSet([{ module: 'entregas', allowed: false }]), 'entregas'), false);
+});
+
+test('Por revisar e Historial solo para administradores', () => {
+  const member = 'brenda@grupopoliplast.com.ar';
+  assert.equal(canSee(member, null, 'inbox'), false);
+  assert.equal(canSee(member, null, 'conversations'), false);
+  assert.equal(canSee('felipe@grupopoliplast.com.ar', null, 'inbox'), true);
+  assert.equal(canSee(member, null, 'sales'), true);
 });

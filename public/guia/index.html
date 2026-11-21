@@ -4,13 +4,14 @@
 <meta charset="utf-8">
 <meta name="color-scheme" content="light dark">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Guía de Entregas</title>
-<meta name="description" content="Guía para comerciales: cargar remitos, seguir pedidos y avisar al cliente con la guía.">
+<title>Guía del CRM</title>
+<meta name="description" content="Guía del CRM de Grupo Poliplast: qué hace cada sección y cómo usarla.">
 <link rel="icon" href="/icon-192.png">
 <style>
-  :root { --bg:#f6f6f7; --card:#fff; --text:#1d1d1f; --muted:#5f6066; --line:#e4e4e7; --red:#ed1c24; --ok:#15803d; --okbg:#e7f6ec; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#111214; --card:#1b1c1f; --text:#f2f2f3; --muted:#a3a4aa; --line:#2c2d31; --okbg:#173322; --ok:#4ade80; } }
+  :root { --bg:#f6f6f7; --card:#fff; --text:#1d1d1f; --muted:#5f6066; --line:#e4e4e7; --red:#ed1c24; --ok:#15803d; --okbg:#e7f6ec; --soft:#f1f1f3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#111214; --card:#1b1c1f; --text:#f2f2f3; --muted:#a3a4aa; --line:#2c2d31; --okbg:#173322; --ok:#4ade80; --soft:#232428; } }
   * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body { margin:0; background:var(--bg); color:var(--text); font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
   header { background:#1d1d1f; color:#fff; padding:22px 16px 26px; }
   header .wrap { max-width:760px; margin:0 auto; }
@@ -18,12 +19,22 @@
   header h1 { font-size:24px; margin:10px 0 6px; }
   header p { margin:0; color:#c9c9cf; }
   main { max-width:760px; margin:0 auto; padding:16px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; margin:0 0 16px; }
-  h2 { font-size:19px; margin:0 0 8px; display:flex; gap:10px; align-items:center; }
-  .n { flex:0 0 28px; height:28px; border-radius:50%; background:var(--red); color:#fff; font-size:15px; display:grid; place-items:center; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; margin:0 0 14px; }
+  h2 { font-size:19px; margin:0 0 8px; }
+  h3 { font-size:16px; margin:18px 0 4px; }
+  .grupo { font-size:13px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin:22px 4px 8px; }
+  details.card { padding:0; }
+  details.card > summary { list-style:none; cursor:pointer; padding:14px 16px; display:flex; gap:12px; align-items:center; font-weight:700; font-size:17px; }
+  details.card > summary::-webkit-details-marker { display:none; }
+  details.card > summary .que { display:block; font-weight:400; font-size:14px; color:var(--muted); margin-top:1px; }
+  details.card > summary .flecha { margin-left:auto; transition:transform .2s; color:var(--muted); font-size:22px; }
+  details.card[open] > summary .flecha { transform:rotate(90deg); }
+  details.card .cuerpo { padding:4px 18px 18px; border-top:1px solid var(--line); }
+  .ico { flex:0 0 38px; height:38px; border-radius:10px; background:var(--soft); display:grid; place-items:center; font-size:19px; }
   p, li { color:var(--text); }
   .muted { color:var(--muted); font-size:14px; }
-  ul { padding-left:20px; margin:8px 0; }
+  .donde { display:inline-block; font-size:13px; background:var(--soft); border-radius:8px; padding:2px 8px; margin:12px 0 2px; color:var(--muted); }
+  ul, ol { padding-left:20px; margin:8px 0; }
   li { margin:4px 0; }
   figure { margin:12px 0 0; }
   figure picture { display:block; }
@@ -31,127 +42,348 @@
   figcaption { text-align:center; font-size:13px; color:var(--muted); margin-top:6px; }
   .chip { display:inline-block; padding:1px 9px; border-radius:999px; font-size:13px; font-weight:600; background:var(--okbg); color:var(--ok); }
   .links a { display:block; padding:12px 14px; margin:8px 0; border-radius:12px; background:var(--red); color:#fff; text-decoration:none; font-weight:600; text-align:center; }
-  .links a.sec { background:transparent; color:var(--text); border:1px solid var(--line); }
+  .aviso { border-left:4px solid var(--red); }
   .faq b { display:block; margin-top:10px; }
+  .indice { columns:2; column-gap:18px; padding-left:18px; }
+  .indice a { color:var(--text); }
+  @media (max-width:420px) { .indice { columns:1; } }
   footer { text-align:center; color:var(--muted); font-size:13px; padding:10px 16px 40px; }
-  nav.indice a { color:var(--text); }
 </style>
 </head>
 <body>
 <header><div class="wrap">
   <img src="/poliplast-isotipo-blanco.png" alt=""> <strong>Grupo Poliplast</strong>
-  <h1>Guía de Entregas para comerciales</h1>
-  <p>Cargar el remito, seguir el pedido y avisarle al cliente. Todo queda en la app: se terminan los «¿ya salió?».</p>
+  <h1>Guía del CRM</h1>
+  <p>Qué hace cada sección y cómo usarla en el día a día: clientes, ventas, prospección, entregas, Mercado Libre y más.</p>
 </div></header>
 <main>
 
 <section class="card links">
-  <h2>Dónde entrar</h2>
-  <p>Desde el CRM: <b>Menú → Ventas → Entregas</b>. Es la misma app que también podés abrir sola.</p>
+  <h2>Cómo entrar</h2>
+  <p>Entrá con tu mail <b>@grupopoliplast.com.ar</b> y tu contraseña.</p>
   <a href="https://poli-crm.vercel.app" target="_blank" rel="noopener">Abrir el CRM</a>
-  <a class="sec" href="https://poli-entregas.vercel.app" target="_blank" rel="noopener">Abrir Entregas sola (poli-entregas.vercel.app)</a>
-  <p class="muted">Entrás con tu mail y contraseña del CRM. Si no te deja entrar, avisale a Felipe.</p>
-  <p class="muted"><b>Fechas:</b> prueba del martes 24/11 al domingo 30/11. Desde el <b>lunes 01/12</b> es obligatorio en los dos depósitos (Villa Domínico y Mar del Plata).</p>
+  <ul>
+    <li><b>Primera vez:</b> cambiá la contraseña en <b>Menú → Más → Perfil</b> (mínimo 8 caracteres).</li>
+    <li><b>En el celular, como una app:</b> en Android (Chrome), menú ⋮ → «Instalar app». En iPhone (Safari), Compartir → «Agregar a pantalla de inicio».</li>
+    <li>En el celular, abajo tenés Inicio, Tareas, Ventas, Empresas y <b>Menú</b> con todo lo demás. En la compu, el menú está a la izquierda.</li>
+    <li><b>Ctrl + K</b> (en la compu) abre el buscador general: clientes, tareas, productos y pantallas.</li>
+  </ul>
 </section>
 
-<section class="card indice">
+<section class="card aviso">
+  <h2>¿Una sección no te sirve?</h2>
+  <p>El CRM lo usamos completo, pero no todos necesitan todo. Si hay un módulo que no usás y te llena de información, <b>avisale a Felipe y te lo saca</b> de tu menú. Lo podés pedir de vuelta cuando quieras.</p>
+  <p class="muted">Lo que cargás en tu cuenta (tareas, notas, prospectos) es tuyo. Lo compartido (competencia, directorio de empresas, fichas técnicas) lo puede sumar cualquiera del equipo.</p>
+</section>
+
+<section class="card">
   <h2>En esta guía</h2>
-  <ol>
-    <li><a href="#inicio">El inicio: qué pasa con tus pedidos</a></li>
-    <li><a href="#cargar">Cargar un remito</a></li>
-    <li><a href="#pedidos">Seguir tus pedidos</a></li>
-    <li><a href="#detalle">El detalle del pedido</a></li>
-    <li><a href="#avisar">Avisarle al cliente con la guía</a></li>
-    <li><a href="#firma">Firma digital del remito</a></li>
+  <ol class="indice">
+    <li><a href="#inicio">Inicio</a></li>
+    <li><a href="#tareas">Tareas</a></li>
+    <li><a href="#ventas">Ventas</a></li>
+    <li><a href="#cotizador">Cotizador</a></li>
+    <li><a href="#entregas">Entregas</a></li>
+    <li><a href="#prospeccion">Prospección</a></li>
+    <li><a href="#mejoras">Centro de mejoras</a></li>
+    <li><a href="#productos">Productos</a></li>
+    <li><a href="#mercadolibre">Mercado Libre</a></li>
+    <li><a href="#shopify">Shopify</a></li>
+    <li><a href="#empresas">Empresas y contactos</a></li>
+    <li><a href="#mapa">Mapa</a></li>
+    <li><a href="#academia">Academia comercial</a></li>
+    <li><a href="#base">Base técnica</a></li>
+    <li><a href="#asistente">El asistente</a></li>
+    <li><a href="#perfil">Perfil y Datos</a></li>
+    <li><a href="#pronto">Próximamente</a></li>
     <li><a href="#dudas">Preguntas frecuentes</a></li>
   </ol>
+  <p class="muted">Tocá cada sección para abrirla.</p>
 </section>
 
-<section class="card" id="inicio">
-  <h2><span class="n">1</span> El inicio</h2>
-  <p>Al entrar ves tus pedidos agrupados: <b>por salir</b>, <b>sin stock</b>, <b>en viaje</b>, <b>sin guía o firma</b>, <b>con problema</b> y <b>entregados</b>. Tocá cualquier cuadro para ver cuáles son.</p>
-  <ul>
-    <li>«Mis pedidos» muestra los tuyos; «Todos», los de todo el equipo.</li>
-    <li>Abajo están las <b>Novedades</b>: cuando expedición imprime, despacha, sube la guía o el remito firmado, te aparece acá.</li>
-  </ul>
-  <figure><picture><source media="(prefers-color-scheme: dark)" srcset="img/1-inicio-oscuro.png"><img src="img/1-inicio.png" alt="Pantalla de inicio de Entregas"></picture><figcaption>Inicio con tus pedidos agrupados</figcaption></figure>
-</section>
+<div class="grupo">Hoy</div>
 
-<section class="card" id="cargar">
-  <h2><span class="n">2</span> Cargar un remito</h2>
-  <p>Cuando hacés una venta que sale por expreso o la retira el cliente:</p>
-  <ul>
-    <li>Tocá <b>Cargar remito</b> y subí el PDF del remito de Contabilium (también acepta una foto). Podés subir varios juntos.</li>
-    <li>Los datos del cliente se completan solos. Revisá que estén bien, sobre todo <b>teléfono y dirección</b>.</li>
-    <li>Elegí <b>por dónde va</b> (expreso o «Retira el cliente») y <b>desde qué depósito sale</b>.</li>
-    <li>Guardá. Expedición lo ve en el momento: no hace falta avisar por el grupo.</li>
-  </ul>
-  <figure><picture><source media="(prefers-color-scheme: dark)" srcset="img/2-cargar-oscuro.png"><img src="img/2-cargar.png" alt="Pantalla Cargar remito"></picture><figcaption>Cargar remito: subís el PDF y elegís expreso y depósito</figcaption></figure>
-</section>
+<details class="card" id="inicio">
+  <summary><span class="ico">🏠</span><span>Inicio<span class="que">Tu resumen del día</span></span><span class="flecha">›</span></summary>
+  <div class="cuerpo">
+    <span class="donde">Menú → Hoy → Inicio</span>
+    <p>Es la primera pantalla. Arrancá el día acá.</p>
+    <ul>
+      <li><b>Mi día:</b> tus tareas vencidas y las de hoy.</li>
+      <li><b>Radares:</b> cotizaciones frías o vencidas y clientes para reactivar.</li>
+      <li><b>Se pasaron de su frecuencia:</b> clientes que compran seguido y ya deberían haber vuelto a comprar.</li>
+    </ul>
+    <p>Tocá cualquier tarjeta para ir directo a la tarea o al cliente.</p>
+  </div>
+</details>
 
-<section class="card" id="pedidos">
-  <h2><span class="n">3</span> Seguir tus pedidos</h2>
-  <p>En <b>Pedidos</b> ves cada uno con su estado: Cargado → Impreso → Despachado → Entregado (o Frenado / Con problema, con el motivo).</p>
-  <ul>
-    <li><span class="chip">Guía lista</span> ya tiene número de guía o la foto de la guía.</li>
-    <li><span class="chip">Firmado</span> ya tiene el remito firmado.</li>
-    <li>A la derecha dice <b>a quién le toca</b>: vendedor, expedición o expreso.</li>
-    <li>Arriba podés buscar por cliente, remito o guía y filtrar por fecha.</li>
-  </ul>
-  <figure><picture><source media="(prefers-color-scheme: dark)" srcset="img/3-pedidos-oscuro.png"><img src="img/3-pedidos.png" alt="Lista de pedidos"></picture><figcaption>Lista de pedidos con estado y «Guía lista»</figcaption></figure>
-</section>
+<details class="card" id="tareas">
+  <summary><span class="ico">✅</span><span>Tareas<span class="que">Tus pendientes con fecha</span></span><span class="flecha">›</span></summary>
+  <div class="cuerpo">
+    <span class="donde">Menú → Hoy → Tareas</span>
+    <p>Llamados, seguimientos, cotizaciones para mandar: todo lo que tenés que hacer, con fecha y cliente.</p>
+    <ul>
+      <li><b>Nueva tarea:</b> título, fecha, prioridad y, si corresponde, el cliente. Al terminarla, marcala hecha.</li>
+      <li>Se ordenan en tres grupos: <b>Vender</b> (tocan a un cliente o prospecto), <b>Canales y gestión</b> y <b>Después</b> (falta más de una semana).</li>
+      <li>Algunas se crean solas: por ejemplo, al marcar «Contactado» a un prospecto se crea el seguimiento a 2 días hábiles.</li>
+      <li><b>Calendario:</b> las mismas tareas vistas por mes.</li>
+      <li><b>Cierre del día:</b> dos minutos a la tarde para anotar qué salió bien, qué quedó sin hacer, qué se posterga y qué hacés mañana.</li>
+      <li>Si usás Trello, podés importar las tarjetas (archivo JSON exportado del tablero): suma solo las nuevas.</li>
+    </ul>
+  </div>
+</details>
 
-<section class="card" id="detalle">
-  <h2><span class="n">4</span> El detalle del pedido</h2>
-  <p>Tocá un pedido para ver todo: cuándo salió, por qué expreso, el <b>número de guía</b> con el link para seguirlo, quién lo despachó y desde qué depósito, y el historial completo.</p>
-  <ul>
-    <li><b>Copiar link</b>: para pasarle el pedido a un compañero.</li>
-    <li>En <b>Historial y comentarios</b> escribís una consulta para expedición: reemplaza el ida y vuelta del grupo.</li>
-    <li>En <b>Archivos</b> están el remito, la guía y el remito firmado.</li>
-  </ul>
-  <figure><picture><source media="(prefers-color-scheme: dark)" srcset="img/4-detalle-oscuro.png"><img src="img/4-detalle.png" alt="Detalle de un pedido"></picture><figcaption>Detalle: estado, guía y seguimiento</figcaption></figure>
-</section>
+<div class="grupo">Ventas</div>
 
-<section class="card" id="avisar">
-  <h2><span class="n">5</span> Avisarle al cliente con la guía</h2>
-  <p>Cuando el pedido sale, aparece <b>«Ya salió: avisale al cliente»</b>. Tocá <b>Preparar mensaje</b>:</p>
-  <ul>
-    <li>El mensaje ya viene armado con el expreso, el número de guía, los bultos y el link de seguimiento. Lo podés editar.</li>
-    <li><b>Enviar por WhatsApp</b> abre el chat del cliente con el texto.</li>
-    <li><b>Mail</b> abre tu correo con asunto y texto.</li>
-    <li><b>Compartir con la guía</b> (en el celular): elegís WhatsApp o mail y va con la foto de la guía adjunta.</li>
-  </ul>
-  <figure><picture><source media="(prefers-color-scheme: dark)" srcset="img/5-avisar-oscuro.png"><img src="img/5-avisar.png" alt="Aviso Ya salió"></picture><figcaption>El aviso aparece solo cuando el pedido salió</figcaption></figure>
-  <figure><picture><source media="(prefers-color-scheme: dark)" srcset="img/6-mensaje-oscuro.png"><img src="img/6-mensaje.png" alt="Mensaje para el cliente"></picture><figcaption>Mensaje listo para WhatsApp o mail</figcaption></figure>
-</section>
+<details class="card" id="ventas">
+  <summary><span class="ico">🧾</span><span>Ventas<span class="que">Lo vendido, objetivos y precios anteriores</span></span><span class="flecha">›</span></summary>
+  <div class="cuerpo">
+    <span class="donde">Menú → Ventas → Ventas</span>
+    <ul>
+      <li>Cargá cada venta con cliente, producto y monto.</li>
+      <li><b>Historial en gráficos:</b> mensual, trimestral y semestral, con objetivos contra vendido.</li>
+      <li><b>Memoria de precios:</b> buscás un producto y te muestra a cuánto se vendió las últimas veces (siempre + IVA).</li>
+      <li><b>Piso de comisión:</b> cada uno carga su piso mensual y ve la comisión del mes.</li>
+    </ul>
+  </div>
+</details>
 
-<section class="card" id="firma">
-  <h2><span class="n">6</span> Firma digital del remito</h2>
-  <p>Si el cliente retira o recibe y no hay papel a mano, se puede firmar en el celular (lo usa sobre todo expedición, pero también podés hacerlo vos):</p>
-  <ul>
-    <li>En el pedido, <b>Archivos → Firmar el remito en el celular</b>.</li>
-    <li>El cliente firma con el dedo y se cargan su <b>nombre y DNI</b>.</li>
-    <li><b>Ver cómo queda</b> muestra el remito con la firma puesta sobre «Recibí conforme», con la fecha, la aclaración y el DNI. Después, <b>Guardar</b>.</li>
-    <li>Imprimir sigue siendo opcional: si el transporte pide papel, se imprime como siempre.</li>
-  </ul>
-  <figure><picture><source media="(prefers-color-scheme: dark)" srcset="img/7-firma-oscuro.png"><img src="img/7-firma.png" alt="Firma en el celular"></picture><figcaption>El cliente firma y se completan nombre y DNI</figcaption></figure>
+<details class="card" id="cotizador">
+  <summary><span class="ico">🧮</span><span>Cotizador<span class="que">Armar precios para el cliente</span></span><span class="flecha">›</span></summary>
+  <div class="cuerpo">
+    <span class="donde">Menú → Ventas → Cotizador</span>
+    <ul>
+      <li>Elegís productos y cantidades y te arma la cotización con fotos, lista para copiar por WhatsApp o pasar a PDF.</li>
+      <li>Busca clientes del CRM y, si no existe, lo podés dar de alta ahí mismo.</li>
+      <li>Al enviarla, el precio queda congelado y se crea solo un seguimiento a 2 días hábiles.</li>
+      <li><b>Una cotización NO es una venta:</b> no se guarda en Ventas.</li>
+    </ul>
+  </div>
+</details>
+
+<details class="card" id="entregas">
+  <summary><span class="ico">🚚</span><span>Entregas<span class="que">Remitos, despachos y avisos al cliente</span></span><span class="flecha">›</span></summary>
+  <div class="cuerpo">
+    <span class="donde">Menú → Ventas → Entregas</span>
+    <p>Reemplaza el ida y vuelta por el grupo de WhatsApp con expedición: vos cargás el remito y expedición lo ve en el momento. <b>Fechas:</b> prueba del 24/11 al 30/11; desde el <b>lunes 01/12</b> es obligatorio en los dos depósitos (Villa Domínico y Mar del Plata).</p>
+
+    <h3>1. El inicio de Entregas</h3>
+    <p>Tus pedidos agrupados: por salir, sin stock, en viaje, sin guía o firma, con problema y entregados. «Mis pedidos» muestra los tuyos; «Todos», los del equipo. Abajo, las <b>Novedades</b>: cuando expedición imprime, despacha o sube la guía, te aparece ahí.</p>
+    <figure><picture><source media="(prefers-color-scheme: dark)" srcset="img/1-inicio-oscuro.png"><img src="img/1-inicio.png" alt="Inicio de Entregas" loading="lazy"></picture><figcaption>Tus pedidos agrupados</figcaption></figure>
+
+    <h3>2. Cargar un remito</h3>
+    <ul>
+      <li>Tocá <b>Cargar remito</b> y subí el PDF de Contabilium (también acepta una foto). Podés subir varios juntos.</li>
+      <li>Los datos del cliente se completan solos: revisá <b>teléfono y dirección</b>.</li>
+      <li>Elegí <b>por dónde va</b> (expreso o «Retira el cliente») y <b>desde qué depósito sale</b>. Guardá.</li>
+    </ul>
+    <figure><picture><source media="(prefers-color-scheme: dark)" srcset="img/2-cargar-oscuro.png"><img src="img/2-cargar.png" alt="Cargar remito" loading="lazy"></picture><figcaption>Subís el PDF y elegís expreso y depósito</figcaption></figure>
+
+    <h3>3. Seguir tus pedidos</h3>
+    <p>Cada pedido pasa por Cargado → Impreso → Despachado → Entregado (o Frenado / Con problema, con el motivo). A la derecha dice a quién le toca.</p>
+    <ul>
+      <li><span class="chip">Guía lista</span> ya tiene número o foto de la guía.</li>
+      <li><span class="chip">Firmado</span> ya tiene el remito firmado.</li>
+    </ul>
+    <figure><picture><source media="(prefers-color-scheme: dark)" srcset="img/3-pedidos-oscuro.png"><img src="img/3-pedidos.png" alt="Lista de pedidos" loading="lazy"></picture><figcaption>Estado y «Guía lista» de un vistazo</figcaption></figure>
+
+    <h3>4. El detalle del pedido</h3>
+    <p>Cuándo salió, por qué expreso, el número de guía con su link de seguimiento, quién lo despachó y el historial. En <b>Historial y comentarios</b> le escribís a expedición; en <b>Archivos</b> están el remito, la guía y el remito firmado. Si te equivocaste en un dato: <b>Datos de envío → Editar</b>.</p>
+    <figure><picture><source media="(prefers-color-scheme: dark)" srcset="img/4-detalle-oscuro.png"><img src="img/4-detalle.png" alt="Detalle del pedido" loading="lazy"></picture><figcaption>Estado, guía y seguimiento</figcaption></figure>
+
+    <h3>5. Avisarle al cliente con la guía</h3>
+    <p>Cuando sale, aparece <b>«Ya salió: avisale al cliente»</b> → <b>Preparar mensaje</b>. Viene armado con expreso, guía, bultos y link; lo mandás por <b>WhatsApp</b>, por <b>Mail</b> o con <b>Compartir con la guía</b> (en el celular va con la foto de la guía adjunta).</p>
+    <figure><picture><source media="(prefers-color-scheme: dark)" srcset="img/5-avisar-oscuro.png"><img src="img/5-avisar.png" alt="Aviso Ya salió" loading="lazy"></picture><figcaption>El aviso aparece solo cuando el pedido salió</figcaption></figure>
+    <figure><picture><source media="(prefers-color-scheme: dark)" srcset="img/6-mensaje-oscuro.png"><img src="img/6-mensaje.png" alt="Mensaje para el cliente" loading="lazy"></picture><figcaption>Mensaje listo para WhatsApp o mail</figcaption></figure>
+
+    <h3>6. Firma digital del remito</h3>
+    <p>En el pedido, <b>Archivos → Firmar el remito en el celular</b>: el cliente firma con el dedo, se cargan nombre y DNI y la firma queda puesta sobre «Recibí conforme» del mismo remito. Imprimir sigue siendo opcional.</p>
+    <figure><picture><source media="(prefers-color-scheme: dark)" srcset="img/7-firma-oscuro.png"><img src="img/7-firma.png" alt="Firma en el celular" loading="lazy"></picture><figcaption>El cliente firma y se completan nombre y DNI</figcaption></figure>
+  </div>
+</details>
+
+<details class="card" id="prospeccion">
+  <summary><span class="ico">🔎</span><span>Prospección<span class="que">Clientes nuevos y clientes para reactivar</span></span><span class="flecha">›</span></summary>
+  <div class="cuerpo">
+    <span class="donde">Menú → Ventas → Prospección</span>
+    <p>Para salir a buscar ventas todos los días. Está en pestañas:</p>
+    <ul>
+      <li><b>Cola del día:</b> listas cortas para trabajar hoy, con el mensaje listo para copiar: <b>Reactivar</b> (clientes que dejaron de comprar), <b>Cotizaron y no compraron</b>, <b>Se pasaron de su frecuencia</b>, <b>Prospectos nuevos</b> y <b>Momentos de sorpresa</b> (agradecer a quien compró grande, cumple años como cliente o volvió). Anotás el resultado en un toque (interesado, precio, ya tiene proveedor, no respondió…) y lo trabajado no vuelve por 14 días.</li>
+      <li><b>Qué aprendimos</b> (dentro de Cola del día): qué mensaje, familia y zona responden mejor, los motivos de rechazo más comunes y cuántas cotizaciones terminan en factura.</li>
+      <li><b>Prospectos:</b> la lista completa, con ficha, WhatsApp con el primer mensaje armado y botón para leer su sitio web.</li>
+      <li><b>Orden de llamada:</b> los prospectos que más valen, ordenados por zona y ciudad. Por cada uno: «Hablé», «No atendió» o «No le sirve…».</li>
+      <li><b>Limpieza:</b> sugiere cuáles conviene descartar y cuáles priorizar.</li>
+      <li><b>Buscar con IA:</b> pedís un rubro y una zona y trae empresas del mapa.</li>
+      <li><b>Respuestas rápidas:</b> textos listos para WhatsApp (abrir la charla, objeciones, seguimiento, pasarlo con alguien) y respuestas técnicas por producto.</li>
+      <li><b>Bandeja de salida:</b> mails de prospección en 3 pasos para aprobar y mandar desde tu Gmail.</li>
+      <li><b>No contactar:</b> a quien pidió que no lo contacten no le vuelve a aparecer.</li>
+      <li><b>Reglas:</b> cómo se puntúa y ordena la cola (normalmente no hace falta tocarlo).</li>
+    </ul>
+    <p class="muted">Nada se manda solo: el CRM arma el mensaje y vos lo mandás desde tu WhatsApp o tu mail.</p>
+  </div>
+</details>
+
+<div class="grupo">Canales online</div>
+
+<details class="card" id="mejoras">
+  <summary><span class="ico">🛠️</span><span>Centro de mejoras<span class="que">Qué arreglar en Mercado Libre y Shopify</span></span><span class="flecha">›</span></summary>
+  <div class="cuerpo">
+    <span class="donde">Menú → Canales online → Centro de mejoras</span>
+    <p>Una lista de trabajo para dejar prolijas las publicaciones: el porcentaje que ya está «limpio» y qué arreglar primero (sin clip, pocas fotos, sin descripción, calidad baja, sin stock, sin SKU…), con cuántas faltan y cómo vienen bajando en la semana.</p>
+    <p>Tocá <b>Ver cuáles</b> para ir directo a esas publicaciones.</p>
+  </div>
+</details>
+
+<details class="card" id="productos">
+  <summary><span class="ico">📦</span><span>Productos<span class="que">Todo de un producto, por SKU</span></span><span class="flecha">›</span></summary>
+  <div class="cuerpo">
+    <span class="donde">Menú → Canales online → Productos</span>
+    <p>Una ficha por SKU que junta el precio de lista del cotizador (en dólares y en pesos al dólar BNA del día), todas las publicaciones de Mercado Libre de todas las cuentas y la tienda Shopify.</p>
+    <ul>
+      <li>Te dice <b>dónde conviene vender</b> (por fuera, ML Clásica, ML Premium o Shopify) según lo que queda por unidad.</li>
+      <li>Avisa <b>⚠ Precio raro</b> cuando el precio de ML y el de la lista no cierran, catálogo perdido, calidad básica y lo que está en tendencia.</li>
+      <li>Sirve para responder rápido «¿cuánto sale en Mercado Libre?», «¿lo tenemos en la tienda?» o «¿está en el cotizador?».</li>
+    </ul>
+  </div>
+</details>
+
+<details class="card" id="mercadolibre">
+  <summary><span class="ico">🛒</span><span>Mercado Libre<span class="que">Ventas, publicaciones, competencia y stock</span></span><span class="flecha">›</span></summary>
+  <div class="cuerpo">
+    <span class="donde">Menú → Canales online → Mercado Libre</span>
+    <p>Todas nuestras cuentas en un solo lugar, cada una con su color (POLIPLAST, COMARG, FOAMFACTORY, FOAMHOME, HOMEARG1 y PURMAC). <b>Solo mira:</b> no cambia nada en Mercado Libre.</p>
+    <ul>
+      <li><b>Resumen:</b> ventas, visitas, conversión, reputación y alertas de los últimos 30 días, y «Lo que preguntan y no está en la descripción».</li>
+      <li><b>Publicaciones:</b> estado, visitas, SKU y qué le falta a cada una. En <b>Qué mejorar</b>: la calidad según Mercado Libre, reclamos y publicaciones con muchas visitas que no venden, con el motivo probable.</li>
+      <li><b>Mercado:</b> <b>Competencia</b> (en los productos de catálogo: si ganamos o perdemos, el precio para ganar y quién gana) y <b>Tendencias</b> (lo más buscado en nuestras categorías; en naranja lo que no cubrimos).</li>
+      <li><b>Dinero:</b> <b>Stock y ganancia</b>: qué reponer y cuánto queda de cada venta después de la comisión y el envío.</li>
+    </ul>
+    <p class="muted">Te sirve para saber cómo se mueve un producto antes de cotizarlo, qué precio tiene la competencia y qué está en alza. Las preguntas y reclamos de Mercado Libre los sigue atendiendo Brenda.</p>
+  </div>
+</details>
+
+<details class="card" id="shopify">
+  <summary><span class="ico">🛍️</span><span>Shopify<span class="que">La tienda online</span></span><span class="flecha">›</span></summary>
+  <div class="cuerpo">
+    <span class="donde">Menú → Canales online → Shopify</span>
+    <ul>
+      <li><b>Resumen:</b> productos activos, pedidos y facturado de 7 y 30 días.</li>
+      <li><b>Qué mejorar</b> y <b>Productos:</b> productos sin descripción, sin fotos, sin stock o sin SKU; buscador por nombre o SKU.</li>
+      <li><b>Operación:</b> pedidos pagos sin despachar, retiros pendientes y carritos abandonados.</li>
+      <li><b>Precios vs ML:</b> compara cada producto con Mercado Libre (regla: tienda = ML − 10 %).</li>
+      <li><b>Faltan en Shopify</b> y <b>Ordenar catálogo:</b> lo que se vende en Mercado Libre y no está en la tienda, y productos repetidos para juntar.</li>
+    </ul>
+    <p class="muted">Solo mira. Los cambios en la tienda los aprueba Felipe.</p>
+  </div>
+</details>
+
+<div class="grupo">Cartera</div>
+
+<details class="card" id="empresas">
+  <summary><span class="ico">🏢</span><span>Empresas y contactos<span class="que">Tu cartera de clientes</span></span><span class="flecha">›</span></summary>
+  <div class="cuerpo">
+    <span class="donde">Menú → Cartera → Empresas y contactos</span>
+    <ul>
+      <li>Cada empresa con contacto, teléfono, mail, CUIT, ciudad, etapa, familia de producto y notas.</li>
+      <li>En la ficha, <b>Facturación</b> muestra lo que compró según Contabilium: última compra, cada cuánto compra y si es cliente grande o recurrente.</li>
+      <li>Anotá cada contacto en la ficha: queda la historia para vos y para el asistente.</li>
+      <li>Marcá <b>«Coticé hoy»</b> cuando le pasás precio, así después aparece en «Cotizaron y no compraron».</li>
+      <li>El directorio compartido de empresas lo traés desde <b>Más → Datos</b>.</li>
+    </ul>
+  </div>
+</details>
+
+<details class="card" id="mapa">
+  <summary><span class="ico">📍</span><span>Mapa<span class="que">Clientes y prospectos por zona</span></span><span class="flecha">›</span></summary>
+  <div class="cuerpo">
+    <span class="donde">Menú → Cartera → Mapa</span>
+    <p>Tus clientes y prospectos en el mapa. Filtrá por tipo o zona para planificar visitas y ver quién queda cerca de una obra o de otro cliente.</p>
+  </div>
+</details>
+
+<div class="grupo">Aprender</div>
+
+<details class="card" id="academia">
+  <summary><span class="ico">🎓</span><span>Academia comercial<span class="que">Productos, cómo vender y práctica</span></span><span class="flecha">›</span></summary>
+  <div class="cuerpo">
+    <span class="donde">Menú → Aprender → Academia comercial</span>
+    <ul>
+      <li><b>Productos:</b> guías de cada producto.</li>
+      <li><b>Cómo vender:</b> el método E-C-E-R-A, las objeciones más comunes y cómo responderlas, y perfiles de cliente.</li>
+      <li><b>Competencia:</b> fichas de competidores por familia. Cualquiera puede sumar uno.</li>
+      <li><b>Equipo:</b> cada uno se describe (lo ve solo esa persona y Felipe).</li>
+      <li><b>Práctica:</b> «Practicar con un cliente (IA)»: elegís tipo de cliente y objeción, respondés como si fuera real y pedís la evaluación con nota de 1 a 10.</li>
+    </ul>
+  </div>
+</details>
+
+<details class="card" id="base">
+  <summary><span class="ico">📄</span><span>Base técnica<span class="que">Fichas técnicas y documentos</span></span><span class="flecha">›</span></summary>
+  <div class="cuerpo">
+    <span class="donde">Menú → Aprender → Base técnica</span>
+    <ul>
+      <li>Fichas técnicas, hojas de seguridad y documentos de cada producto, por familia.</li>
+      <li><b>Subir fichas y documentos:</b> archivos sueltos o una carpeta entera.</li>
+      <li><b>Qué productos tienen ficha:</b> qué productos del catálogo tienen documentación y cuáles no.</li>
+      <li>En <b>Catálogo ↔ Mercado Libre → Descripción y preguntas</b> están la descripción que más vendió y las preguntas frecuentes de cada producto, para copiar.</li>
+    </ul>
+  </div>
+</details>
+
+<div class="grupo">En todas las pantallas</div>
+
+<details class="card" id="asistente">
+  <summary><span class="ico">💬</span><span>El asistente<span class="que">Preguntale como a un compañero</span></span><span class="flecha">›</span></summary>
+  <div class="cuerpo">
+    <span class="donde">Botón redondo abajo a la derecha</span>
+    <p>Responde con lo que sabe el CRM y lo que el equipo respondió en Mercado Libre. Ejemplos:</p>
+    <ul>
+      <li>«¿Cuánto rinde el PoxiPlast?», «¿cuánto tarda en secar…?», «¿sirve para agua potable?»</li>
+      <li>«¿Cuándo compró tal cliente?», «¿a cuánto vendimos el 770?», «¿qué tengo pendiente hoy?»</li>
+      <li>«Quiero cotizar 200 m² de poliurea con top», o el cálculo de material de espuma (kilos y juegos según la ficha).</li>
+      <li>«¿Qué competidores hay de poliuretano?», «¿cómo uso la Cola del día?»</li>
+    </ul>
+    <p>También puede proponerte crear una tarea, anotar en un cliente o redactar un mensaje: vos confirmás. Con 👍 / 👎 lo vamos corrigiendo.</p>
+    <p class="muted">Si un dato importante no te cierra (precio, plazo, dato técnico), confirmalo antes de pasárselo al cliente.</p>
+  </div>
+</details>
+
+<details class="card" id="perfil">
+  <summary><span class="ico">⚙️</span><span>Perfil y Datos<span class="que">Tu cuenta</span></span><span class="flecha">›</span></summary>
+  <div class="cuerpo">
+    <span class="donde">Menú → Más</span>
+    <ul>
+      <li><b>Perfil:</b> tu nombre y cambiar la contraseña.</li>
+      <li><b>Datos:</b> traer el directorio compartido de empresas y descargar un respaldo de lo tuyo.</li>
+    </ul>
+  </div>
+</details>
+
+<section class="card" id="pronto">
+  <h2>🔜 Próximamente</h2>
+  <p><b>Mensajes de WhatsApp en el CRM:</b> ver las consultas que entran por WhatsApp, con la historia de cada cliente y respuestas sugeridas. Hoy está en prueba con Felipe; cuando esté lista se suma a esta guía.</p>
 </section>
 
 <section class="card faq" id="dudas">
-  <h2><span class="n">?</span> Preguntas frecuentes</h2>
-  <b>¿Tengo que seguir avisando por el grupo de WhatsApp?</b>
-  <p>No. Al cargar el remito, expedición ya lo ve. Si hay algo especial, escribilo en el comentario del pedido.</p>
-  <b>¿Cómo sé si ya salió?</b>
-  <p>En Pedidos dice «Despachado» con la fecha, y si aparece <span class="chip">Guía lista</span> ya podés mandarle la guía al cliente.</p>
-  <b>Un pedido está «Frenado», ¿qué hago?</b>
-  <p>Mirá el motivo (sin stock, falta pago, datos incompletos). Si dice que te toca a vos, resolvelo y avisá en el comentario.</p>
-  <b>Me equivoqué en un dato.</b>
-  <p>En el detalle, <b>Datos de envío → Editar</b>.</p>
-  <b>Algo no anda o veo algo raro.</b>
+  <h2>Preguntas frecuentes</h2>
+  <b>¿Pierdo algo si cierro la pestaña?</b>
+  <p>No. Lo que cargás se guarda en tu cuenta y lo ves igual en la compu y en el celular.</p>
+  <b>¿El CRM le manda mensajes a los clientes solo?</b>
+  <p>No. Arma el mensaje y vos lo mandás desde tu WhatsApp o tu mail.</p>
+  <b>Una pantalla queda en blanco o da error.</b>
+  <p>Recargá la página: suele pasar cuando se publica una versión nueva con la pestaña abierta.</p>
+  <b>No uso una sección y me molesta.</b>
+  <p>Avisale a Felipe y te la saca de tu menú.</p>
+  <b>Algo no anda o veo un dato raro.</b>
   <p>Mandale una captura a Felipe por WhatsApp.</p>
 </section>
 
 </main>
-<footer>Grupo Poliplast · Guía de Entregas para comerciales · actualizada el 21/11/2026</footer>
+<footer>Grupo Poliplast · Guía del CRM · actualizada el 21/11/2026</footer>
+<script>
+  // Abre la sección cuando se llega por un link (por ejemplo /guia/#entregas) o se toca el índice.
+  function abrir() { var d = location.hash && document.getElementById(location.hash.slice(1)); if (d && d.tagName === 'DETAILS') { d.open = true; d.scrollIntoView(); } }
+  window.addEventListener('hashchange', abrir); abrir();
+</script>
 </body>
 </html>

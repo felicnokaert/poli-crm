@@ -1,7 +1,7 @@
 import { BookOpen, CalendarDays, ClipboardList, Home, LogOut, Plus, Settings, UserRound, Warehouse } from 'lucide-react'
 
 /** Guía de uso para comerciales (página del CRM, 21/11): siempre a un toque, sin buscar el PDF. */
-export const GUIA_URL = 'https://poli-crm.vercel.app/guia/'
+export const GUIA_URL = 'https://poli-crm.vercel.app/guia/#entregas'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { api, MAQUETA } from '../lib/cliente'
 import { useDatos } from '../lib/datos'

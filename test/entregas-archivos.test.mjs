@@ -149,3 +149,17 @@ test('registrar-archivo con nota la deja como comentario en el historial', async
   assert.match(row.nota, /DNI 27421977/);
   assert.equal(row.operador, 'Marcos');
 });
+
+test('registrar una guía con número lo guarda en el pedido sin pisar uno cargado', async () => {
+  const { http, calls } = fakeHttp();
+  const r = res();
+  await entregasApiHandler(post('registrar-archivo', { path: PATH, tipo: 'guia', pedido: P1, n_guia: '000123456789' }), r, env, http, NOW);
+  assert.equal(r.code, 200);
+  const patch = calls.find((c) => c.url.includes('entregas_pedidos') && c.options.method === 'PATCH');
+  assert.ok(patch, 'debería guardar el número');
+  assert.match(patch.url, /or=\(n_guia\.is\.null,n_guia\.eq\.\)/);
+  assert.equal(JSON.parse(patch.options.body).n_guia, '000123456789');
+  const { http: http2, calls: calls2 } = fakeHttp();
+  await entregasApiHandler(post('registrar-archivo', { path: PATH, tipo: 'remito_firmado', pedido: P1, n_guia: '000123456789' }), res(), env, http2, NOW);
+  assert.ok(!calls2.some((c) => c.url.includes('entregas_pedidos') && c.options.method === 'PATCH'), 'un remito no toca n_guia');
+});

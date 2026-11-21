@@ -14,7 +14,22 @@ import { WhatsAppDerivations } from "./WhatsAppDerivations";
 import { AutomationPause } from "./AutomationPause.jsx";
 // Tras una publicación nueva, la parte pedida puede llegar vacía ("Cannot read properties of undefined (reading 'Clients')"):
 // se reintenta una vez y, si sigue sin venir, se recarga la página una sola vez para tomar la versión nueva.
-const lazyNamed = (loader, name) => lazy(async () => {
+// 21/11 (Felipe: «que las pestañas tarden lo menos posible»): cada pantalla se baja aparte, pero ahora se precargan
+// todas en segundo plano unos segundos después de entrar (preloadScreens), así al tocar una pestaña ya está en el navegador.
+const LAZY_LOADERS = [];
+function preloadScreens() {
+  const queue = [...new Set(LAZY_LOADERS)];
+  const next = () => {
+    const loader = queue.shift();
+    if (!loader) return;
+    Promise.resolve().then(loader).catch(() => null).finally(() => {
+      const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 200));
+      idle(next);
+    });
+  };
+  next();
+}
+const lazyNamed = (loader, name) => (LAZY_LOADERS.push(loader), lazy(async () => {
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
       const m = await loader();
@@ -31,7 +46,7 @@ const lazyNamed = (loader, name) => lazy(async () => {
     return new Promise(() => {});
   }
   throw new Error(`No se pudo cargar ${name}. Recargá la página.`);
-});
+}));
 const TechnicalDocumentsAdmin = lazyNamed(() => import("./TechnicalDocuments"), "TechnicalDocumentsAdmin");
 const MapaCobertura = lazyNamed(() => import("./MapaCobertura"), "MapaCobertura");
 const CotizadorFrame = lazyNamed(() => import("./CotizadorFrame"), "CotizadorFrame");
@@ -139,6 +154,13 @@ function readSavedView() {
 }
 
 export default function App() {
+  useEffect(() => {
+    // Sin conexión lenta ni ahorro de datos: precarga las pantallas 2,5 s después de abrir.
+    const saveData = navigator.connection?.saveData || /2g/.test(navigator.connection?.effectiveType || "");
+    if (saveData) return undefined;
+    const timer = setTimeout(preloadScreens, 2500);
+    return () => clearTimeout(timer);
+  }, []);
   const [narrowScreen, setNarrowScreen] = useState(() => typeof window !== "undefined" && window.matchMedia?.("(max-width: 760px)").matches);
   useEffect(() => {
     const query = window.matchMedia?.("(max-width: 760px)");

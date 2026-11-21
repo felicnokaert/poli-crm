@@ -65,3 +65,16 @@ test('si la app de adentro avisa «lista» otra vez (se recargó), le vuelve a m
     assert.equal(sent[1].tipo, 'crm:sesion');
   } finally { cleanup(); }
 });
+
+// 21/11: mientras la app de adentro arranca se ve la P del CRM (no su «Cargando…»), y se destapa al pasarle la sesión.
+test('con loadingText muestra la P del CRM hasta pasarle la sesión', async () => {
+  try {
+    const origin = 'https://app.example.com';
+    const { container } = render(React.createElement(EmbeddedAppFrame, { session: { access_token: 'a', refresh_token: 'r' }, src: `${origin}/?embed=1`, origin, readyType: 'app:listo', title: 'App', bare: true, loadingText: 'Cargando App' }));
+    assert.ok(Boolean(container.querySelector('.embedded-splash')), 'se ve la P');
+    const frame = container.querySelector('iframe');
+    frame.contentWindow.postMessage = () => {};
+    await act(async () => { window.dispatchEvent(message({ tipo: 'app:listo' }, origin, frame.contentWindow)); });
+    await waitFor(() => assert.ok(!container.querySelector('.embedded-splash')), { timeout: 2000 });
+  } finally { cleanup(); }
+});

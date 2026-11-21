@@ -14,6 +14,7 @@ export function EntregasFrame({ session }) {
       heightType="entregas:alto"
       title="Entregas"
       allow="clipboard-write"
+      loadingText="Cargando Entregas"
       bare
     />
   );

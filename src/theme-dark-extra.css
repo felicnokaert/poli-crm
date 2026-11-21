@@ -1,0 +1,79 @@
+/* Ajustes A MANO del modo oscuro (se cargan después de theme-dark.css, que es generado y se pisa al regenerarlo).
+   21/11: separados para que scripts/build-dark-theme.mjs no los borre. */
+
+:root[data-theme="dark"] .training-row { border-color: #333338; }
+:root[data-theme="dark"] .training-compare > div { background: rgba(255,255,255,.05); }
+:root[data-theme="dark"] .ml-faq > li { border-color: #333338; }
+
+/* 22/10: chat del asistente en oscuro */
+:root[data-theme="dark"] .assistant-window-head { background: linear-gradient(135deg, #1c1c1f 0%, #241c1d 100%); }
+:root[data-theme="dark"] .assistant-avatar { background: #1c1c1f; }
+:root[data-theme="dark"] .assistant-ai-text strong { color: #ff8a8f; }
+:root[data-theme="dark"] .assistant-source { border-top-color: rgba(255, 255, 255, .1); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .assistant-window-head { background: linear-gradient(135deg, #1c1c1f 0%, #241c1d 100%); }
+  :root:not([data-theme="light"]) .assistant-avatar { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .assistant-ai-text strong { color: #ff8a8f; }
+  :root:not([data-theme="light"]) .assistant-source { border-top-color: rgba(255, 255, 255, .1); }
+}
+:root[data-theme="dark"] .ml-trend-words .badge.warn { background: #3a2f17; color: #f3d28b; }
+:root[data-theme="dark"] .ml-below { color: #ff8a80; }
+
+/* 23/10: Mercado Libre rediseño (modo oscuro) */
+:root[data-theme="dark"] .ml-account-chip { background: #1b1b1e; border-color: #343438; }
+:root[data-theme="dark"] .ml-tabs button:hover { color: #f2f2f2; }
+:root[data-theme="dark"] .ml-account-chip.selected { background: #f2f2f2; color: #111; }
+
+/* 23/10: competencia por catálogo. */
+:root[data-theme="dark"] .ml-board .badge.bad { background: #3a1f1f; color: #ffb4b4; }
+:root[data-theme="dark"] .ml-board .badge.ok { background: #1c3324; color: #a7e3b6; }
+:root[data-theme="dark"] .ml-catalog-counts > div { background: #26262a; }
+:root[data-theme="dark"] .integration-state.ok { color: #7fd99a; }
+:root[data-theme="dark"] .integration-state.warn { color: #f5c46b; }
+:root[data-theme="dark"] .integration-state.bad { color: #ff9b9b; }
+:root[data-theme="dark"] .product-hub .ph-row { background: #1c1c1f; border-color: #2c2c31; }
+:root[data-theme="dark"] .product-hub .ph-photo { background: #26262a; }
+:root[data-theme="dark"] .product-hub .badge.danger, :root[data-theme="dark"] .product-hub .ph-alert.ph-alta { background: #3b1414; color: #ffb4b4; }
+:root[data-theme="dark"] .product-hub .badge.ph-trend { background: #12301e; color: #9be3b5; }
+:root[data-theme="dark"] .product-hub .ph-alert, :root[data-theme="dark"] .product-hub .ph-alert.ph-media { background: #2a2416; color: #f3d38c; }
+:root[data-theme="dark"] .product-hub .ph-best td { background: #12301e; }
+:root[data-theme="dark"] .product-hub .ph-detail { border-color: #2c2c31; }
+:root[data-theme="dark"] .assistant-action { background: #1d1d20; border-color: #3a3a40; }
+:root[data-theme="dark"] .assistant-teach { background: #241c1d; border-color: #5a2a2d; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .assistant-action { background: #1d1d20; border-color: #3a3a40; }
+  :root:not([data-theme="light"]) .assistant-teach { background: #241c1d; border-color: #5a2a2d; }
+}
+
+/* Lo mismo para «automático» con el dispositivo en oscuro (antes solo valía eligiendo «oscuro»). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .training-row { border-color: #333338; }
+  :root:not([data-theme="light"]) .training-compare > div { background: rgba(255,255,255,.05); }
+  :root:not([data-theme="light"]) .ml-faq > li { border-color: #333338; }
+  :root:not([data-theme="light"]) .assistant-window-head { background: linear-gradient(135deg, #1c1c1f 0%, #241c1d 100%); }
+  :root:not([data-theme="light"]) .assistant-avatar { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .assistant-ai-text strong { color: #ff8a8f; }
+  :root:not([data-theme="light"]) .assistant-source { border-top-color: rgba(255, 255, 255, .1); }
+  :root:not([data-theme="light"]) .ml-trend-words .badge.warn { background: #3a2f17; color: #f3d28b; }
+  :root:not([data-theme="light"]) .ml-below { color: #ff8a80; }
+  :root:not([data-theme="light"]) .ml-account-chip { background: #1b1b1e; border-color: #343438; }
+  :root:not([data-theme="light"]) .ml-tabs button:hover { color: #f2f2f2; }
+  :root:not([data-theme="light"]) .ml-account-chip.selected { background: #f2f2f2; color: #111; }
+  :root:not([data-theme="light"]) .ml-board .badge.bad { background: #3a1f1f; color: #ffb4b4; }
+  :root:not([data-theme="light"]) .ml-board .badge.ok { background: #1c3324; color: #a7e3b6; }
+  :root:not([data-theme="light"]) .ml-catalog-counts > div { background: #26262a; }
+  :root:not([data-theme="light"]) .integration-state.ok { color: #7fd99a; }
+  :root:not([data-theme="light"]) .integration-state.warn { color: #f5c46b; }
+  :root:not([data-theme="light"]) .integration-state.bad { color: #ff9b9b; }
+  :root:not([data-theme="light"]) .product-hub .ph-row { background: #1c1c1f; border-color: #2c2c31; }
+  :root:not([data-theme="light"]) .product-hub .ph-photo { background: #26262a; }
+  :root:not([data-theme="light"]) .product-hub .badge.danger, :root:not([data-theme="light"]) .product-hub .ph-alert.ph-alta { background: #3b1414; color: #ffb4b4; }
+  :root:not([data-theme="light"]) .product-hub .badge.ph-trend { background: #12301e; color: #9be3b5; }
+  :root:not([data-theme="light"]) .product-hub .ph-alert, :root:not([data-theme="light"]) .product-hub .ph-alert.ph-media { background: #2a2416; color: #f3d38c; }
+  :root:not([data-theme="light"]) .product-hub .ph-best td { background: #12301e; }
+  :root:not([data-theme="light"]) .product-hub .ph-detail { border-color: #2c2c31; }
+  :root:not([data-theme="light"]) .assistant-action { background: #1d1d20; border-color: #3a3a40; }
+  :root:not([data-theme="light"]) .assistant-teach { background: #241c1d; border-color: #5a2a2d; }
+}
+:root[data-theme="dark"] .matrix-chart { background: linear-gradient(135deg, #0d776422, transparent 55%), #1c1c1f; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .matrix-chart { background: linear-gradient(135deg, #0d776422, transparent 55%), #1c1c1f; } }

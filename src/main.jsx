@@ -5,6 +5,7 @@ import { ConfirmProvider } from './ConfirmDialog';
 import { ErrorBoundary } from './ErrorBoundary.jsx';
 import './styles.css';
 import './theme-dark.css';
+import './theme-dark-extra.css';
 import { applyTheme, readTheme } from './theme.mjs';
 
 applyTheme(readTheme());

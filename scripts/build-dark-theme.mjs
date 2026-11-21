@@ -100,5 +100,11 @@ ${scoped(':root[data-theme="dark"]')}
 ${scoped(':root:not([data-theme="light"])').split('\n').map((l) => '  ' + l).join('\n')}
 }
 `;
-writeFileSync('src/theme-dark.css', out);
-console.log('reglas con fondo claro:', rules.size);
+// --check (lo usa test/dark-theme-fresh.test.mjs): falla si styles.css cambió y el modo oscuro no se regeneró.
+if (process.argv.includes('--check')) {
+  if (readFileSync('src/theme-dark.css', 'utf8') !== out) { console.error('src/theme-dark.css está viejo: correr node scripts/build-dark-theme.mjs'); process.exit(1); }
+  console.log('modo oscuro al día');
+} else {
+  writeFileSync('src/theme-dark.css', out);
+  console.log('reglas con fondo claro:', rules.size);
+}

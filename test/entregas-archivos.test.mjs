@@ -136,3 +136,16 @@ test('sin-asignar lista con link firmado y asignar lo pasa al pedido', async () 
   const patch = calls.find((c) => c.url.includes('entregas_archivos_sin_asignar') && c.options.method === 'PATCH');
   assert.equal(JSON.parse(patch.options.body).asignado_pedido, P2);
 });
+
+test('registrar-archivo con nota la deja como comentario en el historial', async () => {
+  const { http, calls } = fakeHttp();
+  const r = res();
+  await entregasApiHandler(post('registrar-archivo', { path: PATH, tipo: 'remito_firmado', pedido: P1, nota: 'Firmó el retiro: Juan Pérez, DNI 27421977 (firma digital).' }), r, env, http, NOW);
+  assert.equal(r.code, 200);
+  const evento = calls.find((c) => c.url.includes('entregas_eventos') && c.options.method === 'POST');
+  const row = JSON.parse(evento.options.body);
+  assert.equal(row.tipo, 'comentario');
+  assert.equal(row.pedido_id, P1);
+  assert.match(row.nota, /DNI 27421977/);
+  assert.equal(row.operador, 'Marcos');
+});

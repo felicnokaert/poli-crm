@@ -1,6 +1,6 @@
 import {
   AlertCircle, ArrowLeft, Camera, Copy, ExternalLink, FileText, HandCoins, Image as ImageIcon, Link2, MessageCircle, MessageSquare, Paperclip,
-  Pencil, PlusCircle, Printer, Send, Trash2, Truck,
+  Mail, Pencil, PenLine, PlusCircle, Printer, Send, Share2, Trash2, Truck,
 } from 'lucide-react'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { mensajeError, type DetallePedido } from '../lib/api'
@@ -10,7 +10,9 @@ import {
   accionLabel, alertaDe, ESTADO_INFO, FALTANTE_LABEL, faltantesDe, MOTIVOS_BLOQUEO, MOTIVOS_INCIDENCIA, pasosRetiro, pelotaEn, transicionesDisponibles,
 } from '../lib/estados'
 import { fechaCorta, fechaHora, fechaLarga, hace } from '../lib/fechas'
-import { guiaLegible, guiaSeCopia, linkPedido, linkSeguimiento, linkWhatsApp, mensajeCliente, numeroSeguir, partesGuia } from '../lib/mensajes'
+import { asuntoCliente, guiaLegible, guiaSeCopia, linkMail, linkPedido, linkSeguimiento, linkWhatsApp, mensajeCliente, numeroSeguir, partesGuia, textoPlano } from '../lib/mensajes'
+import { hoyISO } from '../lib/fechas'
+import { FirmaRemito } from './FirmaRemito'
 import { marcarRetirado } from '../lib/retiro'
 import type { Archivo, CamposEditables, Estado, Evento, Pedido, TipoArchivo } from '../lib/types'
 import { CambioEstado, DIRECTOS } from './CambioEstado'
@@ -119,6 +121,14 @@ export function PedidoDetalle({ idOCodigo }: { idOCodigo: string }) {
     }
   }
 
+  // Al firmar el remito se puede cerrar el pedido en el mismo paso: «lo retiró» o «entregado hoy».
+  const alFirmar = retiro.length
+    ? { label: 'Marcar que lo retiró (queda entregado hoy)', hacer: () => marcarRetirado(api, p, retiro), retiro: true }
+    : posibles.includes('entregado')
+      ? { label: 'Marcar entregado hoy', hacer: () => api.cambiarEstado(p.id, 'entregado', { fecha_entrega: hoyISO() }) }
+      : undefined
+  const avisarCliente = p.estado === 'despachado' && Boolean(p.n_guia || p.tiene_guia_archivo)
+
   return (
     <div className="page">
       <div className="page-head">
@@ -218,13 +228,23 @@ export function PedidoDetalle({ idOCodigo }: { idOCodigo: string }) {
               </div>
             </div>
           )}
-          <Archivos pedido={p} archivos={archivos} onCambio={cargar} />
+          {avisarCliente && (
+            <div className="faltante-box ok">
+              <Send size={18} />
+              <div>
+                <b>Ya salió: avisale al cliente</b>
+                <div className="small">Mensaje armado con la guía{archivos.some((a) => a.tipo === 'guia') ? ' y el archivo para adjuntar' : ''}, por WhatsApp o mail.</div>
+                <button className="btn btn-sm btn-primary" style={{ marginTop: 8 }} onClick={() => setMsgCliente(true)}><MessageCircle size={14} /> Preparar mensaje</button>
+              </div>
+            </div>
+          )}
+          <Archivos pedido={p} archivos={archivos} onCambio={cargar} alFirmar={alFirmar} />
         </div>
       </div>
 
       {cambio && <CambioEstado pedidos={[p]} a={cambio} onClose={() => setCambio(null)} onHecho={cargar} />}
       {editando && <EditarPedido pedido={p} onClose={() => setEditando(false)} onHecho={cargar} />}
-      {msgCliente && <MensajeCliente pedido={p} onClose={() => setMsgCliente(false)} />}
+      {msgCliente && <MensajeCliente pedido={p} archivos={archivos} onClose={() => setMsgCliente(false)} />}
     </div>
   )
 }
@@ -412,7 +432,8 @@ function Historial({ pedido, eventos, onComentado }: { pedido: Pedido; eventos: 
 }
 
 // ---------------------------------------------------------------- Archivos
-function Archivos({ pedido, archivos, onCambio }: { pedido: Pedido; archivos: Archivo[]; onCambio: () => Promise<void> }) {
+function Archivos({ pedido, archivos, onCambio, alFirmar }: { pedido: Pedido; archivos: Archivo[]; onCambio: () => Promise<void>; alFirmar?: { label: string; hacer: () => Promise<void>; retiro?: boolean } }) {
+  const [firmando, setFirmando] = useState(false)
   const { yo } = useDatos()
   const avisar = useToast()
   const nombre = useNombre()
@@ -482,6 +503,11 @@ function Archivos({ pedido, archivos, onCambio }: { pedido: Pedido; archivos: Ar
             )}
           </div>
         ))}
+        {pedido.estado !== 'cancelado' && (
+          <button className="btn btn-primary btn-sm" style={{ marginTop: 6 }} onClick={() => setFirmando(true)}>
+            <PenLine size={14} /> Firmar el remito en el celular
+          </button>
+        )}
         <div className="label" style={{ marginTop: 6 }}>Agregar</div>
         <div className="subir-grid">
           <Subir tipo="guia" label="Guía" camara />
@@ -492,6 +518,7 @@ function Archivos({ pedido, archivos, onCambio }: { pedido: Pedido; archivos: Ar
         </div>
       </div>
       {leerGuia.elemento}
+      {firmando && <FirmaRemito pedido={pedido} alFirmar={alFirmar} onClose={() => setFirmando(false)} onHecho={onCambio} />}
     </section>
   )
 }
@@ -567,19 +594,50 @@ function EditarPedido({ pedido, onClose, onHecho }: { pedido: Pedido; onClose: (
 }
 
 // ---------------------------------------------------------------- Mensaje al cliente
-function MensajeCliente({ pedido, onClose }: { pedido: Pedido; onClose: () => void }) {
+function MensajeCliente({ pedido, archivos, onClose }: { pedido: Pedido; archivos: Archivo[]; onClose: () => void }) {
   const { expresosPorId } = useDatos()
   const copiar = useCopiar()
+  const avisar = useToast()
   const [texto, setTexto] = useState(() => mensajeCliente(pedido, pedido.expreso_id ? expresosPorId.get(pedido.expreso_id) : undefined))
+  const [compartiendo, setCompartiendo] = useState(false)
+  const guia = [...archivos].reverse().find((a) => a.tipo === 'guia')
+  const asunto = asuntoCliente(pedido)
+  // En el celular, «Compartir» abre WhatsApp, Gmail, etc. con la guía ya adjunta. En la compu se descarga y se adjunta a mano.
+  async function compartirGuia() {
+    if (!guia) return
+    setCompartiendo(true)
+    try {
+      const url = await api.urlArchivo(guia)
+      const blob = await (await fetch(url)).blob()
+      const archivo = new File([blob], guia.nombre, { type: guia.mime || blob.type })
+      const datos = { files: [archivo], title: asunto, text: textoPlano(texto) }
+      if (navigator.canShare?.(datos)) {
+        await navigator.share(datos)
+      } else {
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(archivo)
+        a.download = guia.nombre
+        a.click()
+        avisar('Guía descargada: adjuntala en WhatsApp o en el mail')
+      }
+    } catch (e) {
+      if ((e as Error)?.name !== 'AbortError') avisar(mensajeError(e), true)
+    } finally {
+      setCompartiendo(false)
+    }
+  }
   return (
     <Modal titulo="Responder al cliente" subtitulo="Texto armado con el estado real del pedido. Podés editarlo antes de mandarlo." onClose={onClose}
       pie={(
         <>
           <button className="btn" onClick={() => void copiar(texto, 'Mensaje copiado')}><Copy size={16} /> Copiar</button>
+          <a className="btn" href={linkMail(null, asunto, texto)}><Mail size={16} /> Mail</a>
+          {guia && <button className="btn" disabled={compartiendo} onClick={() => void compartirGuia()}><Share2 size={16} /> {compartiendo ? 'Preparando…' : 'Compartir con la guía'}</button>}
           <a className="btn btn-primary" href={linkWhatsApp(pedido.telefono, texto)} target="_blank" rel="noreferrer"><MessageCircle size={16} /> {pedido.telefono ? 'Enviar por WhatsApp' : 'Abrir WhatsApp'}</a>
         </>
       )}>
       <textarea className="control" style={{ minHeight: 150 }} value={texto} onChange={(e) => setTexto(e.target.value)} />
+      {guia && <div className="aviso info"><Share2 size={16} /> «Compartir con la guía» manda el texto con el archivo de la guía adjunto (en el celular elegís WhatsApp o mail).</div>}
       {!pedido.telefono && <div className="aviso info">El pedido no tiene teléfono cargado: WhatsApp se abre para que elijas el chat.</div>}
       {pedido.estado === 'cargado' && <div className="aviso warn"><Printer size={16} /> Ojo: todavía no está impreso. Si el cliente apura, comentalo en el pedido para que expedición lo vea.</div>}
     </Modal>

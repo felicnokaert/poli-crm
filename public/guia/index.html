@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<meta name="color-scheme" content="light dark">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Guía de Entregas</title>
 <meta name="description" content="Guía para comerciales: cargar remitos, seguir pedidos y avisar al cliente con la guía.">
@@ -25,6 +26,7 @@
   ul { padding-left:20px; margin:8px 0; }
   li { margin:4px 0; }
   figure { margin:12px 0 0; }
+  figure picture { display:block; }
   figure img { width:100%; max-width:340px; display:block; margin:0 auto; border-radius:14px; border:1px solid var(--line); }
   figcaption { text-align:center; font-size:13px; color:var(--muted); margin-top:6px; }
   .chip { display:inline-block; padding:1px 9px; border-radius:999px; font-size:13px; font-weight:600; background:var(--okbg); color:var(--ok); }
@@ -72,7 +74,7 @@
     <li>«Mis pedidos» muestra los tuyos; «Todos», los de todo el equipo.</li>
     <li>Abajo están las <b>Novedades</b>: cuando expedición imprime, despacha, sube la guía o el remito firmado, te aparece acá.</li>
   </ul>
-  <figure><img src="img/1-inicio.png" alt="Pantalla de inicio de Entregas"><figcaption>Inicio con tus pedidos agrupados</figcaption></figure>
+  <figure><picture><source media="(prefers-color-scheme: dark)" srcset="img/1-inicio-oscuro.png"><img src="img/1-inicio.png" alt="Pantalla de inicio de Entregas"></picture><figcaption>Inicio con tus pedidos agrupados</figcaption></figure>
 </section>
 
 <section class="card" id="cargar">
@@ -84,7 +86,7 @@
     <li>Elegí <b>por dónde va</b> (expreso o «Retira el cliente») y <b>desde qué depósito sale</b>.</li>
     <li>Guardá. Expedición lo ve en el momento: no hace falta avisar por el grupo.</li>
   </ul>
-  <figure><img src="img/2-cargar.png" alt="Pantalla Cargar remito"><figcaption>Cargar remito: subís el PDF y elegís expreso y depósito</figcaption></figure>
+  <figure><picture><source media="(prefers-color-scheme: dark)" srcset="img/2-cargar-oscuro.png"><img src="img/2-cargar.png" alt="Pantalla Cargar remito"></picture><figcaption>Cargar remito: subís el PDF y elegís expreso y depósito</figcaption></figure>
 </section>
 
 <section class="card" id="pedidos">
@@ -96,7 +98,7 @@
     <li>A la derecha dice <b>a quién le toca</b>: vendedor, expedición o expreso.</li>
     <li>Arriba podés buscar por cliente, remito o guía y filtrar por fecha.</li>
   </ul>
-  <figure><img src="img/3-pedidos.png" alt="Lista de pedidos"><figcaption>Lista de pedidos con estado y «Guía lista»</figcaption></figure>
+  <figure><picture><source media="(prefers-color-scheme: dark)" srcset="img/3-pedidos-oscuro.png"><img src="img/3-pedidos.png" alt="Lista de pedidos"></picture><figcaption>Lista de pedidos con estado y «Guía lista»</figcaption></figure>
 </section>
 
 <section class="card" id="detalle">
@@ -107,7 +109,7 @@
     <li>En <b>Historial y comentarios</b> escribís una consulta para expedición: reemplaza el ida y vuelta del grupo.</li>
     <li>En <b>Archivos</b> están el remito, la guía y el remito firmado.</li>
   </ul>
-  <figure><img src="img/4-detalle.png" alt="Detalle de un pedido"><figcaption>Detalle: estado, guía y seguimiento</figcaption></figure>
+  <figure><picture><source media="(prefers-color-scheme: dark)" srcset="img/4-detalle-oscuro.png"><img src="img/4-detalle.png" alt="Detalle de un pedido"></picture><figcaption>Detalle: estado, guía y seguimiento</figcaption></figure>
 </section>
 
 <section class="card" id="avisar">
@@ -119,8 +121,8 @@
     <li><b>Mail</b> abre tu correo con asunto y texto.</li>
     <li><b>Compartir con la guía</b> (en el celular): elegís WhatsApp o mail y va con la foto de la guía adjunta.</li>
   </ul>
-  <figure><img src="img/5-avisar.png" alt="Aviso Ya salió"><figcaption>El aviso aparece solo cuando el pedido salió</figcaption></figure>
-  <figure><img src="img/6-mensaje.png" alt="Mensaje para el cliente"><figcaption>Mensaje listo para WhatsApp o mail</figcaption></figure>
+  <figure><picture><source media="(prefers-color-scheme: dark)" srcset="img/5-avisar-oscuro.png"><img src="img/5-avisar.png" alt="Aviso Ya salió"></picture><figcaption>El aviso aparece solo cuando el pedido salió</figcaption></figure>
+  <figure><picture><source media="(prefers-color-scheme: dark)" srcset="img/6-mensaje-oscuro.png"><img src="img/6-mensaje.png" alt="Mensaje para el cliente"></picture><figcaption>Mensaje listo para WhatsApp o mail</figcaption></figure>
 </section>
 
 <section class="card" id="firma">
@@ -132,7 +134,7 @@
     <li><b>Ver cómo queda</b> muestra el remito con la firma puesta sobre «Recibí conforme», con la fecha, la aclaración y el DNI. Después, <b>Guardar</b>.</li>
     <li>Imprimir sigue siendo opcional: si el transporte pide papel, se imprime como siempre.</li>
   </ul>
-  <figure><img src="img/7-firma.png" alt="Firma en el celular"><figcaption>El cliente firma y se completan nombre y DNI</figcaption></figure>
+  <figure><picture><source media="(prefers-color-scheme: dark)" srcset="img/7-firma-oscuro.png"><img src="img/7-firma.png" alt="Firma en el celular"></picture><figcaption>El cliente firma y se completan nombre y DNI</figcaption></figure>
 </section>
 
 <section class="card faq" id="dudas">

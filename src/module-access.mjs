@@ -30,6 +30,9 @@ export const MODULES = [
 
 export const ALWAYS_ALLOWED = ['profile', 'settings'];
 
+// Solo administradores (Felipe, 21/11): Por revisar es de Felipe e Historial (WhatsApp) queda para más adelante.
+export const ADMIN_ONLY = ['inbox', 'conversations'];
+
 export const moduleKey = (module, child = '') => (child ? `${module}.${child}` : module);
 
 // Conjunto de claves quitadas a una persona a partir de las filas de la tabla.
@@ -39,6 +42,7 @@ export function deniedSet(rows = []) {
 
 export function canSee(email, denied, module, child = '') {
   if (ALWAYS_ALLOWED.includes(module) || isChannelAdmin(email)) return true;
+  if (ADMIN_ONLY.includes(module)) return false;
   if (!(denied instanceof Set) || denied.size === 0) return true;
   if (denied.has(module)) return false;
   return child ? !denied.has(moduleKey(module, child)) : true;

@@ -224,6 +224,23 @@ export default function App() {
   // Si a esta cuenta le quitaron la pantalla (por permiso o por su rol), cae en la primera que sí puede ver.
   const viewAllowed = (id) => canSeeModule(signedEmail, deniedModules, id) && accessAllows(previewAccess, id);
   const view = viewAllowed(pickedView) ? pickedView : (viewAllowed("dashboard") ? "dashboard" : firstAllowedView(signedEmail, deniedModules));
+  // Entregas precargada (ver abajo): solo si la persona la puede ver y sin ahorro de datos.
+  const canSeeEntregas = viewAllowed("entregas") && !demo;
+  const [entregasWarm, setEntregasWarm] = useState(false);
+  useEffect(() => {
+    if (view === "entregas") { setEntregasWarm(true); return undefined; }
+    if (entregasWarm || !session || !canSeeEntregas) return undefined;
+    const saveData = navigator.connection?.saveData || /2g/.test(navigator.connection?.effectiveType || "");
+    if (saveData) return undefined;
+    const timer = setTimeout(() => setEntregasWarm(true), 4000);
+    return () => clearTimeout(timer);
+  }, [view, entregasWarm, session, canSeeEntregas]);
+  // Al volver a mostrarla, que recalcule la parte visible (estaba escondida).
+  useEffect(() => {
+    if (view !== "entregas") return undefined;
+    const frame = requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
+    return () => cancelAnimationFrame(frame);
+  }, [view]);
   useEffect(() => { try { sessionStorage.setItem(VIEW_KEY, view); } catch { /* sin almacenamiento */ } }, [view]);
   const setHomeLayout = useCallback((layout) => setData((current) => ({ ...current, homeLayout: layout })), []);
   const [mapTab, setMapTab] = useState("aplicadores");
@@ -952,10 +969,14 @@ export default function App() {
           </Suspense>
         )}
         {view === "entregas" && demo && <DemoModule id="entregas" access={previewAccess} />}
-        {view === "entregas" && !demo && (
-          <Suspense fallback={<Splash text="Cargando entregas…" />}>
-            <EntregasFrame session={session} />
-          </Suspense>
+        {/* 25/11 (Felipe: «Entregas demora muchísimo»): se precarga escondida unos segundos después de abrir y queda abierta al
+            cambiar de pestaña, así al tocar Entregas ya está lista. */}
+        {(view === "entregas" || entregasWarm) && session && !demo && (
+          <div hidden={view !== "entregas"} aria-hidden={view !== "entregas"}>
+            <Suspense fallback={view === "entregas" ? <Splash text="Cargando entregas…" /> : null}>
+              <EntregasFrame session={session} />
+            </Suspense>
+          </div>
         )}
         {view === "map" && (
           <>

@@ -53,22 +53,42 @@ export function crearSupabaseApi(): Api & { client: SupabaseClient } {
     }
   }
 
+/** Respaldo si no había sesión local pero el servidor sí la reconoce (no debería pasar). */
+async function usuarioActualLento(): Promise<Usuario | null> {
+    const { data } = await sb.auth.getUser()
+    if (!data.user) return null
+    const email = (data.user.email ?? '').toLowerCase()
+    const [{ data: rol, error }, { data: lista }, { data: fila }] = await Promise.all([
+      sb.rpc('entregas_mi_rol'),
+      sb.rpc('entregas_usuarios'),
+      sb.from('entregas_roles').select('compartida').eq('email', email).maybeSingle(),
+    ])
+    if (error) lanzar(error)
+    if (!rol) throw new SinAcceso(email)
+    const yo = (lista as Usuario[] | null)?.find((u) => u.id === data.user!.id)
+    return { id: data.user.id, email, nombre: yo?.nombre ?? email.split('@')[0], rol: rol as Rol, compartida: Boolean(fila?.compartida) }
+  }
+
   return {
     client: sb,
 
     async usuarioActual() {
-      const { data } = await sb.auth.getUser()
+      // 25/11 (Felipe: «Entregas demora muchísimo»): la sesión local da el mail al instante, así la validación con el servidor (getUser)
+      // y las tres consultas van todas a la vez en vez de una detrás de otra.
+      const { data: local } = await sb.auth.getSession()
+      const emailLocal = (local.session?.user?.email ?? '').toLowerCase()
+      const [{ data }, { data: rol, error }, { data: lista }, { data: fila }] = await Promise.all([
+        sb.auth.getUser(),
+        emailLocal ? sb.rpc('entregas_mi_rol') : Promise.resolve({ data: null, error: null }),
+        emailLocal ? sb.rpc('entregas_usuarios') : Promise.resolve({ data: null }),
+        emailLocal ? sb.from('entregas_roles').select('compartida').eq('email', emailLocal).maybeSingle() : Promise.resolve({ data: null }),
+      ])
       if (!data.user) {
         if (embebido) avisarSinSesionAlCrm()
         return null
       }
       const email = (data.user.email ?? '').toLowerCase()
-      // Las tres consultas a la vez (25/11: antes una detrás de otra, y se veía «Cargando…» más tiempo).
-      const [{ data: rol, error }, { data: lista }, { data: fila }] = await Promise.all([
-        sb.rpc('entregas_mi_rol'),
-        sb.rpc('entregas_usuarios'),
-        sb.from('entregas_roles').select('compartida').eq('email', email).maybeSingle(),
-      ])
+      if (!emailLocal) return usuarioActualLento()
       if (error) lanzar(error)
       if (!rol) throw new SinAcceso(email)
       const yo = (lista as Usuario[] | null)?.find((u) => u.id === data.user!.id)

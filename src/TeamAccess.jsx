@@ -4,18 +4,22 @@ import { accessAllows, changesCount, moduleTree, newPerson, setRole, toggleAcces
 
 // Poliplast App (prueba, 25/11): Equipo y cuentas. Felipe (administrador) crea cuentas con mail y rol, y a cada
 // persona le suma o le saca módulos y submódulos. En la prueba se guarda en este navegador.
-export function TeamAccess({ team, onChange, groups, onViewAs }) {
+export function TeamAccess({ team, onChange, groups, onViewAs, rolesTable = true, status = "local" }) {
   const [open, setOpen] = useState("");
   const [form, setForm] = useState({ email: "", name: "", role: "comercial" });
   const [message, setMessage] = useState("");
   const tree = moduleTree(groups);
-  const update = (email, change) => onChange(team.map((person) => (person.email === email ? change(person) : person)));
+  const commit = async (next) => {
+    const result = await onChange(next);
+    if (result && !result.ok) setMessage(`No se guardó: ${result.error}`);
+  };
+  const update = (email, change) => commit(team.map((person) => (person.email === email ? change(person) : person)));
   const add = (event) => {
     event.preventDefault();
     const result = newPerson(form);
     if (result.error) return setMessage(result.error);
     if (team.some((person) => person.email === result.person.email)) return setMessage("Esa persona ya está en la lista.");
-    onChange([...team, result.person]);
+    commit([...team, result.person]);
     setForm({ email: "", name: "", role: "comercial" });
     setMessage(`Listo: ${result.person.email} queda como ${ROLES.find((role) => role.id === result.person.role)?.label}. Cuando se registre con ese mail, entra viendo eso.`);
   };
@@ -24,6 +28,9 @@ export function TeamAccess({ team, onChange, groups, onViewAs }) {
       <span className="eyebrow">Solo administradores</span>
       <h2>Equipo y cuentas</h2>
       <p className="muted small">Cada persona tiene un rol (lo que ve por defecto) y encima le podés sumar o sacar módulos y submódulos. Solo pueden entrar mails @grupopoliplast.com.ar. «Ver como» te muestra el menú como lo ve esa persona.</p>
+      {status === "local" && <p className="muted small">Versión de prueba: lo que cambies queda guardado en este navegador.</p>}
+      {status === "cargando" && <p className="muted small">Cargando el equipo…</p>}
+      {!rolesTable && <p className="demo-msg" role="status">Falta crear la tabla de roles en la base (pendiente de tu OK). Mientras tanto se guarda lo que sumás o sacás a cada uno, pero no el rol ni las cuentas nuevas.</p>}
       <form className="team-access-add" onSubmit={add}>
         <label>Mail<input type="email" value={form.email} placeholder="nombre@grupopoliplast.com.ar" onChange={(event) => setForm({ ...form, email: event.target.value })} /></label>
         <label>Nombre<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>

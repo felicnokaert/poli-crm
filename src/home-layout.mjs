@@ -1,6 +1,6 @@
 // Poliplast App (prueba, 25/11): Inicio adaptable. Cada tarjeta del Inicio depende de un módulo: si la persona (o el
 // rol que se está mirando) no lo tiene, la tarjeta no aparece. Cada uno puede ordenar sus tarjetas y ocultarlas.
-// Se guarda por cuenta en este navegador (localStorage); más adelante puede ir al espacio de trabajo.
+// Se guarda en el espacio de trabajo de cada cuenta (data.homeLayout): sigue a la persona en la compu y en el celular.
 
 // id, nombre que ve la persona, módulo del que depende (null = siempre), solo administradores.
 export const HOME_BLOCKS = [
@@ -25,7 +25,7 @@ export function normalizeLayout(raw) {
   const order = (Array.isArray(value.order) ? value.order : []).filter((id) => known.has(id));
   for (const block of HOME_BLOCKS) if (!order.includes(block.id)) order.push(block.id);
   const hidden = (Array.isArray(value.hidden) ? value.hidden : []).filter((id) => known.has(id));
-  return { order: [...new Set(order)], hidden: [...new Set(hidden)] };
+  return { order: [...new Set(order)], hidden: [...new Set(hidden)], ...(value.updatedAt ? { updatedAt: value.updatedAt } : {}) };
 }
 
 // Tarjetas que esta persona puede tener (según sus módulos), en su orden. `allows(module)` decide los módulos.
@@ -53,13 +53,13 @@ export function moveBlock(layout, id, direction, allows, isAdmin) {
   const a = order.indexOf(id);
   const b = order.indexOf(other);
   [order[a], order[b]] = [order[b], order[a]];
-  return { ...current, order };
+  return { ...current, order, updatedAt: new Date().toISOString() };
 }
 
 export function toggleBlock(layout, id) {
   const current = normalizeLayout(layout);
   const hidden = current.hidden.includes(id) ? current.hidden.filter((item) => item !== id) : [...current.hidden, id];
-  return { ...current, hidden };
+  return { ...current, hidden, updatedAt: new Date().toISOString() };
 }
 
 export function loadLayout(email = '') {

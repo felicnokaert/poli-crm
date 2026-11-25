@@ -2,15 +2,21 @@
 // a mano (overrides: { 'modulo': true/false, 'modulo.submodulo': false }). Solo administradores lo cambian.
 import { ROLES, SUBMODULES, roleAllows } from './poliplast-app-plan.mjs';
 import { demoTeam } from './demo-data.mjs';
+import { MODULES } from './module-access.mjs';
 
 export const slug = (text = '') => String(text).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-export const childKey = (module, label) => `${module}.${slug(label)}`;
+// Los submódulos que ya existían (Mercado Libre, Shopify) usan las mismas claves que module_access hoy.
+export const childKey = (module, label) => {
+  const known = MODULES.find((item) => item.id === module)?.children?.find(([, name]) => name === label);
+  return `${module}.${known ? known[0] : slug(label)}`;
+};
 
 export function accessAllows(access = {}, module, child = '') {
   const overrides = access.overrides || {};
   if (access.role === 'admin') return true;
   if (module === 'profile') return true;
-  const base = module in overrides ? Boolean(overrides[module]) : roleAllows(access.role || 'comercial', module);
+  // Sin rol asignado (cuentas de antes): ve todo, como hoy; solo cuentan los módulos que se le sacaron.
+  const base = module in overrides ? Boolean(overrides[module]) : (access.role ? roleAllows(access.role, module) : true);
   if (!base || !child) return base;
   const key = childKey(module, child);
   return key in overrides ? Boolean(overrides[key]) : true;
@@ -35,7 +41,7 @@ export function toggleAccess(person, module, child = '') {
     const now = key in overrides ? overrides[key] : true;
     if (now) overrides[key] = false; else delete overrides[key];
   } else {
-    const roleDefault = roleAllows(person.role, module);
+    const roleDefault = person.role ? roleAllows(person.role, module) : true;
     const now = module in overrides ? overrides[module] : roleDefault;
     if (!now === roleDefault) delete overrides[module]; else overrides[module] = !now;
   }
@@ -71,4 +77,20 @@ export function loadLocalTeam(storage = globalThis.localStorage) {
 }
 export function saveLocalTeam(team, storage = globalThis.localStorage) {
   try { storage?.setItem(TEAM_KEY, JSON.stringify(team)); } catch { /* sin almacenamiento */ }
+}
+
+// Filas de module_access (allowed true/false) → overrides, y al revés (lo que hay que escribir para una persona).
+export function overridesFromRows(rows = []) {
+  return Object.fromEntries((rows || []).filter((row) => row && row.module).map((row) => [String(row.module), row.allowed !== false]));
+}
+
+export function overrideChanges(before = {}, after = {}) {
+  const keys = new Set([...Object.keys(before || {}), ...Object.keys(after || {})]);
+  const upserts = [];
+  const deletes = [];
+  for (const key of keys) {
+    if (!(key in (after || {}))) deletes.push(key);
+    else if ((before || {})[key] !== after[key]) upserts.push({ module: key, allowed: Boolean(after[key]) });
+  }
+  return { upserts, deletes };
 }

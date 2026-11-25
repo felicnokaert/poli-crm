@@ -18,7 +18,7 @@ import { buildCustomerBase } from "./customer-base.mjs";
 import { overdueQueue } from "./daily-queues.mjs";
 import { businessFacts } from "./assistant-business.mjs";
 import { weekActivity, weeklySummaryText } from "./weekly-summary.mjs";
-import { availableBlocks, loadLayout, moveBlock, normalizeLayout, saveLayout, toggleBlock, visibleBlockIds } from "./home-layout.mjs";
+import { availableBlocks, moveBlock, normalizeLayout, toggleBlock, visibleBlockIds } from "./home-layout.mjs";
 import { useTeamSharedNotes } from "./hooks/useSharedNotesSync";
 import { findColdQuotes } from "./cold-quotes.mjs";
 import { findStaleHotLeads } from "./hot-leads-radar.mjs";
@@ -507,13 +507,14 @@ function DashboardBase({
   showWeekly = false,
   isAdmin = false,
   allowsModule = null,
+  homeLayout = null,
+  onHomeLayout = null,
 }) {
   // Poliplast App (prueba): tarjetas según los módulos de la persona, en el orden que ella eligió.
   const allows = allowsModule || (() => true);
-  const layoutOwner = session?.user?.email || "";
-  const [layout, setLayout] = useState(() => loadLayout(layoutOwner));
+  const layout = homeLayout || null;
   const [arranging, setArranging] = useState(false);
-  const changeLayout = (next) => { setLayout(next); saveLayout(layoutOwner, next); };
+  const changeLayout = (next) => onHomeLayout?.(next);
   const shownIds = visibleBlockIds(layout, allows, isAdmin);
   const targets = resolveWeeklyTargets(weeklyTargets);
   const clientsById = new Map(clients.map((client) => [client.id, client]));

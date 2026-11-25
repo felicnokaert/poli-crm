@@ -41,3 +41,21 @@ test('Datos de prueba: siempre los mismos y marcados como inventados', () => {
   const modules = demoModules();
   for (const key of ['etiquetas', 'conteo', 'dosificado', 'recibos', 'facturacion', 'compras', 'entregas']) assert.ok(modules[key].length > 0, key);
 });
+
+test('Equipo y cuentas: cambios a escribir en module_access y claves de submódulos de siempre', async () => {
+  const { overrideChanges, overridesFromRows, childKey } = await import('../src/team-access.mjs');
+  assert.deepEqual(overridesFromRows([{ module: 'sales', allowed: false }, { module: 'etiquetas', allowed: true }]), { sales: false, etiquetas: true });
+  assert.deepEqual(overrideChanges({ sales: false, map: false }, { sales: true, etiquetas: false }), { upserts: [{ module: 'sales', allowed: true }, { module: 'etiquetas', allowed: false }], deletes: ['map'] });
+  assert.equal(childKey('mercadolibre', 'Dinero (stock, ganancia y publicidad)'), 'mercadolibre.dinero');
+  // Una cuenta de antes, sin rol: ve todo salvo lo que se le sacó.
+  assert.equal(accessAllows({ role: '', overrides: { sales: false } }, 'map'), true);
+  assert.equal(accessAllows({ role: '', overrides: { sales: false } }, 'sales'), false);
+});
+
+test('Inicio: el orden se guarda en el espacio de trabajo y gana el más reciente', async () => {
+  const { mergeWorkspaceState } = await import('../src/workspace.mjs');
+  const older = { order: ['plan'], hidden: [], updatedAt: '2026-11-25T10:00:00Z' };
+  const newer = { order: ['metricas'], hidden: ['plan'], updatedAt: '2026-11-25T11:00:00Z' };
+  assert.deepEqual(mergeWorkspaceState({ homeLayout: older }, { homeLayout: newer }).homeLayout, newer);
+  assert.deepEqual(mergeWorkspaceState({ homeLayout: newer }, { homeLayout: older }).homeLayout, newer);
+});

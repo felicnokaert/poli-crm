@@ -113,7 +113,8 @@ import { useRapypClients } from "./hooks/useRapypClients";
 import { useClientActions } from "./hooks/useClientActions";
 import { AppSidebar, NAV_GROUPS, NAV_ITEMS } from "./AppSidebar.jsx";
 import { FUTURE_MODULES, PREVIEW_ROLE_KEY } from "./poliplast-app-plan.mjs";
-import { accessAllows, loadLocalTeam, saveLocalTeam } from "./team-access.mjs";
+import { accessAllows } from "./team-access.mjs";
+import { useMyAccess, useTeamStore } from "./team-store.js";
 import { TeamAccess } from "./TeamAccess.jsx";
 import { DemoModule } from "./DemoModules.jsx";
 import { AppPlanOverview, ModulePreview } from "./ModulePreview.jsx";
@@ -198,18 +199,20 @@ export default function App() {
   const [pickedView, setView] = useState(() => (mlCallbackParams() ? "settings" : readSavedView()));
   const deniedModules = useModuleAccess(supabase, session?.user?.email, Boolean(onlineConfigured && session));
   // Si a esta cuenta le quitaron la pantalla (guardada o abierta desde un atajo), cae en la primera que sí puede ver.
-  const view = canSeeModule(session?.user?.email, deniedModules, pickedView) ? pickedView : firstAllowedView(session?.user?.email, deniedModules);
-  useEffect(() => { try { sessionStorage.setItem(VIEW_KEY, view); } catch { /* sin almacenamiento */ } }, [view]);
   // Poliplast App (prueba): «Ver como» un rol. Solo filtra el menú en este navegador; no cambia permisos.
   const [previewRole, setPreviewRole] = useState(() => { try { return localStorage.getItem(PREVIEW_ROLE_KEY) || "admin"; } catch { return "admin"; } });
   // Equipo y cuentas (prueba): roles y módulos de cada persona, guardados en este navegador.
-  const [team, setTeam] = useState(() => loadLocalTeam());
-  const changeTeam = (next) => { setTeam(next); saveLocalTeam(next); };
+  const signedEmail = session?.user?.email || "";
+  const isAdminUser = !onlineConfigured || isChannelAdmin(signedEmail);
+  const teamStore = useTeamStore({ online: Boolean(onlineConfigured && session), supabase, isAdmin: isAdminUser });
+  const team = teamStore.team;
+  const myAccess = useMyAccess({ online: Boolean(onlineConfigured && session), supabase, email: signedEmail });
   const accessFor = (value) => {
     if (String(value).startsWith("person:")) return team.find((person) => `person:${person.email}` === value) || { role: "comercial" };
     return { role: value || "admin", overrides: {} };
   };
-  const previewAccess = accessFor(previewRole);
+  // Lo que se ve: el administrador puede «ver como» un rol o una persona; el resto ve lo suyo (rol + cambios).
+  const previewAccess = isAdminUser ? accessFor(previewRole) : myAccess;
   // Inicio adaptable: una tarjeta aparece si la persona ve su módulo y el rol que se está mirando también.
   const allowsHomeModule = useCallback((module) => canSeeModule(session?.user?.email, deniedModules, module) && accessAllows(previewAccess, module), [session?.user?.email, deniedModules, previewAccess]);
   const pickPreviewRole = (role) => {
@@ -218,6 +221,11 @@ export default function App() {
     if (!accessAllows(accessFor(role), view)) setView("dashboard");
   };
   const demo = isDemoMode({ online: onlineConfigured });
+  // Si a esta cuenta le quitaron la pantalla (por permiso o por su rol), cae en la primera que sí puede ver.
+  const viewAllowed = (id) => canSeeModule(signedEmail, deniedModules, id) && accessAllows(previewAccess, id);
+  const view = viewAllowed(pickedView) ? pickedView : (viewAllowed("dashboard") ? "dashboard" : firstAllowedView(signedEmail, deniedModules));
+  useEffect(() => { try { sessionStorage.setItem(VIEW_KEY, view); } catch { /* sin almacenamiento */ } }, [view]);
+  const setHomeLayout = useCallback((layout) => setData((current) => ({ ...current, homeLayout: layout })), []);
   const [mapTab, setMapTab] = useState("aplicadores");
   // Empresa con la que se abre el cotizador (desde "Cotizar" en la ficha); null = cotización libre.
   const [quoterClient, setQuoterClient] = useState(null);
@@ -735,7 +743,7 @@ export default function App() {
         />
         <ErrorBoundary key={view} view={view}>
         {FUTURE_MODULES[view] && (demo ? <DemoModule key={view} id={view} access={previewAccess} /> : <ModulePreview id={view} />)}
-        {view === "team" && <TeamAccess team={team} onChange={changeTeam} groups={NAV_GROUPS} onViewAs={(person) => pickPreviewRole(`person:${person.email}`)} />}
+        {view === "team" && isAdminUser && <TeamAccess team={team} onChange={teamStore.save} rolesTable={teamStore.rolesTable} status={teamStore.status} groups={NAV_GROUPS} onViewAs={(person) => pickPreviewRole(`person:${person.email}`)} />}
         {view === "plan" && <AppPlanOverview groups={NAV_GROUPS} role={previewRole} onRole={pickPreviewRole} onResetDemo={demo ? () => { if (window.confirm("¿Volver a cargar los datos de prueba? Se pierde lo que tocaste en la prueba.")) { setData((current) => withDemoData(current, { force: true })); } } : null} />}
 
         {view === "dashboard" && (
@@ -763,6 +771,8 @@ export default function App() {
             showWeekly={canSeeWeeklySummary(session?.user?.email)}
             isAdmin={isChannelAdmin(session?.user?.email)}
             allowsModule={allowsHomeModule}
+            homeLayout={data.homeLayout}
+            onHomeLayout={setHomeLayout}
             onToggle={toggleTask}
             onOpenTask={setSelectedTaskId}
             onOpenInteraction={setSelectedInteractionId}

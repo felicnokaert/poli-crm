@@ -285,7 +285,7 @@ export function Competencia({ supabase, userEmail, families = [], family: initia
       )}
       {form && (
         <form className="form-grid" onSubmit={submitNew}>
-          <p className="muted small span-2">Alcanza con el nombre o el link. El CRM lee su sitio en el momento y arma la ficha con la fuente de cada dato (sin IA paga, sin inventar). Facebook e Instagram no se pueden leer: si es lo único que tenés, cargalo a mano.</p>
+          <p className="muted small span-2">Alcanza con el nombre o el link. La app lee su sitio en el momento y arma la ficha con la fuente de cada dato (sin IA paga, sin inventar). Facebook e Instagram no se pueden leer: si es lo único que tenés, cargalo a mano.</p>
           <label>Nombre<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
           <label>Sitio web<input value={form.website} onChange={(event) => setForm({ ...form, website: event.target.value })} placeholder="ejemplo.com.ar" /></label>
           <label>Familia con la que compite (opcional)

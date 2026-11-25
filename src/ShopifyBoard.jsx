@@ -84,7 +84,7 @@ function Setup({ status, isAdmin }) {
           <li>La app de solo lectura ya está creada en el Dev Dashboard de Shopify (con <code>read_products</code>, <code>read_inventory</code> y <code>read_orders</code>) e instalada en la tienda.</li>
           <li>En el Dev Dashboard → tu app → Resumen → tarjeta “Credenciales”: copiá el <strong>ID de cliente</strong> y el <strong>Secreto del cliente</strong>.</li>
           <li>En Vercel (Settings → Environment Variables, Production) cargá <code>SHOPIFY_STORE_DOMAIN</code> (<code>poliplastarg.myshopify.com</code>), <code>SHOPIFY_CLIENT_ID</code> y <code>SHOPIFY_CLIENT_SECRET</code>. El secreto va solo ahí: no lo pegues en un chat ni en una página.</li>
-          <li>Volvé a publicar la app (Redeploy) para que tome las variables y tocá “Actualizar ahora”. El CRM canjea esas credenciales por un token de 24 horas y lo renueva solo.</li>
+          <li>Volvé a publicar la app (Redeploy) para que tome las variables y tocá “Actualizar ahora”. La app canjea esas credenciales por un token de 24 horas y lo renueva solo.</li>
         </ol>
       )}
     </section>
@@ -385,7 +385,7 @@ function Missing({ supabase, products, variants, session }) {
             <div><span className="eyebrow">Se corrige en Mercado Libre</span><h2>Ordenar los SKU de ML</h2></div>
             <button type="button" className="ghost" onClick={() => downloadText(`sku-mercado-libre-${argentinaToday()}.csv`, skuCleanupCsv(cleanup))}>Descargar hoja para corregir ({cleanup.similar.length + cleanup.suggestions.length})</button>
           </div>
-          <p className="muted small">Un mismo producto con dos SKU distintos, o sin SKU, rompe los cruces con Shopify (precios y faltantes). El CRM no escribe en Mercado Libre: corregilos ahí y en la próxima actualización se acomodan solos.</p>
+          <p className="muted small">Un mismo producto con dos SKU distintos, o sin SKU, rompe los cruces con Shopify (precios y faltantes). La app no escribe en Mercado Libre: corregilos ahí y en la próxima actualización se acomodan solos.</p>
           {cleanup.similar.length > 0 && (
             <>
               <h3 className="small">Mismo producto, SKU distinto ({cleanup.similar.length})</h3>

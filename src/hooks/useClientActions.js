@@ -14,7 +14,7 @@ export function useClientActions({ data, setData, confirm, session }) {
   const deleteClient = useCallback(async (id) => {
     const client = data.clients.find((item) => item.id === id);
     if (!client) return false;
-    if (!(await confirm(`¿Eliminar "${client.company}" del CRM? Esto no se puede deshacer.`, { danger: true, confirmLabel: "Eliminar" }))) return false;
+    if (!(await confirm(`¿Eliminar "${client.company}" de la app? Esto no se puede deshacer.`, { danger: true, confirmLabel: "Eliminar" }))) return false;
     setData((current) => {
       const taskIds = current.tasks.filter((task) => task.clientId === id).map((task) => task.id);
       // Las conversaciones vinculadas a este cliente también se borran - si

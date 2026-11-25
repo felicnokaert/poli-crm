@@ -1,39 +1,51 @@
-import { Boxes, Building2, Calculator, ChevronRight, Menu, X, ClipboardList, Database, FileCheck2, GraduationCap, Inbox, LayoutDashboard, ListChecks, MapPin, MessageCircle, ReceiptText, Search, ShoppingBag, Store, Truck, UserCog } from "lucide-react";
+import { Boxes, Building2, Calculator, ChevronRight, Menu, X, ClipboardList, Database, FileCheck2, GraduationCap, Inbox, LayoutDashboard, ListChecks, MapPin, MessageCircle, ReceiptText, Search, ShoppingBag, Store, Truck, UserCog, Tags, PackageSearch, FlaskConical, Receipt, FileText, ShoppingCart, Map as MapIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { onlineConfigured } from "./online";
 import { filterNav } from "./module-access.mjs";
+import { ROLES, navForRole } from "./poliplast-app-plan.mjs";
+import { isChannelAdmin } from "./user-channels.mjs";
 
-// Menú lateral: 6 grupos (Hoy, Ventas, Canales online, Cartera, Aprender, Más). Salió de App.jsx (QA 16/10).
+// Menú lateral de Poliplast App (rama de prueba, 25/11): 7 grupos según docs/PLAN_POLIPLAST_APP.md.
+// Lo marcado como futuro (Etiquetas, Conteo, Dosificado, Recibos, Facturación, Compras) abre una vista «próximamente».
 export const NAV_GROUPS = [
-  ["Hoy", [
+  ["Inicio", [
     ["dashboard", "Inicio", LayoutDashboard],
     ["inbox", "Por revisar", Inbox],
-    ["tasks", "Tareas", ClipboardList],
   ]],
   ["Ventas", [
     ["sales", "Ventas", ReceiptText],
     ["quoter", "Cotizador", Calculator],
-    ["entregas", "Entregas", Truck],
     ["prospecting", "Prospección", Search],
+    ["clients", "Clientes y contactos", Building2],
+    ["map", "Mapa", MapPin],
     ["conversations", "Historial", MessageCircle],
   ]],
   ["Canales online", [
-    ["mejoras", "Centro de mejoras", ListChecks],
-    ["productos", "Productos", Boxes],
     ["mercadolibre", "Mercado Libre", Store],
     ["shopify", "Shopify", ShoppingBag],
+    ["productos", "Productos", Boxes],
+    ["mejoras", "Centro de mejoras", ListChecks],
   ]],
-  ["Cartera", [
-    ["clients", "Empresas y contactos", Building2],
-    ["map", "Mapa", MapPin],
+  ["Logística", [
+    ["entregas", "Entregas", Truck],
+    ["etiquetas", "Etiquetas", Tags],
+    ["conteo", "Conteo", PackageSearch],
+    ["dosificado", "Dosificado", FlaskConical],
   ]],
-  ["Aprender", [
-    ["academy", "Academia comercial", GraduationCap],
+  ["Administración", [
+    ["recibos", "Recibos", Receipt],
+    ["facturacion", "Facturación", FileText],
+    ["compras", "Compras", ShoppingCart],
+  ]],
+  ["Equipo", [
+    ["tasks", "Tareas", ClipboardList],
+    ["academy", "Academia", GraduationCap],
     ["techdocs", "Base técnica", FileCheck2],
   ]],
-  ["Más", [
+  ["Configuración", [
+    ["plan", "Cómo queda la app", MapIcon],
     ["profile", "Perfil", UserCog],
-    ["settings", "Datos", Database],
+    ["settings", "Equipo, cuentas y conexiones", Database],
   ]],
 ];
 
@@ -42,8 +54,8 @@ export const NAV_ITEMS = NAV_GROUPS.flatMap(([, items]) => items);
 // Atajos de la barra inferior del celular (con nombre, no solo ícono). Lo demás está en "Menú".
 const QUICK_IDS = ["dashboard", "tasks", "sales", "clients"];
 
-export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNavGroups, narrowScreen, overdueTaskCount, inboxSignalCount, email = "", denied = null }) {
-  const groups = filterNav(NAV_GROUPS, email, denied);
+export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNavGroups, narrowScreen, overdueTaskCount, inboxSignalCount, email = "", denied = null, previewRole = "admin", onPreviewRole = null }) {
+  const groups = navForRole(filterNav(NAV_GROUPS, email, denied), previewRole);
   const [sheet, setSheet] = useState(false);
   const allowed = groups.flatMap(([, items]) => items);
   const quick = QUICK_IDS.map((id) => allowed.find(([itemId]) => itemId === id)).filter(Boolean);
@@ -120,6 +132,15 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
       })}
     </nav>
     <div className="sidebar-note">
+      {/* Poliplast App (prueba): ver el menú como lo vería cada rol. Solo cambia lo que se muestra, no los permisos. */}
+      {onPreviewRole && (!onlineConfigured || isChannelAdmin(email)) && (
+        <label className="preview-role">
+          <span className="eyebrow">Ver como</span>
+          <select value={previewRole} onChange={(event) => onPreviewRole(event.target.value)}>
+            {ROLES.map((role) => <option key={role.id} value={role.id}>{role.label}</option>)}
+          </select>
+        </label>
+      )}
       <span className="eyebrow">
         {onlineConfigured ? "Equipo conectado" : "MVP local"}
       </span>
@@ -143,7 +164,7 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
     <nav className="mobile-tabbar" aria-label="Accesos rápidos">
       {quick.map(([id, label, Icon]) => (
         <button key={id} type="button" className={view === id ? "active" : ""} onClick={() => pick(id)} aria-current={view === id ? "page" : undefined}>
-          <Icon size={21} /><span>{label === "Empresas y contactos" ? "Empresas" : label}</span>
+          <Icon size={21} /><span>{label === "Clientes y contactos" ? "Clientes" : label}</span>
           {badgeFor(id) > 0 && <b className="nav-badge" aria-label={`${badgeFor(id)} pendientes`}>{badgeFor(id)}</b>}
         </button>
       ))}

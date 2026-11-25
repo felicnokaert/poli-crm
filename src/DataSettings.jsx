@@ -86,7 +86,7 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
     try {
       const result = await connectWhatsApp(session);
       showMessage(
-        `WhatsApp conectado${result.phoneNumberId ? ` · Phone ID ${result.phoneNumberId}` : ""}. El CRM ya puede recibir eventos del número autorizado.`,
+        `WhatsApp conectado${result.phoneNumberId ? ` · Phone ID ${result.phoneNumberId}` : ""}. La app ya puede recibir eventos del número autorizado.`,
       );
     } catch (error) {
       showError(error.message || "No se pudo completar la conexión con Meta.");
@@ -138,7 +138,7 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "No se pudo reparar el webhook.");
       const failed = (payload.steps || []).filter((step) => !step.ok);
-      showMessage(failed.length ? `Webhook reparado, pero la suscripción de General falló: ${failed.map((step) => step.error).join("; ")}` : "Listo: se volvió a suscribir General y a apuntar los mensajes al CRM. Mandá un mensaje de prueba a General.");
+      showMessage(failed.length ? `Webhook reparado, pero la suscripción de General falló: ${failed.map((step) => step.error).join("; ")}` : "Listo: se volvió a suscribir General y a apuntar los mensajes a la app. Mandá un mensaje de prueba a General.");
     } catch (error) {
       showError(error.message || "No se pudo reparar el webhook.");
     } finally {
@@ -389,7 +389,7 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
               {isChannelAdmin(session?.user?.email) ? "" : "Para conectar tu propio número. "}
               Volver a conectar un número ya activo puede cortar la recepción de mensajes: hacelo solo siguiendo un plan. ¿Meta dice "Sin conexión" para tu número? Conectalo acá: se abre Meta, elegís
               "conectar una cuenta existente de WhatsApp Business" y seguís los pasos. Al
-              terminar, el CRM te muestra el ID del número.
+              terminar, la app te muestra el ID del número.
             </p>
             <p>
               <button type="button" className="link-button" disabled={connecting} onClick={startWhatsAppConnection}>
@@ -626,7 +626,7 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
           <p>
             {onlineConfigured
               ? `${syncStatus}. Usuario: ${session?.user?.email || "sin identificar"}. Los cambios se guardan online y siguen teniendo respaldo local.`
-              : "Modo local de prueba. Exportá un respaldo al terminar cada jornada; al configurar la base, el mismo CRM activará acceso y sincronización online."}
+              : "Modo local de prueba. Exportá un respaldo al terminar cada jornada; al configurar la base, la misma app activará acceso y sincronización online."}
           </p>
         </div>
         {onlineConfigured && (

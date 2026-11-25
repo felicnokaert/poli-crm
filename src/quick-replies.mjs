@@ -59,7 +59,7 @@ export const QUICK_REPLIES = Object.freeze([
   // Revendedores
   r('revendedor', 'Ya revendo otra marca', 'Perfecto, no hace falta cambiar lo que tenés. Podrías sumar una línea inicial chica y complementaria (3 a 5 productos con rotación) y ver cómo responde tu cliente. ¿Qué es lo que más se te vende hoy?', 'Surtido complementario, sin inventar condiciones.'),
   r('revendedor', 'Pregunta por mínimos y márgenes', 'Eso lo define el área comercial según el surtido. Si me decís qué productos te interesan y qué volumen mensual manejás, lo consulto y te paso las condiciones por escrito.', 'No inventar mínimos ni descuentos.'),
-  r('revendedor', 'No fabrica ni aplica (no es el perfil)', 'Gracias por contarme. Si en algún momento suman línea de resinas o selladores, me escribís y vemos. Mientras tanto no te molesto más.', 'Y marcarlo como no prioritario en el CRM.'),
+  r('revendedor', 'No fabrica ni aplica (no es el perfil)', 'Gracias por contarme. Si en algún momento suman línea de resinas o selladores, me escribís y vemos. Mientras tanto no te molesto más.', 'Y marcarlo como no prioritario en la app.'),
   // Seguimiento
   r('seguimiento', 'Sin respuesta (a los 3 días)', 'Hola {nombre}, te escribí hace unos días. ¿Pudiste ver el mensaje? Si hoy no es prioridad, decime y lo dejamos para más adelante.', 'Aporta una salida fácil.'),
   r('seguimiento', 'Retomar con algo nuevo', 'Hola {nombre}, te escribo porque [novedad concreta: ficha, producto, rendimiento, caso]. Pensé que te podía servir para lo que me contaste de [tema].', 'Siempre algo nuevo; no repetir «¿alguna novedad?».'),

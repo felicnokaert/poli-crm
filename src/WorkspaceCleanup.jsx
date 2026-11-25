@@ -79,7 +79,7 @@ export function WorkspaceCleanup({ session }) {
               <div>
                 <strong>{item.email}</strong>
                 <span className="muted small">{item.changed ? `Copiado de tu espacio: ${describe(item.removed)}` : "Limpio: no tiene nada tuyo."}</span>
-                {item.automaticTasks > 0 && <span className="muted small">Además tiene {item.automaticTasks} tareas automáticas pendientes, creadas por el CRM con sus propias empresas o su número de WhatsApp (no vienen de tu cuenta; no se borran).</span>}
+                {item.automaticTasks > 0 && <span className="muted small">Además tiene {item.automaticTasks} tareas automáticas pendientes, creadas por la app con sus propias empresas o su número de WhatsApp (no vienen de tu cuenta; no se borran).</span>}
               </div>
               <span className={`pill ${item.changed ? "warn" : "ok"}`}>{item.changed ? "Para limpiar" : "OK"}</span>
             </article>

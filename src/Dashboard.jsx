@@ -347,7 +347,7 @@ function WelcomePanel({ name, onNavigate, onNewInteraction, onDismiss }) {
           <h2>{name ? `Bienvenido/a, ${name}` : "Bienvenido/a"}</h2>
         </div>
       </div>
-      <p>Este es tu espacio personal: lo que cargues acá lo ves solo vos. Tres pasos para arrancar (y la <a href="/guia/" target="_blank" rel="noreferrer">guía del CRM</a>, también en el botón «?» de arriba):</p>
+      <p>Este es tu espacio personal: lo que cargues acá lo ves solo vos. Tres pasos para arrancar (y la <a href="/guia/" target="_blank" rel="noreferrer">guía de la app</a>, también en el botón «?» de arriba):</p>
       <div className="day-mode-list">
         {steps.map(([number, title, text, action, onClick]) => (
           <div className="day-mode-item" key={number}>

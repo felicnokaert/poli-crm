@@ -1,11 +1,11 @@
 {
-  "name": "Poliplast CRM",
-  "short_name": "Poli CRM",
+  "name": "Poliplast App",
+  "short_name": "Poliplast App",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#292929",
-  "description": "CRM, memoria comercial y entrenador de ventas de Grupo Poliplast",
+  "description": "Poliplast App: ventas, logística, memoria comercial y entrenador de ventas de Grupo Poliplast",
   "icons": [
     {
       "src": "/icon-192.png",

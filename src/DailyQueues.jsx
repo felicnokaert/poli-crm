@@ -185,7 +185,7 @@ export function DailyQueues({ rules, supabase, clients: allClients = [], prospec
   const needsData = ['sorprender', 'atrasados', 'reactivar', 'cotizaron'].includes(view);
   return (
     <div className="daily-queues">
-      <p className="muted">Lo que conviene contactar hoy: hasta {QUEUE_SIZE} por lista, con el mensaje listo para copiar y editar. El CRM no envía nada: lo mandás vos y anotás qué respondieron para que el sistema aprenda por qué falla cada mensaje.</p>
+      <p className="muted">Lo que conviene contactar hoy: hasta {QUEUE_SIZE} por lista, con el mensaje listo para copiar y editar. La app no envía nada: lo mandás vos y anotás qué respondieron para que el sistema aprenda por qué falla cada mensaje.</p>
       <div className="segmented" role="tablist" aria-label="Colas del día">
         {tabs.map(([key, label, count]) => (
           <button key={key} type="button" role="tab" aria-selected={view === key} className={view === key ? 'selected' : ''} onClick={() => setView(key)}>{label} ({count})</button>

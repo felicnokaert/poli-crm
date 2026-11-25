@@ -54,5 +54,5 @@ export function clientPurchaseWords(cards = []) {
 }
 
 export function clientContext(cards = []) {
-  return cards.map((card) => [`Ficha del cliente ${card.name} (cartera del CRM):`, ...card.lines.map((line) => `- ${line}`)].join('\n')).join('\n');
+  return cards.map((card) => [`Ficha del cliente ${card.name} (cartera de la app):`, ...card.lines.map((line) => `- ${line}`)].join('\n')).join('\n');
 }

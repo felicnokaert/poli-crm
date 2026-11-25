@@ -51,7 +51,7 @@ export default function MetaRegisterNumber({ session }) {
   return (
     <div className="panel" style={{ marginTop: 12 }}>
       <strong>Volver a registrar el número General en la API</strong>
-      <p className="muted small">Hacelo si el diagnóstico dice <code>ON_PREMISE</code>: el número está en la aplicación y el CRM no recibe mensajes. Necesitás poder recibir el código por SMS o llamada en ese número.</p>
+      <p className="muted small">Hacelo si el diagnóstico dice <code>ON_PREMISE</code>: el número está en la aplicación y la app no recibe mensajes. Necesitás poder recibir el código por SMS o llamada en ese número.</p>
       {step === 0 && (
         <p>
           <button type="button" className="secondary" disabled={busy} onClick={() => askCode("SMS")}>1. Pedir código por SMS</button>{" "}

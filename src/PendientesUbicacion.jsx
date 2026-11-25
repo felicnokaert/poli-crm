@@ -148,7 +148,7 @@ export function PendientesUbicacion({ clients, onApplyLocations }) {
             <li><b>{plan.cambios.length}</b> clientes se van a completar
               {Object.keys(plan.porCampo).length > 0 && ` (${Object.entries(plan.porCampo).map(([campo, n]) => `${n} ${campo}`).join(", ")})`}.</li>
             <li>{plan.sinNovedad} sin cambios (ya estaban completos o no hay un dato seguro para completar).</li>
-            {plan.sinCliente.length > 0 && <li>{plan.sinCliente.length} CUIT de la planilla no están en el CRM (se ignoran).</li>}
+            {plan.sinCliente.length > 0 && <li>{plan.sinCliente.length} CUIT de la planilla no están en la app (se ignoran).</li>}
             {plan.sinDocumento > 0 && <li>{plan.sinDocumento} filas sin CUIT válido (se ignoran).</li>}
             {plan.provinciasDesconocidas.length > 0 && (
               <li>Provincias que no reconozco (esas filas se completan sin provincia): {plan.provinciasDesconocidas.slice(0, 6).map((p) => `${p.nombre} (${p.cantidad})`).join(", ")}.</li>

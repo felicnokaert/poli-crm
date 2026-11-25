@@ -88,7 +88,7 @@ export function Calendar({ tasks = [], date, onToggleTask, onOpenTask, onAddEven
           <label><input type="checkbox" checked={opts.includeTasks} onChange={(event) => setOpts({ ...opts, includeTasks: event.target.checked })} /> Tareas pendientes (día completo, con link a Trello)</label>
           <div className="panel-head-actions"><button type="button" className="primary" onClick={runExport}>Descargar archivo (.ics)</button></div>
           {exported && <p className="form-notice">{exported}</p>}
-          <p className="muted small">Después, en Google Calendar: Configuración ⚙ → Importar y exportar → Importar → elegí el archivo y el calendario. Si lo volvés a importar se actualizan los mismos eventos, no se duplican. Es de una sola vía: lo que cambies en Google no vuelve al CRM.</p>
+          <p className="muted small">Después, en Google Calendar: Configuración ⚙ → Importar y exportar → Importar → elegí el archivo y el calendario. Si lo volvés a importar se actualizan los mismos eventos, no se duplican. Es de una sola vía: lo que cambies en Google no vuelve a la app.</p>
         </div>
       )}
       <div className="calendar-grid" role="grid" aria-label="Calendario del mes">

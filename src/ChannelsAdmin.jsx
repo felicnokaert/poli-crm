@@ -70,7 +70,7 @@ export function ChannelsAdmin() {
     const { error } = await request;
     setBusy(false);
     if (error) return say(`No se pudo guardar: ${error.message}`, true);
-    say(editingKey ? "Canal actualizado. Cada persona lo ve la próxima vez que abra el CRM." : "Canal creado. Cada persona lo ve la próxima vez que abra el CRM.");
+    say(editingKey ? "Canal actualizado. Cada persona lo ve la próxima vez que abra la app." : "Canal creado. Cada persona lo ve la próxima vez que abra la app.");
     cancelEdit();
     reload();
   }
@@ -95,7 +95,7 @@ export function ChannelsAdmin() {
         <Link2 size={20} />
       </div>
       <p>
-        Asigná cada número a quien lo usa. Quien no figure en ningún canal usa el CRM
+        Asigná cada número a quien lo usa. Quien no figure en ningún canal usa la app
         sin ver chats. El ID del número sale de Meta (WhatsApp Manager); sin ID el
         canal queda creado pero todavía no recibe mensajes.
       </p>

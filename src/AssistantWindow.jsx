@@ -58,7 +58,7 @@ function ActionCard({ action, onAction }) {
       <div className="assistant-action">
         <span className="assistant-group-label">Mensaje{input.para ? ` para ${input.para}` : ""}</span>
         <p className="assistant-action-text">{input.texto}</p>
-        <div className="assistant-answer-meta"><span className="muted small">Copialo y mandalo vos: el CRM no envía mensajes.</span><CopyButton text={input.texto} /></div>
+        <div className="assistant-answer-meta"><span className="muted small">Copialo y mandalo vos: la app no envía mensajes.</span><CopyButton text={input.texto} /></div>
       </div>
     );
   }

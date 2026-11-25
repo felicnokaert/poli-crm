@@ -55,7 +55,7 @@ export function weekActivity({ prospects = [], clients = [], tasks = [], shared 
 }
 
 export function weeklySummaryText({ facts = null, activity, gaps = null, today }) {
-  const lines = [`*Resumen semanal del CRM* (${dm(activity.since)} al ${dm(today)})`];
+  const lines = [`*Resumen semanal de Poliplast App* (${dm(activity.since)} al ${dm(today)})`];
   lines.push(`• Cola del día${activity.others ? ` (vos y ${activity.others} más del equipo)` : ''}: ${activity.contacted} contactos anotados, ${activity.interested} con interés${activity.topReason ? `; el motivo de rechazo más común fue "${activity.topReason[0]}" (${activity.topReason[1]})` : ''}.`);
   lines.push(`• Tareas: ${activity.tasksDone} hechas en la semana, ${activity.tasksLate} vencidas sin hacer.`);
   const quotes = facts?.quotes;
@@ -66,6 +66,6 @@ export function weeklySummaryText({ facts = null, activity, gaps = null, today }
   if (facts?.overdue?.length) lines.push(`• Se pasaron de su frecuencia de compra: ${facts.overdue.length}${facts.overdue.length >= 10 ? ' o más' : ''} (${facts.overdue.slice(0, 5).map((item) => item.client.company).join(', ')}).`);
   if (facts?.reactivate?.length) lines.push(`• Buenos clientes dormidos para reactivar: ${facts.reactivate.slice(0, 5).map((item) => item.client.company).join(', ')}.`);
   if (gaps != null) lines.push(`• Asistente: ${gaps} pregunta${gaps === 1 ? '' : 's'} sin buena respuesta para enseñarle (Más → Datos → Asistente).`);
-  lines.push('Detalle en el CRM: Prospección → Cola del día.');
+  lines.push('Detalle en la app: Prospección → Cola del día.');
   return lines.join('\n');
 }

@@ -222,7 +222,7 @@ export function useInboxActions({ data, setData, confirm, session, inboxDraft, s
     const name = event.customer_name || event.customer_wa_id || "este contacto";
     if (
       !(await confirm(
-        `¿Eliminar del CRM la memoria de ${name}? Esto no borra el chat original de WhatsApp.`,
+        `¿Eliminar de la app la memoria de ${name}? Esto no borra el chat original de WhatsApp.`,
         { danger: true, confirmLabel: "Eliminar" },
       ))
     )

@@ -259,7 +259,7 @@ export const TRELLO_PLAN = [
  },
  {
   "id": "trello-6ababaf750db137c24de90a3",
-  "title": "Objetivos Q4 (octubre a diciembre) en el módulo Ventas del CRM",
+  "title": "Objetivos Q4 (octubre a diciembre) en el módulo Ventas de la app",
   "url": "https://trello.com/c/KDoxkgGE/100-objetivos-q4-octubre-a-diciembre-en-el-m%C3%B3dulo-ventas-del-crm",
   "list": "Prioridad semanal",
   "bucket": "comercial",
@@ -421,7 +421,7 @@ export const TRELLO_PLAN = [
  },
  {
   "id": "trello-6a96edb0e693d68d0026ae35",
-  "title": "WhatsApp — contingencia manual y validación del CRM",
+  "title": "WhatsApp — contingencia manual y validación de la app",
   "url": "https://trello.com/c/KLmsKOuH/6-whatsapp-contingencia-manual-y-validaci%C3%B3n-del-crm",
   "list": "Prioridad semanal",
   "bucket": "crm",

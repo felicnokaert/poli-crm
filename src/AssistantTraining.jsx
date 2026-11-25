@@ -184,7 +184,7 @@ export function AssistantTraining({ supabase }) {
   // "¿Anda la IA?" (22/10): una pregunta mínima (menos de un centavo) que dice si responde o el error exacto.
   async function check() {
     setStatus("Probando la IA…");
-    const reply = await askAi(supabase, { question: "Respondé solo: La IA del CRM está funcionando.", context: "" }).catch(() => ({ ok: false, reason: "red" }));
+    const reply = await askAi(supabase, { question: "Respondé solo: La IA de la app está funcionando.", context: "" }).catch(() => ({ ok: false, reason: "red" }));
     setStatus(reply.ok ? `✓ La IA responde: “${reply.text.split(/\n/)[0].slice(0, 120)}”` : `✗ No responde: ${reply.error || reply.reason}${reply.detail ? ` (${reply.detail})` : ""}`);
   }
 

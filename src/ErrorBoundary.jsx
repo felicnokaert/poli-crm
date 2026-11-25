@@ -25,7 +25,7 @@ export class ErrorBoundary extends Component {
     const full = this.props.full;
     return (
       <section className={`panel error-boundary${full ? " error-boundary-full" : ""}`} role="alert">
-        <h2>{full ? "Algo falló en el CRM" : "Algo falló en esta pantalla"}</h2>
+        <h2>{full ? "Algo falló en la app" : "Algo falló en esta pantalla"}</h2>
         <p>No se perdió nada: tus datos siguen guardados. {full ? "Recargá la página." : "Probá de nuevo, o andá a otra sección desde el menú."}</p>
         <p className="muted small">Si se repite, pasale este detalle a Felipe: {String(error?.message || error).slice(0, 200)}</p>
         <div className="panel-head-actions">

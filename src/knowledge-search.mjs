@@ -13,7 +13,7 @@ export const KNOWLEDGE_TYPES = [
   ['objeciones', 'Objeciones'],
   ['competencia', 'Competencia'],
   ['mercadolibre', 'Mercado Libre (publicaciones y preguntas respondidas)'],
-  ['ayuda', 'Cómo usar el CRM'],
+  ['ayuda', 'Cómo usar la app'],
 ];
 
 export function plain(value) {
@@ -96,7 +96,7 @@ export function searchKnowledge(query, sources, { perType = 5 } = {}) {
 
 // Texto para pegar en la IA de cada uno, con lo que el CRM sabe de verdad.
 export function buildKnowledgePrompt(query, result) {
-  const lines = ['Consulta comercial de Grupo Poliplast (datos reales del CRM):', '', `Pregunta: ${query || '(sin especificar)'}`];
+  const lines = ['Consulta comercial de Grupo Poliplast (datos reales de la app):', '', `Pregunta: ${query || '(sin especificar)'}`];
   for (const [key, label] of KNOWLEDGE_TYPES) {
     const list = result.groups[key] || [];
     if (!list.length) continue;
@@ -104,7 +104,7 @@ export function buildKnowledgePrompt(query, result) {
     const says = { guias: 'La guía dice', mercadolibre: 'En Mercado Libre' };
     for (const item of list) lines.push(`- ${item.title}${item.subtitle ? ` (${item.subtitle})` : ''}${item.snippet ? `. ${says[item.type] || 'La ficha dice'}: "${item.snippet}"` : ''}`);
   }
-  if (!result.total) lines.push('', 'El CRM no encontró datos propios sobre esto: respondé con conocimiento general y avisá que no hay respaldo de Poliplast.');
+  if (!result.total) lines.push('', 'La app no encontró datos propios sobre esto: respondé con conocimiento general y avisá que no hay respaldo de Poliplast.');
   lines.push('', 'Respondé solo con lo listado. No inventes precio, stock, rendimiento, dosificación ni compatibilidad; si falta un dato, decilo.');
   return lines.join('\n');
 }

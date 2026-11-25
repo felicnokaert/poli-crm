@@ -501,7 +501,7 @@ export function ClientDetail({
                 Nueva tarea
               </button>
               {onQuote ? (
-                <button type="button" className="secondary" onClick={() => onQuote(client)} title="Abre el cotizador adentro del CRM con esta empresa elegida. Al guardar la cotización se marca sola la fecha de «Coticé hoy» (no es una venta).">
+                <button type="button" className="secondary" onClick={() => onQuote(client)} title="Abre el cotizador adentro de la app con esta empresa elegida. Al guardar la cotización se marca sola la fecha de «Coticé hoy» (no es una venta).">
                   Cotizar
                 </button>
               ) : (

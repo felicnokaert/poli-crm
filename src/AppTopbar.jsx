@@ -84,8 +84,8 @@ export function AppTopbar({ title, myChannels, primaryChannel, readiness, syncSt
         <button
           type="button"
           className="icon-button"
-          aria-label="Buscar en todo el CRM"
-          title="Buscar en todo el CRM (Ctrl+K)"
+          aria-label="Buscar en toda la app"
+          title="Buscar en toda la app (Ctrl+K)"
           onClick={onOpenPalette}
         >
           <Search size={18} />
@@ -93,8 +93,8 @@ export function AppTopbar({ title, myChannels, primaryChannel, readiness, syncSt
         <button
           type="button"
           className="icon-button"
-          aria-label="Ayuda: guía del CRM y atajos"
-          title="Ayuda: guía del CRM y atajos"
+          aria-label="Ayuda: guía de la app y atajos"
+          title="Ayuda: guía de la app y atajos"
           onClick={onOpenShortcuts}
         >
           <HelpCircle size={18} />

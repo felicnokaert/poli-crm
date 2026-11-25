@@ -235,7 +235,7 @@ export function MercadoLibreSync({ supabase, session }) {
         <button type="button" className="link-button" onClick={() => setClipOpen(!clipOpen)}>{clipOpen ? "Cerrar clips" : "Cargar a mano qué publicaciones tienen clip (respaldo: ya se lee solo de la calidad)"}</button>
         {clipOpen && (
           <div className="ml-clips-form">
-            <p className="muted small">Mercado Libre no deja leer los clips desde el CRM. En Mercado Libre → Publicaciones, filtrá Activas y "Sin videos publicados" (o las que tienen), copiá cada página (Ctrl+A, Ctrl+C) y pegalas todas acá, una abajo de la otra. Se reconocen los códigos (#…, MLA…), los links y los títulos.</p>
+            <p className="muted small">Mercado Libre no deja leer los clips desde la app. En Mercado Libre → Publicaciones, filtrá Activas y "Sin videos publicados" (o las que tienen), copiá cada página (Ctrl+A, Ctrl+C) y pegalas todas acá, una abajo de la otra. Se reconocen los códigos (#…, MLA…), los links y los títulos.</p>
             <select value={clipSeller} onChange={(event) => setClipSeller(event.target.value)} aria-label="Cuenta de los clips">
               <option value="">Cuenta…</option>
               {(accounts || []).map((account) => <option key={account.seller_id} value={account.seller_id}>{account.nickname}</option>)}
@@ -313,7 +313,7 @@ export function MercadoLibreSync({ supabase, session }) {
           </tbody>
         </table></div>
       )}
-      {(counts.items !== null || counts.questions !== null) && <p className="muted small">Guardado en el CRM: {counts.items ?? 0} publicaciones y {counts.questions ?? 0} preguntas respondidas.</p>}
+      {(counts.items !== null || counts.questions !== null) && <p className="muted small">Guardado en la app: {counts.items ?? 0} publicaciones y {counts.questions ?? 0} preguntas respondidas.</p>}
     </section>
   );
 }

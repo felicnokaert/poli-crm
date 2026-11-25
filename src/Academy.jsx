@@ -220,7 +220,7 @@ export function KnowledgeSearch({ supabase, clients = [], sellers = [] }) {
     <section className="panel commercial-knowledge">
       <div className="panel-head">
         <div>
-          <span className="eyebrow">Todo lo que sabe el CRM</span>
+          <span className="eyebrow">Todo lo que sabe la app</span>
           <h2>Buscar en productos, fichas, clientes, equipo y competencia</h2>
         </div>
         <label className="search"><Search size={17} /><input value={query} onChange={(event) => { setQuery(event.target.value); setCopied(false); }} placeholder="Ej.: adhesivo para espuma, impermeabilizante, Satch…" /></label>
@@ -242,7 +242,7 @@ export function KnowledgeSearch({ supabase, clients = [], sellers = [] }) {
           </div>
         </>
       )}
-      <div className="quality-note"><CircleAlert size={19} /><p>Busca por palabras en lo que ya está cargado, también dentro del texto de las fichas técnicas vigentes (con el pedacito donde aparece).{pendingDocs > 0 ? ` ${pendingDocs} fichas todavía sin validar no entran: se validan en Base técnica.` : ""} Lo que no figura acá, no lo sabe el CRM.</p></div>
+      <div className="quality-note"><CircleAlert size={19} /><p>Busca por palabras en lo que ya está cargado, también dentro del texto de las fichas técnicas vigentes (con el pedacito donde aparece).{pendingDocs > 0 ? ` ${pendingDocs} fichas todavía sin validar no entran: se validan en Base técnica.` : ""} Lo que no figura acá, no lo sabe la app.</p></div>
     </section>
   );
 }
@@ -275,7 +275,7 @@ export function SellerProfiles({ profiles = [] }) {
             <p><strong>Área:</strong> {item.area}</p>
             <p><strong>Le llega:</strong> {item.receives}</p>
             <p><strong>Riesgo:</strong> {item.risk}</p>
-            <p><strong>Asistencia del CRM:</strong></p>
+            <p><strong>Asistencia de la app:</strong></p>
             <ul>{(item.assist || []).map((line) => <li key={line}>{line}</li>)}</ul>
             <small><strong>Hábito sugerido:</strong> {item.habit}</small>
           </article>

@@ -133,7 +133,7 @@ export function foamContext(quote) {
   if (!quote) return '';
   const { ask, ficha } = quote;
   const lines = [
-    `CÁLCULO DE MATERIAL DE POLIURETANO (hecho con la fórmula del CRM, sin IA): ${fmt(ask.count)} pieza(s) de ${fmt(ask.volumeM3)} m³ = ${fmt(ask.totalVolumeM3)} m³ en total.`,
+    `CÁLCULO DE MATERIAL DE POLIURETANO (hecho con la fórmula de la app, sin IA): ${fmt(ask.count)} pieza(s) de ${fmt(ask.volumeM3)} m³ = ${fmt(ask.totalVolumeM3)} m³ en total.`,
     'Fórmula: kg de mezcla = volumen × densidad moldeada. Se reparte por la relación de mezcla EN PESO de la ficha. Los juegos salen del componente que se acaba primero (cada tambor trae su cantidad), con un margen de pérdidas.',
     ficha ? `Ficha usada: ${ficha.title}${ficha.ratio ? ` · relación ${ficha.ratio.poliol} : ${ficha.ratio.iso} en peso` : ''}${ficha.densityMin ? ` · densidad moldeada sugerida ${ficha.densityMin} a ${ficha.densityMax} kg/m³` : ''}${ficha.drumPoliol ? ` · tambores ${ficha.drumPoliol} kg poliol${ficha.drumIso ? ` / ${ficha.drumIso} kg iso` : ''}` : ''}.` : 'No encontré ficha del producto nombrado.',
   ];

@@ -11,7 +11,7 @@ export const asksTacos = (query) => TACOS.test(plain(query));
 // Texto para la IA. Si no hay alertas guardadas lo dice (no inventa que "no hay nada").
 export function opsContext(rows = [], { tacos = false, now = Date.now() } = {}) {
   const groups = groupAlerts(rows, now);
-  const lines = ['ALERTAS DEL CRM (las arma el servidor todos los días; solo avisan, nada se cambia solo):'];
+  const lines = ['ALERTAS DE LA APP (las arma el servidor todos los días; solo avisan, nada se cambia solo):'];
   if (!groups.total) lines.push('- No hay alertas guardadas: puede que no haya nada urgente o que todavía no se haya generado la primera lista (Centro de mejoras → Actualizar).');
   for (const severity of ['alta', 'media', 'baja']) {
     for (const alert of groups[severity].slice(0, 12)) lines.push(`- ${SEVERITY_LABEL[severity]}: ${alert.title}${alert.days >= 1 ? ` (hace ${alert.days} días)` : ''}${alert.detail ? `. ${alert.detail}` : ''}`);

@@ -61,7 +61,7 @@ export function ReplySuggester({ event, context }) {
       <label className="muted small" style={{ marginLeft: 8 }}>
         <input type="checkbox" checked={asClient} onChange={(e) => setAsClient(e.target.checked)} /> Probar como asistente al cliente
       </label>
-      <span className="muted small"> Es un borrador: lo revisás, lo copiás y lo enviás vos. El CRM no manda nada.</span>
+      <span className="muted small"> Es un borrador: lo revisás, lo copiás y lo enviás vos. La app no manda nada.</span>
       {state.status === "error" && <p className="copilot-suggestion-pending" role="alert">{state.error}</p>}
       {state.status === "ready" && (
         <div className="reply-draft">

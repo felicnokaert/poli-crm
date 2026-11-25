@@ -97,7 +97,7 @@ export function workspaceAnswer(query, { tasks = [], sales = [], interactions = 
       const thisMonth = sales.filter(alive).filter((sale) => String(sale.date).startsWith(month));
       lines.push(`Este mes: ${thisMonth.length} venta${thisMonth.length === 1 ? '' : 's'} cargada${thisMonth.length === 1 ? '' : 's'} por ${money(thisMonth.reduce((sum, sale) => sum + saleTotal(sale), 0))} + IVA.`);
     }
-    if (lines.length) blocks.push({ key: 'ventas', label: 'Ventas cargadas en el CRM', lines });
+    if (lines.length) blocks.push({ key: 'ventas', label: 'Ventas cargadas en la app', lines });
   }
 
   // Historial: lo hablado con una empresa.

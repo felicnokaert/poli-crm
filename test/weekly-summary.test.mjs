@@ -13,7 +13,7 @@ test('resumen semanal: lo de los últimos 7 días, listo para copiar', () => {
   });
   assert.deepEqual([activity.contacted, activity.interested, activity.tasksDone, activity.tasksLate], [2, 1, 1, 1]);
   const text = weeklySummaryText({ activity, gaps: 3, today: '2026-10-22' });
-  assert.match(text, /Resumen semanal del CRM\* \(16\/10 al 22\/10\)/);
+  assert.match(text, /Resumen semanal de Poliplast App\* \(16\/10 al 22\/10\)/);
   assert.match(text, /motivo de rechazo más común fue "Precio"/);
   assert.match(text, /3 preguntas sin buena respuesta/);
 });

@@ -274,7 +274,7 @@ function OutreachDraft({ prospect, defaultSender, onVariant }) {
         <p className="muted small">
           {draft.usesResearch ? 'Incluye lo que encontró la investigación sobre esta empresa. ' : 'Sin investigación previa: usa solo rubro y ciudad. '}
           {draft.missing.length > 0 && `Faltan datos en la ficha: ${draft.missing.join(', ')}. `}
-          Revisalo y editalo antes de usarlo. El CRM no envía nada: lo copiás y lo mandás vos.
+          Revisalo y editalo antes de usarlo. La app no envía nada: lo copiás y lo mandás vos.
         </p>
       </div>
     </details>

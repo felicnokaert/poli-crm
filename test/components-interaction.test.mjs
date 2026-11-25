@@ -291,7 +291,7 @@ describe("ShortcutsHelp.jsx - interacción real", () => {
     const mod = await loadJsxModule("src/ShortcutsHelp.jsx");
     render(React.createElement(mod.ShortcutsHelp, { onClose: () => {} }));
     assert.ok(screen.getByText("Atajos de teclado (compu)"));
-    assert.equal(screen.getByText("Abrir la guía del CRM").getAttribute("href"), "/guia/");
+    assert.equal(screen.getByText("Abrir la guía de la app").getAttribute("href"), "/guia/");
     assert.ok(screen.getByText("Buscar en la pantalla actual"));
     assert.ok(screen.getByText("Nueva tarea"));
     assert.ok(screen.getByText("Cerrar el formulario o ficha abierta"));

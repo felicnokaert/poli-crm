@@ -28,7 +28,7 @@ export function IntegrationsStatus({ supabase }) {
   return (
     <section className="panel integrations-status">
       <div className="panel-head"><div><span className="eyebrow">Todos los días, solas</span><h2>Actualizaciones automáticas</h2>
-        <p className="muted small">Cada mañana el CRM trae solo lo nuevo de Mercado Libre, Contabilium y Shopify, sin tocar ningún botón. Si alguna falla o se corta, aparece acá (y un aviso en Inicio). Los botones de cada pantalla siguen sirviendo para traer todo en el momento.</p></div></div>
+        <p className="muted small">Cada mañana la app trae solo lo nuevo de Mercado Libre, Contabilium y Shopify, sin tocar ningún botón. Si alguna falla o se corta, aparece acá (y un aviso en Inicio). Los botones de cada pantalla siguen sirviendo para traer todo en el momento.</p></div></div>
       {status === "loading" && <p className="muted" role="status">Cargando…</p>}
       {status === "error" && <p className="muted">No se pudo leer el estado.</p>}
       {status === "ready" && (

@@ -111,7 +111,9 @@ import { useSalesActions } from "./hooks/useSalesActions";
 import { useInboxActions } from "./hooks/useInboxActions";
 import { useRapypClients } from "./hooks/useRapypClients";
 import { useClientActions } from "./hooks/useClientActions";
-import { AppSidebar, NAV_ITEMS } from "./AppSidebar.jsx";
+import { AppSidebar, NAV_GROUPS, NAV_ITEMS } from "./AppSidebar.jsx";
+import { FUTURE_MODULES, PREVIEW_ROLE_KEY, roleAllows } from "./poliplast-app-plan.mjs";
+import { AppPlanOverview, ModulePreview } from "./ModulePreview.jsx";
 import { canSee as canSeeModule, firstAllowedView } from "./module-access.mjs";
 import { useModuleAccess } from "./hooks/useModuleAccess.js";
 import { AppTopbar } from "./AppTopbar.jsx";
@@ -131,7 +133,7 @@ const STORAGE_KEY = "poliplast-sales-copilot-v1";
 // Mismos 6 grupos que arma navGroups más abajo - repetidos acá porque hacen
 // falta antes de que el componente pueda armar navGroups (son el estado
 // inicial "todo colapsado").
-const NAV_GROUP_NAMES = ["Hoy", "Ventas", "Canales online", "Cartera", "Aprender", "Más"];
+const NAV_GROUP_NAMES = ["Inicio", "Ventas", "Canales online", "Logística", "Administración", "Equipo", "Configuración"];
 
 function loadState() {
   try {
@@ -145,7 +147,7 @@ function loadState() {
 }
 
 const VIEW_KEY = "poliplast-current-view";
-const SAVED_VIEWS = new Set(["dashboard", "conversations", "inbox", "tasks", "sales", "clients", "prospecting", "mercadolibre", "shopify", "mejoras", "productos", "academy", "quoter", "entregas", "map", "techdocs", "profile", "settings"]);
+const SAVED_VIEWS = new Set(["dashboard", "conversations", "inbox", "tasks", "sales", "clients", "prospecting", "mercadolibre", "shopify", "mejoras", "productos", "academy", "quoter", "entregas", "map", "techdocs", "profile", "settings", "plan", "etiquetas", "conteo", "dosificado", "recibos", "facturacion", "compras"]);
 function readSavedView() {
   try {
     const saved = sessionStorage.getItem(VIEW_KEY);
@@ -195,6 +197,13 @@ export default function App() {
   // Si a esta cuenta le quitaron la pantalla (guardada o abierta desde un atajo), cae en la primera que sí puede ver.
   const view = canSeeModule(session?.user?.email, deniedModules, pickedView) ? pickedView : firstAllowedView(session?.user?.email, deniedModules);
   useEffect(() => { try { sessionStorage.setItem(VIEW_KEY, view); } catch { /* sin almacenamiento */ } }, [view]);
+  // Poliplast App (prueba): «Ver como» un rol. Solo filtra el menú en este navegador; no cambia permisos.
+  const [previewRole, setPreviewRole] = useState(() => { try { return localStorage.getItem(PREVIEW_ROLE_KEY) || "admin"; } catch { return "admin"; } });
+  const pickPreviewRole = (role) => {
+    setPreviewRole(role);
+    try { localStorage.setItem(PREVIEW_ROLE_KEY, role); } catch { /* sin almacenamiento */ }
+    if (!roleAllows(role, view)) setView("dashboard");
+  };
   const [mapTab, setMapTab] = useState("aplicadores");
   // Empresa con la que se abre el cotizador (desde "Cotizar" en la ficha); null = cotización libre.
   const [quoterClient, setQuoterClient] = useState(null);
@@ -689,6 +698,8 @@ export default function App() {
         inboxSignalCount={inboxSignalCount}
         email={session?.user?.email}
         denied={deniedModules}
+        previewRole={previewRole}
+        onPreviewRole={pickPreviewRole}
       />
 
       <main>
@@ -707,6 +718,8 @@ export default function App() {
           onLogConversation={LOG_CONVERSATION_VIEWS.includes(view) ? () => setShowForm(true) : null}
         />
         <ErrorBoundary key={view} view={view}>
+        {FUTURE_MODULES[view] && <ModulePreview id={view} />}
+        {view === "plan" && <AppPlanOverview groups={NAV_GROUPS} role={previewRole} onRole={pickPreviewRole} />}
 
         {view === "dashboard" && (
           <Dashboard

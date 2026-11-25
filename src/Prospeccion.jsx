@@ -662,7 +662,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         <div>
           <span className="eyebrow">Cartera</span>
           <h2>Prospección</h2>
-          <p>Empresas que todavía no son clientes. Al marcar un prospecto como Contactado o Con interés pasa a Empresas y desde ahí rige toda la lógica del CRM. Nunca se envían mensajes desde acá: el contacto es siempre manual.</p>
+          <p>Empresas que todavía no son clientes. Al marcar un prospecto como Contactado o Con interés pasa a Empresas y desde ahí rige toda la lógica de la app. Nunca se envían mensajes desde acá: el contacto es siempre manual.</p>
         </div>
         <div className="panel-head-actions">
           <button type="button" className="primary" onClick={() => { setTab('prospectos'); setForm(blankProspect({ family: familyFilter !== 'Todas' ? familyFilter : '' })); }}><Plus size={16} /> Cargar prospecto</button>
@@ -704,7 +704,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
                 <li>Cuando Claude termina, las empresas aparecen solas en la cola de trabajo, con la fuente de cada dato.</li>
               </ol>
             )}
-            <p className="muted">La búsqueda de verdad: una IA con modo de investigación avanzada recorre Google, Maps, sitios y redes y devuelve una tabla con evidencia y fuente por empresa. Tarda entre {RESEARCH_MINUTES.min} y {RESEARCH_MINUTES.max} minutos y no cuesta nada extra: usa tu suscripción a Claude, ChatGPT, Gemini o Perplexity. El CRM arma el pedido (con las empresas que ya tenés excluidas) y después importa el resultado.</p>
+            <p className="muted">La búsqueda de verdad: una IA con modo de investigación avanzada recorre Google, Maps, sitios y redes y devuelve una tabla con evidencia y fuente por empresa. Tarda entre {RESEARCH_MINUTES.min} y {RESEARCH_MINUTES.max} minutos y no cuesta nada extra: usa tu suscripción a Claude, ChatGPT, Gemini o Perplexity. La app arma el pedido (con las empresas que ya tenés excluidas) y después importa el resultado.</p>
           </div>
         </div>
         <div className="research-form">
@@ -865,7 +865,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         {searching && (
           <div className="search-progress" role="status" aria-live="polite">
             <span className="bar" />
-            <p>Buscando en OpenStreetMap{zone ? ` (${zone.nombre})` : ''}… puede tardar hasta 1 minuto. Podés seguir usando el CRM; el resultado aparece acá y en el historial. Esta zona vuelve a estar disponible en {60} días.</p>
+            <p>Buscando en OpenStreetMap{zone ? ` (${zone.nombre})` : ''}… puede tardar hasta 1 minuto. Podés seguir usando la app; el resultado aparece acá y en el historial. Esta zona vuelve a estar disponible en {60} días.</p>
           </div>
         )}
 
@@ -898,7 +898,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
 
       <details className="import-box">
         <summary><FileUp size={14} /> Importar o pegar una lista de prospectos</summary>
-        <p className="muted small">Subí un CSV o pegá las filas copiadas de la planilla, con los encabezados en la primera fila (Nombre empresa, Familia, Subfamilia, provincia, ciudad, Maquina, Proveedor, telefono, email, Estado, Comercial, Contacto, observaciones, Fecha de seguimiento, Tipo entidad, Producto / propuesta, Estado comercial, Valor potencial, Próxima acción, Fecha próxima acción). Antes de guardar vas a ver cuántas son nuevas, cuántas ya están en el CRM y cuántas son posibles duplicadas.</p>
+        <p className="muted small">Subí un CSV o pegá las filas copiadas de la planilla, con los encabezados en la primera fila (Nombre empresa, Familia, Subfamilia, provincia, ciudad, Maquina, Proveedor, telefono, email, Estado, Comercial, Contacto, observaciones, Fecha de seguimiento, Tipo entidad, Producto / propuesta, Estado comercial, Valor potencial, Próxima acción, Fecha próxima acción). Antes de guardar vas a ver cuántas son nuevas, cuántas ya están en la app y cuántas son posibles duplicadas.</p>
         <textarea rows={6} value={importText} onChange={(event) => setImportText(event.target.value)} aria-label="Lista de prospectos" placeholder="Pegá acá las filas copiadas de la planilla (con la fila de encabezados)" />
         <div className="import-box-actions">
           <button type="button" className="primary" disabled={!importText.trim()} onClick={() => analyzeImport(importText)}>Revisar lista pegada</button>

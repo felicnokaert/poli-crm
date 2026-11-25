@@ -199,6 +199,8 @@ export default function App() {
   useEffect(() => { try { sessionStorage.setItem(VIEW_KEY, view); } catch { /* sin almacenamiento */ } }, [view]);
   // Poliplast App (prueba): «Ver como» un rol. Solo filtra el menú en este navegador; no cambia permisos.
   const [previewRole, setPreviewRole] = useState(() => { try { return localStorage.getItem(PREVIEW_ROLE_KEY) || "admin"; } catch { return "admin"; } });
+  // Inicio adaptable: una tarjeta aparece si la persona ve su módulo y el rol que se está mirando también.
+  const allowsHomeModule = useCallback((module) => canSeeModule(session?.user?.email, deniedModules, module) && roleAllows(previewRole, module), [session?.user?.email, deniedModules, previewRole]);
   const pickPreviewRole = (role) => {
     setPreviewRole(role);
     try { localStorage.setItem(PREVIEW_ROLE_KEY, role); } catch { /* sin almacenamiento */ }
@@ -745,6 +747,7 @@ export default function App() {
             prospects={data.prospects || EMPTY_ARRAY}
             showWeekly={canSeeWeeklySummary(session?.user?.email)}
             isAdmin={isChannelAdmin(session?.user?.email)}
+            allowsModule={allowsHomeModule}
             onToggle={toggleTask}
             onOpenTask={setSelectedTaskId}
             onOpenInteraction={setSelectedInteractionId}

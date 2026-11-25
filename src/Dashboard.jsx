@@ -18,6 +18,7 @@ import { buildCustomerBase } from "./customer-base.mjs";
 import { overdueQueue } from "./daily-queues.mjs";
 import { businessFacts } from "./assistant-business.mjs";
 import { weekActivity, weeklySummaryText } from "./weekly-summary.mjs";
+import { availableBlocks, loadLayout, moveBlock, normalizeLayout, saveLayout, toggleBlock, visibleBlockIds } from "./home-layout.mjs";
 import { useTeamSharedNotes } from "./hooks/useSharedNotesSync";
 import { findColdQuotes } from "./cold-quotes.mjs";
 import { findStaleHotLeads } from "./hot-leads-radar.mjs";
@@ -505,7 +506,15 @@ function DashboardBase({
   prospects = [],
   showWeekly = false,
   isAdmin = false,
+  allowsModule = null,
 }) {
+  // Poliplast App (prueba): tarjetas según los módulos de la persona, en el orden que ella eligió.
+  const allows = allowsModule || (() => true);
+  const layoutOwner = session?.user?.email || "";
+  const [layout, setLayout] = useState(() => loadLayout(layoutOwner));
+  const [arranging, setArranging] = useState(false);
+  const changeLayout = (next) => { setLayout(next); saveLayout(layoutOwner, next); };
+  const shownIds = visibleBlockIds(layout, allows, isAdmin);
   const targets = resolveWeeklyTargets(weeklyTargets);
   const clientsById = new Map(clients.map((client) => [client.id, client]));
   const now = today();
@@ -558,7 +567,12 @@ function DashboardBase({
           onDismiss={onDismissWelcome}
         />
       )}
-      {!showWelcome && (
+      {!showWelcome && !allows("tasks") && (
+        <section className="day-hero">
+          <div className="day-hero-head"><div><h2>{greetingFor()}{welcomeName ? `, ${welcomeName}` : ""}</h2></div></div>
+        </section>
+      )}
+      {!showWelcome && allows("tasks") && (
         <DayHero
           name={welcomeName}
           overdueTasks={overdueTasks}
@@ -569,30 +583,6 @@ function DashboardBase({
           onToggle={onToggle}
         />
       )}
-      {!showWelcome && showRoutine && <MyDay planChecks={planChecks || {}} tasks={tasks} onNavigate={onNavigate} />}
-      <DayMode
-        overdueTasks={overdueTasks}
-        dueTodayTasks={dueTodayTasks}
-        hotLeads={hotLeads}
-        coldQuotes={coldQuotes}
-        repurchaseRadar={repurchaseRadar}
-        staleClients={staleClients}
-        expiredQuotes={expiredQuotes}
-        myChannels={myChannels}
-        onNavigate={onNavigate}
-        onOpenTask={onOpenTask}
-        onOpenEvent={onOpenEvent}
-      />
-      <section className="metric-grid metric-grid-week">
-        {cards.map(([label, value, note, Icon, urgent]) => (
-          <article className={`metric-card${urgent ? " is-urgent" : ""}`} key={label}>
-            <Icon size={20} />
-            <span>{label}</span>
-            <strong><CountUp value={value} /></strong>
-            <small>{note}</small>
-          </article>
-        ))}
-      </section>
       {whatsappHealth && whatsappHealth.ok === false && myChannels.includes("general") && (
         <section className="panel whatsapp-alert" role="alert">
           <strong>WhatsApp: hay algo para revisar</strong>
@@ -600,13 +590,47 @@ function DashboardBase({
           <button type="button" className="secondary" onClick={() => onNavigate("settings")}>Ir a Datos para el diagnóstico</button>
         </section>
       )}
-      {supabase && showWeekly && <WeeklySummaryCard supabase={supabase} clients={clients} prospects={prospects} tasks={tasks} isAdmin={isAdmin} />}
-      {supabase && isAdmin && <AutomationPause />}
-      {supabase && isAdmin && <AttentionPanel supabase={supabase} session={session} isAdmin={isAdmin} onNavigate={onNavigate} compact />}
-      {supabase && <OverdueCard supabase={supabase} clients={clients} onNavigate={onNavigate} />}
-      <AlertsPanel showInbox={isAdmin} hotLeads={hotLeads} coldQuotes={coldQuotes} expiredQuotes={expiredQuotes} staleClients={staleClients} repurchaseRadar={repurchaseRadar} onNavigate={onNavigate} />
-      <AutomationSummary tasks={tasks} cronStatus={cronStatus} />
-      {supabase && isAdmin && <IntegrationsAlert supabase={supabase} onNavigate={onNavigate} />}
+      <HomeArranger open={arranging} onToggle={() => setArranging((value) => !value)} layout={layout} onChange={changeLayout} allows={allows} isAdmin={isAdmin} />
+      {shownIds.map((id) => {
+        if (id === "miDia") return !showWelcome && showRoutine ? <MyDay key={id} planChecks={planChecks || {}} tasks={tasks} onNavigate={onNavigate} /> : null;
+        if (id === "plan") return (
+          <DayMode
+            key={id}
+            overdueTasks={overdueTasks}
+            dueTodayTasks={dueTodayTasks}
+            hotLeads={hotLeads}
+            coldQuotes={coldQuotes}
+            repurchaseRadar={repurchaseRadar}
+            staleClients={staleClients}
+            expiredQuotes={expiredQuotes}
+            myChannels={myChannels}
+            onNavigate={onNavigate}
+            onOpenTask={onOpenTask}
+            onOpenEvent={onOpenEvent}
+          />
+        );
+        if (id === "metricas") return (
+          <section key={id} className="metric-grid metric-grid-week">
+            {cards.map(([label, value, note, Icon, urgent]) => (
+              <article className={`metric-card${urgent ? " is-urgent" : ""}`} key={label}>
+                <Icon size={20} />
+                <span>{label}</span>
+                <strong><CountUp value={value} /></strong>
+                <small>{note}</small>
+              </article>
+            ))}
+          </section>
+        );
+        if (id === "semana") return supabase && showWeekly ? <WeeklySummaryCard key={id} supabase={supabase} clients={clients} prospects={prospects} tasks={tasks} isAdmin={isAdmin} /> : null;
+        if (id === "pausa") return supabase && isAdmin ? <AutomationPause key={id} /> : null;
+        if (id === "atender") return supabase && isAdmin ? <AttentionPanel key={id} supabase={supabase} session={session} isAdmin={isAdmin} onNavigate={onNavigate} compact /> : null;
+        if (id === "atrasados") return supabase ? <OverdueCard key={id} supabase={supabase} clients={clients} onNavigate={onNavigate} /> : null;
+        if (id === "alertas") return <AlertsPanel key={id} showInbox={isAdmin} hotLeads={hotLeads} coldQuotes={coldQuotes} expiredQuotes={expiredQuotes} staleClients={staleClients} repurchaseRadar={repurchaseRadar} onNavigate={onNavigate} />;
+        if (id === "automatico") return <AutomationSummary key={id} tasks={tasks} cronStatus={cronStatus} />;
+        if (id === "logistica") return <LogisticsCard key={id} onNavigate={onNavigate} allows={allows} />;
+        if (id === "conexiones") return supabase && isAdmin ? <IntegrationsAlert key={id} supabase={supabase} onNavigate={onNavigate} /> : null;
+        return null;
+      })}
     </div>
   );
 }
@@ -741,5 +765,53 @@ function AlertsPanel({ showInbox = true, hotLeads, coldQuotes, expiredQuotes, st
 // (sync status, edición de otras vistas, etc.) y este componente hace un
 // trabajo de armado de radares/listas nada gratis, así que conviene evitar
 // re-renderizarlo cuando ninguna de sus props cambió realmente.
+// Poliplast App (prueba): la tarjeta de Logística del Inicio (expedición, depósito). Lo de Etiquetas/Conteo/Dosificado
+// todavía no existe adentro de la app: se muestra como próximamente.
+function LogisticsCard({ onNavigate, allows }) {
+  const soon = [["etiquetas", "Etiquetas pendientes por corte"], ["conteo", "Conteo de stock del día"], ["dosificado", "Pedidos a dosificar"]].filter(([module]) => allows(module));
+  return (
+    <section className="panel">
+      <div className="panel-head">
+        <div><span className="eyebrow">Logística</span><h2>Logística de hoy</h2></div>
+        <button type="button" className="primary" onClick={() => onNavigate("entregas")}>Abrir Entregas</button>
+      </div>
+      <p className="muted small">Pedidos para despachar, guías y remitos firmados: todo en Entregas.</p>
+      {soon.length > 0 && (
+        <ul className="muted small">
+          {soon.map(([module, label]) => <li key={module}><button type="button" className="danger-link" onClick={() => onNavigate(module)}>{label}</button> · próximamente</li>)}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+// Poliplast App (prueba): «Ordenar mi Inicio»: subir, bajar y ocultar tarjetas (solo las de sus módulos).
+function HomeArranger({ open, onToggle, layout, onChange, allows, isAdmin }) {
+  const blocks = availableBlocks(layout, allows, isAdmin);
+  const { hidden } = normalizeLayout(layout);
+  return (
+    <div className="home-arranger">
+      <button type="button" className="secondary" onClick={onToggle} aria-expanded={open}>{open ? "Listo" : "Ordenar mi Inicio"}</button>
+      {open && blocks.length === 0 && <p className="muted small">Con tus módulos no hay tarjetas para ordenar.</p>}
+      {open && blocks.length > 0 && (
+        <ol className="home-arranger-list">
+          {blocks.map((block, index) => (
+            <li key={block.id} className={hidden.includes(block.id) ? "is-hidden" : ""}>
+              <label>
+                <input type="checkbox" checked={!hidden.includes(block.id)} onChange={() => onChange(toggleBlock(layout, block.id))} />
+                {block.label}
+              </label>
+              <span className="home-arranger-moves">
+                <button type="button" className="secondary" disabled={index === 0} onClick={() => onChange(moveBlock(layout, block.id, -1, allows, isAdmin))} aria-label={`Subir ${block.label}`}>↑</button>
+                <button type="button" className="secondary" disabled={index === blocks.length - 1} onClick={() => onChange(moveBlock(layout, block.id, 1, allows, isAdmin))} aria-label={`Bajar ${block.label}`}>↓</button>
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
 export const Dashboard = memo(DashboardBase);
 

@@ -31,7 +31,7 @@ export function ModulePreview({ id }) {
 }
 
 // Poliplast App (prueba): el mapa completo del menú con submódulos y qué ve cada rol.
-export function AppPlanOverview({ groups, role = "admin", onRole = null }) {
+export function AppPlanOverview({ groups, role = "admin", onRole = null, onResetDemo = null }) {
   return (
     <section className="panel module-preview">
       <span className="eyebrow">Poliplast App · versión de prueba</span>
@@ -47,6 +47,9 @@ export function AppPlanOverview({ groups, role = "admin", onRole = null }) {
             {ROLES.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
           </select>
         </label>
+      )}
+      {onResetDemo && (
+        <p className="muted small">Estás en la versión de prueba con datos inventados. <button type="button" className="secondary" onClick={onResetDemo}>Volver a cargar los datos de prueba</button></p>
       )}
       <div className="plan-overview-grid">
         {groups.map(([group, items]) => (

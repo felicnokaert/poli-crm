@@ -112,8 +112,12 @@ import { useInboxActions } from "./hooks/useInboxActions";
 import { useRapypClients } from "./hooks/useRapypClients";
 import { useClientActions } from "./hooks/useClientActions";
 import { AppSidebar, NAV_GROUPS, NAV_ITEMS } from "./AppSidebar.jsx";
-import { FUTURE_MODULES, PREVIEW_ROLE_KEY, roleAllows } from "./poliplast-app-plan.mjs";
+import { FUTURE_MODULES, PREVIEW_ROLE_KEY } from "./poliplast-app-plan.mjs";
+import { accessAllows, loadLocalTeam, saveLocalTeam } from "./team-access.mjs";
+import { TeamAccess } from "./TeamAccess.jsx";
+import { DemoModule } from "./DemoModules.jsx";
 import { AppPlanOverview, ModulePreview } from "./ModulePreview.jsx";
+import { isDemoMode, withDemoData } from "./demo-mode.mjs";
 import { canSee as canSeeModule, firstAllowedView } from "./module-access.mjs";
 import { useModuleAccess } from "./hooks/useModuleAccess.js";
 import { AppTopbar } from "./AppTopbar.jsx";
@@ -136,18 +140,17 @@ const STORAGE_KEY = "poliplast-sales-copilot-v1";
 const NAV_GROUP_NAMES = ["Inicio", "Ventas", "Canales online", "Logística", "Administración", "Equipo", "Configuración"];
 
 function loadState() {
+  let state = initialState;
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    return stored
-      ? { ...initialState, ...stored, inbox: stored.inbox || [] }
-      : initialState;
-  } catch {
-    return initialState;
-  }
+    state = stored ? { ...initialState, ...stored, inbox: stored.inbox || [] } : initialState;
+  } catch { /* copia local rota: arranca vacío */ }
+  // Poliplast App (prueba): en el link de prueba se cargan datos inventados la primera vez.
+  return isDemoMode({ online: onlineConfigured }) ? withDemoData(state) : state;
 }
 
 const VIEW_KEY = "poliplast-current-view";
-const SAVED_VIEWS = new Set(["dashboard", "conversations", "inbox", "tasks", "sales", "clients", "prospecting", "mercadolibre", "shopify", "mejoras", "productos", "academy", "quoter", "entregas", "map", "techdocs", "profile", "settings", "plan", "etiquetas", "conteo", "dosificado", "recibos", "facturacion", "compras"]);
+const SAVED_VIEWS = new Set(["dashboard", "conversations", "inbox", "tasks", "sales", "clients", "prospecting", "mercadolibre", "shopify", "mejoras", "productos", "academy", "quoter", "entregas", "map", "techdocs", "profile", "settings", "plan", "team", "etiquetas", "conteo", "dosificado", "recibos", "facturacion", "compras"]);
 function readSavedView() {
   try {
     const saved = sessionStorage.getItem(VIEW_KEY);
@@ -199,13 +202,22 @@ export default function App() {
   useEffect(() => { try { sessionStorage.setItem(VIEW_KEY, view); } catch { /* sin almacenamiento */ } }, [view]);
   // Poliplast App (prueba): «Ver como» un rol. Solo filtra el menú en este navegador; no cambia permisos.
   const [previewRole, setPreviewRole] = useState(() => { try { return localStorage.getItem(PREVIEW_ROLE_KEY) || "admin"; } catch { return "admin"; } });
+  // Equipo y cuentas (prueba): roles y módulos de cada persona, guardados en este navegador.
+  const [team, setTeam] = useState(() => loadLocalTeam());
+  const changeTeam = (next) => { setTeam(next); saveLocalTeam(next); };
+  const accessFor = (value) => {
+    if (String(value).startsWith("person:")) return team.find((person) => `person:${person.email}` === value) || { role: "comercial" };
+    return { role: value || "admin", overrides: {} };
+  };
+  const previewAccess = accessFor(previewRole);
   // Inicio adaptable: una tarjeta aparece si la persona ve su módulo y el rol que se está mirando también.
-  const allowsHomeModule = useCallback((module) => canSeeModule(session?.user?.email, deniedModules, module) && roleAllows(previewRole, module), [session?.user?.email, deniedModules, previewRole]);
+  const allowsHomeModule = useCallback((module) => canSeeModule(session?.user?.email, deniedModules, module) && accessAllows(previewAccess, module), [session?.user?.email, deniedModules, previewAccess]);
   const pickPreviewRole = (role) => {
     setPreviewRole(role);
     try { localStorage.setItem(PREVIEW_ROLE_KEY, role); } catch { /* sin almacenamiento */ }
-    if (!roleAllows(role, view)) setView("dashboard");
+    if (!accessAllows(accessFor(role), view)) setView("dashboard");
   };
+  const demo = isDemoMode({ online: onlineConfigured });
   const [mapTab, setMapTab] = useState("aplicadores");
   // Empresa con la que se abre el cotizador (desde "Cotizar" en la ficha); null = cotización libre.
   const [quoterClient, setQuoterClient] = useState(null);
@@ -701,6 +713,8 @@ export default function App() {
         email={session?.user?.email}
         denied={deniedModules}
         previewRole={previewRole}
+        previewAccess={previewAccess}
+        previewName={previewAccess.name || ""}
         onPreviewRole={pickPreviewRole}
       />
 
@@ -720,8 +734,9 @@ export default function App() {
           onLogConversation={LOG_CONVERSATION_VIEWS.includes(view) ? () => setShowForm(true) : null}
         />
         <ErrorBoundary key={view} view={view}>
-        {FUTURE_MODULES[view] && <ModulePreview id={view} />}
-        {view === "plan" && <AppPlanOverview groups={NAV_GROUPS} role={previewRole} onRole={pickPreviewRole} />}
+        {FUTURE_MODULES[view] && (demo ? <DemoModule key={view} id={view} access={previewAccess} /> : <ModulePreview id={view} />)}
+        {view === "team" && <TeamAccess team={team} onChange={changeTeam} groups={NAV_GROUPS} onViewAs={(person) => pickPreviewRole(`person:${person.email}`)} />}
+        {view === "plan" && <AppPlanOverview groups={NAV_GROUPS} role={previewRole} onRole={pickPreviewRole} onResetDemo={demo ? () => { if (window.confirm("¿Volver a cargar los datos de prueba? Se pierde lo que tocaste en la prueba.")) { setData((current) => withDemoData(current, { force: true })); } } : null} />}
 
         {view === "dashboard" && (
           <Dashboard
@@ -926,7 +941,8 @@ export default function App() {
             <CotizadorFrame session={session} client={quoterClient} />
           </Suspense>
         )}
-        {view === "entregas" && (
+        {view === "entregas" && demo && <DemoModule id="entregas" access={previewAccess} />}
+        {view === "entregas" && !demo && (
           <Suspense fallback={<Splash text="Cargando entregas…" />}>
             <EntregasFrame session={session} />
           </Suspense>

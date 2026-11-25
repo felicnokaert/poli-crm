@@ -590,8 +590,18 @@ export function AssistantWindow({ supabase, clients = [], workspace = {}, firstN
     const pricesNow = listPrices.key && !listPrices.ready ? await loadListPrices(supabase, listPrices.words, isoToday()).catch(() => []) : listPrices.entries;
     const hub = asksProductHub(asked) ? await productHub() : null;
     const hubText = hub ? productHubContext(findInHub(hub.rows, asked)) : "";
-    const context = [rulesContext({ rules, competitors: competitors || [], rapyp }), routesContext(), wantsBusiness ? businessContext(business) : "", kryptonContext(kryptonFor(asked)), foamContext(foamFor(asked, techDocs)), sprayContext(sprayFor(asked, techDocs)), mlText, opsText, hubText, pricesContext(pricesNow), teamNotesContext(notes), learningText, clientContext(clientsFound), workspaceContext([...mine, ...agenda]), extraContext({ rivals, purchases: purchasesNow, invoices: invoicesNow }), buildAiContext({ intent, facts, team: teamNow, result, mlRows: mlNow, taught: withEarlier(taught) })].filter(Boolean).join("\n");
-    const reply = await askAi(supabase, { question: asked, context, history, today: isoToday(), userName: firstName }).catch(() => ({ ok: false, reason: "red" }));
+    // Poliplast App: cada parte lleva su módulo; el servidor saca las que la persona no tiene habilitadas.
+    const contextParts = [
+      [null, rulesContext({ rules, competitors: competitors || [], rapyp })], [null, routesContext()],
+      ["sales", wantsBusiness ? businessContext(business) : ""],
+      [null, kryptonContext(kryptonFor(asked))], [null, foamContext(foamFor(asked, techDocs))], [null, sprayContext(sprayFor(asked, techDocs))],
+      ["mercadolibre", mlText], ["mejoras", opsText], ["productos", hubText], ["quoter", pricesContext(pricesNow)],
+      ["clients", teamNotesContext(notes)], ["prospecting", learningText], ["clients", clientContext(clientsFound)],
+      ["tasks", workspaceContext([...mine, ...agenda])], ["clients", extraContext({ rivals, purchases: purchasesNow, invoices: invoicesNow })],
+      [null, buildAiContext({ intent, facts, team: teamNow, result, mlRows: mlNow, taught: withEarlier(taught) })],
+    ].filter(([, text]) => text).map(([module, text]) => ({ module, text }));
+    const context = contextParts.map((part) => part.text).join("\n");
+    const reply = await askAi(supabase, { question: asked, context, contextParts, history, today: isoToday(), userName: firstName }).catch(() => ({ ok: false, reason: "red" }));
     setThinking(false);
     if (reply.ok) {
       setAi("on");

@@ -1674,3 +1674,22 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .home-arranger-list label { display: flex; align-items: center; gap: 8px; }
 .home-arranger-moves { display: inline-flex; gap: 6px; }
 .home-arranger-moves .secondary { padding: 6px 12px; }
+/* Poliplast App (prueba): módulos con datos inventados y Equipo y cuentas. */
+.demo-tabs { margin: 12px 0; width: fit-content; max-width: 100%; flex-wrap: wrap; }
+.demo-stats { margin: 4px 0 12px; }
+.demo-table td, .demo-table th { white-space: nowrap; }
+.demo-pill { font-style: normal; }
+.demo-scan, .demo-form, .team-access-add { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin: 8px 0; }
+.demo-scan input { flex: 1 1 240px; }
+.demo-form label, .team-access-add label { display: grid; gap: 4px; font-size: 0.85rem; flex: 1 1 180px; }
+.demo-msg { margin: 6px 0; padding: 8px 12px; border-radius: 10px; background: var(--color-border-light); }
+.demo-count { width: 84px; }
+.team-access-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.team-access-list > li { border: 1px solid var(--color-border); border-radius: 12px; padding: 10px 14px; }
+.team-access-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: center; }
+.team-access-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.team-access-modules { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); margin-top: 10px; }
+.team-access-modules fieldset { border: 1px solid var(--color-border-light); border-radius: 10px; padding: 8px 12px; margin: 0; }
+.team-access-modules legend { font-weight: 700; font-size: 0.85rem; padding: 0 4px; }
+.team-access-module > label, .team-access-children label { display: flex; gap: 8px; align-items: center; padding: 3px 0; }
+.team-access-children { padding-left: 24px; font-size: 0.85rem; }

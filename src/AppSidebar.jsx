@@ -1,8 +1,9 @@
-import { Boxes, Building2, Calculator, ChevronRight, Menu, X, ClipboardList, Database, FileCheck2, GraduationCap, Inbox, LayoutDashboard, ListChecks, MapPin, MessageCircle, ReceiptText, Search, ShoppingBag, Store, Truck, UserCog, Tags, PackageSearch, FlaskConical, Receipt, FileText, ShoppingCart, Map as MapIcon } from "lucide-react";
+import { Boxes, Building2, Calculator, ChevronRight, Menu, X, ClipboardList, Database, FileCheck2, GraduationCap, Inbox, LayoutDashboard, ListChecks, MapPin, MessageCircle, ReceiptText, Search, ShoppingBag, Store, Truck, UserCog, Tags, PackageSearch, FlaskConical, Receipt, FileText, ShoppingCart, Map as MapIcon, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { onlineConfigured } from "./online";
 import { filterNav } from "./module-access.mjs";
-import { ROLES, navForRole } from "./poliplast-app-plan.mjs";
+import { ROLES } from "./poliplast-app-plan.mjs";
+import { navForAccess } from "./team-access.mjs";
 import { isChannelAdmin } from "./user-channels.mjs";
 
 // Menú lateral de Poliplast App (rama de prueba, 25/11): 7 grupos según docs/PLAN_POLIPLAST_APP.md.
@@ -44,8 +45,9 @@ export const NAV_GROUPS = [
   ]],
   ["Configuración", [
     ["plan", "Cómo queda la app", MapIcon],
+    ["team", "Equipo y cuentas", Users],
     ["profile", "Perfil", UserCog],
-    ["settings", "Equipo, cuentas y conexiones", Database],
+    ["settings", "Datos y conexiones", Database],
   ]],
 ];
 
@@ -54,8 +56,8 @@ export const NAV_ITEMS = NAV_GROUPS.flatMap(([, items]) => items);
 // Atajos de la barra inferior del celular (con nombre, no solo ícono). Lo demás está en "Menú".
 const QUICK_IDS = ["dashboard", "tasks", "sales", "clients"];
 
-export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNavGroups, narrowScreen, overdueTaskCount, inboxSignalCount, email = "", denied = null, previewRole = "admin", onPreviewRole = null }) {
-  const groups = navForRole(filterNav(NAV_GROUPS, email, denied), previewRole);
+export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNavGroups, narrowScreen, overdueTaskCount, inboxSignalCount, email = "", denied = null, previewRole = "admin", previewAccess = null, previewName = "", onPreviewRole = null }) {
+  const groups = navForAccess(filterNav(NAV_GROUPS, email, denied), previewAccess || { role: previewRole });
   const [sheet, setSheet] = useState(false);
   const allowed = groups.flatMap(([, items]) => items);
   const quick = QUICK_IDS.map((id) => allowed.find(([itemId]) => itemId === id)).filter(Boolean);
@@ -138,6 +140,7 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
           <span className="eyebrow">Ver como</span>
           <select value={previewRole} onChange={(event) => onPreviewRole(event.target.value)}>
             {ROLES.map((role) => <option key={role.id} value={role.id}>{role.label}</option>)}
+            {previewRole.startsWith("person:") && <option value={previewRole}>{previewName || "Persona"}</option>}
           </select>
         </label>
       )}

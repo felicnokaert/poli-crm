@@ -25,7 +25,8 @@ export const SUBMODULES = {
   academy: ['Productos', 'Práctica', 'Competencia', 'Equipo'],
   techdocs: ['Documentos', 'Qué productos tienen ficha', 'Catálogo ↔ Mercado Libre'],
   profile: ['Mis datos', 'Contraseña'],
-  settings: ['Equipo y cuentas (roles y permisos)', 'Conexiones', 'Datos'],
+  settings: ['Conexiones', 'Datos'],
+  team: ['Personas y roles', 'Módulos y submódulos de cada uno'],
 };
 
 // Módulos que todavía no existen dentro de la app: se muestran como «próximamente».

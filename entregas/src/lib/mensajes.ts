@@ -1,6 +1,6 @@
 // Textos listos para pegar: el aviso al grupo de expedición y la respuesta al cliente.
 import { duracion, resumenLead } from './leadtime'
-import { MOTIVOS_BLOQUEO, MOTIVOS_INCIDENCIA } from './estados'
+import { MOTIVOS_BLOQUEO, MOTIVOS_INCIDENCIA, esRetiroDelCliente } from './estados'
 import { fechaCorta, fechaLarga, hoyISO } from './fechas'
 import type { Expreso, Pedido } from './types'
 
@@ -151,6 +151,24 @@ export function resumenDelDia(pedidos: Pedido[], expresos: Map<string, Expreso>,
   return bloques.filter(Boolean).join('\n\n')
 }
 
+/** Dónde retira el cliente (Felipe, 25/11): dirección, horario y mapa de cada depósito. */
+export const PUNTOS_RETIRO: Record<string, { direccion: string; mapa: string }> = {
+  'villa dominico': { direccion: 'Magdalena 962, Villa Domínico', mapa: 'https://www.google.com/maps/search/?api=1&query=Magdalena+962+Villa+Dominico' },
+  'mar del plata': { direccion: 'Depósito Mar del Plata', mapa: 'https://maps.app.goo.gl/p2wBAvncP8fCrzpU8' },
+}
+export const HORARIO_RETIRO = 'de lunes a viernes de 8 a 16 h'
+
+function claveDeposito(d: string | null | undefined): string {
+  return String(d ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+}
+
+/** Líneas con dónde y cuándo retirar; vacío si el depósito no es uno conocido. */
+export function lineasRetiro(deposito: string | null | undefined): string[] {
+  const punto = PUNTOS_RETIRO[claveDeposito(deposito)]
+  if (!punto) return [`Lo podés retirar ${HORARIO_RETIRO}.`]
+  return [`📍 Retiro: *${punto.direccion}*`, `🕗 Horario: ${HORARIO_RETIRO}`, `Cómo llegar: ${punto.mapa}`]
+}
+
 /** Respuesta para el cliente según en qué está su pedido. */
 export function mensajeCliente(p: Pedido, expreso: Expreso | undefined): string {
   const saludo = 'Hola! Te paso el estado de tu pedido'
@@ -159,6 +177,9 @@ export function mensajeCliente(p: Pedido, expreso: Expreso | undefined): string 
   switch (p.estado) {
     case 'cargado':
     case 'impreso':
+      if (esRetiroDelCliente(expreso)) {
+        return [`${saludo} ${ref}: ya está en preparación. Cuando esté listo lo podés pasar a retirar.`, ...lineasRetiro(p.deposito_salida)].join('\n')
+      }
       return `${saludo} ${ref}: ya está en preparación en nuestro depósito. Apenas lo despachemos por ${expreso?.nombre ?? 'el expreso'} te paso el número de guía.`
     case 'bloqueado': {
       const motivo = p.bloqueo_motivo === 'sin_stock'

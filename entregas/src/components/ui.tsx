@@ -49,6 +49,21 @@ export function Faltantes({ lista }: { lista: Faltante[] }) {
   )
 }
 
+/** Desde qué depósito sale (25/11, Felipe: «que se diferencie en colores»): Villa Domínico azul, Mar del Plata naranja, otro gris. */
+export function tonoDeposito(d: string | null | undefined): 'vd' | 'mdp' | 'otro' {
+  const k = String(d ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  if (k.includes('dominico')) return 'vd'
+  if (k.includes('mar del plata') || k.includes('mardel')) return 'mdp'
+  return 'otro'
+}
+
+export function DepositoChip({ deposito, corto }: { deposito: string | null | undefined; corto?: boolean }) {
+  if (!deposito) return null
+  const tono = tonoDeposito(deposito)
+  const texto = corto && tono !== 'otro' ? (tono === 'vd' ? 'V. Domínico' : 'Mar del Plata') : deposito
+  return <span className={`chip dep-${tono}`} title={`Sale desde ${deposito}`}>{texto}</span>
+}
+
 /** Lo que ya está resuelto (21/11): el vendedor ve en la lista que su pedido tiene guía o remito firmado sin entrar ni preguntar. */
 export function Listos({ pedido: p }: { pedido: Pick<Pedido, 'n_guia' | 'tiene_guia_archivo' | 'tiene_comprobante' | 'estado'> }) {
   const guia = Boolean(p.n_guia || p.tiene_guia_archivo)

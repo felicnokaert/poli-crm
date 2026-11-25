@@ -22,7 +22,7 @@ import { DepositoSalida } from './DepositoSalida'
 import { useLeerGuia } from './ConfirmarGuia'
 import { RelojLead } from './LeadTime'
 import { leadTime } from '../lib/leadtime'
-import { ACEPTA_ARCHIVOS, Empty, EstadoChip, Faltantes, ICONO_ESTADO, Modal, PelotaTag, soltable, useCopiar, useToast } from './ui'
+import { ACEPTA_ARCHIVOS, DepositoChip, Empty, EstadoChip, Faltantes, ICONO_ESTADO, Modal, PelotaTag, soltable, useCopiar, useToast } from './ui'
 
 export const TIPO_ARCHIVO_LABEL: Record<TipoArchivo, string> = {
   remito: 'Remito',
@@ -188,7 +188,7 @@ export function PedidoDetalle({ idOCodigo }: { idOCodigo: string }) {
             </div>
             <dl className="datos">
               <Dato label="Expreso">{expreso?.nombre}</Dato>
-              <Dato label="Sale desde">{p.deposito_salida}</Dato>
+              <Dato label="Sale desde">{p.deposito_salida ? <DepositoChip deposito={p.deposito_salida} /> : null}</Dato>
               <Dato label="Lead time">{leadTime(p) ? <RelojLead pedido={p} conTexto /> : null}</Dato>
               {(() => {
                 const g = partesGuia(p.n_guia)

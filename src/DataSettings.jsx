@@ -632,7 +632,7 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
         {onlineConfigured && (
           <button
             className="secondary signout"
-            onClick={() => supabase.auth.signOut()}
+            onClick={() => supabase.auth.signOut({ scope: "local" })}
           >
             Cerrar sesión
           </button>

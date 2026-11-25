@@ -15,7 +15,7 @@ import { mensajeError, SinAcceso } from './lib/api'
 import { api } from './lib/cliente'
 import { DatosProvider } from './lib/datos'
 import { altoAutomaticoEnCrm } from './lib/altoCrm'
-import { escucharSesionDelCrm, isEmbeddedInApp, isEmbeddedInCrm } from './lib/embed'
+import { avisarSinSesionAlCrm, escucharSesionDelCrm, isEmbeddedInApp, isEmbeddedInCrm } from './lib/embed'
 import { alCambiarOperador, depositoActual, operadorActual, tomarPersonaDeLaUrl } from './lib/operador'
 import { useRuta } from './lib/ruta'
 import type { Usuario } from './lib/types'
@@ -49,9 +49,9 @@ export default function App() {
       let recibida = false
       const dejar = escucharSesionDelCrm((access, refresh) => {
         recibida = true
-        void api.recibirSesion?.(access, refresh).then(comprobar).catch((e) => setError(mensajeError(e)))
+        void api.recibirSesion?.(access, refresh).then(comprobar).catch(() => avisarSinSesionAlCrm())
       })
-      const t = window.setTimeout(() => { if (!recibida) void comprobar() }, 5000)
+      const t = window.setTimeout(() => { if (!recibida) avisarSinSesionAlCrm() }, 5000)
       const dejarAlto = altoAutomaticoEnCrm()
       // Si la sesión del CRM no llegó y se entra con el login propio, también hay que enterarse.
       const dejarCambios = api.alCambiarSesion(() => void comprobar())
@@ -76,6 +76,9 @@ export default function App() {
 
   if (sesion.estado === 'cargando') return <div className="centrado">Cargando…</div>
   if (sesion.estado === 'sin_acceso') return <Login sinAcceso={sesion.email || 'actual'} onSalir={() => void api.cerrarSesion()} />
+  // Dentro del CRM nunca se pide usuario y contraseña (25/11, Felipe: «Entregas es parte del CRM»): si la sesión no sirve,
+  // se le avisa al CRM, que la renueva (y la reenvía) o muestra su propio ingreso.
+  if (sesion.estado === 'fuera' && isEmbeddedInCrm()) return <div className="centrado">Conectando con el CRM…</div>
   if (sesion.estado === 'fuera') return (
     <>
       {error && <div className="aviso err" style={{ margin: 16 }}>{error}</div>}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { resolvedTheme, visibleSlice, withTheme } from "./embedded-frame-view.mjs";
 import { Splash } from "./ui-primitives";
+import { supabase } from "./online";
 
 // Otra aplicación del grupo (cotizador, entregas) mostrada como pestaña del CRM, con la misma sesión.
 // Contrato: la aplicación de adentro avisa `{ tipo: readyType }` cuando está lista y el CRM le contesta
@@ -42,6 +43,21 @@ export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, 
     if (loadingText) setTimeout(() => setRevealed(true), 700);
   }
 
+  const renewingRef = useRef(false);
+  async function renewOrSignOut() {
+    if (renewingRef.current || !supabase) return;
+    renewingRef.current = true;
+    try {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error || !data?.session) await supabase.auth.signOut({ scope: "local" });
+      else sendSession(data.session);
+    } catch {
+      await supabase.auth.signOut({ scope: "local" }).catch(() => {});
+    } finally {
+      setTimeout(() => { renewingRef.current = false; }, 5000);
+    }
+  }
+
   useEffect(() => {
     function onMessage(event) {
       if (event.origin !== origin || event.source !== frameRef.current?.contentWindow) return;
@@ -52,6 +68,9 @@ export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, 
         // Cada aviso de «lista» recibe la sesión: si la app de adentro se recargó sola, no se queda en «Cargando…».
         sendSession(sessionRef.current);
       }
+      // 25/11 (Felipe: «Entregas es parte del CRM, que no pida usuario»): si la sesión que le pasamos no le sirve (se cerró
+      // en otro equipo o venció), el CRM la renueva —y el efecto de abajo la reenvía— o, si ya no vale, muestra su ingreso.
+      if (tipo === "app:sin-sesion") void renewOrSignOut();
       if (heightType && tipo === heightType) {
         const alto = Number(event.data.alto);
         if (Number.isFinite(alto) && alto > 0) setHeight(Math.min(Math.ceil(alto), 100000));

@@ -487,6 +487,8 @@ textarea.control { min-height: 70px; resize: vertical; }
 .imp-fila { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
 .imp-fila > svg { flex: none; }
 .imp-texto { display: grid; gap: 2px; flex: 1 1 220px; min-width: 0; }
+/* celular: los dos botones de imprimir lado a lado, parejos (25/11) */
+@media (max-width: 600px) { .imp-fila > .btn { flex: 1 1 0; justify-content: center; } }
 .deposito-select { background: transparent; color: inherit; border: 0; font: inherit; padding: 0; cursor: pointer; }
 .deposito-select option { color: #111; }
 

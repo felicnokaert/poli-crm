@@ -71,3 +71,11 @@ export function avisarSinSesionAlCrm(): void {
     try { window.parent.postMessage({ tipo: 'app:sin-sesion' }, origin) } catch { /* otro origen */ }
   }
 }
+
+/** Ya se ve la pantalla de Entregas: el CRM saca su animación de carga. */
+export function avisarVisibleAlCrm(): void {
+  if (!isEmbeddedInCrm()) return
+  for (const origin of origenesCrm()) {
+    try { window.parent.postMessage({ tipo: 'entregas:visible' }, origin) } catch { /* otro origen */ }
+  }
+}

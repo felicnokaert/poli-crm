@@ -15,7 +15,7 @@ import { mensajeError, SinAcceso } from './lib/api'
 import { api } from './lib/cliente'
 import { DatosProvider } from './lib/datos'
 import { altoAutomaticoEnCrm } from './lib/altoCrm'
-import { avisarSinSesionAlCrm, escucharSesionDelCrm, isEmbeddedInApp, isEmbeddedInCrm } from './lib/embed'
+import { avisarSinSesionAlCrm, avisarVisibleAlCrm, escucharSesionDelCrm, isEmbeddedInApp, isEmbeddedInCrm } from './lib/embed'
 import { alCambiarOperador, depositoActual, operadorActual, tomarPersonaDeLaUrl } from './lib/operador'
 import { useRuta } from './lib/ruta'
 import type { Usuario } from './lib/types'
@@ -67,6 +67,9 @@ export default function App() {
     return api.alCambiarSesion(() => void comprobar())
   }, [comprobar])
 
+  // Dentro del CRM: avisar que ya se ve la pantalla, así el CRM saca su P de carga.
+  useEffect(() => { if (sesion.estado === 'dentro' || sesion.estado === 'sin_acceso') avisarVisibleAlCrm() }, [sesion.estado])
+
   // En la cuenta compartida de expedición, la persona que usa el dispositivo pasa a ser "yo".
   const yo = useMemo(() => {
     if (sesion.estado !== 'dentro') return null
@@ -74,11 +77,12 @@ export default function App() {
     return u.compartida && operador ? { ...u, nombre: operador, operador } : u
   }, [sesion, operador])
 
-  if (sesion.estado === 'cargando') return <div className="centrado">Cargando…</div>
+  // Dentro del CRM, mientras arranca se ve la P del CRM (encima): acá no se muestra «Cargando…».
+  if (sesion.estado === 'cargando') return isEmbeddedInCrm() ? <div className="centrado" /> : <div className="centrado">Cargando…</div>
   if (sesion.estado === 'sin_acceso') return <Login sinAcceso={sesion.email || 'actual'} onSalir={() => void api.cerrarSesion()} />
   // Dentro del CRM nunca se pide usuario y contraseña (25/11, Felipe: «Entregas es parte del CRM»): si la sesión no sirve,
   // se le avisa al CRM, que la renueva (y la reenvía) o muestra su propio ingreso.
-  if (sesion.estado === 'fuera' && isEmbeddedInCrm()) return <div className="centrado">Conectando con el CRM…</div>
+  if (sesion.estado === 'fuera' && isEmbeddedInCrm()) return <div className="centrado" />
   if (sesion.estado === 'fuera') return (
     <>
       {error && <div className="aviso err" style={{ margin: 16 }}>{error}</div>}

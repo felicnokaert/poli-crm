@@ -62,13 +62,16 @@ export function crearSupabaseApi(): Api & { client: SupabaseClient } {
         if (embebido) avisarSinSesionAlCrm()
         return null
       }
-      const { data: rol, error } = await sb.rpc('entregas_mi_rol')
-      if (error) lanzar(error)
       const email = (data.user.email ?? '').toLowerCase()
+      // Las tres consultas a la vez (25/11: antes una detrás de otra, y se veía «Cargando…» más tiempo).
+      const [{ data: rol, error }, { data: lista }, { data: fila }] = await Promise.all([
+        sb.rpc('entregas_mi_rol'),
+        sb.rpc('entregas_usuarios'),
+        sb.from('entregas_roles').select('compartida').eq('email', email).maybeSingle(),
+      ])
+      if (error) lanzar(error)
       if (!rol) throw new SinAcceso(email)
-      const { data: lista } = await sb.rpc('entregas_usuarios')
       const yo = (lista as Usuario[] | null)?.find((u) => u.id === data.user!.id)
-      const { data: fila } = await sb.from('entregas_roles').select('compartida').eq('email', email).maybeSingle()
       return { id: data.user.id, email, nombre: yo?.nombre ?? email.split('@')[0], rol: rol as Rol, compartida: Boolean(fila?.compartida) }
     },
 

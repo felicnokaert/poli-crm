@@ -1,7 +1,7 @@
 // Pantalla de trabajo de expedición, pensada para el celular: qué preparar y despachar, qué está frenado y a
 // qué le falta la guía. Los remitos nuevos se imprimen en tanda desde la barra de arriba (o solos, en la compu
 // marcada): ya no hay un paso «Por imprimir» a mano. Permite marcar varios a la vez.
-import { AlertCircle, Camera, FileText, FileUp, HandCoins, PackageOpen, Printer, Truck, Warehouse } from 'lucide-react'
+import { AlertCircle, Camera, FileText, FileUp, HandCoins, PackageOpen, Printer, Truck } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { mensajeError } from '../lib/api'
 import { api } from '../lib/cliente'
@@ -16,7 +16,7 @@ import { useLeerGuia } from './ConfirmarGuia'
 import { BotonResumen } from './ResumenDia'
 import { RelojLead } from './LeadTime'
 import { SubirGuias } from './SubirGuias'
-import { ACEPTA_ARCHIVOS, Empty, EstadoChip, soltable, useToast } from './ui'
+import { ACEPTA_ARCHIVOS, DepositoChip, Empty, EstadoChip, soltable, useToast } from './ui'
 
 type Tab = 'preparar' | 'frenados' | 'guia'
 
@@ -160,7 +160,7 @@ export function Expedicion() {
                   <span className="small muted"><span className="mono">{p.n_remito}</span> · {[p.localidad, p.provincia].filter(Boolean).join(', ')} · <VendedorNombre p={p} /></span>
                   <div className="row" style={{ gap: 6 }}>
                     <span className="chip tono-neutro"><Truck size={12} /> {e?.nombre ?? 'Sin expreso'}</span>
-                    {p.deposito_salida && <span className="chip tono-neutro" title="Sale desde"><Warehouse size={12} /> {p.deposito_salida}</span>}
+                    <DepositoChip deposito={p.deposito_salida} />
                     {tab === 'frenados' || tab === 'guia' || p.estado === 'cargado' ? <EstadoChip pedido={p} corto /> : null}
                     {p.estado === 'impreso' && <RelojLead pedido={p} conTexto />}
                     <span className="small muted">cargado {hace(p.created_at)}</span>

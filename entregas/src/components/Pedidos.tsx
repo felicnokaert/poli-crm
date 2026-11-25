@@ -10,7 +10,7 @@ import {
   aplicarFiltros, FILTROS_DEFAULT, ordenar, PERIODO_LABEL, VISTA_LABEL, type CampoFecha, type Filtros, type Orden, type Periodo, type Vista,
 } from '../lib/filtros'
 import type { Estado, Pedido, Pelota } from '../lib/types'
-import { Empty, EstadoChip, Faltantes, Listos, PelotaTag } from './ui'
+import { DepositoChip, Empty, EstadoChip, Faltantes, Listos, PelotaTag } from './ui'
 
 function filtrosDesdeQuery(q: URLSearchParams, yoId: string, esVendedor: boolean): Filtros {
   const f: Filtros = { ...FILTROS_DEFAULT, vendedorId: esVendedor ? yoId : '' }
@@ -189,7 +189,7 @@ export function PedidoFila({ pedido: p, compacta }: { pedido: Pedido; compacta?:
         {alerta ? <span className="alerta-txt"><AlertCircle size={12} /> {alerta.texto}</span> : <span className="sub">{dias === 0 ? 'desde hoy' : `hace ${dias} ${dias === 1 ? 'día' : 'días'}`}</span>}
       </div>
       <div className="cell envio">
-        <span>{e?.nombre ?? <span className="muted">Sin expreso</span>}</span>
+        <span className="row" style={{ gap: 6 }}>{e?.nombre ?? <span className="muted">Sin expreso</span>} <DepositoChip deposito={p.deposito_salida} corto /></span>
         <span className="sub">
           {p.fecha_despacho ? `Salió ${fechaCorta(p.fecha_despacho)}` : `Cargado ${fechaCorta(p.created_at)}`}
           {p.n_guia ? <> · <span className="mono">{guiaLegible(p.n_guia)}</span></> : null}

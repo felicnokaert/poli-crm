@@ -146,6 +146,9 @@ textarea.control { min-height: 70px; resize: vertical; }
 .tono-ok { background: var(--t-ok-bg); color: var(--t-ok); }
 .tono-peligro { background: var(--t-peligro-bg); color: var(--t-peligro); }
 .tono-neutro { background: var(--t-neutro-bg); color: var(--t-neutro); }
+.dep-vd { background: var(--dep-vd-bg, #e3edff); color: var(--dep-vd, #1d4ed8); }
+.dep-mdp { background: var(--dep-mdp-bg, #ffedd5); color: var(--dep-mdp, #b45309); }
+.dep-otro { background: var(--t-neutro-bg); color: var(--t-neutro); }
 .chip-outline { background: transparent; border: 1px dashed currentColor; }
 .pelota { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--graphite); font-weight: 600; }
 .pelota i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: inline-block; }
@@ -687,6 +690,7 @@ textarea.control { min-height: 70px; resize: vertical; }
   --t-ok-bg: #17302a; --t-ok: #6cc3a6;
   --t-peligro-bg: #3d1f1c; --t-peligro: #f19a8e;
   --t-neutro-bg: #2a2a2e; --t-neutro: #b4b5b9;
+  --dep-vd-bg: #1e2a4a; --dep-vd: #93b4ff; --dep-mdp-bg: #3d2a12; --dep-mdp: #fdba74;
   --shadow: 0 1px 2px #00000040, 0 6px 22px #00000059; --shadow-lg: 0 20px 60px #00000099;
   color-scheme: dark;
 }
@@ -728,6 +732,7 @@ textarea.control { min-height: 70px; resize: vertical; }
   --t-ok-bg: #17302a; --t-ok: #6cc3a6;
   --t-peligro-bg: #3d1f1c; --t-peligro: #f19a8e;
   --t-neutro-bg: #2a2a2e; --t-neutro: #b4b5b9;
+  --dep-vd-bg: #1e2a4a; --dep-vd: #93b4ff; --dep-mdp-bg: #3d2a12; --dep-mdp: #fdba74;
   --shadow: 0 1px 2px #00000040, 0 6px 22px #00000059; --shadow-lg: 0 20px 60px #00000099;
   color-scheme: dark;
 }
@@ -759,3 +764,10 @@ textarea.control { min-height: 70px; resize: vertical; }
 :root:not([data-theme="light"]):not(.en-app).embebido .nav a[aria-current='page'] { background: #34343a; box-shadow: 0 2px 8px #00000066; }
 :root:not([data-theme="light"]):not(.en-app).embebido .nav-badge { background: #34343a; color: #e2e2e4; }
 }
+
+
+/* Dentro de la app de conteo, alineado con su barra (25/11, Felipe: «no es lo mismo la barra con el sistema»):
+   mismo ancho centrado de 980 px que conteo y sin repetir quién sos y el depósito (ya están en la franja de conteo). */
+.en-app .sidebar { padding-left: max(12px, calc((100% - 980px) / 2)); padding-right: max(12px, calc((100% - 980px) / 2)); }
+.en-app .sidebar-foot { display: none; }
+.en-app .main { width: 100%; max-width: 980px; margin-left: auto; margin-right: auto; box-sizing: border-box; padding-left: 12px; padding-right: 12px; }

@@ -200,6 +200,18 @@ describe('mensajes', () => {
     expect(m).toContain('AB 12')
     expect(m).toContain('https://track.example/AB%2012')
   })
+  it('retira el cliente: dice dónde, cuándo y el mapa según el depósito', () => {
+    const retira = { ...VIA, nombre: 'Retira el cliente', requiere_guia: false, tracking_url: null }
+    const vd = mensajeCliente(pedido({ estado: 'impreso', deposito_salida: 'Villa Domínico' }), retira)
+    expect(vd).toContain('Magdalena 962, Villa Domínico')
+    expect(vd).toContain('de lunes a viernes de 8 a 16 h')
+    expect(vd).toContain('google.com/maps')
+    const mdp = mensajeCliente(pedido({ estado: 'cargado', deposito_salida: 'Mar del Plata' }), retira)
+    expect(mdp).toContain('Mar del Plata')
+    expect(mdp).toContain('https://maps.app.goo.gl/p2wBAvncP8fCrzpU8')
+    expect(mensajeCliente(pedido({ estado: 'cargado' }), retira)).toContain('de lunes a viernes de 8 a 16 h')
+    expect(mensajeCliente(pedido({ estado: 'cargado' }), VIA)).not.toContain('Magdalena')
+  })
   it('sin stock con fecha estimada', () => {
     expect(mensajeCliente(pedido({ estado: 'bloqueado', bloqueo_motivo: 'sin_stock', stock_estimado: '2026-11-20' }), VIA)).toMatch(/reposición de stock, estimada para el vie 20 nov/)
   })

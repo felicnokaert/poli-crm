@@ -14,8 +14,11 @@ export const MODO_CONTEO = import.meta.env.MODE === 'conteo'
 
 export const api: Api = MAQUETA ? crearDemoApi() : MODO_CONTEO ? crearExpedicionApi() : crearSupabaseApi()
 
-/** Imprimir remitos y «Cargar remito»: en conteo no (los remitos los cargan los vendedores, Felipe 21/11). */
+/** «Cargar remito»: en conteo no (los remitos los cargan los vendedores, Felipe 21/11). */
 export const CON_ARCHIVOS = !MODO_CONTEO
+/** Imprimir remitos (barra «Imprimir todos», «Esta compu imprime sola», botón Imprimir): solo expedición, en la app de conteo.
+ *  25/11, Felipe: «al comercial no le sirve, ninguno de los comerciales imprime; Diego y los chicos son los que imprimen». */
+export const CON_IMPRIMIR = MODO_CONTEO || MAQUETA
 /** Subir por la API de expedición del CRM (guías, remitos y remitos firmados, con emparejado y «sin asignar»). Solo conteo. */
 export const CON_SUBIR = MODO_CONTEO
 /** Qué se puede adjuntar al cambiar de estado (null = todo). En conteo el CRM no recibe fotos sueltas ni «otro». */

@@ -1,6 +1,7 @@
 // TABLERO DEL DEPÓSITO (PARCHE CONTEO): vista para un monitor o TV fijo en el depósito. Solo mira, no se toca nada: lo que hay para despachar
 // (lo más viejo primero), lo frenado y los problemas, con letra grande. Se actualiza sola cada 45 segundos. Muestra el depósito de este equipo
 // (agregá ?todos=1 para ver todos).
+// PARCHE CONTEO (25/11, Felipe): más chico y con ETIQUETAS de Mercado Libre (pendientes por hora límite y escaneadas hoy), todo cada 45 s.
 import { Maximize2, Minimize2, ArrowLeft, Moon, Sun } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useDatos } from '../lib/datos'
@@ -8,6 +9,7 @@ import { depositoActual } from '../lib/operador'
 import { MOTIVOS_BLOQUEO, MOTIVOS_INCIDENCIA } from '../lib/estados'
 import { hoyISO } from '../lib/fechas'
 import type { Pedido } from '../lib/types'
+import { cargarEtq, limite, tipoEnvio, type DatosEtq } from '../lib/etiquetasTablero'
 
 const hace = (iso: string, ahora: number) => { const h = Math.max(0, Math.floor((ahora - new Date(iso).getTime()) / 3600000)); return h < 24 ? `${h} h` : `${Math.floor(h / 24)} d` }
 const horas = (iso: string, ahora: number) => (ahora - new Date(iso).getTime()) / 3600000
@@ -21,6 +23,15 @@ export function Pantalla() {
   const todos = new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('todos') === '1'
   const dep = depositoActual()
   useEffect(() => { const t = setInterval(() => setAhora(Date.now()), 30000); return () => clearInterval(t) }, [])
+  // Etiquetas: se consulta al entrar y cada 45 s (lo mismo que la pestaña Etiquetas)
+  const [etq, setEtq] = useState<DatosEtq | null>(null)
+  const [etqError, setEtqError] = useState('')
+  useEffect(() => {
+    let vivo = true
+    const traer = () => cargarEtq().then((d) => { if (vivo) { setEtq(d); setEtqError('') } }).catch((e) => { if (vivo) setEtqError(String((e as Error).message || e)) })
+    traer(); const t = setInterval(traer, 45000)
+    return () => { vivo = false; clearInterval(t) }
+  }, [])
   useEffect(() => { const f = () => setFull(!!document.fullscreenElement); document.addEventListener('fullscreenchange', f); return () => document.removeEventListener('fullscreenchange', f) }, [])
 
   const mios = useMemo(() => pedidos.filter((p) => todos || !dep || !p.deposito_salida || p.deposito_salida === dep), [pedidos, dep, todos])
@@ -53,6 +64,8 @@ export function Pantalla() {
         <div className={para.length ? 'rojo' : 'verde'}><b>{cargando ? '·' : para.length}</b><span>Para despachar</span></div>
         <div className={frenados.length ? 'ambar' : 'verde'}><b>{cargando ? '·' : frenados.length}</b><span>Frenados</span></div>
         <div className={problemas.length ? 'rojo' : 'verde'}><b>{cargando ? '·' : problemas.length}</b><span>Con problema</span></div>
+        <div className={etq && etq.vencidas ? 'rojo' : etq && etq.pendientes.length ? 'ambar' : 'verde'}><b>{etq ? etq.pendientes.length : '·'}</b><span>Etiquetas por despachar</span></div>
+        <div className="verde"><b>{etq ? etq.escaneadasHoy : '·'}</b><span>Etiquetas escaneadas hoy</span></div>
       </div>
       <div className="pantalla-cols">
         <section>
@@ -86,6 +99,23 @@ export function Pantalla() {
               <div className="hace">{hace(p.estado_desde, ahora)}</div>
             </div>
           ))}
+        </section>
+        <section>
+          <h2>Etiquetas ML <small>por hora límite</small></h2>
+          {etqError && <p className="pantalla-mas">{etqError}</p>}
+          {etq && !etq.pendientes.length && <p className="pantalla-vacio">✅ Todo escaneado</p>}
+          {etq && etq.vencidas > 0 && <p className="pantalla-alerta">⏰ {etq.vencidas} vencida{etq.vencidas === 1 ? '' : 's'}: despachalas primero</p>}
+          {etq && etq.pendientes.slice(0, 10).map((s) => {
+            const l = limite(s.dispatch_by, ahora)
+            return (
+              <div key={s.id} className={'pantalla-fila' + (l?.nivel === 'vencido' ? ' viejo' : l?.nivel === 'urgente' ? ' ambar' : '')}>
+                <div className="cli">{(s.lines || []).map((x) => `${x.sku || 'SIN SKU'} × ${x.qty ?? 1}`).join(' · ') || s.id}</div>
+                <div className="det">{[tipoEnvio(s.logistic_type), s.account].filter(Boolean).join(' · ')}</div>
+                <div className="hace">{l ? l.txt.replace('hoy ', '') : ''}</div>
+              </div>
+            )
+          })}
+          {etq && etq.pendientes.length > 10 && <p className="pantalla-mas">y {etq.pendientes.length - 10} más…</p>}
         </section>
       </div>
     </div>

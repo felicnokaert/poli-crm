@@ -148,6 +148,12 @@ textarea.control { min-height: 70px; resize: vertical; }
 .tono-neutro { background: var(--t-neutro-bg); color: var(--t-neutro); }
 .dep-vd { background: var(--dep-vd-bg, #e3edff); color: var(--dep-vd, #1d4ed8); }
 .dep-mdp { background: var(--dep-mdp-bg, #ffedd5); color: var(--dep-mdp, #b45309); }
+/* Filtro por depósito de salida y «Sale de» (25/11, de la app de conteo; sirve en los dos lados) */
+.dep-sale { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted, #64656a); font-weight: 600; }
+.filtro-dep { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 12px; }
+.filtro-dep .chip { cursor: pointer; border: 1.5px solid transparent; font-weight: 700; padding: 5px 12px; font-size: 13px; opacity: .75; }
+.filtro-dep .chip:not(.dep-vd):not(.dep-mdp) { background: var(--t-neutro-bg); color: var(--t-neutro); }
+.filtro-dep .chip.on { opacity: 1; border-color: currentColor; box-shadow: 0 2px 8px #2929291a; }
 .dep-otro { background: var(--t-neutro-bg); color: var(--t-neutro); }
 .chip-outline { background: transparent; border: 1px dashed currentColor; }
 .pelota { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--graphite); font-weight: 600; }

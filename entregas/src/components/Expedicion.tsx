@@ -17,10 +17,11 @@ import { AvisoCierre, BotonResumen } from './ResumenDia'
 import { depositoActual, operadorActual } from '../lib/operador'
 import { RelojLead } from './LeadTime'
 import { SubirGuias } from './SubirGuias'
-import { CON_ARCHIVOS, CON_SUBIR, CON_VER_ARCHIVOS, GUIA_LEIDA_AL_SUBIR, MODO_CONTEO } from '../lib/cliente' // en conteo: subir por la API del CRM (1b); imprimir sigue en el CRM
+import { CON_IMPRIMIR, CON_SUBIR, CON_VER_ARCHIVOS, GUIA_LEIDA_AL_SUBIR, MODO_CONTEO } from '../lib/cliente' // en conteo: subir por la API del CRM (1b) e imprimir
 import { listarSinAsignar, type ArchivoSinAsignar } from '../lib/expedicionApi'
 import { SinAsignar } from './SinAsignar'
 import { FirmaRemito } from './FirmaRemito'
+import { FiltroDeposito, useFiltroDeposito } from './FiltroDeposito'
 import { ACEPTA_ARCHIVOS, DepositoChip, Empty, EstadoChip, soltable, useToast } from './ui'
 
 type Tab = 'preparar' | 'frenados' | 'guia' | 'sinasignar'
@@ -51,16 +52,18 @@ export function Expedicion() {
   useEffect(() => { void cargarSinAsig(); const t = setInterval(() => void cargarSinAsig(), 60000); return () => clearInterval(t) }, [])
   async function recargarTodo() { await Promise.all([recargar(), cargarSinAsig()]) }
 
+  const [filtroDep, setFiltroDep, porDeposito] = useFiltroDeposito() // PARCHE CONTEO
   const grupos = useMemo(() => {
+    const pedidosDep = porDeposito(pedidos)
     const porAntiguedad = (a: Pedido, b: Pedido) => a.created_at.localeCompare(b.created_at)
     return {
-      preparar: pedidos.filter((p) => p.estado === 'impreso' || p.estado === 'cargado').sort(porAntiguedad),
-      frenados: pedidos.filter((p) => p.estado === 'bloqueado').sort(porAntiguedad),
-      guia: pedidos.filter((p) => faltantesDe(p, p.expreso_id ? expresosPorId.get(p.expreso_id) : undefined).includes('guia'))
+      preparar: pedidosDep.filter((p) => p.estado === 'impreso' || p.estado === 'cargado').sort(porAntiguedad),
+      frenados: pedidosDep.filter((p) => p.estado === 'bloqueado').sort(porAntiguedad),
+      guia: pedidosDep.filter((p) => faltantesDe(p, p.expreso_id ? expresosPorId.get(p.expreso_id) : undefined).includes('guia'))
         .sort((a, b) => (b.fecha_despacho ?? '').localeCompare(a.fecha_despacho ?? '')),
       sinasignar: [] as Pedido[],
     } satisfies Record<Tab, Pedido[]>
-  }, [pedidos, expresosPorId])
+  }, [pedidos, expresosPorId, filtroDep]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Al entrar, abrir la primera pestaña que tenga trabajo.
   const elegida = useRef(false)
@@ -140,8 +143,9 @@ export function Expedicion() {
 
       <AvisoCierre /> {/* PARCHE CONTEO: el aviso de las 15:30 estaba en Inicio */}
       {error && <div className="aviso err" role="alert" style={{ marginBottom: 12 }}>{error} <button className="btn btn-sm" onClick={() => void recargar()}>Reintentar</button></div>} {/* PARCHE CONTEO */}
-      {CON_ARCHIVOS && <BarraImpresion />}
+      {CON_IMPRIMIR && <BarraImpresion />}
 
+      <FiltroDeposito valor={filtroDep} onChange={setFiltroDep} /> {/* PARCHE CONTEO */}
       <div className="exp-tabs" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
         {TABS.map((t) => (
           <button key={t.id} className="exp-tab" aria-pressed={tab === t.id} onClick={() => cambiarTab(t.id)}>
@@ -176,10 +180,10 @@ export function Expedicion() {
                 {accionLote && <input type="checkbox" checked={sel.has(p.id)} onChange={() => toggle(p.id)} aria-label={`Seleccionar ${p.cliente}`} />}
                 <div className="info">
                   <a href={`#/p/${p.codigo}`} style={{ textDecoration: 'none' }}><b>{p.cliente}</b></a>
-                  <span className="small muted"><span className="mono">{p.n_remito}</span> · {[p.localidad, p.provincia].filter(Boolean).join(', ')} · <VendedorNombre p={p} /></span>
+                  <span className="small muted"><span className="mono">{p.n_remito}</span> · {[p.localidad, p.provincia].filter(Boolean).length ? <>Destino: {[p.localidad, p.provincia].filter(Boolean).join(', ')} · </> : null}<VendedorNombre p={p} /></span>
                   <div className="row" style={{ gap: 6 }}>
                     <span className="chip tono-neutro"><Truck size={12} /> {e?.nombre ?? 'Sin expreso'}</span>
-                    <DepositoChip deposito={p.deposito_salida} />
+                    {p.deposito_salida && <span className="dep-sale">Sale de <DepositoChip deposito={p.deposito_salida} corto /></span>}
                     {tab === 'frenados' || tab === 'guia' || p.estado === 'cargado' ? <EstadoChip pedido={p} corto /> : null}
                     {p.estado === 'impreso' && <RelojLead pedido={p} conTexto />}
                     <span className="small muted">cargado {hace(p.created_at)}</span>
@@ -202,7 +206,7 @@ export function Expedicion() {
                         </>
                       : puede('despachado', p) && <button className="btn btn-sm btn-dark" onClick={() => setCambio({ pedidos: [p], a: 'despachado' })}><Truck size={15} /> Despachar</button>}
                     {puede('bloqueado', p) && <button className="btn btn-sm" onClick={() => setCambio({ pedidos: [p], a: 'bloqueado' })}>{p.estado === 'cargado' ? 'Sin stock / frenar' : 'Frenar'}</button>}
-                    {CON_ARCHIVOS && p.estado === 'cargado' && impresion.puedeImprimir && <button className="btn btn-sm" disabled={impresion.trabajando} onClick={() => void impresion.imprimir([p])}><Printer size={15} /> Imprimir</button>}
+                    {CON_IMPRIMIR && p.estado === 'cargado' && impresion.puedeImprimir && <button className="btn btn-sm" disabled={impresion.trabajando} onClick={() => void impresion.imprimir([p])}><Printer size={15} /> Imprimir</button>}
                     {CON_VER_ARCHIVOS && <button className="btn btn-sm" onClick={() => void abrirRemito(p)}><FileText size={15} /> Remito</button>}
                   </>
                 )}

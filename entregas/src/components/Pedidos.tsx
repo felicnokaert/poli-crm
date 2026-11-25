@@ -2,6 +2,7 @@ import { guiaLegible, quienDespacho } from '../lib/mensajes'
 import { leadTime } from '../lib/leadtime'
 import { RelojLead } from './LeadTime'
 import { AlertCircle, CalendarDays, ChevronRight, Download, Inbox, Plus, Search, SlidersHorizontal } from 'lucide-react'
+import { FiltroDeposito, useFiltroDeposito } from './FiltroDeposito'
 import { useMemo, useState } from 'react'
 import { useDatos, useNombre } from '../lib/datos'
 import { alertaDe, ESTADO_INFO, ESTADOS, faltantesDe, PELOTA_LABEL, pelotaEn } from '../lib/estados'
@@ -38,10 +39,11 @@ export function Pedidos({ query }: { query: URLSearchParams }) {
   const bloqueo = query.get('bloqueo')
   const set = <K extends keyof Filtros>(k: K, v: Filtros[K]) => setF((x) => ({ ...x, [k]: v }))
 
+  const [filtroDep, setFiltroDep, porDeposito] = useFiltroDeposito() // PARCHE CONTEO
   const base = useMemo(() => {
-    const lista = aplicarFiltros(pedidos, { ...f, vista: 'todos', estados: [] }, expresosPorId, config)
+    const lista = aplicarFiltros(porDeposito(pedidos), { ...f, vista: 'todos', estados: [] }, expresosPorId, config)
     return bloqueo ? lista.filter((p) => p.estado === 'bloqueado' && p.bloqueo_motivo === bloqueo) : lista
-  }, [pedidos, f, expresosPorId, config, bloqueo])
+  }, [pedidos, f, expresosPorId, config, bloqueo, filtroDep]) // eslint-disable-line react-hooks/exhaustive-deps
   const visibles = useMemo(
     () => ordenar(aplicarFiltros(base, f, expresosPorId, config), orden, expresosPorId, config),
     [base, f, orden, expresosPorId, config],
@@ -95,6 +97,7 @@ export function Pedidos({ query }: { query: URLSearchParams }) {
           <Search size={16} />
           <input className="control" type="search" placeholder="Buscar por cliente, N° de remito, guía, localidad o teléfono…" value={f.texto} onChange={(e) => set('texto', e.target.value)} />
         </div>
+        <FiltroDeposito valor={filtroDep} onChange={setFiltroDep} /> {/* PARCHE CONTEO */}
         <div className="chips-scroll" role="group" aria-label="Vista">
           {(Object.keys(VISTA_LABEL) as Vista[]).map((v) => (
             <button key={v} className="chip-btn" aria-pressed={f.vista === v && !f.estados.length} onClick={() => setF((x) => ({ ...x, vista: v, estados: [] }))}>

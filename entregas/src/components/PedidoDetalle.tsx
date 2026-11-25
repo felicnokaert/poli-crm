@@ -4,7 +4,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { mensajeError, type DetallePedido } from '../lib/api'
-import { api } from '../lib/cliente'
+import { api, CON_SUBIR } from '../lib/cliente'
 import { useDatos, useNombre } from '../lib/datos'
 import {
   accionLabel, alertaDe, ESTADO_INFO, FALTANTE_LABEL, faltantesDe, MOTIVOS_BLOQUEO, MOTIVOS_INCIDENCIA, pasosRetiro, pelotaEn, transicionesDisponibles,
@@ -513,8 +513,8 @@ function Archivos({ pedido, archivos, onCambio, alFirmar }: { pedido: Pedido; ar
           <Subir tipo="guia" label="Guía" camara />
           <Subir tipo="remito_firmado" label="Remito firmado" camara />
           {!archivos.some((a) => a.tipo === 'remito') && <Subir tipo="remito" label="Remito (PDF)" />}
-          <Subir tipo="foto" label="Foto" camara />
-          <Subir tipo="otro" label="Otro archivo" />
+          {!CON_SUBIR && <Subir tipo="foto" label="Foto" camara />}
+          {!CON_SUBIR && <Subir tipo="otro" label="Otro archivo" />} {/* PARCHE CONTEO: el CRM recibe guía, remito y remito firmado */}
         </div>
       </div>
       {leerGuia.elemento}

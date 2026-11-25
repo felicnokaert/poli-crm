@@ -1,7 +1,7 @@
 // Pantalla de trabajo de expedición, pensada para el celular: qué preparar y despachar, qué está frenado y a
 // qué le falta la guía. Los remitos nuevos se imprimen en tanda desde la barra de arriba (o solos, en la compu
 // marcada): ya no hay un paso «Por imprimir» a mano. Permite marcar varios a la vez.
-import { AlertCircle, Camera, FileText, FileUp, HandCoins, PackageOpen, Printer, Truck } from 'lucide-react'
+import { AlertCircle, Camera, FileText, FileUp, HandCoins, Monitor, PackageOpen, PenLine, Printer, Truck } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { mensajeError } from '../lib/api'
 import { api } from '../lib/cliente'
@@ -13,21 +13,27 @@ import type { Estado, Pedido } from '../lib/types'
 import { CambioEstado } from './CambioEstado'
 import { BarraImpresion, useImpresion } from './Impresion'
 import { useLeerGuia } from './ConfirmarGuia'
-import { BotonResumen } from './ResumenDia'
+import { AvisoCierre, BotonResumen } from './ResumenDia'
+import { depositoActual, operadorActual } from '../lib/operador'
 import { RelojLead } from './LeadTime'
 import { SubirGuias } from './SubirGuias'
+import { CON_ARCHIVOS, CON_SUBIR, CON_VER_ARCHIVOS, GUIA_LEIDA_AL_SUBIR, MODO_CONTEO } from '../lib/cliente' // en conteo: subir por la API del CRM (1b); imprimir sigue en el CRM
+import { listarSinAsignar, type ArchivoSinAsignar } from '../lib/expedicionApi'
+import { SinAsignar } from './SinAsignar'
+import { FirmaRemito } from './FirmaRemito'
 import { ACEPTA_ARCHIVOS, DepositoChip, Empty, EstadoChip, soltable, useToast } from './ui'
 
-type Tab = 'preparar' | 'frenados' | 'guia'
+type Tab = 'preparar' | 'frenados' | 'guia' | 'sinasignar'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'preparar', label: 'Para despachar' },
   { id: 'frenados', label: 'Frenados' },
   { id: 'guia', label: 'Falta la guía' },
+  ...(CON_SUBIR ? [{ id: 'sinasignar' as const, label: 'Sin asignar' }] : []), // PARCHE CONTEO
 ]
 
 export function Expedicion() {
-  const { yo, pedidos, expresosPorId, config, recargar, cargando } = useDatos()
+  const { yo, pedidos, expresosPorId, config, recargar, cargando, error } = useDatos()
   const avisar = useToast()
   const [tab, setTab] = useState<Tab>('preparar')
   const impresion = useImpresion()
@@ -35,6 +41,15 @@ export function Expedicion() {
   const [cambio, setCambio] = useState<{ pedidos: Pedido[]; a: Estado } | null>(null)
   const leerGuia = useLeerGuia(recargar)
   const [subirGuias, setSubirGuias] = useState(false)
+  const [firmar, setFirmar] = useState<{ p: Pedido; pasos: Estado[] } | null>(null) // PARCHE CONTEO: firma digital al retirar
+  // PARCHE CONTEO: archivos subidos que el CRM no pudo emparejar
+  const [sinAsig, setSinAsig] = useState<{ archivos: ArchivoSinAsignar[]; cargando: boolean; error: string | null }>({ archivos: [], cargando: CON_SUBIR, error: null })
+  async function cargarSinAsig() {
+    if (!CON_SUBIR) return
+    try { const archivos = await listarSinAsignar(); setSinAsig({ archivos, cargando: false, error: null }) } catch (e) { setSinAsig((x) => ({ ...x, cargando: false, error: mensajeError(e) })) }
+  }
+  useEffect(() => { void cargarSinAsig(); const t = setInterval(() => void cargarSinAsig(), 60000); return () => clearInterval(t) }, [])
+  async function recargarTodo() { await Promise.all([recargar(), cargarSinAsig()]) }
 
   const grupos = useMemo(() => {
     const porAntiguedad = (a: Pedido, b: Pedido) => a.created_at.localeCompare(b.created_at)
@@ -43,6 +58,7 @@ export function Expedicion() {
       frenados: pedidos.filter((p) => p.estado === 'bloqueado').sort(porAntiguedad),
       guia: pedidos.filter((p) => faltantesDe(p, p.expreso_id ? expresosPorId.get(p.expreso_id) : undefined).includes('guia'))
         .sort((a, b) => (b.fecha_despacho ?? '').localeCompare(a.fecha_despacho ?? '')),
+      sinasignar: [] as Pedido[],
     } satisfies Record<Tab, Pedido[]>
   }, [pedidos, expresosPorId])
 
@@ -51,7 +67,7 @@ export function Expedicion() {
   useEffect(() => {
     if (cargando || elegida.current) return
     elegida.current = true
-    const primera = TABS.find((t) => grupos[t.id].length > 0)
+    const primera = TABS.find((t) => t.id !== 'sinasignar' && grupos[t.id].length > 0)
     if (primera) setTab(primera.id)
   }, [cargando, grupos])
 
@@ -118,15 +134,18 @@ export function Expedicion() {
         <div className="head-actions">
           <button className="btn" onClick={() => setSubirGuias(true)}><FileUp size={15} /> Subir guías</button>
           <BotonResumen />
+          {MODO_CONTEO && <a className="btn" href={`/entregas/?embed=app&modo=expedicion&persona=${encodeURIComponent(operadorActual() ?? '')}&deposito=${encodeURIComponent(depositoActual() ?? '')}#/pantalla`} target="_blank" rel="noreferrer"><Monitor size={15} /> Tablero del depósito</a>}
         </div>
       </div>
 
-      <BarraImpresion />
+      <AvisoCierre /> {/* PARCHE CONTEO: el aviso de las 15:30 estaba en Inicio */}
+      {error && <div className="aviso err" role="alert" style={{ marginBottom: 12 }}>{error} <button className="btn btn-sm" onClick={() => void recargar()}>Reintentar</button></div>} {/* PARCHE CONTEO */}
+      {CON_ARCHIVOS && <BarraImpresion />}
 
-      <div className="exp-tabs" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))' }}>
+      <div className="exp-tabs" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
         {TABS.map((t) => (
           <button key={t.id} className="exp-tab" aria-pressed={tab === t.id} onClick={() => cambiarTab(t.id)}>
-            <b className="num">{cargando ? '·' : grupos[t.id].length}</b>
+            <b className="num">{t.id === 'sinasignar' ? (sinAsig.cargando ? '·' : sinAsig.archivos.length) : cargando ? '·' : grupos[t.id].length}</b>
             <span>{t.label}</span>
           </button>
         ))}
@@ -141,7 +160,7 @@ export function Expedicion() {
             </label>
           </div>
         )}
-        {cargando ? (
+        {tab === 'sinasignar' ? <SinAsignar archivos={sinAsig.archivos} cargando={sinAsig.cargando} error={sinAsig.error} onCambio={recargarTodo} /> : cargando ? (
           <div className="stack" style={{ padding: 16 }}>{[1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 70 }} />)}</div>
         ) : lista.length === 0 ? (
           <Empty icono={PackageOpen} titulo={tab === 'preparar' ? 'No hay nada esperando salir' : tab === 'frenados' ? 'No hay pedidos frenados' : 'No falta ninguna guía'}>
@@ -177,11 +196,14 @@ export function Expedicion() {
                 {tab === 'preparar' && (
                   <>
                     {retiro.length > 0
-                      ? <button className="btn btn-sm btn-dark" disabled={retirando === p.id} onClick={() => void loRetiro(p, retiro)}><HandCoins size={15} /> {retirando === p.id ? 'Guardando…' : 'Lo retiró'}</button>
+                      ? <>
+                          <button className="btn btn-sm btn-primary" onClick={() => setFirmar({ p, pasos: retiro })}><PenLine size={15} /> Firma y retira</button>
+                          <button className="btn btn-sm btn-dark" disabled={retirando === p.id} onClick={() => void loRetiro(p, retiro)}><HandCoins size={15} /> {retirando === p.id ? 'Guardando…' : 'Lo retiró'}</button>
+                        </>
                       : puede('despachado', p) && <button className="btn btn-sm btn-dark" onClick={() => setCambio({ pedidos: [p], a: 'despachado' })}><Truck size={15} /> Despachar</button>}
                     {puede('bloqueado', p) && <button className="btn btn-sm" onClick={() => setCambio({ pedidos: [p], a: 'bloqueado' })}>{p.estado === 'cargado' ? 'Sin stock / frenar' : 'Frenar'}</button>}
-                    {p.estado === 'cargado' && impresion.puedeImprimir && <button className="btn btn-sm" disabled={impresion.trabajando} onClick={() => void impresion.imprimir([p])}><Printer size={15} /> Imprimir</button>}
-                    <button className="btn btn-sm" onClick={() => void abrirRemito(p)}><FileText size={15} /> Remito</button>
+                    {CON_ARCHIVOS && p.estado === 'cargado' && impresion.puedeImprimir && <button className="btn btn-sm" disabled={impresion.trabajando} onClick={() => void impresion.imprimir([p])}><Printer size={15} /> Imprimir</button>}
+                    {CON_VER_ARCHIVOS && <button className="btn btn-sm" onClick={() => void abrirRemito(p)}><FileText size={15} /> Remito</button>}
                   </>
                 )}
                 {tab === 'frenados' && (
@@ -196,7 +218,7 @@ export function Expedicion() {
                       <Camera size={15} /> Guía (foto o PDF)
                       <input type="file" accept={ACEPTA_ARCHIVOS} hidden onChange={(ev) => { void subirGuia(p, ev.target.files?.[0]); ev.target.value = '' }} />
                     </label>
-                    <a className="btn btn-sm" href={`#/p/${p.codigo}`}>Cargar N° de guía</a>
+                    {!GUIA_LEIDA_AL_SUBIR && <a className="btn btn-sm" href={`#/p/${p.codigo}`}>Cargar N° de guía</a>}
                   </>
                 )}
               </div>
@@ -218,7 +240,8 @@ export function Expedicion() {
       )}
 
       {leerGuia.elemento}
-      {subirGuias && <SubirGuias onClose={() => setSubirGuias(false)} />}
+      {firmar && <FirmaRemito pedido={firmar.p} alFirmar={{ label: 'Marcar que lo retiró (queda entregado hoy)', hacer: () => marcarRetirado(api, firmar.p, firmar.pasos), retiro: true }} onClose={() => setFirmar(null)} onHecho={recargar} />}
+      {subirGuias && <SubirGuias onClose={() => { setSubirGuias(false); void cargarSinAsig() }} />}
       {cambio && <CambioEstado pedidos={cambio.pedidos} a={cambio.a} onClose={() => setCambio(null)} onHecho={() => setSel(new Set())} />}
     </div>
   )

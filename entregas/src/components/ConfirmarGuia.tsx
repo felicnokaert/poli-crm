@@ -2,7 +2,7 @@
 import { ScanLine } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { mensajeError } from '../lib/api'
-import { api } from '../lib/cliente'
+import { api, GUIA_LEIDA_AL_SUBIR } from '../lib/cliente' // PARCHE CONTEO
 import { detectarGuia } from '../lib/leerGuia'
 import type { Pedido } from '../lib/types'
 import { CamposGuia } from './CamposGuia'
@@ -14,7 +14,7 @@ export function useLeerGuia(onGuardada: () => Promise<void> | void): { revisar: 
   const [guardando, setGuardando] = useState(false)
 
   function revisar(p: Pedido, f: File) {
-    if (p.n_guia) return
+    if (p.n_guia || GUIA_LEIDA_AL_SUBIR) return // PARCHE CONTEO: el número ya se leyó al subir
     avisar('Buscando el N° de guía en el archivo…')
     void detectarGuia(f).then((r) => {
       if (r) setEstado({ pedido: p, numero: r.numero, fuente: r.fuente })

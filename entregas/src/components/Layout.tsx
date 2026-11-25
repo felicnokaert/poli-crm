@@ -1,7 +1,8 @@
 import { BookOpen, CalendarDays, ClipboardList, Home, LogOut, Plus, Settings, UserRound, Warehouse } from 'lucide-react'
+import { MODO_CONTEO } from '../lib/cliente'
 
-/** Guía de uso para comerciales (página del CRM, 21/11): siempre a un toque, sin buscar el PDF. */
-export const GUIA_URL = 'https://poli-crm.vercel.app/guia/#entregas'
+/** Guía de uso (21/11): la del CRM para comerciales; en la app de conteo, la de expedición. */
+export const GUIA_URL = MODO_CONTEO ? 'https://poliplast-conteo-stock.netlify.app/guia/' : 'https://poli-crm.vercel.app/guia/#entregas'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { api, MAQUETA } from '../lib/cliente'
 import { useDatos } from '../lib/datos'

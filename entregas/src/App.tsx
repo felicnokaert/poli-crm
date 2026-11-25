@@ -4,6 +4,7 @@ import { Calendario } from './components/Calendario'
 import { Expedicion } from './components/Expedicion'
 import { ImpresionProvider } from './components/Impresion'
 import { Inicio } from './components/Inicio'
+import { Pantalla } from './components/Pantalla' // PARCHE CONTEO
 import { Layout } from './components/Layout'
 import { Login } from './components/Login'
 import { NuevoRemito } from './components/NuevoRemito'
@@ -77,8 +78,10 @@ export default function App() {
     return u.compartida && operador ? { ...u, nombre: operador, operador } : u
   }, [sesion, operador])
 
-  // Dentro del CRM, mientras arranca se ve la P del CRM (encima): acá no se muestra «Cargando…».
-  if (sesion.estado === 'cargando') return isEmbeddedInCrm() ? <div className="centrado" /> : <div className="centrado">Cargando…</div>
+  // Dentro del CRM, mientras arranca se ve la P del CRM (encima): acá no se muestra nada. Suelta o en la app de conteo, la P propia.
+  if (sesion.estado === 'cargando') return isEmbeddedInCrm()
+    ? <div className="centrado" />
+    : <div className="centrado cargando-p" role="status" aria-label="Cargando"><span className="anillo" /><img src={`${import.meta.env.BASE_URL}poliplast-isotipo-color.png`} alt="" /></div>
   if (sesion.estado === 'sin_acceso') return <Login sinAcceso={sesion.email || 'actual'} onSalir={() => void api.cerrarSesion()} />
   // Dentro del CRM nunca se pide usuario y contraseña (25/11, Felipe: «Entregas es parte del CRM»): si la sesión no sirve,
   // se le avisa al CRM, que la renueva (y la reenvía) o muestra su propio ingreso.
@@ -108,6 +111,7 @@ export default function App() {
 function Rutas() {
   const ruta = useRuta()
   let pagina
+  if (ruta.pagina === 'pantalla') return <Pantalla /> // PARCHE CONTEO: pantalla grande para el monitor del depósito (sin menú)
   switch (ruta.pagina) {
     case 'pedidos': pagina = <Pedidos query={ruta.query} />; break
     case 'nuevo': pagina = <NuevoRemito />; break
@@ -115,7 +119,7 @@ function Rutas() {
     case 'expedicion': pagina = <Expedicion />; break
     case 'calendario': pagina = <Calendario />; break
     case 'ajustes': pagina = <Ajustes />; break
-    default: pagina = <Inicio />
+    default: pagina = isEmbeddedInApp() ? <Expedicion /> : <Inicio /> // PARCHE CONTEO: expedición no usa Inicio
   }
   return <Layout ruta={ruta}>{pagina}</Layout>
 }

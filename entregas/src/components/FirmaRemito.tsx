@@ -4,6 +4,8 @@ import { Eraser, PenLine } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { mensajeError } from '../lib/api'
 import { api } from '../lib/cliente'
+import { CON_SUBIR } from '../lib/cliente'
+import { subirYRegistrar } from '../lib/expedicionApi'
 import { estamparFirma } from '../lib/firmaPdf' // la firma va ESTAMPADA en el PDF del remito (Felipe, 21/11)
 import { useDatos } from '../lib/datos'
 import { dniValido, firmaSuficiente, lineasConstancia, nombreArchivoFirma, nombreValido } from '../lib/firma'
@@ -156,8 +158,9 @@ export function FirmaRemito({ pedido, onClose, onHecho, alFirmar }: {
     setGuardando(true)
     try {
       const nota = `Firmó ${modo === 'retiro' ? 'el retiro' : 'la recepción'}: ${nombreOk}, DNI ${dniOk} (firma digital${previa.pagina ? ' estampada en el remito' : ''}).`
-      await api.subirArchivo(pedido.id, 'remito_firmado', previa.archivo)
-      await api.comentar(pedido.id, nota)
+      // En conteo no hay ruta de comentarios: el texto viaja como nota al registrar el archivo.
+      if (CON_SUBIR) await subirYRegistrar(previa.archivo, 'remito_firmado', { pedido: pedido.id, nota })
+      else { await api.subirArchivo(pedido.id, 'remito_firmado', previa.archivo); await api.comentar(pedido.id, nota) }
       if (cerrar && alFirmar) await alFirmar.hacer()
       avisar('Remito firmado guardado')
       await onHecho()

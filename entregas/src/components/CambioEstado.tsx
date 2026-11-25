@@ -2,7 +2,7 @@
 import { Camera, Paperclip } from 'lucide-react'
 import { useState } from 'react'
 import { mensajeError } from '../lib/api'
-import { api } from '../lib/cliente'
+import { api, TIPOS_SUBIDA } from '../lib/cliente' // en conteo solo guía, remito y remito firmado (sin fotos sueltas)
 import { detectarGuia } from '../lib/leerGuia'
 import { CamposGuia } from './CamposGuia'
 import { useDatos } from '../lib/datos'
@@ -194,7 +194,7 @@ export function CambioEstado({ pedidos, a, onClose, onHecho }: {
 
       {a === 'cancelado' && <div className="aviso warn">El pedido sale de las listas en curso. Queda en el historial y un admin lo puede reabrir.</div>}
 
-      {tipoAdjunto && uno && (
+      {tipoAdjunto && (!TIPOS_SUBIDA || TIPOS_SUBIDA.includes(tipoAdjunto)) && uno && (
         <div className="field">
           <span>
             {tipoAdjunto === 'guia' ? 'Foto o PDF de la guía' : tipoAdjunto === 'remito_firmado' ? 'Remito firmado / comprobante de entrega' : 'Foto del problema'}{' '}

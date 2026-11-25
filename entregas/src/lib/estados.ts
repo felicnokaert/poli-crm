@@ -105,7 +105,7 @@ export function alertaDe(p: Pedido, expreso: Expreso | undefined, config: Config
     }
     case 'impreso': {
       const dias = diasHabilesEntre(desde, ahora)
-      return dias > config.dias_sin_despachar ? { tipo: 'sin_despachar', texto: `Impreso hace ${dias} días hábiles y no salió` } : null
+      return dias > config.dias_sin_despachar ? { tipo: 'sin_despachar', texto: `Impreso hace ${dias} días hábiles y no salió: despachalo o frenalo e indicá por qué` } : null
     }
     case 'bloqueado': {
       if (p.stock_estimado && p.stock_estimado < hoyISO(ahora)) return { tipo: 'bloqueo_vencido', texto: 'Pasó la fecha estimada de stock' }

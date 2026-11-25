@@ -6,6 +6,9 @@ import { aISO, hoyISO, inicioSemana, sumarDiasHabiles, desdeISO } from '../lib/f
 import type { Pedido } from '../lib/types'
 import { DetalleDia } from './CalendarioDia'
 
+// PARCHE CONTEO: colores por expreso (alternativa a colorear por tipo de movimiento)
+const PALETA = [['#e3edff', '#1d4fa3'], ['#e5f5ec', '#146c3a'], ['#fff1d6', '#8a5a00'], ['#f3e5ff', '#6b2bb0'], ['#ffe3e5', '#b3202b'], ['#ddf4f6', '#0e6a74'], ['#f1ecdf', '#6a5a2b'], ['#e8e8ec', '#3d3e41']]
+
 export type Capa = 'despacho' | 'entrega' | 'stock' | 'estimada'
 export interface EventoDia { p: Pedido; capa: Capa }
 
@@ -21,7 +24,9 @@ const angosto = () => window.matchMedia('(max-width: 860px)').matches
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
 export function Calendario() {
-  const { yo, pedidos, expresosPorId } = useDatos()
+  const { yo, pedidos, expresosPorId, expresos } = useDatos()
+  const [colorPor, setColorPor] = useState<'tipo' | 'expreso'>('tipo')
+  const colorExp = (p: Pedido) => { const i = expresos.findIndex((x) => x.id === p.expreso_id); const c = PALETA[(i < 0 ? PALETA.length - 1 : i) % PALETA.length]; return { background: c[0], color: c[1] } }
   const [mes, setMes] = useState(() => { const h = new Date(); return new Date(h.getFullYear(), h.getMonth(), 1) })
   const [capas, setCapas] = useState<Set<Capa>>(new Set(['despacho', 'entrega', 'estimada', 'stock']))
   const [mios, setMios] = useState(yo.rol === 'vendedor')
@@ -80,12 +85,23 @@ export function Calendario() {
         <button className="chip-btn" aria-pressed={mios} onClick={() => setMios(true)}>Mis pedidos</button>
         <button className="chip-btn" aria-pressed={!mios} onClick={() => setMios(false)}>Todos</button>
         <span style={{ width: 8 }} />
-        {CAPAS.map((c) => (
+        {colorPor === 'tipo' && CAPAS.map((c) => (
           <button key={c.id} className="chip-btn cal-capa" aria-pressed={capas.has(c.id)} onClick={() => toggle(c.id)}>
             <span className={`chip ${c.tono}`} style={{ minHeight: 10, padding: '0 5px' }}>&nbsp;</span> {c.label}
           </button>
         ))}
       </div>
+
+      <div className="row" style={{ marginBottom: 12 }}>
+        <span className="hint">Colorear por:</span>
+        <button className="chip-btn" aria-pressed={colorPor === 'tipo'} onClick={() => setColorPor('tipo')}>Tipo (despacho, entrega…)</button>
+        <button className="chip-btn" aria-pressed={colorPor === 'expreso'} onClick={() => setColorPor('expreso')}>Expreso</button>
+      </div>
+      {colorPor === 'expreso' && (
+        <div className="row" style={{ marginBottom: 12 }}>
+          {expresos.map((x, i) => <span key={x.id} className="chip" style={{ background: PALETA[i % PALETA.length][0], color: PALETA[i % PALETA.length][1] }}>{x.nombre}</span>)}
+        </div>
+      )}
 
       <div className="panel" style={{ overflow: 'hidden' }}>
         <div className="cal">
@@ -112,7 +128,7 @@ export function Calendario() {
               >
                 <span className="n">{d.getDate()}</span>
                 {evs.slice(0, 4).map(({ p, capa }) => (
-                  <a key={`${p.id}-${capa}`} className={`cal-ev ${CAPAS.find((c) => c.id === capa)!.tono}`} href={`#/p/${p.codigo}`} title={`${CAPAS.find((c) => c.id === capa)!.label}: ${p.cliente} (${p.n_remito})`}>
+                  <a key={`${p.id}-${capa}`} className={`cal-ev ${colorPor === 'tipo' ? CAPAS.find((c) => c.id === capa)!.tono : ''}`} style={colorPor === 'expreso' ? colorExp(p) : undefined} href={`#/p/${p.codigo}`} title={`${CAPAS.find((c) => c.id === capa)!.label}: ${p.cliente} (${p.n_remito})`}>
                     {p.cliente}
                   </a>
                 ))}

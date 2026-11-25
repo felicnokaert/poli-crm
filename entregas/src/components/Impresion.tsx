@@ -6,7 +6,7 @@
 import { Printer, Undo2 } from 'lucide-react'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { mensajeError } from '../lib/api'
-import { api } from '../lib/cliente'
+import { api, CON_IMPRIMIR } from '../lib/cliente'
 import { useDatos } from '../lib/datos'
 import { puedeTransicionar } from '../lib/estados'
 import { imprimeSolo, imprimirPaginas, paginasDeArchivo, setImprimeSolo } from '../lib/impresion'
@@ -48,7 +48,8 @@ export function ImpresionProvider({ children }: { children: ReactNode }) {
   const [ultima, setUltima] = useState<Pedido[]>([])
   const ocupado = useRef(false)
 
-  const puedeImprimir = puedeTransicionar('cargado', 'impreso', yo.rol, false)
+  // Solo expedición imprime, desde la app de conteo (25/11): en el CRM no se imprime ni sola ni a mano.
+  const puedeImprimir = CON_IMPRIMIR && puedeTransicionar('cargado', 'impreso', yo.rol, false)
   const pendientes = useMemo(
     () => pedidos.filter((p) => p.estado === 'cargado').sort((a, b) => a.created_at.localeCompare(b.created_at)),
     [pedidos],

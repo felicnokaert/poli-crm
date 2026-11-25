@@ -6,8 +6,8 @@ import { CONFIG_DEFAULT, type TipoArchivo, type Archivo, type Config, type Estad
    que consulta el CRM con su propia clave (nunca llega acá, ni la sesión de expedicion@). Lo que el servidor todavía no entrega
    (historial del pedido, archivos adjuntos: remitos y guías) se muestra vacío; ver LEEME-CONTEO.md. */
 
-const URL_BASE = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || 'https://coldwrbfxpdfutbekysr.supabase.co'
-const CLAVE = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvbGR3cmJmeHBkZnV0YmVreXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNjE0MzAsImV4cCI6MjEwMzkzNzQzMH0.7CloDCuNcsm4E3TcEO712RNZdTUvL_BmCrmXWHRRrrc' // clave pública anon (respaldo)
+export const URL_BASE = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || 'https://coldwrbfxpdfutbekysr.supabase.co'
+export const CLAVE = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvbGR3cmJmeHBkZnV0YmVreXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNjE0MzAsImV4cCI6MjEwMzkzNzQzMH0.7CloDCuNcsm4E3TcEO712RNZdTUvL_BmCrmXWHRRrrc' // clave pública anon (respaldo)
 const noDisponible = (que: string) => () => Promise.reject(new ApiError(`${que} todavía no está disponible desde expedición. Se hace en Poli-Entregas.`))
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()

@@ -19,7 +19,9 @@ import { supabase } from "./online";
 // 21/11 (Felipe: «Entregas sigue con el "Cargando…" en vez de nuestra P»): mientras la app de adentro arranca y toma la
 // sesión, se ve la misma animación de la P que en el resto del CRM (loadingText); se destapa poco después de pasarle la
 // sesión, o a los 6 s si la app no avisa (por ejemplo, si muestra su propio login).
-export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, openUrl, title, allow, bare = false, loadingText = "" }) {
+// revealType (25/11, Felipe: «el Cargando… me sigue jodiendo»): si la app de adentro avisa `{ tipo: revealType }` cuando ya
+// muestra su pantalla, la P queda hasta ese aviso (o 8 s); sin revealType se destapa 0,7 s después de pasarle la sesión.
+export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, revealType, openUrl, title, allow, bare = false, loadingText = "" }) {
   const frameRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [revealed, setRevealed] = useState(!loadingText);
@@ -40,7 +42,7 @@ export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, 
       origin,
     );
     sentRef.current = current.access_token;
-    if (loadingText) setTimeout(() => setRevealed(true), 700);
+    if (loadingText && !revealType) setTimeout(() => setRevealed(true), 700);
   }
 
   const renewingRef = useRef(false);
@@ -71,6 +73,7 @@ export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, 
       // 25/11 (Felipe: «Entregas es parte del CRM, que no pida usuario»): si la sesión que le pasamos no le sirve (se cerró
       // en otro equipo o venció), el CRM la renueva —y el efecto de abajo la reenvía— o, si ya no vale, muestra su ingreso.
       if (tipo === "app:sin-sesion") void renewOrSignOut();
+      if (revealType && tipo === revealType) setRevealed(true);
       if (heightType && tipo === heightType) {
         const alto = Number(event.data.alto);
         if (Number.isFinite(alto) && alto > 0) setHeight(Math.min(Math.ceil(alto), 100000));
@@ -82,7 +85,7 @@ export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, 
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [origin, readyType, heightType]);
+  }, [origin, readyType, heightType, revealType]);
 
   // Pasarle la sesión del CRM cuando la app de adentro avisa que está lista, y de nuevo cada vez que el CRM la renueva.
   // (20/11: este paso se había perdido y el cotizador y Entregas volvían a pedir usuario y contraseña.)
@@ -139,7 +142,7 @@ export function EmbeddedAppFrame({ session, src, origin, readyType, heightType, 
   useEffect(() => { setReady(false); setHeight(null); sentRef.current = ""; setRevealed(!loadingText); }, [src, loadingText]);
   useEffect(() => {
     if (revealed) return undefined;
-    const timer = setTimeout(() => setRevealed(true), 6000);
+    const timer = setTimeout(() => setRevealed(true), revealType ? 8000 : 6000);
     return () => clearTimeout(timer);
   }, [revealed]);
 

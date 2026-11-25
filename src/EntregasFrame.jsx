@@ -3,7 +3,7 @@ import { EmbeddedAppFrame } from "./EmbeddedAppFrame";
 
 // Poli-Entregas (remitos, despachos y entregas) como pestaña del CRM. Es su propia aplicación (carpeta Entregas,
 // misma base y mismos logins); expedición entra por el link directo. Adentro del CRM recibe la sesión del CRM;
-// si en 5 segundos no le llega, muestra su propio login. Se ve como una sección más (sin barra ni marco).
+// si no le sirve, le pide al CRM que la renueve (nunca muestra su propio login adentro del CRM). Se ve como una sección más (sin barra ni marco).
 export function EntregasFrame({ session }) {
   return (
     <EmbeddedAppFrame
@@ -12,6 +12,7 @@ export function EntregasFrame({ session }) {
       origin={ENTREGAS_ORIGIN}
       readyType="entregas:listo"
       heightType="entregas:alto"
+      revealType="entregas:visible"
       title="Entregas"
       allow="clipboard-write"
       loadingText="Cargando Entregas"

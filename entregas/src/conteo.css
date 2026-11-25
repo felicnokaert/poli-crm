@@ -8,8 +8,6 @@ a[href="#/nuevo"] { display: none !important; }
 @keyframes p-giro { to { transform: rotate(360deg); } }
 @keyframes p-pulso { 0%,100% { transform: scale(.94); opacity: .85; } 50% { transform: scale(1.04); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .cargando-p img, .cargando-p .anillo { animation: none; } }
-/* versión (para saber qué se está viendo) */
-html::after { content: 'Entregas v4'; position: fixed; right: 6px; top: 2px; font: 9px/1 sans-serif; color: #b5b5b8; z-index: 1; pointer-events: none; }
 
 /* PARCHE CONTEO: la app de conteo ya muestra «quién sos y depósito» arriba; no se repite acá (cambiarlo allá recarga esta pantalla) */
 html.en-app .mobile-top { display: none !important; }
@@ -98,3 +96,6 @@ html.en-app .cal-d { min-height: 0; align-content: start; }
 @media (max-width: 700px) { .pantalla-cols { grid-template-columns: 1fr; } .pantalla-cifras { grid-template-columns: repeat(2, 1fr); } }
 /* Conteo: «Sale de [depósito]» con el chip de color al lado */
 /* Conteo: filtro por depósito (Pedidos y Expedición) */
+
+/* 25/11: la barra nueva de conteo ya tiene la guía arriba: no se repite como pestaña */
+html.en-app .nav-guia { display: none !important; }

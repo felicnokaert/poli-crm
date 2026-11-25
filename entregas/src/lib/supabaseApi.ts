@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { SinAcceso, type Api } from './api'
 import { sha256Hex } from './hash'
-import { isEmbeddedInCrm } from './embed'
+import { avisarSinSesionAlCrm, isEmbeddedInCrm } from './embed'
 import { headerDeposito, headerOperador } from './operador'
 import { CONFIG_DEFAULT, type Archivo, type Config, type Evento, type Expreso, type Pedido, type Rol, type RolAsignado, type Usuario } from './types'
 
@@ -58,7 +58,10 @@ export function crearSupabaseApi(): Api & { client: SupabaseClient } {
 
     async usuarioActual() {
       const { data } = await sb.auth.getUser()
-      if (!data.user) return null
+      if (!data.user) {
+        if (embebido) avisarSinSesionAlCrm()
+        return null
+      }
       const { data: rol, error } = await sb.rpc('entregas_mi_rol')
       if (error) lanzar(error)
       const email = (data.user.email ?? '').toLowerCase()
@@ -80,7 +83,7 @@ export function crearSupabaseApi(): Api & { client: SupabaseClient } {
     },
 
     async cerrarSesion() {
-      await sb.auth.signOut()
+      await sb.auth.signOut({ scope: 'local' })
     },
 
     alCambiarSesion(cb) {

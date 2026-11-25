@@ -64,3 +64,10 @@ export function escucharSesionDelCrm(onSesion: (accessToken: string, refreshToke
   timer = setInterval(avisar, 800)
   return () => { window.removeEventListener('message', onMessage); if (timer) clearInterval(timer) }
 }
+
+/** La sesión que mandó el CRM no sirve (venció o se cerró en otro equipo): el CRM la renueva y la reenvía, o pide ingresar. */
+export function avisarSinSesionAlCrm(): void {
+  for (const origin of origenesCrm()) {
+    try { window.parent.postMessage({ tipo: 'app:sin-sesion' }, origin) } catch { /* otro origen */ }
+  }
+}

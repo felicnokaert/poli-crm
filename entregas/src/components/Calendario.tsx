@@ -1,4 +1,5 @@
 // Calendario mensual: qué salió cada día, qué se entregó y cuándo se espera stock.
+import { esFeriado } from '../lib/feriados'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useDatos } from '../lib/datos'
@@ -110,10 +111,11 @@ export function Calendario() {
             const iso = aISO(d)
             const evs = eventos.get(iso) ?? []
             const fuera = d.getMonth() !== mes.getMonth()
+            const feriado = esFeriado(iso)
             return (
               <div
                 key={iso}
-                className={`cal-d${fuera ? ' fuera' : ''}${iso === hoy ? ' hoy' : ''}${evs.length ? ' con-eventos' : ''}`}
+                className={`cal-d${fuera ? ' fuera' : ''}${feriado ? ' feriado' : ''}${iso === hoy ? ' hoy' : ''}${evs.length ? ' con-eventos' : ''}`}
                 role={evs.length ? 'button' : undefined}
                 tabIndex={evs.length ? 0 : undefined}
                 aria-label={evs.length ? `${d.getDate()}: ${evs.length} movimiento${evs.length === 1 ? '' : 's'}. Ver el detalle` : undefined}
@@ -127,6 +129,7 @@ export function Calendario() {
                 onKeyDown={(e) => { if (evs.length && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setAbierto(iso) } }}
               >
                 <span className="n">{d.getDate()}</span>
+                {feriado && <em className="cal-feriado">Feriado</em>}
                 {evs.slice(0, 4).map(({ p, capa }) => (
                   <a key={`${p.id}-${capa}`} className={`cal-ev ${colorPor === 'tipo' ? CAPAS.find((c) => c.id === capa)!.tono : ''}`} style={colorPor === 'expreso' ? colorExp(p) : undefined} href={`#/p/${p.codigo}`} title={`${CAPAS.find((c) => c.id === capa)!.label}: ${p.cliente} (${p.n_remito})`}>
                     {p.cliente}

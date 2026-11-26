@@ -477,12 +477,23 @@ function Archivos({ pedido, archivos, onCambio, alFirmar }: { pedido: Pedido; ar
     }
   }
 
+  // 26/11 (Felipe: «la foto del remito firmado no la toma»): con «camara» el botón abre directo la cámara del celular
+  // (capture), y al lado queda el clip para elegir un archivo (PDF o una foto ya sacada).
   const Subir = ({ tipo, label, camara }: { tipo: TipoArchivo; label: string; camara?: boolean }) => (
-    <label className="btn btn-sm" aria-disabled={subiendo !== null} {...soltable((fs) => { if (subiendo === null) void subir(tipo, fs[0]) })}>
-      {camara ? <Camera size={14} /> : <Paperclip size={14} />} {subiendo === tipo ? 'Subiendo…' : label}
-      <input type="file" hidden accept={tipo === 'otro' ? undefined : ACEPTA_ARCHIVOS} disabled={subiendo !== null}
-        onChange={(e) => { void subir(tipo, e.target.files?.[0]); e.target.value = '' }} />
-    </label>
+    <span className="subir-par">
+      <label className="btn btn-sm" aria-disabled={subiendo !== null} {...soltable((fs) => { if (subiendo === null) void subir(tipo, fs[0]) })}>
+        {camara ? <Camera size={14} /> : <Paperclip size={14} />} {subiendo === tipo ? 'Subiendo…' : label}
+        <input type="file" hidden accept={camara ? 'image/*' : tipo === 'otro' ? undefined : ACEPTA_ARCHIVOS} {...(camara ? { capture: 'environment' as const } : {})} disabled={subiendo !== null}
+          onChange={(e) => { void subir(tipo, e.target.files?.[0]); e.target.value = '' }} />
+      </label>
+      {camara && (
+        <label className="btn btn-sm btn-ghost" aria-label={`${label}: elegir un archivo`} title="Elegir un archivo (PDF o foto ya sacada)" aria-disabled={subiendo !== null}>
+          <Paperclip size={14} />
+          <input type="file" hidden accept={ACEPTA_ARCHIVOS} disabled={subiendo !== null}
+            onChange={(e) => { void subir(tipo, e.target.files?.[0]); e.target.value = '' }} />
+        </label>
+      )}
+    </span>
   )
 
   return (

@@ -10,7 +10,7 @@ export function buildNotifications({ tasks = [], alerts = [], reports = [], toda
       if (task.done || !task.dueDate || task.dueDate > today) continue;
       const late = daysBetween(task.dueDate, today);
       items.push({
-        id: `task:${task.id}:${task.dueDate}`, kind: 'action', group: 'Tareas', view: 'tasks', taskId: task.id,
+        id: `task:${task.id}:${task.dueDate}:${today}`, kind: 'action', group: 'Tareas', view: 'tasks', taskId: task.id,
         title: task.title || 'Tarea', detail: `${task.company ? `${task.company} · ` : ''}${late > 0 ? `vencida hace ${late} día${late === 1 ? '' : 's'}` : 'para hoy'}`,
         at: task.dueDate, weight: late > 0 ? 2 : 1,
       });
@@ -21,7 +21,7 @@ export function buildNotifications({ tasks = [], alerts = [], reports = [], toda
     const module = String(alert.type || '').startsWith('shopify') ? 'shopify' : String(alert.type || '').startsWith('ml') ? 'mercadolibre' : 'mejoras';
     if (!allows(module) && !allows('mejoras')) continue;
     items.push({
-      id: `alert:${alert.type}:${alert.entity_id}:${String(alert.first_seen || '').slice(0, 10)}`,
+      id: `alert:${alert.type}:${alert.entity_id}:${alert.severity === 'baja' ? String(alert.first_seen || '').slice(0, 10) : today}`,
       kind: alert.severity === 'baja' ? 'info' : 'action', group: 'Alertas', view: allows('mejoras') ? 'mejoras' : module,
       title: alert.title || 'Alerta', detail: alert.detail || '', at: String(alert.last_seen || alert.first_seen || '').slice(0, 10), weight: alert.severity === 'alta' ? 3 : 1,
     });

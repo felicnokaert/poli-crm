@@ -1836,3 +1836,45 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .quote-status.st-aceptada { color: #15803d; border-color: #15803d55; }
 .quote-status.st-rechazada { color: var(--color-text-gray); }
 @media (max-width: 760px) { .quote-history li { grid-template-columns: minmax(0, 1fr) auto; } .quote-history-actions { grid-column: 1 / -1; } }
+.readonly-strip { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; justify-content: space-between; margin: 0 0 12px; padding: 8px 14px; border-radius: 12px; background: #fff7e6; border: 1px solid #f5d38a; color: #7a5200; font-size: 13px; }
+.readonly-strip .danger-link { font-size: 12.5px; }
+/* Poliplast App (26/11): menú sin franja blanca, botón de minimizar como pestaña del borde, Acceso rápido. */
+@media (min-width: 761px) {
+  .sidebar nav { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: #ffffff26 transparent; }
+  .sidebar { overflow: visible; }
+  .app-shell.nav-mini .sidebar { overflow: visible; }
+  .nav-mini-toggle { position: absolute; right: -24px; top: 84px; width: 26px; height: 26px; padding: 0; display: grid; place-items: center; border-radius: 50%; background: var(--color-white); color: #242424; border: 1px solid var(--color-border); box-shadow: 0 4px 14px #0000002e; z-index: 5; }
+  .nav-mini-toggle:hover, .nav-mini-toggle:focus-visible { background: var(--brand-red); color: #fff; border-color: var(--brand-red); }
+  .app-shell.nav-mini .nav-mini-toggle { position: absolute; right: -22px; top: 56px; }
+  .sidebar nav button { position: relative; }
+  .nav-pin { margin-left: auto; opacity: 0; color: #9a9a9f; display: inline-grid; padding: 2px; border-radius: 6px; transition: opacity .15s ease, color .15s ease; }
+  .sidebar nav button:hover .nav-pin, .nav-pin.is-pinned { opacity: 1; }
+  .nav-pin.is-pinned { color: #fbbf24; }
+  .nav-pin:hover { color: #fbbf24; }
+  .sidebar nav button .nav-badge + .nav-pin { margin-left: 6px; }
+}
+.maqueta-frame.is-loading iframe { opacity: 0; }
+.maqueta-frame iframe { transition: opacity 220ms ease; }
+.notif-toggle-read { border: 0; background: transparent; color: var(--color-text-gray); font-size: 12.5px; cursor: pointer; padding: 4px; justify-self: center; text-decoration: underline; }
+/* Poliplast App (26/11, Felipe: «que no haya que bajar tanto»): densidad compacta en toda la app. Se achican los
+   espacios, las cajas y los números grandes; los textos chicos quedan igual. */
+.app-shell.densa main { padding: 18px 26px 40px; }
+.app-shell.densa .topbar { margin-bottom: 12px; }
+.app-shell.densa .topbar h1 { font-size: 23px; }
+.app-shell.densa .content-stack { gap: 10px; }
+.app-shell.densa main .panel { padding: 12px 14px; border-radius: 14px; }
+.app-shell.densa .panel-head { margin-bottom: 8px; }
+.app-shell.densa .panel-head h2, .app-shell.densa main .panel > h2 { font-size: 15.5px; }
+.app-shell.densa .metric-grid { gap: 10px; }
+.app-shell.densa .metric-card { padding: 11px 13px; gap: 2px 8px; }
+.app-shell.densa .metric-card strong { font-size: 22px; }
+.app-shell.densa .metric-card svg { width: 17px; height: 17px; }
+.app-shell.densa .segmented button { padding-top: 6px; padding-bottom: 6px; }
+.app-shell.densa .day-hero { padding: 14px 16px; }
+.app-shell.densa .primary, .app-shell.densa .secondary { padding: 8px 13px; }
+.app-shell.densa .sidebar nav button { padding-top: 7px; padding-bottom: 7px; }
+@media (max-width: 760px) {
+  .app-shell.densa main { padding: 12px 12px 90px; }
+  .app-shell.densa .topbar h1 { font-size: 21px; }
+  .app-shell.densa .metric-card strong { font-size: 20px; }
+}

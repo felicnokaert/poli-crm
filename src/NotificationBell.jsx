@@ -6,10 +6,12 @@ import { Bell, CheckCheck } from "lucide-react";
 export function NotificationBell({ items = [], read = [], onRead, onNavigate }) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState("action");
+  const [showRead, setShowRead] = useState(false);
   const boxRef = useRef(null);
   const seen = new Set(read);
   const unread = items.filter((item) => !seen.has(item.id));
-  const shown = items.filter((item) => (tab === "action" ? item.kind === "action" : item.kind !== "action"));
+  // Por defecto solo lo NO leído: leído = ya está. «Ver leídas» las muestra igual.
+  const shown = items.filter((item) => (tab === "action" ? item.kind === "action" : item.kind !== "action") && (showRead || !seen.has(item.id)));
   useEffect(() => {
     if (!open) return undefined;
     const onKey = (event) => { if (event.key === "Escape") setOpen(false); };
@@ -35,7 +37,7 @@ export function NotificationBell({ items = [], read = [], onRead, onNavigate }) 
             <button type="button" role="tab" aria-selected={tab === "action"} className={tab === "action" ? "selected" : ""} onClick={() => setTab("action")}>Para hacer{count("action") ? ` · ${count("action")}` : ""}</button>
             <button type="button" role="tab" aria-selected={tab === "info"} className={tab === "info" ? "selected" : ""} onClick={() => setTab("info")}>Novedades{count("info") ? ` · ${count("info")}` : ""}</button>
           </div>
-          {shown.length === 0 ? <p className="notif-empty">Nada por acá. 👌</p> : (
+          {shown.length === 0 ? <p className="notif-empty">{showRead ? "Nada por acá." : "Estás al día. 👌"}</p> : (
             <ul className="notif-list">
               {shown.slice(0, 40).map((item) => (
                 <li key={item.id} className={seen.has(item.id) ? "is-read" : ""}>
@@ -47,6 +49,7 @@ export function NotificationBell({ items = [], read = [], onRead, onNavigate }) 
               ))}
             </ul>
           )}
+          <button type="button" className="notif-toggle-read" onClick={() => setShowRead((value) => !value)}>{showRead ? "Ocultar las leídas" : "Ver también las leídas"}</button>
         </div>
       )}
     </div>

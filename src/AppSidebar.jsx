@@ -5,6 +5,8 @@ import { onlineConfigured } from "./online";
 import { filterNav } from "./module-access.mjs";
 import { ROLES } from "./poliplast-app-plan.mjs";
 import { navForAccess } from "./team-access.mjs";
+import { countUse, pinToggle, quickAccessIds, readQuick, saveQuick } from "./quick-access.mjs";
+import { Star } from "lucide-react";
 import { isChannelAdmin } from "./user-channels.mjs";
 
 // Menú lateral de Poliplast App (rama de prueba, 25/11): 7 grupos según docs/PLAN_POLIPLAST_APP.md.
@@ -59,13 +61,21 @@ export const NAV_ITEMS = NAV_GROUPS.flatMap(([, items]) => items);
 const QUICK_IDS = ["dashboard", "tasks", "sales", "clients"];
 
 export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNavGroups, narrowScreen, overdueTaskCount, inboxSignalCount, email = "", denied = null, previewRole = "admin", previewAccess = null, previewName = "", onPreviewRole = null, mini = false, onToggleMini = null }) {
-  const groups = navForAccess(filterNav(NAV_GROUPS, email, denied), previewAccess || { role: previewRole });
+  const baseGroups = navForAccess(filterNav(NAV_GROUPS, email, denied), previewAccess || { role: previewRole });
+  // Acceso rápido (26/11): lo que más usás (se cuenta solo) y lo que fijás con la estrella. Se guarda en este equipo.
+  const [quick, setQuick] = useState(() => readQuick());
+  const allowedItems = baseGroups.flatMap(([, items]) => items);
+  const quickIds = quickAccessIds(quick, allowedItems.map(([id]) => id));
+  const quickItems = quickIds.map((id) => allowedItems.find(([itemId]) => itemId === id)).filter(Boolean);
+  const groups = quickItems.length ? [["Acceso rápido", quickItems], ...baseGroups] : baseGroups;
+  const togglePin = (id) => setQuick((current) => { const next = pinToggle(current, id); saveQuick(next); return next; });
+  useEffect(() => { if (view && view !== "plan") setQuick((current) => { const next = countUse(current, view); saveQuick(next); return next; }); }, [view]);
   const [sheet, setSheet] = useState(false);
   // Menú minimizado: el nombre aparece al pasar el mouse (cartelito fijo, no lo corta el desplazamiento del menú).
   const [tip, setTip] = useState(null);
   const showTip = (event, label) => { if (!mini) return; const rect = event.currentTarget.getBoundingClientRect(); setTip({ label, top: rect.top + rect.height / 2, left: rect.right + 10 }); };
-  const allowed = groups.flatMap(([, items]) => items);
-  const quick = QUICK_IDS.map((id) => allowed.find(([itemId]) => itemId === id)).filter(Boolean);
+  const allowed = baseGroups.flatMap(([, items]) => items);
+  const tabbar = QUICK_IDS.map((id) => allowed.find(([itemId]) => itemId === id)).filter(Boolean);
   const current = allowed.find(([id]) => id === view)?.[1] || "Menú";
   const badgeFor = (id) => (id === "tasks" ? overdueTaskCount : id === "inbox" ? inboxSignalCount : 0);
   const pick = (id) => { setSheet(false); onSelect(id); };
@@ -79,7 +89,7 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
   // no deja minimizarlo": antes la sección donde estabas parado quedaba siempre abierta y el botón no hacía nada).
   useEffect(() => {
     const group = NAV_GROUPS.find(([, items]) => items.some(([id]) => id === view))?.[0];
-    if (group) setCollapsedNavGroups((current) => (current.includes(group) ? current.filter((item) => item !== group) : current));
+    if (group) setCollapsedNavGroups((current) => (current.includes(group) ? NAV_GROUPS.map(([name]) => name).filter((name) => name !== group) : current));
   }, [view, setCollapsedNavGroups]);
   return (
   <aside className="sidebar">
@@ -110,9 +120,10 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
               type="button"
               className="nav-group-title"
               onClick={() =>
+                // Acordeón (26/11, Felipe): al abrir un grupo se cierran los demás.
                 setCollapsedNavGroups((current) =>
                   current.includes(group)
-                    ? current.filter((item) => item !== group)
+                    ? groups.map(([name]) => name).filter((name) => name !== group && name !== "Acceso rápido")
                     : [...current, group],
                 )
               }
@@ -134,6 +145,7 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
                   onBlur={() => setTip(null)}
                 >
                   <Icon size={19} /> <span className="nav-label">{label}</span>
+                  {!mini && <span role="button" tabIndex={-1} className={`nav-pin${(quick.pins || []).includes(id) ? " is-pinned" : ""}`} title={(quick.pins || []).includes(id) ? "Sacar de Acceso rápido" : "Fijar en Acceso rápido"} onClick={(event) => { event.stopPropagation(); togglePin(id); }}><Star size={13} /></span>}
                   {id === "tasks" && overdueTaskCount > 0 && (
                     <span className="nav-badge" aria-label={`${overdueTaskCount} tareas vencidas`}>
                       {overdueTaskCount}
@@ -183,13 +195,13 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
       </div>
     </div>
     <nav className="mobile-tabbar" aria-label="Accesos rápidos">
-      {quick.map(([id, label, Icon]) => (
+      {tabbar.map(([id, label, Icon]) => (
         <button key={id} type="button" className={view === id ? "active" : ""} onClick={() => pick(id)} aria-current={view === id ? "page" : undefined}>
           <Icon size={21} /><span>{label === "Clientes y contactos" ? "Clientes" : label}</span>
           {badgeFor(id) > 0 && <b className="nav-badge" aria-label={`${badgeFor(id)} pendientes`}>{badgeFor(id)}</b>}
         </button>
       ))}
-      <button type="button" className={!quick.some(([id]) => id === view) ? "active" : ""} onClick={() => setSheet(true)} aria-haspopup="dialog">
+      <button type="button" className={!tabbar.some(([id]) => id === view) ? "active" : ""} onClick={() => setSheet(true)} aria-haspopup="dialog">
         <Menu size={21} /><span>Menú</span>
         {(badgeFor("inbox") > 0) && <b className="nav-badge" aria-label="Hay algo por revisar">{badgeFor("inbox")}</b>}
       </button>

@@ -760,7 +760,7 @@ export default function App() {
   }
 
   return (
-    <div className={`app-shell${navMini && !narrowScreen ? " nav-mini" : ""}`}>
+    <div className={`app-shell${navMini && !narrowScreen ? " nav-mini" : ""}${previewSite ? " densa" : ""}`}>
       <AppSidebar
         view={view}
         onSelect={(id) => { if (id === "quoter") setQuoterClient(null); setView(id); }}
@@ -796,6 +796,12 @@ export default function App() {
           profileLabel={data.profileName || session?.user?.email || ""}
           onLogConversation={LOG_CONVERSATION_VIEWS.includes(view) ? () => setShowForm(true) : null}
         />
+        {previewSite && onlineConfigured && typeof window !== "undefined" && window.__poliplastReadOnly && (
+          <div className="readonly-strip" role="status">
+            <span><b>Link de prueba · solo lectura.</b> Ves los datos reales y al día; lo que toques acá no se guarda en ningún lado.</span>
+            <button type="button" className="danger-link" onClick={() => { try { localStorage.removeItem(STORAGE_KEY); } catch { /* sin almacenamiento */ } window.location.reload(); }}>Descartar lo que toqué</button>
+          </div>
+        )}
         {isExpedition && <ExpeditionChip value={expeditionWho} onChange={setExpeditionWho} />}
         {isExpedition && !expeditionWho ? <ExpeditionGate onPick={setExpeditionWho} /> : (
         <ErrorBoundary key={view} view={view}>

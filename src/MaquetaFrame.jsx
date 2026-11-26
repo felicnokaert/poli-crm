@@ -14,13 +14,17 @@ export function MaquetaFrame({ src, title, children = null, theme = null }) {
   // La app de conteo hoy es solo clara: se le manda siempre claro (si no, el navegador pinta un fondo opaco).
   const frameRef = useRef(null);
   const [height, setHeight] = useState(null);
+  // Tapado hasta el primer aviso de la app de adentro (o 2,5 s): así no se ve un instante su pantalla de carga.
+  const [shown, setShown] = useState(false);
+  useEffect(() => { setShown(false); const timer = setTimeout(() => setShown(true), 2500); return () => clearTimeout(timer); }, [src]);
   const origin = typeof window !== "undefined" ? window.location.origin : "*";
 
   useEffect(() => {
     const onMessage = (event) => {
       if (event.origin !== origin || event.source !== frameRef.current?.contentWindow) return;
       const data = event.data || {};
-      if (HEIGHT_TYPES.has(data.tipo) && Number(data.alto) > 0) setHeight(Math.ceil(Number(data.alto)));
+      if (HEIGHT_TYPES.has(data.tipo) && Number(data.alto) > 0) { setHeight(Math.ceil(Number(data.alto))); setShown(true); }
+      if (data.tipo === "entregas:visible") setShown(true);
       if (data.tipo === "app:subir") window.scrollTo({ top: 0, behavior: "smooth" });
       if (typeof data.tipo === "string" && /:(listo|lista)$/.test(data.tipo)) frameRef.current?.contentWindow?.postMessage({ tipo: "crm:tema", tema: (theme || resolvedTheme()) }, origin);
     };
@@ -60,7 +64,7 @@ export function MaquetaFrame({ src, title, children = null, theme = null }) {
   const [path, hash = ""] = String(src).split("#");
   const withTema = `${path}${path.includes("?") ? "&" : "?"}tema=${(theme || resolvedTheme())}${hash ? `#${hash}` : ""}`;
   return (
-    <section className={`maqueta-frame${height != null ? " is-auto" : ""}`}>
+    <section className={`maqueta-frame${height != null ? " is-auto" : ""}${shown ? "" : " is-loading"}`}>
       {children}
       <iframe ref={frameRef} src={withTema} title={title} loading="eager" style={height != null ? { height } : undefined} onLoad={() => frameRef.current?.contentWindow?.postMessage({ tipo: "crm:tema", tema: (theme || resolvedTheme()) }, origin)} />
     </section>

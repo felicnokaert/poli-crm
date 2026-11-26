@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Copy, Search, Trash2 } from "lucide-react";
 import { currentListPrices } from "./assistant-prices.mjs";
+import { PriceAdmin } from "./PriceAdmin.jsx";
 import { loadDollar } from "./product-hub-data.js";
 import { MODES, ars, channelRefs, lineTotals, pickRow, quoteTotals, usd, whatsappText, wholesaleWarnings } from "./quote-model.mjs";
 import { STATUSES, linesFromItems, listQuotes, quoteNumber, quoteRow, saveQuote, setQuoteStatus } from "./quote-store.js";
@@ -11,7 +12,7 @@ import { STATUSES, linesFromItems, listQuotes, quoteNumber, quoteRow, saveQuote,
 const today = () => new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
 const plain = (value) => String(value || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-async function searchVariants(supabase, text) {
+export async function searchVariants(supabase, text) {
   const words = plain(text).split(/[^a-z0-9.-]+/).filter((word) => word.length > 1).slice(0, 3);
   if (!words.length) return [];
   let query = supabase.from("catalog_variants").select("id,sku,name,product_id,unit").eq("active", true);
@@ -44,7 +45,7 @@ async function loadLineData(supabase, variant, lists) {
   return { rows: entry?.rows || [], photo: photo.data?.[0]?.url || "", refs: channelRefs(variant.sku, { mlItems: ml.data || [], shopVariants: shop.data || [] }) };
 }
 
-export function QuoteBuilder({ supabase, userId = "", clients = [], initialClient = null, sellerName = "", onQuoted = null, onFollowUp = null, onCloseFollowUp = null }) {
+export function QuoteBuilder({ supabase, userId = "", clients = [], initialClient = null, sellerName = "", onQuoted = null, onFollowUp = null, onCloseFollowUp = null, isAdmin = false, who = "" }) {
   const [screen, setScreen] = useState("nueva");
   const [saved, setSaved] = useState(null); // { id, number, status }
   const [history, setHistory] = useState(null);
@@ -165,8 +166,10 @@ export function QuoteBuilder({ supabase, userId = "", clients = [], initialClien
     <div className="segmented quote-screens" role="tablist" aria-label="Cotizador">
       <button type="button" role="tab" aria-selected={screen === "nueva"} className={screen === "nueva" ? "selected" : ""} onClick={() => setScreen("nueva")}>{saved ? `Cotización ${saved.number}` : "Nueva cotización"}</button>
       <button type="button" role="tab" aria-selected={screen === "historial"} className={screen === "historial" ? "selected" : ""} onClick={() => { setScreen("historial"); loadHistory(); }}>Mis cotizaciones</button>
+      {isAdmin && <button type="button" role="tab" aria-selected={screen === "precios"} className={screen === "precios" ? "selected" : ""} onClick={() => setScreen("precios")}>Precios y condiciones</button>}
     </div>
   );
+  if (screen === "precios" && isAdmin) return <div className="quote-builder content-stack">{tabs}<PriceAdmin supabase={supabase} who={who} /></div>;
   if (screen === "historial") return (
     <div className="quote-builder content-stack">
       {tabs}

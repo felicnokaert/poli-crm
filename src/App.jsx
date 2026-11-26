@@ -1026,6 +1026,8 @@ export default function App() {
             initialClient={quoterClient}
             sellerName={data.profileName || ""}
             userId={session?.user?.id || ""}
+            isAdmin={isAdminUser}
+            who={String(session?.user?.email || "")}
             onFollowUp={({ number, client }) => setData((current) => ({ ...current, tasks: [...(current.tasks || []), { ...blankTask(), id: crypto.randomUUID(), company: client || "Sin empresa", clientId: (current.clients || []).find((item) => String(item.company || "").toLowerCase() === String(client || "").toLowerCase())?.id || "", title: `Seguimiento de cotización ${number}${client ? ` · ${client}` : ""}`, dueDate: businessDaysFromToday(2), priority: "Media", source: "quote-followup", quoteNumber: number, done: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }] }))}
             onCloseFollowUp={(number) => setData((current) => ({ ...current, tasks: (current.tasks || []).map((task) => (task.source === "quote-followup" && task.quoteNumber === number && !task.done ? { ...task, done: true, completedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : task)) }))}
             onQuoted={(clientId) => setData((current) => ({ ...current, clients: current.clients.map((client) => (client.id === clientId ? { ...client, lastQuotedAt: today(), updatedAt: new Date().toISOString() } : client)) }))}

@@ -117,7 +117,7 @@ import { accessAllows } from "./team-access.mjs";
 import { useMyAccess, useTeamStore } from "./team-store.js";
 import { TeamAccess } from "./TeamAccess.jsx";
 import { DemoModule } from "./DemoModules.jsx";
-import { MaquetaFrame } from "./MaquetaFrame.jsx";
+import { CONTEO_MODULES, ConteoMaqueta, MaquetaFrame } from "./MaquetaFrame.jsx";
 import { ExpeditionChip, ExpeditionGate, readExpeditionWho, saveExpeditionWho } from "./ExpeditionGate.jsx";
 import { AppPlanOverview, ModulePreview } from "./ModulePreview.jsx";
 import { isDemoMode, withDemoData } from "./demo-mode.mjs";
@@ -767,7 +767,8 @@ export default function App() {
         {isExpedition && <ExpeditionChip value={expeditionWho} onChange={setExpeditionWho} />}
         {isExpedition && !expeditionWho ? <ExpeditionGate onPick={setExpeditionWho} /> : (
         <ErrorBoundary key={view} view={view}>
-        {FUTURE_MODULES[view] && (demo ? <DemoModule key={view} id={view} access={previewAccess} /> : <ModulePreview id={view} />)}
+        {FUTURE_MODULES[view] && demo && CONTEO_MODULES[view] && <ConteoMaqueta key={view} module={view} access={previewAccess} who={isExpedition ? expeditionWho : null} />}
+        {FUTURE_MODULES[view] && !(demo && CONTEO_MODULES[view]) && (demo ? <DemoModule key={view} id={view} access={previewAccess} /> : <ModulePreview id={view} />)}
         {view === "team" && isAdminUser && <TeamAccess team={team} onChange={teamStore.save} rolesTable={teamStore.rolesTable} status={teamStore.status} groups={NAV_GROUPS} onViewAs={(person) => pickPreviewRole(`person:${person.email}`)} />}
         {view === "plan" && <AppPlanOverview groups={NAV_GROUPS} role={previewRole} onRole={pickPreviewRole} onResetDemo={demo ? () => { if (window.confirm("¿Volver a cargar los datos de prueba? Se pierde lo que tocaste en la prueba.")) { setData((current) => withDemoData(current, { force: true })); } } : null} />}
 

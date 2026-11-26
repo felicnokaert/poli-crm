@@ -465,6 +465,8 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
 
   // 26/11 (Felipe: «que busque y devuelva la lista, no un prompt»): la IA busca en la web desde el servidor y la tabla
   // se revisa con el importador de siempre (vista previa antes de cargar). Cuesta ~US$ 0,15-0,30 por búsqueda (Sonnet 5.5); hay tope diario.
+  // 26/11 (Felipe): la búsqueda con IA queda en pausa; cada uno usa el pedido en la IA que prefiera. Para prenderla: true.
+  const PROSPECT_AI_UI = false;
   const [aiSearching, setAiSearching] = useState(false);
   async function searchWithAi() {
     const family = research.family || planFamily;
@@ -728,9 +730,9 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         <div className="prospect-search-head">
           <div>
             <ol className="muted small">
-              <li>Elegí familia, zona y cantidad (hasta 10 por búsqueda).</li>
-              <li>Tocá «Buscar con IA ahora»: en menos de un minuto la IA busca en internet y te devuelve la lista con «Valor N/10», qué compraría y la fuente de cada dato.</li>
-              <li>Revisás la vista previa y cargás las que te sirvan: las de más valor suben solas en la Orden de llamada.</li>
+              <li>Elegí familia, zona y cantidad. Antes de buscar más, fijate si ya tenés pendientes en la Orden de llamada: primero lo que ya está.</li>
+              <li>«Preparar pedido para otra IA» arma el pedido (con las empresas que ya tenés excluidas): copialo en la IA que prefieras (Claude, ChatGPT, Gemini o Perplexity) con su modo de investigación.</li>
+              <li>Pegá acá la tabla que te devuelve y revisá la vista previa: si la IA puso «Valor N/10», las de más valor suben solas en la Orden de llamada.</li>
             </ol>
           </div>
         </div>
@@ -766,10 +768,10 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
           </label>
         </div>
         <div className="prospect-search-actions">
-          {session?.access_token && <button type="button" className="primary big" disabled={aiSearching} onClick={searchWithAi}><Search size={18} /> {aiSearching ? 'Buscando con IA…' : 'Buscar con IA ahora'}</button>}
-          {requests && <button type="button" className="secondary" onClick={requestFromClaude}>Pedir a Claude (sin costo, tarda más)</button>}
+          {PROSPECT_AI_UI && session?.access_token && <button type="button" className="primary big" disabled={aiSearching} onClick={searchWithAi}><Search size={18} /> {aiSearching ? 'Buscando con IA…' : 'Buscar con IA ahora'}</button>}
+          {requests && <button type="button" className={PROSPECT_AI_UI ? "secondary" : "primary big"} onClick={requestFromClaude}>Pedir a Claude (sin costo, tarda más)</button>}
           <button type="button" className="secondary" onClick={prepareResearch}>{requests ? 'Preparar pedido para otra IA' : <><Search size={18} /> Preparar investigación</>}</button>
-          <span className="muted small">«Buscar con IA ahora» devuelve hasta 10 empresas en menos de un minuto (≈ US$ 0,15 a 0,30 cada búsqueda, con valor del prospecto de 1 a 10). Se excluyen {exclusionNames(clients, prospects).length} empresas que ya tenés.</span>
+          <span className="muted small">Se excluyen {exclusionNames(clients, prospects).length} empresas que ya tenés.</span>
         </div>
 
         {researchJobs.length > 0 && (

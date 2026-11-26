@@ -356,6 +356,9 @@ textarea.control { min-height: 70px; resize: vertical; }
 .cal-d:nth-child(7n) { border-right: 0; }
 .cal-d .n { font-size: 12px; font-weight: 700; color: var(--graphite); }
 .cal-d.fuera { background: #fafafa; }
+/* Feriados (26/11), como el Calendario de Tareas del CRM */
+.cal-d.feriado { background: repeating-linear-gradient(135deg, transparent 0 6px, var(--line-soft) 6px 7px); }
+.cal-feriado { font-style: normal; font-size: 10.5px; font-weight: 700; color: var(--t-alerta); text-transform: uppercase; letter-spacing: .04em; }
 .cal-d.fuera .n { color: #b6b7ba; }
 .cal-d.hoy .n { background: var(--brand-red); color: #fff; border-radius: 99px; width: 22px; height: 22px; display: grid; place-items: center; }
 .cal-ev { display: block; font-size: 11px; font-weight: 650; padding: 2px 6px; border-radius: 6px; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -786,3 +789,5 @@ html.marco-poliplast, html.marco-poliplast body { background: transparent !impor
 html.marco-poliplast .layout { display: block; min-height: 0; }
 html.marco-poliplast .sidebar, html.marco-poliplast .bottom-nav, html.marco-poliplast .mobile-top, html.marco-poliplast .nav-guia { display: none !important; }
 html.marco-poliplast .main { max-width: none; width: 100%; margin: 0; padding: 0 0 24px; }
+.modo-prueba { margin-bottom: 12px; }
+.subir-par { display: inline-flex; gap: 4px; }

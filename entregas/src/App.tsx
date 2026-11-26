@@ -19,6 +19,7 @@ import { altoAutomaticoEnCrm } from './lib/altoCrm'
 import { avisarSinSesionAlCrm, avisarVisibleAlCrm, enMarcoPoliplast, escucharSesionDelCrm, isEmbeddedInApp, isEmbeddedInCrm } from './lib/embed'
 import { alCambiarOperador, depositoActual, operadorActual, tomarPersonaDeLaUrl } from './lib/operador'
 import { useRuta } from './lib/ruta'
+import { camaraPendiente } from './lib/camaraPendiente'
 import type { Usuario } from './lib/types'
 
 type Sesion = { estado: 'cargando' } | { estado: 'fuera' } | { estado: 'sin_acceso'; email: string } | { estado: 'dentro'; yo: Usuario }
@@ -65,6 +66,9 @@ export default function App() {
       tomarPersonaDeLaUrl()
       if (!window.location.hash || window.location.hash === '#/') window.history.replaceState(null, '', '#/expedicion')
     }
+    // Si la página se recargó con la cámara abierta (Android), volver al pedido donde se estaba sacando la foto.
+    const pendiente = camaraPendiente()
+    if (pendiente && window.location.hash !== `#/p/${pendiente.codigo}`) window.location.hash = `#/p/${pendiente.codigo}`
     // Pantalla de Poliplast App (marco=poliplast): sin barra propia, alto automático y tema del padre (mismo origen).
     let dejarAltoMarco = () => {}
     if (enMarcoPoliplast()) {
@@ -86,7 +90,7 @@ export default function App() {
   }, [sesion, operador])
 
   // Dentro del CRM, mientras arranca se ve la P del CRM (encima): acá no se muestra nada. Suelta o en la app de conteo, la P propia.
-  if (sesion.estado === 'cargando') return isEmbeddedInCrm()
+  if (sesion.estado === 'cargando') return isEmbeddedInCrm() || enMarcoPoliplast()
     ? <div className="centrado" />
     : <div className="centrado cargando-p" role="status" aria-label="Cargando"><span className="anillo" /><img src={`${import.meta.env.BASE_URL}poliplast-isotipo-color.png`} alt="" /></div>
   if (sesion.estado === 'sin_acceso') return <Login sinAcceso={sesion.email || 'actual'} onSalir={() => void api.cerrarSesion()} />

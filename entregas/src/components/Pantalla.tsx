@@ -3,6 +3,7 @@
 // (agregá ?todos=1 para ver todos).
 // PARCHE CONTEO (25/11, Felipe): más chico y con ETIQUETAS de Mercado Libre (pendientes por hora límite y escaneadas hoy), todo cada 45 s.
 import { Maximize2, Minimize2, ArrowLeft, Moon, Sun } from 'lucide-react'
+import './pantalla.css'
 import { useEffect, useMemo, useState } from 'react'
 import { useDatos } from '../lib/datos'
 import { depositoActual } from '../lib/operador'

@@ -1,5 +1,5 @@
 import { BookOpen, CalendarDays, ClipboardList, Home, LogOut, Plus, Settings, UserRound, Warehouse } from 'lucide-react'
-import { MODO_CONTEO } from '../lib/cliente'
+import { MODO_CONTEO, SOLO_LECTURA } from '../lib/cliente'
 
 /** Guía de uso (21/11): la del CRM para comerciales; en la app de conteo, la de expedición. */
 export const GUIA_URL = MODO_CONTEO ? 'https://poliplast-conteo-stock.netlify.app/guia/' : 'https://poli-crm.vercel.app/guia/#entregas'
@@ -80,7 +80,7 @@ export function Layout({ ruta, children }: { ruta: Ruta; children: ReactNode }) 
           : <button className="link-btn" onClick={() => void api.cerrarSesion()} aria-label="Cerrar sesión"><LogOut size={18} /></button>}
       </header>
 
-      <main className="main">{children}</main>
+      <main className="main">{SOLO_LECTURA && <div className="aviso warn modo-prueba" role="status">Modo prueba: ves los datos reales, pero nada de lo que toques se guarda.</div>}{children}</main>
 
       <nav className="bottom-nav" aria-label="Secciones">
         <a href="#/" aria-current={actual('inicio')}><Home size={20} /> Inicio</a>

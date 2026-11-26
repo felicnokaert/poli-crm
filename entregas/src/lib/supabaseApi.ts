@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { SinAcceso, type Api } from './api'
 import { sha256Hex } from './hash'
+import { comprimirFoto } from './comprimirFoto'
 import { avisarSinSesionAlCrm, isEmbeddedInCrm } from './embed'
 import { headerDeposito, headerOperador } from './operador'
 import { CONFIG_DEFAULT, type Archivo, type Config, type Evento, type Expreso, type Pedido, type Rol, type RolAsignado, type Usuario } from './types'
@@ -249,7 +250,7 @@ async function usuarioActualLento(): Promise<Usuario | null> {
     },
 
     async subirArchivo(pedidoId, tipo, archivo) {
-      await subir(pedidoId, tipo, archivo)
+      await subir(pedidoId, tipo, await comprimirFoto(archivo))
     },
 
     async urlArchivo(archivo) {

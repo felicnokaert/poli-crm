@@ -122,7 +122,7 @@ export function ConteoMaqueta({ module, access = null, who = null, base = "/cont
 const ENTREGAS_HASH = { Pedidos: "#/pedidos", "Expedición hoy": "#/expedicion", Calendario: "#/calendario", "Tablero del depósito": "#/pantalla" };
 export function EntregasEmbed({ base, access = null, who = null }) {
   const [subs, sub, setSub] = useSub("entregas", access);
-  const params = new URLSearchParams({ embed: "app", marco: "poliplast", ...(who ? { persona: who.who, deposito: who.deposit } : {}) });
+  const params = new URLSearchParams({ embed: "app", marco: "poliplast", ...(globalThis.window?.__poliplastReadOnly ? { "solo-lectura": "1" } : {}), ...(who ? { persona: who.who, deposito: who.deposit } : {}) });
   return (
     <MaquetaFrame src={`${base}?${params}${ENTREGAS_HASH[sub] || ""}`} title="Entregas">
       <SubTabs subs={subs} value={sub} onChange={setSub} label="Submódulos de Entregas" />

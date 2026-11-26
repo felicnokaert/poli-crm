@@ -2,7 +2,7 @@
 // No editar a mano: el plan se revisa en el CRM y Trello sigue siendo la fuente.
 export const PLAN_START = '2026-10-16';
 export const PLAN_END = '2026-12-31';
-export const PLAN_HOLIDAYS = ["2026-11-23","2026-12-08","2026-12-25"];
+export const PLAN_HOLIDAYS = ["2026-11-09","2026-11-23","2026-12-08","2026-12-25"];
 export const PLAN_LIGHT_DAYS = ["2026-12-07","2026-12-24","2026-12-31"];
 export const TRELLO_PLAN = [
  {

@@ -7,9 +7,8 @@ import { accessAllows } from "./team-access.mjs";
 export function MaquetaFrame({ src, title, children = null }) {
   return (
     <section className="maqueta-frame">
-      <p className="muted small">Versión de prueba · {title} con su diseño de siempre y datos de ejemplo.</p>
       {children}
-      <iframe src={src} title={title} loading="eager" />
+      <iframe src={src} title={title} loading="eager" allowtransparency="true" />
     </section>
   );
 }

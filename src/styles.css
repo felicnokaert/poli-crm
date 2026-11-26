@@ -1694,8 +1694,8 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .team-access-module > label, .team-access-children label { display: flex; gap: 8px; align-items: center; padding: 3px 0; }
 .team-access-children { padding-left: 24px; font-size: 0.85rem; }
 .maqueta-frame { display: grid; gap: 6px; }
-.maqueta-frame iframe { width: 100%; height: calc(100vh - 190px); min-height: 560px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-white); }
-@media (max-width: 760px) { .maqueta-frame iframe { height: calc(100vh - 230px); border-radius: 12px; } }
+.maqueta-frame iframe { width: 100%; height: calc(100vh - 170px); min-height: 560px; border: 0; border-radius: 0; background: transparent; display: block; animation: quote-in 220ms ease-out; }
+@media (max-width: 760px) { .maqueta-frame iframe { height: calc(100vh - 200px); } }
 .expedition-gate { max-width: 560px; margin: 0 auto; display: grid; gap: 12px; }
 .expedition-gate h2 { margin: 6px 0 0; }
 .expedition-options { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -1703,3 +1703,34 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .expedition-go { justify-content: center; padding: 14px; font-size: 1.05rem; }
 .expedition-chip { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; padding: 8px 12px; border-radius: 12px; background: var(--color-border-light); }
 .expedition-chip .secondary { padding: 6px 12px; }
+/* Poliplast App: cotizador propio. */
+.quote-head { display: grid; gap: 14px; }
+.quote-fields { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); align-items: end; }
+.quote-fields label { display: grid; gap: 6px; font-size: 0.85rem; font-weight: 600; }
+.quote-fields .segmented { width: fit-content; }
+.quote-search { display: flex; align-items: center; gap: 10px; border: 1px solid var(--color-border); border-radius: 14px; padding: 4px 14px; background: var(--color-white); }
+.quote-search input { border: 0; flex: 1; padding: 10px 0; background: transparent; outline: none; font-size: 1rem; }
+.quote-results { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 320px; overflow: auto; animation: quote-in 180ms ease-out; }
+.quote-results button { width: 100%; text-align: left; display: grid; gap: 2px; padding: 10px 12px; border: 0; border-radius: 12px; background: transparent; cursor: pointer; }
+.quote-results button:hover, .quote-results button:focus-visible { background: var(--color-border-light); }
+.quote-lines { display: grid; gap: 4px; }
+.quote-line { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--color-border-light); animation: quote-in 220ms ease-out; }
+.quote-line:last-child { border-bottom: 0; }
+.quote-line img, .quote-photo-empty { width: 56px; height: 56px; border-radius: 12px; object-fit: cover; background: var(--color-border-light); }
+.quote-line-main { display: grid; gap: 3px; min-width: 0; }
+.quote-refs { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.quote-refs a { color: inherit; text-decoration: underline; }
+.quote-line-controls { display: flex; align-items: center; gap: 8px; }
+.quote-line-controls input { width: 76px; }
+.quote-line-price { display: grid; text-align: right; min-width: 120px; }
+.quote-line-price span { font-size: 0.8rem; color: var(--color-text-gray); }
+.quote-warn { color: var(--brand-red); }
+.quote-totals .is-strong strong { color: var(--brand-red); }
+.quote-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+@keyframes quote-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .quote-results, .quote-line { animation: none; } }
+@media (max-width: 760px) {
+  .quote-line { grid-template-columns: 48px minmax(0, 1fr); }
+  .quote-line img, .quote-photo-empty { width: 48px; height: 48px; }
+  .quote-line-controls { grid-column: 1 / -1; justify-content: space-between; }
+}

@@ -117,6 +117,7 @@ import { accessAllows } from "./team-access.mjs";
 import { useMyAccess, useTeamStore } from "./team-store.js";
 import { TeamAccess } from "./TeamAccess.jsx";
 import { DemoModule } from "./DemoModules.jsx";
+import { QuoteBuilder } from "./QuoteBuilder.jsx";
 import { CONTEO_MODULES, ConteoMaqueta, MaquetaFrame } from "./MaquetaFrame.jsx";
 import { ExpeditionChip, ExpeditionGate, readExpeditionWho, saveExpeditionWho } from "./ExpeditionGate.jsx";
 import { AppPlanOverview, ModulePreview } from "./ModulePreview.jsx";
@@ -976,7 +977,16 @@ export default function App() {
             />
           </Suspense>
         )}
-        {view === "quoter" && (
+        {view === "quoter" && previewSite && (
+          <QuoteBuilder
+            supabase={onlineConfigured && session ? supabase : null}
+            clients={data.clients}
+            initialClient={quoterClient}
+            sellerName={data.profileName || ""}
+            onQuoted={(clientId) => setData((current) => ({ ...current, clients: current.clients.map((client) => (client.id === clientId ? { ...client, lastQuotedAt: today(), updatedAt: new Date().toISOString() } : client)) }))}
+          />
+        )}
+        {view === "quoter" && !previewSite && (
           <Suspense fallback={<Splash text="Cargando cotizador…" />}>
             <CotizadorFrame session={session} client={quoterClient} />
           </Suspense>

@@ -31,7 +31,7 @@ function displayedChannel(readiness, key) {
   };
 }
 
-export function AppTopbar({ title, myChannels, primaryChannel, readiness, syncStatus, onRetrySave, theme, onThemeChange, onOpenPalette, onOpenShortcuts, onReport = null, profileLabel, onLogConversation }) {
+export function AppTopbar({ title, myChannels, primaryChannel, readiness, syncStatus, onRetrySave, theme, onThemeChange, onOpenPalette, onOpenShortcuts, onReport = null, notifications = null, profileLabel, onLogConversation }) {
   return (
     <header className="topbar">
       <div>
@@ -90,6 +90,7 @@ export function AppTopbar({ title, myChannels, primaryChannel, readiness, syncSt
         >
           <Search size={18} />
         </button>
+        {notifications}
         {onReport && (
           <button type="button" className="icon-button report-button" aria-label="Algo no anda: avisar" title="Algo no anda: avisar" onClick={onReport}>
             <MessageSquareWarning size={18} />

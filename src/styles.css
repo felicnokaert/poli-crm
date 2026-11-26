@@ -1752,3 +1752,72 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .app-reports-list p { margin: 0; white-space: pre-wrap; }
 .app-reports-head { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; }
 .app-reports-list .secondary { justify-self: start; padding: 6px 12px; }
+/* Poliplast App (26/11): menú minimizable y animado. */
+@media (min-width: 761px) {
+  .app-shell { transition: grid-template-columns 260ms cubic-bezier(.2, .8, .2, 1); }
+  .app-shell.nav-mini { grid-template-columns: 76px 1fr; }
+  .brand { position: relative; }
+  .brand-iso { display: none; width: 34px; height: 34px; object-fit: contain; }
+  .nav-mini-toggle { position: absolute; right: 0; top: 4px; border: 0; background: transparent; color: #9a9a9f; padding: 6px; border-radius: 10px; cursor: pointer; transition: background .2s ease, color .2s ease, transform .26s ease; }
+  .nav-mini-toggle:hover, .nav-mini-toggle:focus-visible { background: #ffffff14; color: #fff; }
+  .sidebar .nav-label { transition: opacity 180ms ease, transform 220ms ease; white-space: nowrap; }
+  .app-shell.nav-mini .sidebar { padding: 14px 10px; overflow: hidden; }
+  .app-shell.nav-mini .brand { height: auto; padding: 6px 0 14px; flex-direction: column; gap: 10px; }
+  .app-shell.nav-mini .brand-logo { display: none; }
+  .app-shell.nav-mini .brand-iso { display: block; animation: nav-pop 260ms ease-out; }
+  .app-shell.nav-mini .nav-mini-toggle { position: static; }
+  .app-shell.nav-mini .nav-group-title { display: block; height: 1px !important; min-height: 0 !important; line-height: 0; padding: 0 !important; margin: 10px 14px; background: #ffffff1f; border-radius: 1px; font-size: 0; overflow: hidden; pointer-events: none; }
+  .app-shell.nav-mini .nav-group-title > * { display: none; }
+  .app-shell.nav-mini .sidebar nav button { justify-content: center; padding: 10px 0; position: relative; }
+  .app-shell.nav-mini .sidebar nav button:hover { transform: scale(1.06); }
+  .app-shell.nav-mini .nav-label { opacity: 0; width: 0; overflow: hidden; transform: translateX(-6px); position: absolute; }
+  .app-shell.nav-mini .sidebar nav .nav-badge { position: absolute; top: 3px; right: 10px; min-width: 16px; height: 16px; font-size: 9px; padding: 0 4px; }
+  .app-shell.nav-mini .sidebar-note { display: none; }
+  .nav-tip { position: fixed; transform: translateY(-50%); z-index: 60; background: #111; color: #fff; font-size: 12.5px; font-weight: 600; padding: 6px 10px; border-radius: 8px; box-shadow: 0 8px 24px #0005; pointer-events: none; white-space: nowrap; animation: nav-tip-in 140ms ease-out; }
+}
+@keyframes nav-pop { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
+@keyframes nav-tip-in { from { opacity: 0; transform: translate(-4px, -50%); } to { opacity: 1; transform: translateY(-50%); } }
+@media (prefers-reduced-motion: reduce) { .app-shell, .nav-label, .brand-iso, .nav-tip { transition: none !important; animation: none !important; } }
+/* Poliplast App (26/11): campanita de notificaciones. */
+.notif { position: relative; }
+.notif-button { position: relative; }
+.notif-count { position: absolute; top: -4px; right: -4px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--brand-red); color: #fff; font-size: 10px; font-weight: 800; display: grid; place-items: center; animation: nav-pop 220ms ease-out; }
+.notif-panel { position: absolute; right: 0; top: calc(100% + 10px); width: min(380px, calc(100vw - 24px)); max-height: min(70vh, 560px); overflow: auto; background: var(--color-white); border: 1px solid var(--color-border); border-radius: 18px; box-shadow: 0 24px 60px #0f172a2e; z-index: 50; padding: 12px; display: grid; gap: 10px; transform-origin: top right; animation: notif-in 180ms cubic-bezier(.2, .8, .2, 1); }
+.notif-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.notif-head strong { font: 800 16px 'Manrope'; }
+.notif-readall { display: inline-flex; align-items: center; gap: 5px; border: 0; background: transparent; color: var(--brand-red); font-weight: 700; font-size: 12.5px; cursor: pointer; padding: 4px 6px; border-radius: 8px; }
+.notif-readall:disabled { color: var(--color-text-gray); cursor: default; }
+.notif-tabs { width: 100%; }
+.notif-tabs button { flex: 1; }
+.notif-empty { margin: 14px 0; text-align: center; color: var(--color-text-gray); }
+.notif-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.notif-list button { width: 100%; display: flex; gap: 10px; align-items: flex-start; text-align: left; border: 0; background: transparent; padding: 9px 8px; border-radius: 12px; cursor: pointer; transition: background .15s ease; }
+.notif-list button:hover, .notif-list button:focus-visible { background: var(--color-border-light); }
+.notif-dot { flex: 0 0 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: var(--brand-red); }
+.notif-list li.is-read .notif-dot { background: transparent; box-shadow: inset 0 0 0 1px var(--color-border); }
+.notif-list li.is-read b { font-weight: 600; color: var(--color-text-gray); }
+.notif-text { display: grid; gap: 2px; min-width: 0; }
+.notif-text b { font-size: 13.5px; line-height: 1.3; }
+.notif-text small { color: var(--color-text-gray); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@keyframes notif-in { from { opacity: 0; transform: translateY(-6px) scale(.97); } to { opacity: 1; transform: none; } }
+@media (max-width: 760px) { .notif-panel { position: fixed; left: 12px; right: 12px; top: 64px; width: auto; } }
+@media (prefers-reduced-motion: reduce) { .notif-panel, .notif-count { animation: none; } }
+/* Poliplast App (26/11): efectos suaves. Entrada de cada pantalla, tarjetas escalonadas, levantado al pasar el mouse. */
+.view-enter { animation: view-in 320ms cubic-bezier(.2, .8, .2, 1) both; }
+.view-enter .content-stack > *, .view-enter > .content-stack > * { animation: view-rise 420ms cubic-bezier(.2, .8, .2, 1) both; }
+.view-enter .content-stack > *:nth-child(2) { animation-delay: 50ms; }
+.view-enter .content-stack > *:nth-child(3) { animation-delay: 100ms; }
+.view-enter .content-stack > *:nth-child(4) { animation-delay: 150ms; }
+.view-enter .content-stack > *:nth-child(5) { animation-delay: 200ms; }
+.view-enter .content-stack > *:nth-child(n+6) { animation-delay: 240ms; }
+.view-enter .metric-grid > .metric-card:nth-child(2) { animation-delay: 60ms; }
+.view-enter .metric-grid > .metric-card:nth-child(3) { animation-delay: 120ms; }
+.view-enter .metric-grid > .metric-card:nth-child(4) { animation-delay: 180ms; }
+@media (hover: hover) {
+  .view-enter .metric-card:hover { transform: translateY(-3px); box-shadow: 0 14px 34px #0f172a1f; }
+  .view-enter .panel { transition: box-shadow .2s ease; }
+  .view-enter .panel:hover { box-shadow: 0 12px 34px #0f172a14; }
+}
+@keyframes view-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes view-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .view-enter, .view-enter * { animation: none !important; } }

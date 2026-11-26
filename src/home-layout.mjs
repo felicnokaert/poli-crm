@@ -19,8 +19,12 @@ export const HOME_BLOCKS = [
 
 export const HOME_LAYOUT_KEY = 'poliplast-app-home-layout';
 
+// 26/11 (Felipe: «el Inicio termina siendo extenso»): sin orden guardado, arranca corto. Lo que ya avisa la campanita
+// (radares, lo automático, actualizaciones, resumen) queda oculto y se prende desde «Ordenar mi Inicio».
+export const DEFAULT_HIDDEN = ['alertas', 'automatico', 'conexiones', 'semana', 'atrasados'];
+
 export function normalizeLayout(raw) {
-  const value = raw && typeof raw === 'object' ? raw : {};
+  const value = raw && typeof raw === 'object' ? raw : { hidden: DEFAULT_HIDDEN };
   const known = new Set(HOME_BLOCKS.map((block) => block.id));
   const order = (Array.isArray(value.order) ? value.order : []).filter((id) => known.has(id));
   for (const block of HOME_BLOCKS) if (!order.includes(block.id)) order.push(block.id);
@@ -36,8 +40,10 @@ export function availableBlocks(layout, allows = () => true, isAdmin = false) {
     .filter((block) => block && (!block.admin || isAdmin) && (!block.module || allows(block.module)));
 }
 
-export function visibleBlockIds(layout, allows, isAdmin) {
+export function visibleBlockIds(layout, allows = () => true, isAdmin) {
   const { hidden } = normalizeLayout(layout);
+  // Sin orden guardado: quien vende no arranca con la tarjeta de Logística (la tiene en el menú); depósito y expedición sí.
+  if (!layout && allows('sales')) hidden.push('logistica');
   return availableBlocks(layout, allows, isAdmin).map((block) => block.id).filter((id) => !hidden.includes(id));
 }
 

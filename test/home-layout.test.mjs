@@ -1,10 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { HOME_BLOCKS, moveBlock, normalizeLayout, toggleBlock, visibleBlockIds } from '../src/home-layout.mjs';
+import { DEFAULT_HIDDEN, HOME_BLOCKS, moveBlock, normalizeLayout, toggleBlock, visibleBlockIds } from '../src/home-layout.mjs';
 
-test('Inicio: sin orden guardado muestra todas las tarjetas que permite cada módulo', () => {
+test('Inicio: sin orden guardado arranca corto (lo que avisa la campanita queda oculto)', () => {
   const all = visibleBlockIds(null, () => true, true);
-  assert.deepEqual(all, HOME_BLOCKS.map((block) => block.id));
+  assert.deepEqual(all, HOME_BLOCKS.map((block) => block.id).filter((id) => !DEFAULT_HIDDEN.includes(id) && id !== 'logistica'));
+  assert.ok(visibleBlockIds(null, (module) => module === 'entregas', false).includes('logistica'));
+  assert.ok(all.includes('plan') && all.includes('metricas') && all.includes('pausa'));
   const noAdmin = visibleBlockIds(null, () => true, false);
   assert.ok(!noAdmin.includes('pausa') && !noAdmin.includes('atender'));
 });

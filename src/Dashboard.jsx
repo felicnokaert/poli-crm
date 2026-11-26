@@ -779,7 +779,7 @@ function LogisticsCard({ onNavigate, allows }) {
       <p className="muted small">Pedidos para despachar, guías y remitos firmados: todo en Entregas.</p>
       {soon.length > 0 && (
         <ul className="muted small">
-          {soon.map(([module, label]) => <li key={module}><button type="button" className="danger-link" onClick={() => onNavigate(module)}>{label}</button> · próximamente</li>)}
+          {soon.map(([module, label]) => <li key={module}><button type="button" className="danger-link" onClick={() => onNavigate(module)}>{label}</button></li>)}
         </ul>
       )}
     </section>

@@ -328,6 +328,12 @@
 :root[data-theme="dark"] .quote-results button:focus-visible { background: #26262a; }
 :root[data-theme="dark"] .quote-line img { background: #26262a; }
 :root[data-theme="dark"] .quote-photo-empty { background: #26262a; }
+:root[data-theme="dark"] .nav-mini-toggle:hover { background: #1c1c1f; }
+:root[data-theme="dark"] .nav-mini-toggle:focus-visible { background: #1c1c1f; }
+:root[data-theme="dark"] .app-shell.nav-mini .nav-group-title { background: #1c1c1f; }
+:root[data-theme="dark"] .notif-panel { background: #1c1c1f; }
+:root[data-theme="dark"] .notif-list button:hover { background: #26262a; }
+:root[data-theme="dark"] .notif-list button:focus-visible { background: #26262a; }
 :root[data-theme="dark"] :root { color: #e7e7e9; }
 :root[data-theme="dark"] .link-button { color: #b4b5b9; }
 :root[data-theme="dark"] .link-button:hover { color: #b4b5b9; }
@@ -774,6 +780,12 @@
   :root:not([data-theme="light"]) .quote-results button:focus-visible { background: #26262a; }
   :root:not([data-theme="light"]) .quote-line img { background: #26262a; }
   :root:not([data-theme="light"]) .quote-photo-empty { background: #26262a; }
+  :root:not([data-theme="light"]) .nav-mini-toggle:hover { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .nav-mini-toggle:focus-visible { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .app-shell.nav-mini .nav-group-title { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .notif-panel { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .notif-list button:hover { background: #26262a; }
+  :root:not([data-theme="light"]) .notif-list button:focus-visible { background: #26262a; }
   :root:not([data-theme="light"]) :root { color: #e7e7e9; }
   :root:not([data-theme="light"]) .link-button { color: #b4b5b9; }
   :root:not([data-theme="light"]) .link-button:hover { color: #b4b5b9; }

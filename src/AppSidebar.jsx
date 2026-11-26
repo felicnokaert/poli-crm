@@ -1,5 +1,6 @@
-import { Boxes, Building2, Calculator, ChevronRight, Menu, X, ClipboardList, Database, FileCheck2, GraduationCap, Inbox, LayoutDashboard, ListChecks, MapPin, MessageCircle, ReceiptText, Search, ShoppingBag, Store, Truck, UserCog, Tags, PackageSearch, FlaskConical, Receipt, FileText, ShoppingCart, Map as MapIcon, Users, MessageSquareWarning } from "lucide-react";
+import { Boxes, Building2, Calculator, ChevronRight, Menu, X, ClipboardList, Database, FileCheck2, GraduationCap, Inbox, LayoutDashboard, ListChecks, MapPin, MessageCircle, ReceiptText, Search, ShoppingBag, Store, Truck, UserCog, Tags, PackageSearch, FlaskConical, Receipt, FileText, ShoppingCart, Map as MapIcon, Users, MessageSquareWarning, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { onlineConfigured } from "./online";
 import { filterNav } from "./module-access.mjs";
 import { ROLES } from "./poliplast-app-plan.mjs";
@@ -57,9 +58,12 @@ export const NAV_ITEMS = NAV_GROUPS.flatMap(([, items]) => items);
 // Atajos de la barra inferior del celular (con nombre, no solo ícono). Lo demás está en "Menú".
 const QUICK_IDS = ["dashboard", "tasks", "sales", "clients"];
 
-export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNavGroups, narrowScreen, overdueTaskCount, inboxSignalCount, email = "", denied = null, previewRole = "admin", previewAccess = null, previewName = "", onPreviewRole = null }) {
+export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNavGroups, narrowScreen, overdueTaskCount, inboxSignalCount, email = "", denied = null, previewRole = "admin", previewAccess = null, previewName = "", onPreviewRole = null, mini = false, onToggleMini = null }) {
   const groups = navForAccess(filterNav(NAV_GROUPS, email, denied), previewAccess || { role: previewRole });
   const [sheet, setSheet] = useState(false);
+  // Menú minimizado: el nombre aparece al pasar el mouse (cartelito fijo, no lo corta el desplazamiento del menú).
+  const [tip, setTip] = useState(null);
+  const showTip = (event, label) => { if (!mini) return; const rect = event.currentTarget.getBoundingClientRect(); setTip({ label, top: rect.top + rect.height / 2, left: rect.right + 10 }); };
   const allowed = groups.flatMap(([, items]) => items);
   const quick = QUICK_IDS.map((id) => allowed.find(([itemId]) => itemId === id)).filter(Boolean);
   const current = allowed.find(([id]) => id === view)?.[1] || "Menú";
@@ -85,6 +89,12 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
         src="/poliplast-logo.png"
         alt="Grupo Poliplast"
       />
+      <img className="brand-iso" src="/poliplast-isotipo-blanco.png" alt="" aria-hidden="true" />
+      {onToggleMini && (
+        <button type="button" className="nav-mini-toggle" onClick={onToggleMini} aria-pressed={mini} aria-label={mini ? "Abrir el menú" : "Minimizar el menú"} title={mini ? "Abrir el menú" : "Minimizar el menú"}>
+          {mini ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+        </button>
+      )}
       <button type="button" className="mobile-menu-button" onClick={() => setSheet(true)} aria-haspopup="dialog" aria-expanded={sheet}>
         <Menu size={20} /> <span>{current}</span>
       </button>
@@ -92,7 +102,8 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
     <nav>
       {groups.map(([group, items]) => {
         // En el celular los títulos de sección no se muestran, así que nunca se colapsa.
-        const collapsed = collapsedNavGroups.includes(group) && !narrowScreen;
+        // Minimizado: se ven todos los íconos (sin títulos de grupo, con una línea entre grupos).
+        const collapsed = collapsedNavGroups.includes(group) && !narrowScreen && !mini;
         return (
           <div className={`nav-group ${collapsed ? "collapsed" : ""}`} key={group}>
             <button
@@ -116,8 +127,13 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
                   key={id}
                   className={view === id ? "active" : ""}
                   onClick={() => onSelect(id)}
+                  aria-label={mini ? label : undefined}
+                  onMouseEnter={(event) => showTip(event, label)}
+                  onMouseLeave={() => setTip(null)}
+                  onFocus={(event) => showTip(event, label)}
+                  onBlur={() => setTip(null)}
                 >
-                  <Icon size={19} /> {label}
+                  <Icon size={19} /> <span className="nav-label">{label}</span>
                   {id === "tasks" && overdueTaskCount > 0 && (
                     <span className="nav-badge" aria-label={`${overdueTaskCount} tareas vencidas`}>
                       {overdueTaskCount}
@@ -134,6 +150,7 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
         );
       })}
     </nav>
+    {mini && tip && createPortal(<div className="nav-tip" role="tooltip" style={{ top: tip.top, left: tip.left }}>{tip.label}</div>, document.body)}
     <div className="sidebar-note">
       {/* Poliplast App (prueba): ver el menú como lo vería cada rol. Solo cambia lo que se muestra, no los permisos. */}
       {onPreviewRole && (!onlineConfigured || isChannelAdmin(email)) && (

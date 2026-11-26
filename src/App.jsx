@@ -119,6 +119,10 @@ import { TeamAccess } from "./TeamAccess.jsx";
 import { DemoModule } from "./DemoModules.jsx";
 import { QuoteBuilder } from "./QuoteBuilder.jsx";
 import { AppReports, ReportProblem } from "./ReportProblem.jsx";
+import { NotificationBell } from "./NotificationBell.jsx";
+import { buildNotifications } from "./notifications.mjs";
+import { useOpsAlerts } from "./hooks/useOpsAlerts.js";
+import { adminFetch } from "./admin-api.mjs";
 import { CONTEO_MODULES, ConteoMaqueta, EntregasEmbed } from "./MaquetaFrame.jsx";
 import { ExpeditionChip, ExpeditionGate, readExpeditionWho, saveExpeditionWho } from "./ExpeditionGate.jsx";
 import { AppPlanOverview, ModulePreview } from "./ModulePreview.jsx";
@@ -254,6 +258,19 @@ export default function App() {
   const isExpedition = previewAccess.role === "expedicion" || signedEmail.toLowerCase() === "expedicion@grupopoliplast.com.ar";
   const [expeditionWho, setExpeditionWhoState] = useState(readExpeditionWho);
   const setExpeditionWho = (value) => { setExpeditionWhoState(value); saveExpeditionWho(value); };
+  // Campanita (26/11): tareas vencidas o de hoy, alertas abiertas y, para administradores, avisos del equipo.
+  const opsAlerts = useOpsAlerts(previewSite && onlineConfigured && session ? supabase : null);
+  const [teamReports, setTeamReports] = useState([]);
+  useEffect(() => {
+    if (!previewSite || !onlineConfigured || !session || !isAdminUser) return undefined;
+    let alive = true;
+    const load = () => adminFetch({ action: "app-report", op: "list" }).then((response) => response.json()).then((body) => { if (alive) setTeamReports(body.items || []); }).catch(() => {});
+    load();
+    const timer = setInterval(load, 5 * 60000);
+    return () => { alive = false; clearInterval(timer); };
+  }, [previewSite, session, isAdminUser]);
+  const notificationItems = useMemo(() => buildNotifications({ tasks: data.tasks || [], alerts: opsAlerts || [], reports: teamReports, today: today(), allows: (module) => accessAllows(previewAccess, module) }), [data.tasks, opsAlerts, teamReports, previewAccess]);
+  const markNotificationsRead = useCallback((ids) => setData((current) => ({ ...current, notificationsRead: [...new Set([...(current.notificationsRead || []), ...ids])].slice(-600) })), []);
   const setHomeLayout = useCallback((layout) => setData((current) => ({ ...current, homeLayout: layout })), []);
   const [mapTab, setMapTab] = useState("aplicadores");
   // Empresa con la que se abre el cotizador (desde "Cotizar" en la ficha); null = cotización libre.
@@ -263,6 +280,9 @@ export default function App() {
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  // Menú minimizable (Felipe 26/11): solo íconos, con el nombre al pasar el mouse. Se recuerda en este equipo.
+  const [navMini, setNavMini] = useState(() => { try { return localStorage.getItem("poliplast-app-nav-mini") === "1"; } catch { return false; } });
+  const toggleNavMini = () => setNavMini((current) => { const next = !current; try { localStorage.setItem("poliplast-app-nav-mini", next ? "1" : "0"); } catch { /* sin almacenamiento */ } return next; });
   const [theme, setTheme] = useState(readTheme);
   const [clientsTab, setClientsTab] = useState("empresas");
   const [showTaskForm, setShowTaskForm] = useState(false);
@@ -739,7 +759,7 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${navMini && !narrowScreen ? " nav-mini" : ""}`}>
       <AppSidebar
         view={view}
         onSelect={(id) => { if (id === "quoter") setQuoterClient(null); setView(id); }}
@@ -754,6 +774,8 @@ export default function App() {
         previewAccess={previewAccess}
         previewName={previewAccess.name || ""}
         onPreviewRole={pickPreviewRole}
+        mini={navMini && !narrowScreen}
+        onToggleMini={narrowScreen ? null : toggleNavMini}
       />
 
       <main>
@@ -769,12 +791,14 @@ export default function App() {
           onOpenPalette={() => setShowPalette(true)}
           onOpenShortcuts={() => setShowShortcutsHelp(true)}
           onReport={previewSite ? () => setShowReport(true) : null}
+          notifications={previewSite ? <NotificationBell items={notificationItems} read={data.notificationsRead || EMPTY_ARRAY} onRead={markNotificationsRead} onNavigate={(item) => { if (item.taskId) setSelectedTaskId(item.taskId); else setView(item.view); }} /> : null}
           profileLabel={data.profileName || session?.user?.email || ""}
           onLogConversation={LOG_CONVERSATION_VIEWS.includes(view) ? () => setShowForm(true) : null}
         />
         {isExpedition && <ExpeditionChip value={expeditionWho} onChange={setExpeditionWho} />}
         {isExpedition && !expeditionWho ? <ExpeditionGate onPick={setExpeditionWho} /> : (
         <ErrorBoundary key={view} view={view}>
+        <div className={previewSite ? "view-enter" : undefined}>
         {FUTURE_MODULES[view] && previewSite && CONTEO_MODULES[view] && <ConteoMaqueta key={view} module={view} access={previewAccess} who={isExpedition ? expeditionWho : null} />}
         {FUTURE_MODULES[view] && !(previewSite && CONTEO_MODULES[view]) && (demo ? <DemoModule key={view} id={view} access={previewAccess} /> : <ModulePreview id={view} />)}
         {view === "avisos" && isAdminUser && <AppReports online={Boolean(onlineConfigured && session)} />}
@@ -1043,6 +1067,7 @@ export default function App() {
             />
           </Suspense>
         )}
+        </div>
         </ErrorBoundary>
         )}
         <ReportProblem open={showReport} onClose={() => setShowReport(false)} view={view} viewLabel={NAV_ITEMS.find(([id]) => id === view)?.[1] || view} name={isExpedition && expeditionWho ? `${expeditionWho.who} (expedición)` : data.profileName || ""} online={Boolean(onlineConfigured && session)} />

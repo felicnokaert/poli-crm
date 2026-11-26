@@ -1,4 +1,5 @@
 import { ApiError, type Api, type DetallePedido } from './api'
+import { comprimirFoto } from './comprimirFoto'
 import { depositoActual, operadorActual } from './operador'
 import { CONFIG_DEFAULT, type TipoArchivo, type Archivo, type Config, type Estado, type Evento, type Expreso, type Pedido, type Usuario } from './types'
 
@@ -210,7 +211,9 @@ export interface ArchivoSinAsignar { id: string; tipo: TipoArchivo; nombre: stri
 /** Archivos ya subidos en esta sesión, por si el registro falló y se reintenta. */
 const yaSubidos = new WeakMap<File, string>()
 
-export async function subirYRegistrar(archivo: File, tipo: TipoArchivo, extra: { pedido: string | null; texto?: string; n_guia?: string | null; nota?: string }): Promise<ResultadoRegistro> {
+export async function subirYRegistrar(original: File, tipo: TipoArchivo, extra: { pedido: string | null; texto?: string; n_guia?: string | null; nota?: string }): Promise<ResultadoRegistro> {
+  // Fotos de la cámara: se achican antes de subir (26/11); el mismo original da siempre el mismo archivo achicado.
+  const archivo = await comprimirFoto(original)
   if (!TIPOS_SUBIDA.includes(tipo)) throw new ApiError('Desde expedición se suben guías, remitos y remitos firmados.')
   const mime = mimeDe(archivo)
   if (!MIMES_OK.includes(mime)) throw new ApiError(`«${archivo.name}»: usá PDF o foto (JPG, PNG, WEBP, HEIC).`)

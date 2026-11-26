@@ -12,6 +12,7 @@ import {
 import { fechaCorta, fechaHora, fechaLarga, hace } from '../lib/fechas'
 import { asuntoCliente, guiaLegible, guiaSeCopia, linkMail, linkPedido, linkSeguimiento, linkWhatsApp, mensajeCliente, numeroSeguir, partesGuia, textoPlano } from '../lib/mensajes'
 import { hoyISO } from '../lib/fechas'
+import { camaraPendiente, limpiarCamara, marcarCamara } from '../lib/camaraPendiente'
 import { FirmaRemito } from './FirmaRemito'
 import { marcarRetirado } from '../lib/retiro'
 import type { Archivo, CamposEditables, Estado, Evento, Pedido, TipoArchivo } from '../lib/types'
@@ -477,6 +478,13 @@ function Archivos({ pedido, archivos, onCambio, alFirmar }: { pedido: Pedido; ar
     }
   }
 
+  // Si la página se recargó mientras estaba abierta la cámara (Android la saca de memoria), avisar qué pasó.
+  const [camaraPerdida] = useState(() => {
+    const pend = camaraPendiente()
+    if (pend && pend.codigo === pedido.codigo) { limpiarCamara(); return true }
+    return false
+  })
+
   // 26/11 (Felipe: «la foto del remito firmado no la toma»): con «camara» el botón abre directo la cámara del celular
   // (capture), y al lado queda el clip para elegir un archivo (PDF o una foto ya sacada).
   const Subir = ({ tipo, label, camara }: { tipo: TipoArchivo; label: string; camara?: boolean }) => (
@@ -484,7 +492,8 @@ function Archivos({ pedido, archivos, onCambio, alFirmar }: { pedido: Pedido; ar
       <label className="btn btn-sm" aria-disabled={subiendo !== null} {...soltable((fs) => { if (subiendo === null) void subir(tipo, fs[0]) })}>
         {camara ? <Camera size={14} /> : <Paperclip size={14} />} {subiendo === tipo ? 'Subiendo…' : label}
         <input type="file" hidden accept={camara ? 'image/*' : tipo === 'otro' ? undefined : ACEPTA_ARCHIVOS} {...(camara ? { capture: 'environment' as const } : {})} disabled={subiendo !== null}
-          onChange={(e) => { void subir(tipo, e.target.files?.[0]); e.target.value = '' }} />
+          onClick={camara ? () => marcarCamara(pedido.codigo, tipo) : undefined}
+          onChange={(e) => { limpiarCamara(); void subir(tipo, e.target.files?.[0]); e.target.value = '' }} />
       </label>
       {camara && (
         <label className="btn btn-sm btn-ghost" aria-label={`${label}: elegir un archivo`} title="Elegir un archivo (PDF o foto ya sacada)" aria-disabled={subiendo !== null}>
@@ -500,6 +509,7 @@ function Archivos({ pedido, archivos, onCambio, alFirmar }: { pedido: Pedido; ar
     <section className="panel">
       <div className="panel-head"><h2>Archivos</h2><span className="muted small">{archivos.length}</span></div>
       <div className="archivos">
+        {camaraPerdida && <div className="aviso warn" role="alert">El celular cerró la página mientras estaba abierta la cámara y la foto no llegó. Probá de nuevo con la cámara o tocá el clip y elegila de la galería.</div>}
         {archivos.length === 0 && <span className="muted small">Todavía no hay archivos.</span>}
         {archivos.map((a) => (
           <div key={a.id} className="archivo">

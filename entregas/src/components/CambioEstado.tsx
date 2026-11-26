@@ -1,5 +1,6 @@
 // Diálogo para pasar uno o varios pedidos a otro estado, pidiendo solo los datos que ese estado necesita.
 import { Camera, Paperclip } from 'lucide-react'
+import { limpiarCamara, marcarCamara } from '../lib/camaraPendiente'
 import { useState } from 'react'
 import { mensajeError } from '../lib/api'
 import { api, TIPOS_SUBIDA } from '../lib/cliente' // en conteo solo guía, remito y remito firmado (sin fotos sueltas)
@@ -162,6 +163,7 @@ export function CambioEstado({ pedidos, a, onClose, onHecho }: {
               </label>
             </div>
           )}
+          {!archivo && <span className="hint">Si la cámara no vuelve con la foto, usá «Adjuntar archivo» y elegila de la galería.</span>}
           {!uno && <p className="muted small" style={{ margin: 0 }}>La guía de cada uno se carga después, desde el pedido.</p>}
         </>
       )}
@@ -206,11 +208,12 @@ export function CambioEstado({ pedidos, a, onClose, onHecho }: {
             <div className="row">
               <label className="btn btn-sm">
                 <Camera size={15} /> Sacar foto
-                <input type="file" accept="image/*" capture="environment" hidden onChange={(e) => adjuntar(e.target.files?.[0] ?? null)} />
+                <input type="file" accept="image/*" capture="environment" hidden onClick={() => marcarCamara(uno.codigo, tipoAdjunto)}
+                  onChange={(e) => { limpiarCamara(); adjuntar(e.target.files?.[0] ?? null); e.target.value = '' }} />
               </label>
               <label className="btn btn-sm">
                 <Paperclip size={15} /> Adjuntar archivo
-                <input type="file" accept="image/*,application/pdf" hidden onChange={(e) => adjuntar(e.target.files?.[0] ?? null)} />
+                <input type="file" accept="image/*,application/pdf" hidden onChange={(e) => { adjuntar(e.target.files?.[0] ?? null); e.target.value = '' }} />
               </label>
             </div>
           )}

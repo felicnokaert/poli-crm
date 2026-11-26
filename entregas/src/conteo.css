@@ -1,7 +1,6 @@
 /* PARCHE CONTEO: «Cargar remito» necesita crear pedidos y subir el PDF, que el CRM todavía no entrega a expedición sin login. */
 a[href="#/nuevo"] { display: none !important; }
 
-/* PARCHE CONTEO: pantalla de carga con la P de Poliplast (en vez del texto «Cargando…») */
 .cargando-p { position: relative; min-height: 70vh; }
 .cargando-p img { width: 76px; height: 76px; object-fit: contain; animation: p-pulso 1.6s ease-in-out infinite; }
 .cargando-p .anillo { position: absolute; width: 124px; height: 124px; border-radius: 50%; border: 3px solid rgba(237,28,36,.14); border-top-color: #ed1c24; animation: p-giro 1.3s linear infinite; }
@@ -9,7 +8,6 @@ a[href="#/nuevo"] { display: none !important; }
 @keyframes p-pulso { 0%,100% { transform: scale(.94); opacity: .85; } 50% { transform: scale(1.04); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .cargando-p img, .cargando-p .anillo { animation: none; } }
 
-/* PARCHE CONTEO: la app de conteo ya muestra «quién sos y depósito» arriba; no se repite acá (cambiarlo allá recarga esta pantalla) */
 html.en-app .mobile-top { display: none !important; }
 @media (max-width: 860px) { html.en-app .sidebar { display: none !important; } }
 
@@ -17,37 +15,7 @@ html.en-app .mobile-top { display: none !important; }
 html.en-app .bottom-nav a[href="#/"], html.en-app .nav a[href="#/"] { display: none !important; }
 html.en-app .bottom-nav { grid-template-columns: repeat(3, 1fr); }
 
-/* PARCHE CONTEO: pantalla grande para el monitor del depósito */
-html:has(.pantalla) .bottom-nav, html:has(.pantalla) .sidebar, html:has(.pantalla) .mobile-top { display: none !important; }
-.pantalla { min-height: 100vh; background: #1d1d1f; color: #fff; padding: 18px clamp(14px, 3vw, 40px) 40px; font-family: 'DM Sans', system-ui, sans-serif; }
-.pantalla-top { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
-.pantalla-top > div:nth-child(2) { flex: 1; }
-.pantalla-volver, .pantalla-fs { color: #fff; background: #ffffff1a; border: 0; border-radius: 12px; width: 46px; height: 46px; display: grid; place-items: center; cursor: pointer; }
-.pantalla-dep { font: 800 clamp(22px, 4vw, 40px)/1.1 'Manrope', sans-serif; }
-.pantalla-fecha { color: #b5b5b8; font-size: clamp(14px, 2vw, 20px); }
-.pantalla-fecha::first-letter { text-transform: uppercase; }
-.pantalla-reloj { font: 800 clamp(34px, 7vw, 76px)/1 'Manrope', sans-serif; letter-spacing: -.02em; }
-.pantalla-error { background: #7a5200; padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; }
-.pantalla-cifras { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
-.pantalla-cifras div { border-radius: 18px; padding: 14px 10px; text-align: center; background: #2b2b2e; border-top: 6px solid #3a3a3e; }
-.pantalla-cifras b { display: block; font: 800 clamp(34px, 8vw, 92px)/1 'Manrope', sans-serif; }
-.pantalla-cifras span { color: #c9c9cc; font-size: clamp(11px, 1.8vw, 20px); font-weight: 600; }
-.pantalla-cifras .verde { border-color: #2fa866; } .pantalla-cifras .verde b { color: #5fd391; }
-.pantalla-cifras .rojo { border-color: #ed1c24; } .pantalla-cifras .rojo b { color: #ff6a70; }
-.pantalla-cifras .ambar { border-color: #e0a100; } .pantalla-cifras .ambar b { color: #ffc940; }
-.pantalla-cols { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; align-items: start; }
-@media (max-width: 800px) { .pantalla-cols { grid-template-columns: 1fr; } .pantalla-cifras { grid-template-columns: repeat(2, 1fr); } }
-.pantalla h2 { color: #fff; font: 800 clamp(18px, 2.6vw, 30px) 'Manrope', sans-serif; margin: 0 0 10px; }
-.pantalla h2 small { color: #9a9a9e; font: 500 .6em 'DM Sans', sans-serif; margin-left: 8px; }
-.pantalla-fila { display: grid; grid-template-columns: 1fr auto; gap: 2px 14px; background: #2b2b2e; border-left: 8px solid #3a8bd6; border-radius: 12px; padding: 12px 16px; margin-bottom: 9px; }
-.pantalla-fila.viejo { border-color: #ed1c24; background: #3a2224; } .pantalla-fila.ambar { border-color: #e0a100; }
-.pantalla-fila .cli { font: 700 clamp(17px, 2.6vw, 30px)/1.15 'DM Sans', sans-serif; }
-.pantalla-fila .det { grid-column: 1; color: #b5b5b8; font-size: clamp(13px, 1.8vw, 21px); }
-.pantalla-fila .hace { grid-row: 1 / span 2; grid-column: 2; align-self: center; font: 800 clamp(20px, 3vw, 36px) 'Manrope', sans-serif; color: #ffc940; }
-.pantalla-fila.viejo .hace { color: #ff6a70; }
-.pantalla-vacio { color: #5fd391; font-size: clamp(16px, 2.2vw, 26px); margin: 4px 0 14px; } .pantalla-mas { color: #9a9a9e; }
 
-/* PARCHE CONTEO: el calendario aprovecha todo el alto de la pantalla (antes quedaba un hueco grande debajo) */
 html.en-app .cal { min-height: calc(100dvh - 300px); grid-template-rows: auto; grid-auto-rows: minmax(54px, 1fr); }
 html.en-app .cal-d { min-height: 0; align-content: start; }
 @media (max-width: 860px) {
@@ -58,42 +26,12 @@ html.en-app .cal-d { min-height: 0; align-content: start; }
 }
 
 /* Tablero en modo claro (el modo oscuro es el de siempre; se cambia con el botón sol/luna y queda guardado en el equipo) */
-.pantalla.clara { background: #f5f5f6; color: #242424; }
-.pantalla.clara .pantalla-volver, .pantalla.clara .pantalla-fs { background: #2929291a; color: #242424; }
-.pantalla.clara .pantalla-fecha, .pantalla.clara .pantalla-cifras span, .pantalla.clara .pantalla h2 small, .pantalla.clara h2 small, .pantalla.clara .pantalla-fila .det, .pantalla.clara .pantalla-mas { color: #5c5d60; }
-.pantalla.clara h2 { color: #242424; }
-.pantalla.clara .pantalla-cifras div, .pantalla.clara .pantalla-fila { background: #fff; box-shadow: 0 2px 10px #0000000d; }
-.pantalla.clara .pantalla-fila.viejo { background: #fdecec; }
-.pantalla.clara .pantalla-cifras .verde b { color: #1f7a46; } .pantalla.clara .pantalla-cifras .rojo b { color: #c9151c; } .pantalla.clara .pantalla-cifras .ambar b { color: #b07a00; }
-.pantalla.clara .pantalla-fila .hace { color: #b07a00; } .pantalla.clara .pantalla-fila.viejo .hace { color: #c9151c; }
-.pantalla.clara .pantalla-vacio { color: #1f7a46; }
 
 /* PARCHE CONTEO: firma digital (igual que entregas/src/styles.css del CRM) */
 .firma-lienzo { display: block; width: 100%; height: 220px; background: #fff; border: 1.5px dashed #9ca3af; border-radius: 12px; touch-action: none; cursor: crosshair; }
 .segmentado { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
 
 /* PARCHE CONTEO (25/11): tablero más chico (para monitor común, no tele) y 3 columnas: Entregas · Frenados · Etiquetas ML */
-.pantalla { padding: 12px clamp(12px, 2vw, 28px) 28px; }
-.pantalla-top { margin-bottom: 12px; gap: 12px; }
-.pantalla-volver, .pantalla-fs { width: 38px; height: 38px; }
-.pantalla-dep { font-size: clamp(18px, 2.2vw, 28px); }
-.pantalla-fecha { font-size: clamp(12px, 1.3vw, 16px); }
-.pantalla-reloj { font-size: clamp(26px, 3.6vw, 46px); }
-.pantalla-cifras { grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 14px; }
-.pantalla-cifras div { padding: 10px 8px; border-radius: 14px; border-top-width: 5px; }
-.pantalla-cifras b { font-size: clamp(24px, 3.6vw, 50px); }
-.pantalla-cifras span { font-size: clamp(10px, 1vw, 14px); }
-.pantalla-cols { grid-template-columns: 1.15fr 1fr 1fr; gap: 16px; }
-.pantalla h2 { font-size: clamp(15px, 1.6vw, 21px); margin-bottom: 8px; }
-.pantalla-fila { padding: 8px 12px; margin-bottom: 7px; border-left-width: 6px; border-radius: 10px; }
-.pantalla-fila .cli { font-size: clamp(14px, 1.45vw, 19px); }
-.pantalla-fila .det { font-size: clamp(11px, 1.05vw, 14px); }
-.pantalla-fila .hace { font-size: clamp(14px, 1.6vw, 21px); }
-.pantalla-vacio { font-size: clamp(14px, 1.4vw, 18px); }
-.pantalla-alerta { background: #3a2224; color: #ff8a8f; border-radius: 10px; padding: 8px 12px; margin: 0 0 8px; font-weight: 700; }
-.pantalla.clara .pantalla-alerta { background: #fdecec; color: #c9151c; }
-@media (max-width: 1100px) { .pantalla-cols { grid-template-columns: 1fr 1fr; } .pantalla-cifras { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 700px) { .pantalla-cols { grid-template-columns: 1fr; } .pantalla-cifras { grid-template-columns: repeat(2, 1fr); } }
 /* Conteo: «Sale de [depósito]» con el chip de color al lado */
 /* Conteo: filtro por depósito (Pedidos y Expedición) */
 

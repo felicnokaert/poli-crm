@@ -5,6 +5,9 @@
 // - `npm run maqueta`: datos de ejemplo en el navegador.
 import { crearDemoApi } from '../dev/demoApi'
 import type { Api } from './api'
+import { soloLectura } from './soloLectura'
+export { AVISO_SOLO_LECTURA, soloLectura } from './soloLectura'
+import { enMarcoPoliplast } from './embed'
 import { crearExpedicionApi } from './expedicionApi'
 import { crearSupabaseApi } from './supabaseApi'
 
@@ -12,7 +15,15 @@ export const MAQUETA = import.meta.env.MODE === 'maqueta'
 /** Compilada para la app de conteo. */
 export const MODO_CONTEO = import.meta.env.MODE === 'conteo'
 
-export const api: Api = MAQUETA ? crearDemoApi() : MODO_CONTEO ? crearExpedicionApi() : crearSupabaseApi()
+/**
+ * Modo prueba de Poliplast App (26/11, Felipe: «datos reales, pero que lo que toque no cambie nada»): con marco=poliplast y
+ * solo-lectura=1 se lee todo de verdad y cualquier escritura se frena con «Modo prueba: no se guarda».
+ */
+export const SOLO_LECTURA = (() => {
+  try { return enMarcoPoliplast() && new URLSearchParams(window.location.search).get('solo-lectura') === '1' } catch { return false }
+})()
+const apiBase: Api = MAQUETA ? crearDemoApi() : MODO_CONTEO ? crearExpedicionApi() : crearSupabaseApi()
+export const api: Api = SOLO_LECTURA ? soloLectura(apiBase) : apiBase
 
 /** «Cargar remito»: en conteo no (los remitos los cargan los vendedores, Felipe 21/11). */
 export const CON_ARCHIVOS = !MODO_CONTEO

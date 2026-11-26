@@ -86,7 +86,7 @@ export default function App() {
   }, [sesion, operador])
 
   // Dentro del CRM, mientras arranca se ve la P del CRM (encima): acá no se muestra nada. Suelta o en la app de conteo, la P propia.
-  if (sesion.estado === 'cargando') return isEmbeddedInCrm()
+  if (sesion.estado === 'cargando') return isEmbeddedInCrm() || enMarcoPoliplast()
     ? <div className="centrado" />
     : <div className="centrado cargando-p" role="status" aria-label="Cargando"><span className="anillo" /><img src={`${import.meta.env.BASE_URL}poliplast-isotipo-color.png`} alt="" /></div>
   if (sesion.estado === 'sin_acceso') return <Login sinAcceso={sesion.email || 'actual'} onSalir={() => void api.cerrarSesion()} />

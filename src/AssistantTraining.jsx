@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { GraduationCap, Play } from "lucide-react";
 import { askAi, TeachForm } from "./AssistantWindow.jsx";
 import { IntensiveTraining } from "./IntensiveTraining.jsx";
+import { AssistantExam } from "./AssistantExam.jsx";
 import { matchTaught } from "./assistant-answer.mjs";
 import { draftCandidates } from "./assistant-draft.mjs";
 import { appendEvalHistory, conflictingAnswers, evalSummary, familySiblings, pickQuestions, realAnswer, suggestTeachings, trainingContext, trainingQuestion, VERDICT_LABEL } from "./assistant-training.mjs";
@@ -261,6 +262,7 @@ export function AssistantTraining({ supabase }) {
 
   return (
     <>
+    <AssistantExam supabase={supabase} />
     <IntensiveTraining supabase={supabase} />
     <FeedbackReview supabase={supabase} />
     <section className="panel" aria-label="Probar el asistente">

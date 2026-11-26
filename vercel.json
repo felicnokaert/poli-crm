@@ -28,6 +28,8 @@
     { "path": "/api/admin-users?cron=gmail-envios&run=4", "schedule": "10 17 * * 1-5" },
     { "path": "/api/admin-users?cron=gmail-envios&run=5", "schedule": "40 18 * * 1-5" },
     { "path": "/api/admin-users?cron=gmail-envios&run=6", "schedule": "10 20 * * 1-5" },
+    { "path": "/api/admin-users?cron=examen-1", "schedule": "5 12 * * 1" },
+    { "path": "/api/admin-users?cron=examen-2", "schedule": "45 12 * * 1" },
     { "path": "/api/admin-users?cron=entrenamiento-1", "schedule": "10 12 * * *" },
     { "path": "/api/admin-users?cron=entrenamiento-2", "schedule": "40 13 * * *" },
     { "path": "/api/admin-users?cron=entrenamiento-3", "schedule": "10 15 * * *" },

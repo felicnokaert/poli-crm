@@ -29,6 +29,6 @@ test('Calendario único: feriados, tareas, entregas y cortes en su día', () => 
 });
 
 test('Feriados: normaliza la fuente y trae el respaldo de 2026', () => {
-  assert.equal(FALLBACK[2026].length, 19);
+  assert.equal(FALLBACK[2026].length, 20);
   assert.deepEqual(normalizeHolidays([{ fecha: '2026-12-25', nombre: 'Navidad', tipo: 'inamovible' }, { fecha: 'x' }]).length, 1);
 });

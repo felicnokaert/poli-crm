@@ -1693,7 +1693,8 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .team-access-modules legend { font-weight: 700; font-size: 0.85rem; padding: 0 4px; }
 .team-access-module > label, .team-access-children label { display: flex; gap: 8px; align-items: center; padding: 3px 0; }
 .team-access-children { padding-left: 24px; font-size: 0.85rem; }
-.maqueta-frame { display: grid; gap: 6px; }
+.maqueta-frame { display: grid; gap: 10px; }
+.maqueta-frame.is-auto iframe { min-height: 0; transition: height 160ms ease-out; }
 .maqueta-frame iframe { width: 100%; height: calc(100vh - 170px); min-height: 560px; border: 0; border-radius: 0; background: transparent; display: block; animation: quote-in 220ms ease-out; }
 @media (max-width: 760px) { .maqueta-frame iframe { height: calc(100vh - 200px); } }
 .expedition-gate { max-width: 560px; margin: 0 auto; display: grid; gap: 12px; }

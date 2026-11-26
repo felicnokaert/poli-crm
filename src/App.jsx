@@ -119,7 +119,7 @@ import { TeamAccess } from "./TeamAccess.jsx";
 import { DemoModule } from "./DemoModules.jsx";
 import { QuoteBuilder } from "./QuoteBuilder.jsx";
 import { AppReports, ReportProblem } from "./ReportProblem.jsx";
-import { CONTEO_MODULES, ConteoMaqueta, MaquetaFrame } from "./MaquetaFrame.jsx";
+import { CONTEO_MODULES, ConteoMaqueta, EntregasEmbed } from "./MaquetaFrame.jsx";
 import { ExpeditionChip, ExpeditionGate, readExpeditionWho, saveExpeditionWho } from "./ExpeditionGate.jsx";
 import { AppPlanOverview, ModulePreview } from "./ModulePreview.jsx";
 import { isDemoMode, isPreviewSite, withDemoData } from "./demo-mode.mjs";
@@ -995,8 +995,8 @@ export default function App() {
             <CotizadorFrame session={session} client={quoterClient} />
           </Suspense>
         )}
-        {view === "entregas" && previewSite && !demo && <MaquetaFrame src={`/entregas-app/?embed=app${isExpedition && expeditionWho ? `&persona=${encodeURIComponent(expeditionWho.who)}&deposito=${encodeURIComponent(expeditionWho.deposit)}` : ""}`} title="Entregas" />}
-        {view === "entregas" && demo && <MaquetaFrame src={`/entregas-maqueta/?embed=app${isExpedition && expeditionWho ? `&persona=${encodeURIComponent(expeditionWho.who)}&deposito=${encodeURIComponent(expeditionWho.deposit)}` : ""}`} title="Entregas" />}
+        {view === "entregas" && previewSite && !demo && <EntregasEmbed base="/entregas-app/" access={previewAccess} who={isExpedition ? expeditionWho : null} />}
+        {view === "entregas" && demo && <EntregasEmbed base="/entregas-maqueta/" access={previewAccess} who={isExpedition ? expeditionWho : null} />}
         {/* 25/11 (Felipe: «Entregas demora muchísimo»): se precarga escondida unos segundos después de abrir y queda abierta al
             cambiar de pestaña, así al tocar Entregas ya está lista. */}
         {(view === "entregas" || entregasWarm) && session && !previewSite && (

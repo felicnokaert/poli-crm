@@ -94,10 +94,23 @@ export const CONTEO_MODULES = {
 };
 const HASH_OF = { Escanear: "escanear", Pendientes: "pendientes", Hecho: "hecho", Devoluciones: "devoluciones", Cortes: "cortes", Cargar: "cargar", Kits: "kits", Registros: "registros", Resumen: "resumen", "Categorías": "", "Administración": "admin" };
 
-export function ConteoMaqueta({ module, access = null, who = null, base = "/conteo-maqueta/" }) {
+// Sin PIN (26/11): si hay sesión, el servidor firma quién es, el depósito y si es administrador de Logística
+// (getFirma); conteo lo verifica con la clave pública y habilita Administración y Cortes sin pedir PIN.
+export function ConteoMaqueta({ module, access = null, who = null, base = "/conteo-maqueta/", getFirma = null, me = "" }) {
   const info = CONTEO_MODULES[module];
   const [subs, sub, setSub] = useSub(module, access);
-  const params = new URLSearchParams({ embebida: "1", marco: "poliplast", persona: who?.who || "Marcos", deposito: who?.deposit || "Villa Domínico" });
+  const persona = who?.who || me || "Marcos";
+  const deposito = who?.deposit || "Villa Domínico";
+  const [firma, setFirma] = useState(getFirma ? undefined : null);
+  useEffect(() => {
+    if (!getFirma) return undefined;
+    let alive = true;
+    const timer = setTimeout(() => { if (alive) setFirma((current) => (current === undefined ? null : current)); }, 4000);
+    Promise.resolve(getFirma({ persona, deposito })).then((token) => { if (alive) setFirma(token || null); }).catch(() => { if (alive) setFirma(null); });
+    return () => { alive = false; clearTimeout(timer); };
+  }, [getFirma, persona, deposito]);
+  if (firma === undefined) return <div className="maqueta-frame is-loading" aria-busy="true" />;
+  const params = new URLSearchParams({ embebida: "1", marco: "poliplast", persona, deposito, ...(firma ? { firma } : {}) });
   return (
     <MaquetaFrame src={`${base}?${params}#${info.hash(HASH_OF[sub] || "")}`} title={info.title} theme={info.lightOnly ? "light" : null}>
       <SubTabs subs={subs} value={sub} onChange={setSub} label={`Submódulos de ${info.title}`} />

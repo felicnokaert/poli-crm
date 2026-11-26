@@ -118,6 +118,7 @@ import { useMyAccess, useTeamStore } from "./team-store.js";
 import { TeamAccess } from "./TeamAccess.jsx";
 import { DemoModule } from "./DemoModules.jsx";
 import { MaquetaFrame } from "./MaquetaFrame.jsx";
+import { ExpeditionChip, ExpeditionGate, readExpeditionWho, saveExpeditionWho } from "./ExpeditionGate.jsx";
 import { AppPlanOverview, ModulePreview } from "./ModulePreview.jsx";
 import { isDemoMode, withDemoData } from "./demo-mode.mjs";
 import { canSee as canSeeModule, firstAllowedView } from "./module-access.mjs";
@@ -243,6 +244,10 @@ export default function App() {
     return () => cancelAnimationFrame(frame);
   }, [view]);
   useEffect(() => { try { sessionStorage.setItem(VIEW_KEY, view); } catch { /* sin almacenamiento */ } }, [view]);
+  // Cuenta de expedición (compartida): antes de usar la app se elige quién es y el depósito.
+  const isExpedition = previewAccess.role === "expedicion" || signedEmail.toLowerCase() === "expedicion@grupopoliplast.com.ar";
+  const [expeditionWho, setExpeditionWhoState] = useState(readExpeditionWho);
+  const setExpeditionWho = (value) => { setExpeditionWhoState(value); saveExpeditionWho(value); };
   const setHomeLayout = useCallback((layout) => setData((current) => ({ ...current, homeLayout: layout })), []);
   const [mapTab, setMapTab] = useState("aplicadores");
   // Empresa con la que se abre el cotizador (desde "Cotizar" en la ficha); null = cotización libre.
@@ -759,6 +764,8 @@ export default function App() {
           profileLabel={data.profileName || session?.user?.email || ""}
           onLogConversation={LOG_CONVERSATION_VIEWS.includes(view) ? () => setShowForm(true) : null}
         />
+        {isExpedition && <ExpeditionChip value={expeditionWho} onChange={setExpeditionWho} />}
+        {isExpedition && !expeditionWho ? <ExpeditionGate onPick={setExpeditionWho} /> : (
         <ErrorBoundary key={view} view={view}>
         {FUTURE_MODULES[view] && (demo ? <DemoModule key={view} id={view} access={previewAccess} /> : <ModulePreview id={view} />)}
         {view === "team" && isAdminUser && <TeamAccess team={team} onChange={teamStore.save} rolesTable={teamStore.rolesTable} status={teamStore.status} groups={NAV_GROUPS} onViewAs={(person) => pickPreviewRole(`person:${person.email}`)} />}
@@ -778,7 +785,7 @@ export default function App() {
             planChecks={data.planChecks}
             showRoutine={isFelipeTools}
             showWelcome={shouldShowWelcome(data)}
-            welcomeName={data.profileName}
+            welcomeName={isExpedition && expeditionWho ? expeditionWho.who : data.profileName}
             onDismissWelcome={dismissWelcome}
             onNewInteraction={openNewInteractionForm}
             dailySignals={data.dailySignals}
@@ -969,7 +976,7 @@ export default function App() {
             <CotizadorFrame session={session} client={quoterClient} />
           </Suspense>
         )}
-        {view === "entregas" && demo && <MaquetaFrame src="/entregas-maqueta/?embed=app" title="Entregas" />}
+        {view === "entregas" && demo && <MaquetaFrame src={`/entregas-maqueta/?embed=app${isExpedition && expeditionWho ? `&persona=${encodeURIComponent(expeditionWho.who)}&deposito=${encodeURIComponent(expeditionWho.deposit)}` : ""}`} title="Entregas" />}
         {/* 25/11 (Felipe: «Entregas demora muchísimo»): se precarga escondida unos segundos después de abrir y queda abierta al
             cambiar de pestaña, así al tocar Entregas ya está lista. */}
         {(view === "entregas" || entregasWarm) && session && !demo && (
@@ -1017,6 +1024,7 @@ export default function App() {
           </Suspense>
         )}
         </ErrorBoundary>
+        )}
       </main>
 
       <Suspense fallback={null}>

@@ -334,6 +334,7 @@
 :root[data-theme="dark"] .notif-panel { background: #1c1c1f; }
 :root[data-theme="dark"] .notif-list button:hover { background: #26262a; }
 :root[data-theme="dark"] .notif-list button:focus-visible { background: #26262a; }
+:root[data-theme="dark"] .quote-saved { background: #26262a; }
 :root[data-theme="dark"] :root { color: #e7e7e9; }
 :root[data-theme="dark"] .link-button { color: #b4b5b9; }
 :root[data-theme="dark"] .link-button:hover { color: #b4b5b9; }
@@ -442,6 +443,8 @@
 :root[data-theme="dark"] .product-hub .ph-up { color: #b4b5b9; }
 :root[data-theme="dark"] .product-hub .ph-alert.ph-alta { color: #e7e7e9; }
 :root[data-theme="dark"] .product-hub .ph-alert.ph-media { color: #b4b5b9; }
+:root[data-theme="dark"] .quote-status.st-enviada { color: #b4b5b9; }
+:root[data-theme="dark"] .quote-status.st-aceptada { color: #b4b5b9; }
 :root[data-theme="dark"] body, :root[data-theme="dark"] .login-shell { background: #121214; }
 :root[data-theme="dark"] .commercial-guidance, :root[data-theme="dark"] .prospect-glass::before { background: #1c1c1f; }
 :root[data-theme="dark"] .segmented { background: #2a2a2e; }
@@ -786,6 +789,7 @@
   :root:not([data-theme="light"]) .notif-panel { background: #1c1c1f; }
   :root:not([data-theme="light"]) .notif-list button:hover { background: #26262a; }
   :root:not([data-theme="light"]) .notif-list button:focus-visible { background: #26262a; }
+  :root:not([data-theme="light"]) .quote-saved { background: #26262a; }
   :root:not([data-theme="light"]) :root { color: #e7e7e9; }
   :root:not([data-theme="light"]) .link-button { color: #b4b5b9; }
   :root:not([data-theme="light"]) .link-button:hover { color: #b4b5b9; }
@@ -894,6 +898,8 @@
   :root:not([data-theme="light"]) .product-hub .ph-up { color: #b4b5b9; }
   :root:not([data-theme="light"]) .product-hub .ph-alert.ph-alta { color: #e7e7e9; }
   :root:not([data-theme="light"]) .product-hub .ph-alert.ph-media { color: #b4b5b9; }
+  :root:not([data-theme="light"]) .quote-status.st-enviada { color: #b4b5b9; }
+  :root:not([data-theme="light"]) .quote-status.st-aceptada { color: #b4b5b9; }
   :root:not([data-theme="light"]) body, :root:not([data-theme="light"]) .login-shell { background: #121214; }
   :root:not([data-theme="light"]) .commercial-guidance, :root:not([data-theme="light"]) .prospect-glass::before { background: #1c1c1f; }
   :root:not([data-theme="light"]) .segmented { background: #2a2a2e; }

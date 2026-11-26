@@ -3,6 +3,7 @@ import { Copy, Search, Trash2 } from "lucide-react";
 import { currentListPrices } from "./assistant-prices.mjs";
 import { loadDollar } from "./product-hub-data.js";
 import { MODES, ars, channelRefs, lineTotals, pickRow, quoteTotals, usd, whatsappText, wholesaleWarnings } from "./quote-model.mjs";
+import { STATUSES, linesFromItems, listQuotes, quoteNumber, quoteRow, saveQuote, setQuoteStatus } from "./quote-store.js";
 
 // Poliplast App (26/11): el cotizador adentro de la app, con el diseño de la app. Lee el catálogo y las listas de
 // precios de siempre (en USD), muestra de referencia el precio en Mercado Libre y Shopify por SKU, avisa el mínimo
@@ -43,7 +44,11 @@ async function loadLineData(supabase, variant, lists) {
   return { rows: entry?.rows || [], photo: photo.data?.[0]?.url || "", refs: channelRefs(variant.sku, { mlItems: ml.data || [], shopVariants: shop.data || [] }) };
 }
 
-export function QuoteBuilder({ supabase, clients = [], initialClient = null, sellerName = "", onQuoted = null }) {
+export function QuoteBuilder({ supabase, userId = "", clients = [], initialClient = null, sellerName = "", onQuoted = null, onFollowUp = null, onCloseFollowUp = null }) {
+  const [screen, setScreen] = useState("nueva");
+  const [saved, setSaved] = useState(null); // { id, number, status }
+  const [history, setHistory] = useState(null);
+  const [busy, setBusy] = useState(false);
   const [lists, setLists] = useState([]);
   const [payments, setPayments] = useState([]);
   const [policies, setPolicies] = useState([]);
@@ -76,7 +81,9 @@ export function QuoteBuilder({ supabase, clients = [], initialClient = null, sel
   }, [supabase, text]);
 
   // El modo de cada renglón sigue al general hasta que se cambie a mano en el renglón.
-  const priced = useMemo(() => lines.map((line) => ({ ...line, row: pickRow(line.rows, line.mode, line.quantity) })), [lines]);
+  // Una cotización guardada abre con el precio congelado (el del momento) hasta «Actualizar precios de hoy».
+  const priced = useMemo(() => lines.map((line) => ({ ...line, row: line.frozenRow || pickRow(line.rows, line.mode, line.quantity) })), [lines]);
+  const frozen = lines.some((line) => line.frozenRow);
   const payment = payments.find((item) => item.id === paymentId) || null;
   const totals = quoteTotals(priced, { payment });
   const warnings = wholesaleWarnings(priced, policies);
@@ -89,13 +96,62 @@ export function QuoteBuilder({ supabase, clients = [], initialClient = null, sel
     const data = await loadLineData(supabase, variant, lists);
     setLines((current) => current.map((line) => (line.key === key ? { ...line, ...data, loading: false } : line)));
   };
-  const update = (key, change) => setLines((current) => current.map((line) => (line.key === key ? { ...line, ...change } : line)));
+  const update = (key, change) => setLines((current) => current.map((line) => (line.key === key ? { ...line, ...change, ...("quantity" in change || "mode" in change ? { frozenRow: null } : {}) } : line)));
   const changeMode = (value) => { setMode(value); setLines((current) => current.map((line) => ({ ...line, mode: value }))); };
 
+  const persist = async (status) => {
+    if (!userId) { setMessage("Para guardar hace falta haber entrado con tu cuenta."); return null; }
+    setBusy(true);
+    try {
+      const number = saved?.number || quoteNumber();
+      const row = quoteRow({ id: saved?.id, number, userId, client, mode, payment, validDays, dollar, status });
+      const result = await saveQuote(supabase, { quote: row, lines: priced });
+      const next = { id: result.id, number: result.quote_number, status: result.status };
+      // Precios congelados desde que se guarda.
+      setLines((current) => current.map((line, index) => ({ ...line, frozenRow: priced[index]?.row || line.frozenRow || null })));
+      if (status === "enviada" && saved?.status !== "enviada") onFollowUp?.({ number: next.number, client });
+      setSaved(next);
+      return next;
+    } catch (failure) {
+      setMessage(`No se pudo guardar: ${failure.message || failure}`);
+      return null;
+    } finally { setBusy(false); }
+  };
   const copy = async () => {
-    const textOut = whatsappText({ client, lines: priced, totals, dollar, payment, validDays, seller: sellerName });
+    const result = await persist(saved?.status === "aceptada" || saved?.status === "rechazada" ? saved.status : "enviada");
+    const textOut = whatsappText({ client, lines: priced, totals, dollar, payment, validDays, seller: sellerName }) + (result ? `\nCotización ${result.number}` : "");
     try { await navigator.clipboard.writeText(textOut); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { setMessage("No se pudo copiar: seleccioná el texto a mano."); }
   };
+  const refreshPrices = async () => {
+    setBusy(true);
+    const fresh = await Promise.all(lines.map((line) => (line.id ? loadLineData(supabase, { id: line.id, product_id: line.product_id, sku: line.sku }, lists).catch(() => null) : null)));
+    setLines((current) => current.map((line, index) => (fresh[index] ? { ...line, ...fresh[index], frozenRow: null } : { ...line, frozenRow: null })));
+    setBusy(false);
+    setMessage("Precios actualizados a la lista de hoy. Guardá para que quede así.");
+  };
+  const loadHistory = async () => {
+    setHistory(null);
+    try { setHistory(await listQuotes(supabase)); } catch (failure) { setHistory([]); setMessage(`No se pudo leer el historial: ${failure.message || failure}`); }
+  };
+  const openQuote = (entry, duplicate = false) => {
+    setClient(entry.quote.client_name || "");
+    setMode(entry.summary.mode);
+    setPaymentId(payments.some((item) => item.id === entry.quote.payment_method) ? entry.quote.payment_method : "");
+    setValidDays(entry.quote.valid_days || 7);
+    setLines(linesFromItems(entry.items).map((line) => (duplicate ? { ...line, frozenRow: null } : line)));
+    setSaved(duplicate ? null : { id: entry.quote.id, number: entry.quote.quote_number, status: entry.quote.status });
+    setMessage(duplicate ? "Copia nueva con los precios de hoy: todavía no está guardada." : "");
+    setScreen("nueva");
+  };
+  const changeStatus = async (entry, status) => {
+    try {
+      await setQuoteStatus(supabase, entry.quote.id, status, userId);
+      if (status === "aceptada" || status === "rechazada") onCloseFollowUp?.(entry.quote.quote_number);
+      if (status === "enviada" && entry.quote.status !== "enviada") onFollowUp?.({ number: entry.quote.quote_number, client: entry.quote.client_name });
+      setHistory((current) => current.map((row) => (row.quote.id === entry.quote.id ? { ...row, quote: { ...row.quote, status } } : row)));
+    } catch (failure) { setMessage(`No se pudo cambiar el estado: ${failure.message || failure}`); }
+  };
+  const startNew = () => { setLines([]); setSaved(null); setClient(""); setMessage(""); };
   const markQuoted = () => {
     const found = clients.find((item) => plain(item.company) === plain(client));
     if (!found || !onQuoted) { setMessage("Para marcar «Coticé hoy», elegí un cliente de tu cartera."); return; }
@@ -104,8 +160,45 @@ export function QuoteBuilder({ supabase, clients = [], initialClient = null, sel
   };
 
   if (!supabase) return <section className="panel"><p className="muted">El cotizador necesita la conexión con la base.</p></section>;
+  const statusLabel = Object.fromEntries(STATUSES);
+  const tabs = (
+    <div className="segmented quote-screens" role="tablist" aria-label="Cotizador">
+      <button type="button" role="tab" aria-selected={screen === "nueva"} className={screen === "nueva" ? "selected" : ""} onClick={() => setScreen("nueva")}>{saved ? `Cotización ${saved.number}` : "Nueva cotización"}</button>
+      <button type="button" role="tab" aria-selected={screen === "historial"} className={screen === "historial" ? "selected" : ""} onClick={() => { setScreen("historial"); loadHistory(); }}>Mis cotizaciones</button>
+    </div>
+  );
+  if (screen === "historial") return (
+    <div className="quote-builder content-stack">
+      {tabs}
+      <section className="panel">
+        {history === null ? <p className="muted">Cargando…</p> : history.length === 0 ? <p className="muted">Todavía no guardaste cotizaciones. Se guardan al tocar «Guardar» o «Copiar para WhatsApp».</p> : (
+          <ul className="quote-history">
+            {history.map((entry) => (
+              <li key={entry.quote.id}>
+                <div className="quote-history-main">
+                  <strong>{entry.quote.client_name || "Sin cliente"}</strong>
+                  <span className="muted small">{entry.quote.quote_number} · {entry.summary.issued} · vence {entry.summary.expires} · {entry.summary.lines} producto{entry.summary.lines === 1 ? "" : "s"}{entry.summary.first ? ` (${entry.summary.first}${entry.summary.lines > 1 ? "…" : ""})` : ""}</span>
+                </div>
+                <strong className="quote-history-total">{usd(entry.summary.totals.gross)}</strong>
+                <select aria-label="Estado" className={`quote-status st-${entry.quote.status}`} value={entry.quote.status} onChange={(event) => changeStatus(entry, event.target.value)}>
+                  {STATUSES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+                </select>
+                <div className="quote-history-actions">
+                  <button type="button" className="secondary" onClick={() => openQuote(entry)}>Abrir</button>
+                  <button type="button" className="secondary" onClick={() => openQuote(entry, true)}>Duplicar</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      {message && <p className="muted small" role="status">{message}</p>}
+    </div>
+  );
   return (
     <div className="quote-builder content-stack">
+      {tabs}
+      {saved && <p className="quote-saved small">Guardada como <b>{saved.number}</b> · {statusLabel[saved.status] || saved.status}{frozen ? " · precios del día en que se cotizó" : ""} {frozen && <button type="button" className="danger-link" disabled={busy} onClick={refreshPrices}>Actualizar precios de hoy</button>}</p>}
       <section className="panel quote-head">
         <div className="quote-fields">
           <label>Cliente
@@ -189,9 +282,10 @@ export function QuoteBuilder({ supabase, clients = [], initialClient = null, sel
       )}
       {priced.length > 0 && (
         <div className="quote-actions">
-          <button type="button" className="primary" onClick={copy}><Copy size={16} /> {copied ? "Copiado ✓" : "Copiar para WhatsApp"}</button>
+          <button type="button" className="primary" disabled={busy} onClick={copy}><Copy size={16} /> {copied ? "Copiado ✓" : "Copiar para WhatsApp"}</button>
+          <button type="button" className="secondary" disabled={busy} onClick={() => persist(saved?.status || "borrador")}>{busy ? "Guardando…" : "Guardar"}</button>
           <button type="button" className="secondary" onClick={markQuoted}>Coticé hoy</button>
-          <button type="button" className="secondary" onClick={() => setLines([])}>Empezar otra</button>
+          <button type="button" className="secondary" onClick={startNew}>Empezar otra</button>
         </div>
       )}
       {message && <p className="muted small" role="status">{message}</p>}

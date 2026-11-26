@@ -81,3 +81,15 @@ export function channelRefs(sku, { mlItems = [], shopVariants = [] } = {}) {
     shopify: shopify ? { price: Number(shopify.price), compareAt: shopify.compare_at_price ? Number(shopify.compare_at_price) : null } : null,
   };
 }
+
+// Seguimiento a N días hábiles (sin sábados ni domingos), en fecha argentina.
+export function businessDaysFromToday(days = 2, now = Date.now()) {
+  let date = new Date(Number(now) - 3 * 3600000);
+  let left = days;
+  while (left > 0) {
+    date = new Date(date.getTime() + 86400000);
+    const weekday = date.getUTCDay();
+    if (weekday !== 0 && weekday !== 6) left -= 1;
+  }
+  return date.toISOString().slice(0, 10);
+}

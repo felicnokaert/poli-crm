@@ -1693,3 +1693,6 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .team-access-modules legend { font-weight: 700; font-size: 0.85rem; padding: 0 4px; }
 .team-access-module > label, .team-access-children label { display: flex; gap: 8px; align-items: center; padding: 3px 0; }
 .team-access-children { padding-left: 24px; font-size: 0.85rem; }
+.maqueta-frame { display: grid; gap: 6px; }
+.maqueta-frame iframe { width: 100%; height: calc(100vh - 190px); min-height: 560px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-white); }
+@media (max-width: 760px) { .maqueta-frame iframe { height: calc(100vh - 230px); border-radius: 12px; } }

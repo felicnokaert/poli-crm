@@ -117,6 +117,7 @@ import { accessAllows } from "./team-access.mjs";
 import { useMyAccess, useTeamStore } from "./team-store.js";
 import { TeamAccess } from "./TeamAccess.jsx";
 import { DemoModule } from "./DemoModules.jsx";
+import { MaquetaFrame } from "./MaquetaFrame.jsx";
 import { AppPlanOverview, ModulePreview } from "./ModulePreview.jsx";
 import { isDemoMode, withDemoData } from "./demo-mode.mjs";
 import { canSee as canSeeModule, firstAllowedView } from "./module-access.mjs";
@@ -968,7 +969,7 @@ export default function App() {
             <CotizadorFrame session={session} client={quoterClient} />
           </Suspense>
         )}
-        {view === "entregas" && demo && <DemoModule id="entregas" access={previewAccess} />}
+        {view === "entregas" && demo && <MaquetaFrame src="/entregas-maqueta/?embed=app" title="Entregas" />}
         {/* 25/11 (Felipe: «Entregas demora muchísimo»): se precarga escondida unos segundos después de abrir y queda abierta al
             cambiar de pestaña, así al tocar Entregas ya está lista. */}
         {(view === "entregas" || entregasWarm) && session && !demo && (

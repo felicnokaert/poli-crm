@@ -10,7 +10,8 @@ import { resolvedTheme, visibleSlice } from "./embedded-frame-view.mjs";
 // - le pasa el tema claro/oscuro ({ tipo: 'crm:tema' }) y { tipo: 'app:subir' } sube la página.
 const HEIGHT_TYPES = new Set(["entregas:alto", "conteo:alto", "app:alto"]);
 
-export function MaquetaFrame({ src, title, children = null }) {
+export function MaquetaFrame({ src, title, children = null, theme = null }) {
+  // La app de conteo hoy es solo clara: se le manda siempre claro (si no, el navegador pinta un fondo opaco).
   const frameRef = useRef(null);
   const [height, setHeight] = useState(null);
   const origin = typeof window !== "undefined" ? window.location.origin : "*";
@@ -21,7 +22,7 @@ export function MaquetaFrame({ src, title, children = null }) {
       const data = event.data || {};
       if (HEIGHT_TYPES.has(data.tipo) && Number(data.alto) > 0) setHeight(Math.ceil(Number(data.alto)));
       if (data.tipo === "app:subir") window.scrollTo({ top: 0, behavior: "smooth" });
-      if (typeof data.tipo === "string" && /:(listo|lista)$/.test(data.tipo)) frameRef.current?.contentWindow?.postMessage({ tipo: "crm:tema", tema: resolvedTheme() }, origin);
+      if (typeof data.tipo === "string" && /:(listo|lista)$/.test(data.tipo)) frameRef.current?.contentWindow?.postMessage({ tipo: "crm:tema", tema: (theme || resolvedTheme()) }, origin);
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
@@ -50,18 +51,18 @@ export function MaquetaFrame({ src, title, children = null }) {
   }, [height, origin]);
 
   useEffect(() => {
-    const sendTheme = () => frameRef.current?.contentWindow?.postMessage({ tipo: "crm:tema", tema: resolvedTheme() }, origin);
+    const sendTheme = () => frameRef.current?.contentWindow?.postMessage({ tipo: "crm:tema", tema: (theme || resolvedTheme()) }, origin);
     const observer = typeof MutationObserver === "function" ? new MutationObserver(sendTheme) : null;
     observer?.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
     return () => observer?.disconnect();
   }, [origin]);
 
   const [path, hash = ""] = String(src).split("#");
-  const withTema = `${path}${path.includes("?") ? "&" : "?"}tema=${resolvedTheme()}${hash ? `#${hash}` : ""}`;
+  const withTema = `${path}${path.includes("?") ? "&" : "?"}tema=${(theme || resolvedTheme())}${hash ? `#${hash}` : ""}`;
   return (
     <section className={`maqueta-frame${height != null ? " is-auto" : ""}`}>
       {children}
-      <iframe ref={frameRef} src={withTema} title={title} loading="eager" style={height != null ? { height } : undefined} onLoad={() => frameRef.current?.contentWindow?.postMessage({ tipo: "crm:tema", tema: resolvedTheme() }, origin)} />
+      <iframe ref={frameRef} src={withTema} title={title} loading="eager" style={height != null ? { height } : undefined} onLoad={() => frameRef.current?.contentWindow?.postMessage({ tipo: "crm:tema", tema: (theme || resolvedTheme()) }, origin)} />
     </section>
   );
 }
@@ -83,19 +84,19 @@ const useSub = (module, access) => {
 
 // App de conteo (otro repositorio): cada submódulo abre su pestaña directo por hash (#etiquetas/devoluciones).
 export const CONTEO_MODULES = {
-  etiquetas: { title: "Etiquetas", hash: (sub) => `etiquetas/${sub}` },
-  conteo: { title: "Conteo", hash: () => "conteo" },
-  dosificado: { title: "Dosificado", hash: (sub) => `dosificado/${sub}` },
+  etiquetas: { title: "Etiquetas", hash: (sub) => `etiquetas/${sub}`, lightOnly: true },
+  conteo: { title: "Conteo", hash: (sub) => (sub === "admin" ? "conteo/admin" : "conteo"), lightOnly: true },
+  dosificado: { title: "Dosificado", hash: (sub) => `dosificado/${sub}`, lightOnly: true },
 };
-const HASH_OF = { Escanear: "escanear", Pendientes: "pendientes", Hecho: "hecho", Devoluciones: "devoluciones", Cortes: "cortes", Cargar: "cargar", Kits: "kits", Registros: "registros", Resumen: "resumen" };
+const HASH_OF = { Escanear: "escanear", Pendientes: "pendientes", Hecho: "hecho", Devoluciones: "devoluciones", Cortes: "cortes", Cargar: "cargar", Kits: "kits", Registros: "registros", Resumen: "resumen", "Categorías": "", "Administración": "admin" };
 
 export function ConteoMaqueta({ module, access = null, who = null, base = "/conteo-maqueta/" }) {
   const info = CONTEO_MODULES[module];
   const [subs, sub, setSub] = useSub(module, access);
   const params = new URLSearchParams({ embebida: "1", marco: "poliplast", persona: who?.who || "Marcos", deposito: who?.deposit || "Villa Domínico" });
   return (
-    <MaquetaFrame src={`${base}?${params}#${info.hash(HASH_OF[sub] || "")}`} title={info.title}>
-      {module !== "conteo" && <SubTabs subs={subs} value={sub} onChange={setSub} label={`Submódulos de ${info.title}`} />}
+    <MaquetaFrame src={`${base}?${params}#${info.hash(HASH_OF[sub] || "")}`} title={info.title} theme={info.lightOnly ? "light" : null}>
+      <SubTabs subs={subs} value={sub} onChange={setSub} label={`Submódulos de ${info.title}`} />
     </MaquetaFrame>
   );
 }

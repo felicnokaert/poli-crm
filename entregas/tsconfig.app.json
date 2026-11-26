@@ -23,5 +23,5 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src"],
-  "exclude": ["src/**/*.remitos.spec.ts"]
+  "exclude": ["src/**/*.remitos.spec.ts", "src/**/*.node.spec.ts"]
 }

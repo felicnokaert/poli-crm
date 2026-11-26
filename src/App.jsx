@@ -916,6 +916,9 @@ export default function App() {
             onUpdateTask={updateTask}
             personal={isFelipeTools}
             onAddEvent={addEvent}
+            supabase={onlineConfigured && session ? supabase : null}
+            allows={allowsHomeModule}
+            demo={demo}
             automations={data.automations}
             onAutomationsChange={(next) => setData((current) => ({ ...current, automations: next }))}
           />

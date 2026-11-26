@@ -13,6 +13,7 @@ import { runIntegrationCron } from '../lib/integration-crons.mjs';
 import { contabiliumAdmin, contabiliumCron } from '../lib/contabilium.mjs';
 import { assistantAi } from '../lib/assistant-ai.mjs';
 import { appReportsAdmin } from '../lib/app-reports.mjs';
+import { feriadosHandler } from '../lib/feriados.mjs';
 import { shopifyAdmin, shopifyCron } from '../lib/shopify.mjs';
 import { etiquetasHandler } from '../lib/etiquetas.mjs';
 import { entregasApiHandler } from '../lib/entregas-api.mjs';
@@ -86,6 +87,7 @@ export default async function handler(request, response) {
   // Entregas para expedición sin login (20/11): /api/entregas/<ruta> → ?entregas=<ruta>. Clave ENTREGAS_API_KEY en X-Api-Key.
   if (request.query?.entregas) return entregasApiHandler(request, response);
   if (request.query?.dolar) return bnaDollarHandler(request, response);
+  if (request.query?.feriados) return feriadosHandler(request, response);
   const cron = request.method === 'GET' ? CRONS[request.query?.cron] : null;
   if (cron) {
     const result = await runIntegrationCron(request.query.cron, (req) => cron(req), request);

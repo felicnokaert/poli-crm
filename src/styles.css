@@ -1878,3 +1878,16 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
   .app-shell.densa .topbar h1 { font-size: 21px; }
   .app-shell.densa .metric-card strong { font-size: 20px; }
 }
+
+/* Calendario único (26/11): capas compartidas (feriados, entregas, cortes) y lo personal. */
+.calendar-layers { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0 10px; }
+.calendar-layer { --layer: #999; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--color-border, #e4e4e7); background: transparent; color: inherit; border-radius: 999px; padding: 4px 10px; font-size: 12px; cursor: pointer; opacity: .55; transition: opacity .15s ease, background .15s ease; }
+.calendar-layer.on, .calendar-layer.mine { opacity: 1; }
+.calendar-layer.mine { cursor: default; }
+.calendar-layer i { width: 8px; height: 8px; border-radius: 50%; background: var(--layer); }
+.calendar-dots { display: flex; gap: 3px; justify-self: start; }
+.calendar-dots i { width: 6px; height: 6px; border-radius: 50%; }
+.calendar-dots .dot-entregas, .calendar-task.layer-entregas .calendar-tag { background: #2563eb; }
+.calendar-dots .dot-cortes, .calendar-task.layer-cortes .calendar-tag { background: #d97706; }
+.calendar-task.shared { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.calendar-tag { color: #fff; font-size: 11px; border-radius: 999px; padding: 1px 8px; }

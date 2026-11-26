@@ -125,7 +125,7 @@ function TrelloImport({ items, onImportTasks }) {
   );
 }
 
-function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, onNavigate, onImportPlan, onImportTasks, onAddEvent, onPostpone, onUpdateTask, personal = true, plan = [], automations, onAutomationsChange }) {
+function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, onNavigate, onImportPlan, onImportTasks, onAddEvent, onPostpone, onUpdateTask, personal = true, plan = [], automations, onAutomationsChange, supabase = null, allows, demo = false }) {
   const [tab, setTab] = useState("tareas");
   const [filter, setFilter] = useState("pending");
   const [query, setQuery] = useState("");
@@ -179,7 +179,7 @@ function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, o
     return (
       <div className="content-stack">
         {tabs}
-        <Calendar tasks={items} date={today()} onToggleTask={onToggle} onOpenTask={onOpen} onAddEvent={onAddEvent} />
+        <Calendar tasks={items} date={today()} onToggleTask={onToggle} onOpenTask={onOpen} onAddEvent={onAddEvent} supabase={supabase} allows={allows} demo={demo} />
       </div>
     );
   }

@@ -4,6 +4,14 @@ import { monthGrid, tasksForDay } from "./trello-plan-import.mjs";
 import { routineForDate, specialsForDate } from "./routine.mjs";
 import { PLAN_HOLIDAYS, PLAN_LIGHT_DAYS } from "./plan-calendar.mjs";
 import { buildIcs } from "./ics.mjs";
+import { buildCalendar, layersFor } from "./unified-calendar.mjs";
+import { useSharedCalendar } from "./hooks/useSharedCalendar.js";
+
+const LAYERS_KEY = "poliplast-calendar-layers";
+function loadLayersOn() {
+  try { const saved = JSON.parse(localStorage.getItem(LAYERS_KEY)); if (Array.isArray(saved)) return new Set(saved); } catch { /* sin almacenamiento */ }
+  return null;
+}
 
 const MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 const HEADS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
@@ -12,7 +20,7 @@ function timeOrder(a, b) {
   return (a.startTime || "99:99").localeCompare(b.startTime || "99:99");
 }
 
-export function Calendar({ tasks = [], date, onToggleTask, onOpenTask, onAddEvent }) {
+export function Calendar({ tasks = [], date, onToggleTask, onOpenTask, onAddEvent, supabase = null, allows = () => true, demo = false }) {
   const [form, setForm] = useState(null);
   const [exportOpen, setExportOpen] = useState(false);
   const [opts, setOpts] = useState({ routine: true, includeTasks: true, includeEvents: true });
@@ -20,6 +28,19 @@ export function Calendar({ tasks = [], date, onToggleTask, onOpenTask, onAddEven
   const [cursor, setCursor] = useState(() => { const [y, m] = date.split("-").map(Number); return { y, m: m - 1 }; });
   const [selected, setSelected] = useState(date);
   const cells = useMemo(() => monthGrid(cursor.y, cursor.m), [cursor]);
+  // Calendario único: lo compartido (feriados, entregas, cortes de etiquetas) según los módulos de cada uno.
+  const sharedLayers = useMemo(() => layersFor(allows).filter((layer) => layer.shared), [allows]);
+  const [layersOn, setLayersOn] = useState(() => loadLayersOn() || new Set(sharedLayers.map((layer) => layer.id)));
+  const days = useMemo(() => cells.filter(Boolean), [cells]);
+  const shared = useSharedCalendar({ days, supabase, allows, demo });
+  const sharedMap = useMemo(() => buildCalendar({ days, holidays: shared.holidays, entregas: shared.entregas, cortes: shared.cortes, on: layersOn }), [days, shared, layersOn]);
+  const holidayDays = useMemo(() => new Set(shared.holidays.length ? shared.holidays.map((item) => item.fecha) : PLAN_HOLIDAYS), [shared.holidays]);
+  const toggleLayer = (id) => setLayersOn((current) => {
+    const next = new Set(current);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    try { localStorage.setItem(LAYERS_KEY, JSON.stringify([...next])); } catch { /* sin almacenamiento */ }
+    return next;
+  });
   const move = (delta) => setCursor(({ y, m }) => { const next = new Date(y, m + delta, 1, 12); return { y: next.getFullYear(), m: next.getMonth() }; });
   const dayTasks = tasksForDay(tasks, selected);
   const dayEvents = dayTasks.filter((task) => task.kind === "evento").sort(timeOrder);
@@ -27,7 +48,9 @@ export function Calendar({ tasks = [], date, onToggleTask, onOpenTask, onAddEven
   const routine = routineForDate(selected);
   const block = routine.blocks.find((item) => item.id === "dia");
   const specials = specialsForDate(selected);
-  const holiday = PLAN_HOLIDAYS.includes(selected);
+  const holiday = holidayDays.has(selected);
+  const daySharedEvents = (sharedMap[selected] || []).filter((event) => event.layer !== "feriados");
+  const holidayName = (sharedMap[selected] || []).find((event) => event.layer === "feriados")?.title || shared.holidays.find((item) => item.fecha === selected)?.nombre;
   const light = PLAN_LIGHT_DAYS.includes(selected);
   function submitEvent(event) {
     event.preventDefault();
@@ -41,7 +64,7 @@ export function Calendar({ tasks = [], date, onToggleTask, onOpenTask, onAddEven
 
   function runExport() {
     const to = "2026-12-31";
-    const { text, count } = buildIcs(tasks, { from: date, to, ...opts, skipDays: [...PLAN_HOLIDAYS, ...PLAN_LIGHT_DAYS] });
+    const { text, count } = buildIcs(tasks, { from: date, to, ...opts, skipDays: [...holidayDays, ...PLAN_LIGHT_DAYS] });
     const blob = new Blob([text], { type: "text/calendar;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
@@ -91,6 +114,15 @@ export function Calendar({ tasks = [], date, onToggleTask, onOpenTask, onAddEven
           <p className="muted small">Después, en Google Calendar: Configuración ⚙ → Importar y exportar → Importar → elegí el archivo y el calendario. Si lo volvés a importar se actualizan los mismos eventos, no se duplican. Es de una sola vía: lo que cambies en Google no vuelve a la app.</p>
         </div>
       )}
+      <div className="calendar-layers" role="group" aria-label="Qué mostrar">
+        {sharedLayers.map((layer) => (
+          <button key={layer.id} type="button" className={`calendar-layer${layersOn.has(layer.id) ? " on" : ""}`} style={{ "--layer": layer.color }} aria-pressed={layersOn.has(layer.id)} onClick={() => toggleLayer(layer.id)}>
+            <i aria-hidden="true" />{layer.label}
+          </button>
+        ))}
+        <span className="calendar-layer mine"><i aria-hidden="true" style={{ "--layer": "#15803d" }} />Mis tareas y eventos (solo vos)</span>
+        {shared.problems.length > 0 && <span className="muted small">No se pudo leer: {shared.problems.join(", ")}.</span>}
+      </div>
       <div className="calendar-grid" role="grid" aria-label="Calendario del mes">
         {HEADS.map((name) => <div key={name} className="calendar-head">{name}</div>)}
         {cells.map((cell, index) => {
@@ -98,7 +130,8 @@ export function Calendar({ tasks = [], date, onToggleTask, onOpenTask, onAddEven
           const list = tasksForDay(tasks, cell);
           const pending = list.filter((task) => !task.done).length;
           const weekend = index % 7 >= 5;
-          const off = PLAN_HOLIDAYS.includes(cell);
+          const off = holidayDays.has(cell);
+          const marks = [...new Set((sharedMap[cell] || []).filter((event) => event.layer !== "feriados").map((event) => event.layer))];
           return (
             <button
               type="button"
@@ -110,17 +143,25 @@ export function Calendar({ tasks = [], date, onToggleTask, onOpenTask, onAddEven
               <span className="calendar-day">{Number(cell.slice(8))}</span>
               {off && <em>feriado</em>}
               {pending > 0 && <strong className="calendar-count">{pending}</strong>}
+              {marks.length > 0 && <span className="calendar-dots">{marks.map((layer) => <i key={layer} className={`dot-${layer}`} />)}</span>}
             </button>
           );
         })}
       </div>
       <div className="calendar-detail">
         <h3>{selected}</h3>
-        {holiday && <p className="form-notice">Feriado (a confirmar): sin carga de trabajo.</p>}
+        {holiday && <p className="form-notice">{holidayName ? `Feriado: ${holidayName}.` : "Feriado."} Sin carga de trabajo.</p>}
         {light && <p className="form-notice">Día liviano / puente (a confirmar): sin carga de trabajo.</p>}
         {!routine.weekend && block && <p className="muted small"><strong>Bloque del día:</strong> {block.title}</p>}
         {specials.map((line) => <p key={line} className="muted small">{line}</p>)}
-        {dayTasks.length === 0 && <p className="muted">Sin tareas ni eventos para este día.</p>}
+        {daySharedEvents.map((event) => (
+          <article key={event.id} className={`calendar-task shared layer-${event.layer}${event.done ? " done" : ""}`}>
+            <span className="calendar-tag">{event.layer === "entregas" ? "Entregas" : "Etiquetas"}</span>
+            <span>{event.title}</span>
+            {event.detail && <span className="muted small">{event.detail}</span>}
+          </article>
+        ))}
+        {dayTasks.length === 0 && daySharedEvents.length === 0 && <p className="muted">Sin tareas ni eventos para este día.</p>}
         {[...dayEvents, ...dayOthers].map((task) => (
           <article key={task.id} className={`calendar-task${task.done ? " done" : ""}${task.kind === "evento" ? " event" : ""}`}>
             {task.kind === "evento" && <span className="calendar-time">{task.startTime}{task.endTime ? `–${task.endTime}` : ""}</span>}

@@ -464,7 +464,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   }
 
   // 26/11 (Felipe: «que busque y devuelva la lista, no un prompt»): la IA busca en la web desde el servidor y la tabla
-  // se revisa con el importador de siempre (vista previa antes de cargar). Cuesta ~US$ 0,05 por búsqueda; hay tope diario.
+  // se revisa con el importador de siempre (vista previa antes de cargar). Cuesta ~US$ 0,15-0,30 por búsqueda (Sonnet 5.5); hay tope diario.
   const [aiSearching, setAiSearching] = useState(false);
   async function searchWithAi() {
     const family = research.family || planFamily;
@@ -773,7 +773,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
           {session?.access_token && <button type="button" className="primary big" disabled={aiSearching} onClick={searchWithAi}><Search size={18} /> {aiSearching ? 'Buscando con IA…' : 'Buscar con IA ahora'}</button>}
           {requests && <button type="button" className="secondary" onClick={requestFromClaude}>Pedir a Claude (sin costo, tarda más)</button>}
           <button type="button" className="secondary" onClick={prepareResearch}>{requests ? 'Preparar pedido para otra IA' : <><Search size={18} /> Preparar investigación</>}</button>
-          <span className="muted small">«Buscar con IA ahora» devuelve hasta 10 empresas en menos de un minuto (≈ US$ 0,05 cada búsqueda). Se excluyen {exclusionNames(clients, prospects).length} empresas que ya tenés.</span>
+          <span className="muted small">«Buscar con IA ahora» devuelve hasta 10 empresas en menos de un minuto (≈ US$ 0,15 a 0,30 cada búsqueda, con valor del prospecto de 1 a 10). Se excluyen {exclusionNames(clients, prospects).length} empresas que ya tenés.</span>
         </div>
 
         {researchJobs.length > 0 && (

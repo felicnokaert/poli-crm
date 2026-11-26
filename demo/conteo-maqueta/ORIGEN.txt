@@ -1,1 +1,1 @@
-poliplast-app main-dae273 4aea462 · MAQUETA_BASE=/conteo-maqueta/ npm run build:maqueta (sin entregas/ ni guia/)
+poliplast-app main-dae273 7ef7709

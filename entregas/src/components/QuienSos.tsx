@@ -43,7 +43,7 @@ export function QuienSos({ onCancelar }: { onCancelar?: () => void }) {
     <div className="login-wrap">
       <div className="panel login">
         <div className="brand-dark">
-          <img src="/poliplast-isotipo-color.png" alt="" />
+          <img src={`${import.meta.env.BASE_URL}poliplast-isotipo-color.png`} alt="" />
           <div>
             <div className="eyebrow">Expedición</div>
             <h1>¿Quién sos?</h1>

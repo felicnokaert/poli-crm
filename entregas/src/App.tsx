@@ -16,7 +16,7 @@ import { mensajeError, SinAcceso } from './lib/api'
 import { api } from './lib/cliente'
 import { DatosProvider } from './lib/datos'
 import { altoAutomaticoEnCrm } from './lib/altoCrm'
-import { avisarSinSesionAlCrm, avisarVisibleAlCrm, escucharSesionDelCrm, isEmbeddedInApp, isEmbeddedInCrm } from './lib/embed'
+import { avisarSinSesionAlCrm, avisarVisibleAlCrm, enMarcoPoliplast, escucharSesionDelCrm, isEmbeddedInApp, isEmbeddedInCrm } from './lib/embed'
 import { alCambiarOperador, depositoActual, operadorActual, tomarPersonaDeLaUrl } from './lib/operador'
 import { useRuta } from './lib/ruta'
 import type { Usuario } from './lib/types'
@@ -60,12 +60,19 @@ export default function App() {
     }
     // Sección de la app de conteo: se ve integrada y arranca en Expedición; el login es el propio.
     if (isEmbeddedInApp()) {
-      document.documentElement.classList.add('embebido', 'en-app')
+      // En Poliplast App (marco) no lleva el aspecto de la app de conteo: toma el diseño y el tema de la app que la contiene.
+      document.documentElement.classList.add('embebido', enMarcoPoliplast() ? 'marco-poliplast' : 'en-app')
       tomarPersonaDeLaUrl()
       if (!window.location.hash || window.location.hash === '#/') window.history.replaceState(null, '', '#/expedicion')
     }
+    // Pantalla de Poliplast App (marco=poliplast): sin barra propia, alto automático y tema del padre (mismo origen).
+    let dejarAltoMarco = () => {}
+    if (enMarcoPoliplast()) {
+      dejarAltoMarco = altoAutomaticoEnCrm()
+    }
     void comprobar()
-    return api.alCambiarSesion(() => void comprobar())
+    const dejarSesion = api.alCambiarSesion(() => void comprobar())
+    return () => { dejarSesion(); dejarAltoMarco() }
   }, [comprobar])
 
   // Dentro del CRM: avisar que ya se ve la pantalla, así el CRM saca su P de carga.

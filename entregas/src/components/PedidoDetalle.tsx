@@ -1,5 +1,5 @@
 import {
-  AlertCircle, ArrowLeft, Camera, Copy, ExternalLink, FileText, HandCoins, Image as ImageIcon, Link2, MessageCircle, MessageSquare, Paperclip,
+  AlertCircle, ArrowLeft, Copy, ExternalLink, FileText, HandCoins, Image as ImageIcon, Link2, MessageCircle, MessageSquare, Paperclip,
   Mail, Pencil, PenLine, PlusCircle, Printer, Send, Share2, Trash2, Truck,
 } from 'lucide-react'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
@@ -485,25 +485,18 @@ function Archivos({ pedido, archivos, onCambio, alFirmar }: { pedido: Pedido; ar
     return false
   })
 
-  // 26/11 (Felipe: «en la compu no me abras la cámara; en el celular quiero poder adjuntar»): el botón principal ADJUNTA (PDF o
-  // foto; en el celular el mismo selector ofrece galería, archivos y cámara). En un celular se suma «Foto» que abre directo la cámara.
+  // 26/11 (Felipe: «al tocar Guía o Remito firmado, que en el celular dé la opción de Archivos o Cámara; en la compu, adjuntar»):
+  // UN botón por tipo, sin capture: en Android/iPhone el selector del sistema ya ofrece Cámara y Archivos; en la compu adjunta.
+  // OJO: es una función que devuelve JSX, NO un componente (<Subir/>) definido adentro del render: como la pantalla se refresca
+  // sola cada pocos segundos, un componente interno se desmontaba con el selector de archivos abierto y la foto/PDF elegido se perdía.
   const celular = esCelular()
-  const Subir = ({ tipo, label, camara }: { tipo: TipoArchivo; label: string; camara?: boolean }) => (
-    <span className="subir-par">
-      <label className="btn btn-sm" aria-disabled={subiendo !== null} title="Adjuntar un PDF o una foto" {...soltable((fs) => { if (subiendo === null) void subir(tipo, fs[0]) })}>
-        <Paperclip size={14} /> {subiendo === tipo ? 'Subiendo…' : label}
-        <input type="file" hidden accept={tipo === 'otro' ? undefined : ACEPTA_ARCHIVOS} disabled={subiendo !== null}
-          onChange={(e) => { void subir(tipo, e.target.files?.[0]); e.target.value = '' }} />
-      </label>
-      {camara && celular && (
-        <label className="btn btn-sm btn-ghost" aria-label={`${label}: sacar foto con la cámara`} title="Sacar foto con la cámara" aria-disabled={subiendo !== null}>
-          <Camera size={14} /> Cámara
-          <input type="file" hidden accept="image/*" capture="environment" disabled={subiendo !== null}
-            onClick={() => marcarCamara(pedido.codigo, tipo)}
-            onChange={(e) => { limpiarCamara(); void subir(tipo, e.target.files?.[0]); e.target.value = '' }} />
-        </label>
-      )}
-    </span>
+  const subirBoton = (tipo: TipoArchivo, label: string) => (
+    <label key={tipo} className="btn btn-sm" aria-disabled={subiendo !== null} title={celular ? 'Sacar una foto o elegir un archivo' : 'Adjuntar un PDF o una foto'} {...soltable((fs) => { if (subiendo === null) void subir(tipo, fs[0]) })}>
+      <Paperclip size={14} /> {subiendo === tipo ? 'Subiendo…' : label}
+      <input type="file" hidden accept={tipo === 'otro' ? undefined : ACEPTA_ARCHIVOS} disabled={subiendo !== null}
+        onClick={() => { if (celular && tipo !== 'otro') marcarCamara(pedido.codigo, tipo) }}
+        onChange={(e) => { limpiarCamara(); void subir(tipo, e.target.files?.[0]); e.target.value = '' }} />
+    </label>
   )
 
   return (
@@ -532,11 +525,11 @@ function Archivos({ pedido, archivos, onCambio, alFirmar }: { pedido: Pedido; ar
         )}
         <div className="label" style={{ marginTop: 6 }}>Agregar</div>
         <div className="subir-grid">
-          <Subir tipo="guia" label="Guía" camara />
-          <Subir tipo="remito_firmado" label="Remito firmado" camara />
-          {!archivos.some((a) => a.tipo === 'remito') && <Subir tipo="remito" label="Remito (PDF)" />}
-          {!CON_SUBIR && <Subir tipo="foto" label="Foto" camara />}
-          {!CON_SUBIR && <Subir tipo="otro" label="Otro archivo" />} {/* PARCHE CONTEO: el CRM recibe guía, remito y remito firmado */}
+          {subirBoton('guia', 'Guía')}
+          {subirBoton('remito_firmado', 'Remito firmado')}
+          {!archivos.some((a) => a.tipo === 'remito') && subirBoton('remito', 'Remito (PDF)')}
+          {!CON_SUBIR && subirBoton('foto', 'Foto')}
+          {!CON_SUBIR && subirBoton('otro', 'Otro archivo')} {/* PARCHE CONTEO: el CRM recibe guía, remito y remito firmado */}
         </div>
       </div>
       {leerGuia.elemento}

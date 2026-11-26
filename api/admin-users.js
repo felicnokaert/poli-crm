@@ -90,6 +90,7 @@ export default async function handler(request, response) {
   // Entregas para expedición sin login (20/11): /api/entregas/<ruta> → ?entregas=<ruta>. Clave ENTREGAS_API_KEY en X-Api-Key.
   if (request.query?.entregas) return entregasApiHandler(request, response);
   if (request.query?.dolar) return bnaDollarHandler(request, response);
+  // Feriados nacionales + días cerrados de la empresa (lib/company-days.mjs), para el calendario y Entregas.
   if (request.query?.feriados) return feriadosHandler(request, response, fetch, async (year) => asHolidays(await readCompanyDays(storeFor(process.env, fetch)), year));
   if (request.query?.['app-firma-publica']) return publicKeyHandler(request, response);
   const cron = request.method === 'GET' ? CRONS[request.query?.cron] : null;
@@ -108,9 +109,9 @@ export default async function handler(request, response) {
     : action === 'shopify' ? await shopifyAdmin(request)
     : action === 'alerts' ? await alertsAdmin(request)
     : action === 'trello-plan' ? await trelloPlanAdmin(request)
+    : action === 'company-days' ? await companyDaysAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'whatsapp-auto' ? await whatsappAutoAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'automation-pause' ? await automationPauseAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
-    : action === 'company-days' ? await companyDaysAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'app-firma' ? await appFirmaAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'app-report' ? await appReportsAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'gmail' ? await gmailAdmin(request)

@@ -18,7 +18,7 @@ export const SUBMODULES = {
   etiquetas: ['Escanear', 'Pendientes', 'Hecho', 'Devoluciones', 'Cortes'],
   conteo: ['Categorías', 'Administración'],
   dosificado: ['Cargar', 'Kits', 'Registros', 'Resumen'],
-  recibos: ['Cargar recibo', 'Recibos del día', 'Cobranzas por cliente'],
+  recibos: ['Comprobantes recibidos', 'Clientes y saldos', 'Enlaces de carga', 'Entrenamiento'],
   facturacion: ['Comprobantes (Contabilium)', 'Saldos', 'Notas de crédito'],
   compras: ['Qué se termina', 'Proveedores sugeridos', 'Pedidos y negociación'],
   tasks: ['Tareas', 'Rutina / Cierre del día', 'Calendario', 'Automatizaciones'],
@@ -49,8 +49,9 @@ export const FUTURE_MODULES = {
   },
   recibos: {
     label: 'Recibos',
-    status: 'En armado (Poli-Recibos)',
-    text: 'Cargar los recibos de cobranza desde el celular, verlos por día y por cliente.',
+    status: 'Ya funciona en su propia app (Poli-Recibos)',
+    text: 'Se suben los comprobantes de pago (PDF, fotos, capturas): los lee solo, avisa si ya tienen recibo o están repetidos, administración asigna el cliente y confirma, y arma la cobranza para Contabilium. Por ahora se abre en su propia pestaña, con su propio usuario; la unión dentro de la app (mismo usuario y misma pantalla) es el próximo paso.',
+    url: 'https://poli-recibos.vercel.app/login',
   },
   facturacion: {
     label: 'Facturación',

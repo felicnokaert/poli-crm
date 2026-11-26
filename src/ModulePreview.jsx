@@ -12,6 +12,7 @@ export function ModulePreview({ id }) {
       <span className="eyebrow">Próximamente · {module.status}</span>
       <h2>{module.label}</h2>
       <p className="muted">{module.text}</p>
+      {module.url && <p><a className="primary" href={module.url} target="_blank" rel="noreferrer">Abrir {module.label}</a></p>}
       {subs.length > 0 && (
         <div className="segmented" role="tablist" aria-label={`Submódulos de ${module.label}`} style={{ margin: "12px 0", width: "fit-content", flexWrap: "wrap" }}>
           {subs.map((sub) => (

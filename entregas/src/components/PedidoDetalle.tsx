@@ -23,7 +23,7 @@ import { DepositoSalida } from './DepositoSalida'
 import { useLeerGuia } from './ConfirmarGuia'
 import { RelojLead } from './LeadTime'
 import { leadTime } from '../lib/leadtime'
-import { ACEPTA_ARCHIVOS, DepositoChip, Empty, EstadoChip, Faltantes, ICONO_ESTADO, Modal, PelotaTag, soltable, useCopiar, useToast } from './ui'
+import { ACEPTA_ARCHIVOS, esCelular, DepositoChip, Empty, EstadoChip, Faltantes, ICONO_ESTADO, Modal, PelotaTag, soltable, useCopiar, useToast } from './ui'
 
 export const TIPO_ARCHIVO_LABEL: Record<TipoArchivo, string> = {
   remito: 'Remito',
@@ -485,21 +485,22 @@ function Archivos({ pedido, archivos, onCambio, alFirmar }: { pedido: Pedido; ar
     return false
   })
 
-  // 26/11 (Felipe: «la foto del remito firmado no la toma»): con «camara» el botón abre directo la cámara del celular
-  // (capture), y al lado queda el clip para elegir un archivo (PDF o una foto ya sacada).
+  // 26/11 (Felipe: «en la compu no me abras la cámara; en el celular quiero poder adjuntar»): el botón principal ADJUNTA (PDF o
+  // foto; en el celular el mismo selector ofrece galería, archivos y cámara). En un celular se suma «Foto» que abre directo la cámara.
+  const celular = esCelular()
   const Subir = ({ tipo, label, camara }: { tipo: TipoArchivo; label: string; camara?: boolean }) => (
     <span className="subir-par">
-      <label className="btn btn-sm" aria-disabled={subiendo !== null} {...soltable((fs) => { if (subiendo === null) void subir(tipo, fs[0]) })}>
-        {camara ? <Camera size={14} /> : <Paperclip size={14} />} {subiendo === tipo ? 'Subiendo…' : label}
-        <input type="file" hidden accept={camara ? 'image/*' : tipo === 'otro' ? undefined : ACEPTA_ARCHIVOS} {...(camara ? { capture: 'environment' as const } : {})} disabled={subiendo !== null}
-          onClick={camara ? () => marcarCamara(pedido.codigo, tipo) : undefined}
-          onChange={(e) => { limpiarCamara(); void subir(tipo, e.target.files?.[0]); e.target.value = '' }} />
+      <label className="btn btn-sm" aria-disabled={subiendo !== null} title="Adjuntar un PDF o una foto" {...soltable((fs) => { if (subiendo === null) void subir(tipo, fs[0]) })}>
+        <Paperclip size={14} /> {subiendo === tipo ? 'Subiendo…' : label}
+        <input type="file" hidden accept={tipo === 'otro' ? undefined : ACEPTA_ARCHIVOS} disabled={subiendo !== null}
+          onChange={(e) => { void subir(tipo, e.target.files?.[0]); e.target.value = '' }} />
       </label>
-      {camara && (
-        <label className="btn btn-sm btn-ghost" aria-label={`${label}: elegir un archivo`} title="Elegir un archivo (PDF o foto ya sacada)" aria-disabled={subiendo !== null}>
-          <Paperclip size={14} />
-          <input type="file" hidden accept={ACEPTA_ARCHIVOS} disabled={subiendo !== null}
-            onChange={(e) => { void subir(tipo, e.target.files?.[0]); e.target.value = '' }} />
+      {camara && celular && (
+        <label className="btn btn-sm btn-ghost" aria-label={`${label}: sacar foto con la cámara`} title="Sacar foto con la cámara" aria-disabled={subiendo !== null}>
+          <Camera size={14} /> Cámara
+          <input type="file" hidden accept="image/*" capture="environment" disabled={subiendo !== null}
+            onClick={() => marcarCamara(pedido.codigo, tipo)}
+            onChange={(e) => { limpiarCamara(); void subir(tipo, e.target.files?.[0]); e.target.value = '' }} />
         </label>
       )}
     </span>

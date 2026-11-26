@@ -28,7 +28,7 @@ export function Login({ sinAcceso, onSalir }: { sinAcceso?: string | null; onSal
     <div className="login-wrap">
       <div className="panel login">
         <div className="brand-dark">
-          <img src="/poliplast-isotipo-color.png" alt="" />
+          <img src={`${import.meta.env.BASE_URL}poliplast-isotipo-color.png`} alt="" />
           <div>
             <div className="eyebrow">Grupo Poliplast</div>
             <h1>Entregas</h1>

@@ -1840,7 +1840,7 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .readonly-strip .danger-link { font-size: 12.5px; }
 /* Poliplast App (26/11): menú sin franja blanca, botón de minimizar como pestaña del borde, Acceso rápido. */
 @media (min-width: 761px) {
-  .sidebar nav { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: #ffffff26 transparent; }
+  .sidebar nav { flex: 1 1 auto; align-content: start; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: #ffffff26 transparent; }
   .sidebar { overflow: visible; }
   .app-shell.nav-mini .sidebar { overflow: visible; }
   .nav-mini-toggle { position: absolute; right: -24px; top: 84px; width: 26px; height: 26px; padding: 0; display: grid; place-items: center; border-radius: 50%; background: var(--color-white); color: #242424; border: 1px solid var(--color-border); box-shadow: 0 4px 14px #0000002e; z-index: 5; }

@@ -447,6 +447,7 @@ function Archivos({ pedido, archivos, onCambio, alFirmar }: { pedido: Pedido; ar
     try {
       await api.subirArchivo(pedido.id, tipo, file)
       avisar(`${TIPO_ARCHIVO_LABEL[tipo]} subido`)
+      setCamaraMarca(null)
       await onCambio()
       if (tipo === 'guia') leerGuia.revisar(pedido, file)
     } catch (e) {
@@ -479,11 +480,14 @@ function Archivos({ pedido, archivos, onCambio, alFirmar }: { pedido: Pedido; ar
   }
 
   // Si la página se recargó mientras estaba abierta la cámara (Android la saca de memoria), avisar qué pasó.
-  const [camaraPerdida] = useState(() => {
+  // 26/11: no avisar si ese archivo igual llegó (la marca puede quedar de un intento anterior o de elegir «Archivos» y cancelar).
+  const [camaraMarca, setCamaraMarca] = useState(() => {
     const pend = camaraPendiente()
-    if (pend && pend.codigo === pedido.codigo) { limpiarCamara(); return true }
-    return false
+    if (pend && pend.codigo === pedido.codigo) { limpiarCamara(); return pend }
+    return null
   })
+  const camaraPerdida = !!camaraMarca && subiendo === null &&
+    !archivos.some((a) => a.tipo === camaraMarca.tipo && Date.parse(a.created_at) >= camaraMarca.at - 60000)
 
   // 26/11 (Felipe: «al tocar Guía o Remito firmado, que en el celular dé la opción de Archivos o Cámara; en la compu, adjuntar»):
   // UN botón por tipo, sin capture: en Android/iPhone el selector del sistema ya ofrece Cámara y Archivos; en la compu adjunta.
@@ -503,7 +507,7 @@ function Archivos({ pedido, archivos, onCambio, alFirmar }: { pedido: Pedido; ar
     <section className="panel">
       <div className="panel-head"><h2>Archivos</h2><span className="muted small">{archivos.length}</span></div>
       <div className="archivos">
-        {camaraPerdida && <div className="aviso warn" role="alert">El celular cerró la página mientras estaba abierta la cámara y la foto no llegó. Probá de nuevo con la cámara o tocá el clip y elegila de la galería.</div>}
+        {camaraPerdida && <div className="aviso warn" role="alert">El celular cerró la página mientras estaba abierta la cámara y la foto no llegó. Probá de nuevo: tocá el botón y elegí Cámara o la foto de la galería. <button className="btn btn-ghost btn-sm" onClick={() => setCamaraMarca(null)}>Entendido</button></div>}
         {archivos.length === 0 && <span className="muted small">Todavía no hay archivos.</span>}
         {archivos.map((a) => (
           <div key={a.id} className="archivo">

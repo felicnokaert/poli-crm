@@ -94,7 +94,7 @@ export function buildResearchPrompt({ family, scope = 'todo el país', count = 2
     'REGLAS: no inventes datos ni cifras; si algo no se encuentra, dejá la celda vacía. Cada fila debe tener la fuente (link) que la respalda. Si no estás seguro de que encaje, marcalo como "verificar".',
     '',
     `ENTREGA: una tabla con estas columnas exactas: ${RESEARCH_COLUMNS.join(' | ')}.`,
-    'Después de la tabla, listá las empresas que descartaste y por qué (una línea cada una). Por último, repetí la misma tabla como CSV separado por punto y coma dentro de un bloque de código, para poder importarlo.',
+    'En «Por qué encaja» empezá con «Valor N/10 ·» (probabilidad × volumen de compra recurrente) y sumá qué productos nuestros usaría, señales de volumen y a quién conviene hablarle; ordená la tabla de mayor a menor valor. Después de la tabla, listá las empresas que descartaste y por qué (una línea cada una). Por último, repetí la misma tabla como CSV separado por punto y coma dentro de un bloque de código, para poder importarlo.',
   ];
   return lines.join('\n');
 }

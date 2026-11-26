@@ -120,6 +120,9 @@ export function normalizeFit(value) {
 export function prospectFieldsFromRow(row) {
   const fields = { ...row };
   const imported = {};
+  // 26/11: la IA escribe «Valor N/10 ·» al principio de «Por qué encaja»: pasa a ser el puntaje (sube en la cola).
+  const aiValue = /valor\s*(\d{1,2})\s*\/\s*10/i.exec(String(fields.fit || ''));
+  if (aiValue && !('sheetScore' in fields && String(fields.sheetScore).trim())) fields.sheetScore = String(Math.min(10, Number(aiValue[1])));
   if ('sheetScore' in fields) {
     const score = parseScore(fields.sheetScore);
     if (score === null) imported.scoreRaw = fields.sheetScore;

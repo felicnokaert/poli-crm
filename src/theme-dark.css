@@ -335,6 +335,8 @@
 :root[data-theme="dark"] .quote-saved { background: #26262a; }
 :root[data-theme="dark"] .readonly-strip { background: #1c1c1f; }
 :root[data-theme="dark"] .nav-mini-toggle { background: #1c1c1f; }
+:root[data-theme="dark"] .exam-results .badge.warn { background: #26262a; }
+:root[data-theme="dark"] .exam-results .badge.danger { background: #26262a; }
 :root[data-theme="dark"] :root { color: #e7e7e9; }
 :root[data-theme="dark"] .link-button { color: #b4b5b9; }
 :root[data-theme="dark"] .link-button:hover { color: #b4b5b9; }
@@ -447,6 +449,8 @@
 :root[data-theme="dark"] .quote-status.st-aceptada { color: #b4b5b9; }
 :root[data-theme="dark"] .readonly-strip { color: #b4b5b9; }
 :root[data-theme="dark"] .nav-mini-toggle { color: #e7e7e9; }
+:root[data-theme="dark"] .exam-results .badge.warn { color: #b4b5b9; }
+:root[data-theme="dark"] .exam-results .badge.danger { color: #e7e7e9; }
 :root[data-theme="dark"] body, :root[data-theme="dark"] .login-shell { background: #121214; }
 :root[data-theme="dark"] .commercial-guidance, :root[data-theme="dark"] .prospect-glass::before { background: #1c1c1f; }
 :root[data-theme="dark"] .segmented { background: #2a2a2e; }
@@ -792,6 +796,8 @@
   :root:not([data-theme="light"]) .quote-saved { background: #26262a; }
   :root:not([data-theme="light"]) .readonly-strip { background: #1c1c1f; }
   :root:not([data-theme="light"]) .nav-mini-toggle { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .exam-results .badge.warn { background: #26262a; }
+  :root:not([data-theme="light"]) .exam-results .badge.danger { background: #26262a; }
   :root:not([data-theme="light"]) :root { color: #e7e7e9; }
   :root:not([data-theme="light"]) .link-button { color: #b4b5b9; }
   :root:not([data-theme="light"]) .link-button:hover { color: #b4b5b9; }
@@ -904,6 +910,8 @@
   :root:not([data-theme="light"]) .quote-status.st-aceptada { color: #b4b5b9; }
   :root:not([data-theme="light"]) .readonly-strip { color: #b4b5b9; }
   :root:not([data-theme="light"]) .nav-mini-toggle { color: #e7e7e9; }
+  :root:not([data-theme="light"]) .exam-results .badge.warn { color: #b4b5b9; }
+  :root:not([data-theme="light"]) .exam-results .badge.danger { color: #e7e7e9; }
   :root:not([data-theme="light"]) body, :root:not([data-theme="light"]) .login-shell { background: #121214; }
   :root:not([data-theme="light"]) .commercial-guidance, :root:not([data-theme="light"]) .prospect-glass::before { background: #1c1c1f; }
   :root:not([data-theme="light"]) .segmented { background: #2a2a2e; }

@@ -5,6 +5,7 @@ import { authenticatedCorporateUser } from '../lib/corporate-auth.mjs';
 import { whatsappAutoAdmin } from '../lib/whatsapp-autoreply.mjs';
 import { automationPauseAdmin } from '../lib/automation-pause.mjs';
 import { trainingAdmin, trainingCron } from '../lib/ai-training.mjs';
+import { examAdmin, examCron } from '../lib/ai-exam.mjs';
 import { cleanupWorkspaces } from '../lib/workspace-cleanup-admin.mjs';
 import { technicalAdmin } from '../lib/technical-admin.mjs';
 import { listClientErrors, logClientError } from '../lib/error-log.mjs';
@@ -33,6 +34,9 @@ import { gmailAdmin, gmailAutoSendCron, gmailCallback } from '../lib/gmail-servi
 // Actualizaciones diarias (vercel.json → crons): cada una deja constancia de cómo terminó (lib/integration-crons.mjs)
 // y Más → Datos → Conexiones ("Actualizaciones automáticas") lo muestra.
 const CRONS = {
+  // Examen semanal del asistente (26/11): lunes, dos tandas que se suman en la misma semana.
+  'examen-1': examCron,
+  'examen-2': examCron,
   mercadolibre: mercadoLibreCron,
   'mercadolibre-1': mercadoLibreAccountCron(0),
   'mercadolibre-2': mercadoLibreAccountCron(1),
@@ -115,6 +119,7 @@ export default async function handler(request, response) {
     : action === 'app-firma' ? await appFirmaAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'app-report' ? await appReportsAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'gmail' ? await gmailAdmin(request)
+    : action === 'ai-exam' ? await examAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'training' ? await trainingAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'assistant' ? await assistantAi(request)
     : await deleteUser(request);

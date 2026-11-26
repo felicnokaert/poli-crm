@@ -1917,3 +1917,12 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
   .condition-row { grid-template-columns: 1fr 1fr; }
   .condition-row label.wide { grid-column: span 2; }
 }
+
+/* Examen semanal del asistente (26/11). */
+.exam-weeks { display: flex; gap: 6px; align-items: flex-end; height: 90px; margin: 10px 0; }
+.exam-week { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
+.exam-bar { width: 100%; max-width: 28px; background: var(--brand-red); border-radius: 4px 4px 0 0; opacity: .85; }
+.exam-results { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 8px; }
+.exam-results .badge.ok { background: var(--color-success-bg); color: var(--color-success); }
+.exam-results .badge.warn { background: #fff1d6; color: #7a5200; }
+.exam-results .badge.danger { background: #fde2e2; color: #9b1c1c; }

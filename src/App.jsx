@@ -120,7 +120,7 @@ import { DemoModule } from "./DemoModules.jsx";
 import { CONTEO_MODULES, ConteoMaqueta, MaquetaFrame } from "./MaquetaFrame.jsx";
 import { ExpeditionChip, ExpeditionGate, readExpeditionWho, saveExpeditionWho } from "./ExpeditionGate.jsx";
 import { AppPlanOverview, ModulePreview } from "./ModulePreview.jsx";
-import { isDemoMode, withDemoData } from "./demo-mode.mjs";
+import { isDemoMode, isPreviewSite, withDemoData } from "./demo-mode.mjs";
 import { canSee as canSeeModule, firstAllowedView } from "./module-access.mjs";
 import { useModuleAccess } from "./hooks/useModuleAccess.js";
 import { AppTopbar } from "./AppTopbar.jsx";
@@ -147,6 +147,8 @@ function loadState() {
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
     state = stored ? { ...initialState, ...stored, inbox: stored.inbox || [] } : initialState;
+    // Poliplast App: los datos INVENTADOS de la prueba nunca se mezclan con una cuenta real.
+    if (onlineConfigured && stored?.demo) state = initialState;
   } catch { /* copia local rota: arranca vacío */ }
   // Poliplast App (prueba): en el link de prueba se cargan datos inventados la primera vez.
   return isDemoMode({ online: onlineConfigured }) ? withDemoData(state) : state;
@@ -223,11 +225,13 @@ export default function App() {
     if (!accessAllows(accessFor(role), view)) setView("dashboard");
   };
   const demo = isDemoMode({ online: onlineConfigured });
+  // Link de prueba (con tus datos reales o con datos inventados): módulos de otras apps desde el mismo link.
+  const previewSite = isPreviewSite();
   // Si a esta cuenta le quitaron la pantalla (por permiso o por su rol), cae en la primera que sí puede ver.
   const viewAllowed = (id) => canSeeModule(signedEmail, deniedModules, id) && accessAllows(previewAccess, id);
   const view = viewAllowed(pickedView) ? pickedView : (viewAllowed("dashboard") ? "dashboard" : firstAllowedView(signedEmail, deniedModules));
   // Entregas precargada (ver abajo): solo si la persona la puede ver y sin ahorro de datos.
-  const canSeeEntregas = viewAllowed("entregas") && !demo;
+  const canSeeEntregas = viewAllowed("entregas") && !previewSite;
   const [entregasWarm, setEntregasWarm] = useState(false);
   useEffect(() => {
     if (view === "entregas") { setEntregasWarm(true); return undefined; }
@@ -767,8 +771,8 @@ export default function App() {
         {isExpedition && <ExpeditionChip value={expeditionWho} onChange={setExpeditionWho} />}
         {isExpedition && !expeditionWho ? <ExpeditionGate onPick={setExpeditionWho} /> : (
         <ErrorBoundary key={view} view={view}>
-        {FUTURE_MODULES[view] && demo && CONTEO_MODULES[view] && <ConteoMaqueta key={view} module={view} access={previewAccess} who={isExpedition ? expeditionWho : null} />}
-        {FUTURE_MODULES[view] && !(demo && CONTEO_MODULES[view]) && (demo ? <DemoModule key={view} id={view} access={previewAccess} /> : <ModulePreview id={view} />)}
+        {FUTURE_MODULES[view] && previewSite && CONTEO_MODULES[view] && <ConteoMaqueta key={view} module={view} access={previewAccess} who={isExpedition ? expeditionWho : null} />}
+        {FUTURE_MODULES[view] && !(previewSite && CONTEO_MODULES[view]) && (demo ? <DemoModule key={view} id={view} access={previewAccess} /> : <ModulePreview id={view} />)}
         {view === "team" && isAdminUser && <TeamAccess team={team} onChange={teamStore.save} rolesTable={teamStore.rolesTable} status={teamStore.status} groups={NAV_GROUPS} onViewAs={(person) => pickPreviewRole(`person:${person.email}`)} />}
         {view === "plan" && <AppPlanOverview groups={NAV_GROUPS} role={previewRole} onRole={pickPreviewRole} onResetDemo={demo ? () => { if (window.confirm("¿Volver a cargar los datos de prueba? Se pierde lo que tocaste en la prueba.")) { setData((current) => withDemoData(current, { force: true })); } } : null} />}
 
@@ -977,10 +981,11 @@ export default function App() {
             <CotizadorFrame session={session} client={quoterClient} />
           </Suspense>
         )}
+        {view === "entregas" && previewSite && !demo && <MaquetaFrame src={`/entregas-app/?embed=app${isExpedition && expeditionWho ? `&persona=${encodeURIComponent(expeditionWho.who)}&deposito=${encodeURIComponent(expeditionWho.deposit)}` : ""}`} title="Entregas" />}
         {view === "entregas" && demo && <MaquetaFrame src={`/entregas-maqueta/?embed=app${isExpedition && expeditionWho ? `&persona=${encodeURIComponent(expeditionWho.who)}&deposito=${encodeURIComponent(expeditionWho.deposit)}` : ""}`} title="Entregas" />}
         {/* 25/11 (Felipe: «Entregas demora muchísimo»): se precarga escondida unos segundos después de abrir y queda abierta al
             cambiar de pestaña, así al tocar Entregas ya está lista. */}
-        {(view === "entregas" || entregasWarm) && session && !demo && (
+        {(view === "entregas" || entregasWarm) && session && !previewSite && (
           <div hidden={view !== "entregas"} aria-hidden={view !== "entregas"}>
             <Suspense fallback={view === "entregas" ? <Splash text="Cargando entregas…" /> : null}>
               <EntregasFrame session={session} />

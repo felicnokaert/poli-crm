@@ -23,3 +23,11 @@ export function withDemoData(state, { storage = globalThis.localStorage, force =
   } catch { /* sin almacenamiento: igual carga los datos en memoria */ }
   return { ...state, ...demoWorkspace() };
 }
+
+// El link de prueba de Poliplast App (con o sin base conectada). Ahí se muestran los módulos de otras apps
+// desde el mismo link (Entregas real, maqueta de la app de conteo) y el cotizador propio.
+export function isPreviewSite({ location = globalThis.location, storage = globalThis.localStorage } = {}) {
+  const host = String(location?.hostname || '');
+  if (host.includes('-git-poliplast-app-')) return true;
+  try { return new URLSearchParams(location?.search || '').has('demo') || storage?.getItem(DEMO_FLAG_KEY) === '1'; } catch { return false; }
+}

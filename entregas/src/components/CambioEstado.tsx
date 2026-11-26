@@ -10,7 +10,7 @@ import { useDatos } from '../lib/datos'
 import { accionLabel, ESTADO_INFO, MOTIVOS_BLOQUEO, MOTIVOS_INCIDENCIA } from '../lib/estados'
 import { hoyISO } from '../lib/fechas'
 import type { DatosCambio, Estado, MotivoBloqueo, MotivoIncidencia, Pedido, TipoArchivo } from '../lib/types'
-import { Modal, useToast } from './ui'
+import { esCelular, Modal, useToast } from './ui'
 
 // Estados que se pueden confirmar con un clic (sin datos extra).
 export const DIRECTOS: Estado[] = ['impreso', 'cargado']
@@ -206,11 +206,11 @@ export function CambioEstado({ pedidos, a, onClose, onHecho }: {
             <div className="archivo-cargado"><Paperclip size={16} /> <span className="small">{archivo.name}</span><span className="spacer" /><button className="btn btn-ghost btn-sm" onClick={() => setArchivo(null)}>Quitar</button></div>
           ) : (
             <div className="row">
-              <label className="btn btn-sm">
+              {esCelular() && <label className="btn btn-sm">
                 <Camera size={15} /> Sacar foto
                 <input type="file" accept="image/*" capture="environment" hidden onClick={() => marcarCamara(uno.codigo, tipoAdjunto)}
                   onChange={(e) => { limpiarCamara(); adjuntar(e.target.files?.[0] ?? null); e.target.value = '' }} />
-              </label>
+              </label>}
               <label className="btn btn-sm">
                 <Paperclip size={15} /> Adjuntar archivo
                 <input type="file" accept="image/*,application/pdf" hidden onChange={(e) => { adjuntar(e.target.files?.[0] ?? null); e.target.value = '' }} />

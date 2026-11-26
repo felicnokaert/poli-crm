@@ -1,7 +1,7 @@
 // Modo oscuro (21/11, Felipe: «Entregas no responde al modo noche»). Dentro del CRM, Entregas toma el tema del CRM:
 // el CRM lo pasa en la dirección (?tema=dark|light, para no parpadear al abrir) y lo vuelve a mandar con
 // { tipo: 'crm:tema', tema } cada vez que se cambia. Suelta (link directo) sigue al dispositivo por CSS.
-import { isCrmOrigin, isEmbeddedInCrm } from './embed'
+import { enMarcoPoliplast, isCrmOrigin, isEmbeddedInCrm } from './embed'
 
 export type Tema = 'dark' | 'light'
 
@@ -16,7 +16,7 @@ export function aplicarTema(tema: Tema | null, root: HTMLElement = document.docu
 
 /** Arranca el tema según el CRM y lo sigue. Devuelve la función para dejar de escuchar. */
 export function seguirTemaDelCrm(win: Window = window): () => void {
-  if (!isEmbeddedInCrm(win)) return () => {}
+  if (!isEmbeddedInCrm(win) && !enMarcoPoliplast(win)) return () => {}
   try { aplicarTema(temaValido(new URLSearchParams(win.location.search).get('tema')), win.document.documentElement) } catch { /* sin dirección */ }
   const onMessage = (event: MessageEvent) => {
     if (!isCrmOrigin(event.origin) || event.source !== win.parent) return

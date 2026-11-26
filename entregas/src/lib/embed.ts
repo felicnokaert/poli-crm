@@ -28,13 +28,29 @@ export function isEmbeddedInApp(win: Window = window): boolean {
 /** En la maqueta (datos de mentira, solo en la compu) cualquier página de localhost hace de CRM para probar. */
 const MAQUETA_LOCAL = import.meta.env.MODE === 'maqueta'
 
+/**
+ * Entregas como pantalla de Poliplast App (26/11, ?embed=app&marco=poliplast, iframe del MISMO origen): sin barra ni menú propios,
+ * del ancho del contenedor y con el mismo contrato que dentro del CRM (alto, vista y tema). El login es la sesión de Supabase que ya
+ * está guardada en ese origen (la misma app), así que no se pide de nuevo.
+ */
+export function enMarcoPoliplast(win: Window = window): boolean {
+  try {
+    return new URLSearchParams(win.location.search).get('marco') === 'poliplast' && win.parent !== win
+  } catch {
+    return false
+  }
+}
+
 export function isCrmOrigin(origin: string): boolean {
-  return CRM_ORIGINS.includes(origin) || (MAQUETA_LOCAL && /^http:\/\/localhost:\d+$/.test(origin))
+  if (CRM_ORIGINS.includes(origin) || (MAQUETA_LOCAL && /^http:\/\/localhost:\d+$/.test(origin))) return true
+  // En Poliplast App el «CRM» es el padre del mismo origen.
+  return typeof window !== 'undefined' && enMarcoPoliplast() && origin === window.location.origin
 }
 
 /** A dónde se le habla al CRM (en la maqueta, a cualquier localhost). */
 export function origenesCrm(): string[] {
-  return MAQUETA_LOCAL ? ['*'] : CRM_ORIGINS
+  if (MAQUETA_LOCAL) return ['*']
+  return typeof window !== 'undefined' && enMarcoPoliplast() ? [...CRM_ORIGINS, window.location.origin] : CRM_ORIGINS
 }
 
 /** Escucha la sesión que manda el CRM y avisa que la pestaña está lista. Devuelve la función para dejar de escuchar. */

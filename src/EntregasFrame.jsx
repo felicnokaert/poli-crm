@@ -14,7 +14,7 @@ export function EntregasFrame({ session }) {
       heightType="entregas:alto"
       revealType="entregas:visible"
       title="Entregas"
-      allow="clipboard-write"
+      allow="clipboard-write; camera"
       loadingText="Cargando Entregas"
       bare
     />

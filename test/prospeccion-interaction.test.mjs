@@ -408,7 +408,7 @@ describe("Prospeccion.jsx - pedido a Claude", () => {
     }
     render(React.createElement(Wrapper));
     openSearchTab();
-    fireEvent.click(screen.getByText("Pedir a Claude que investigue"));
+    fireEvent.click(screen.getByText("Pedir a Claude (sin costo, tarda más)"));
     await waitFor(() => assert.equal(snapshots.at(-1).researchJobs.length, 1));
     assert.equal(snapshots.at(-1).researchJobs[0].remote, true);
     await waitFor(() => assert.equal(snapshots.at(-1).researchJobs[0].status, "Resultado listo"), { timeout: 3000 });

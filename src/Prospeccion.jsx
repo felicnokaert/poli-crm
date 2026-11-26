@@ -463,6 +463,37 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     }
   }
 
+  // 26/11 (Felipe: «que busque y devuelva la lista, no un prompt»): la IA busca en la web desde el servidor y la tabla
+  // se revisa con el importador de siempre (vista previa antes de cargar). Cuesta ~US$ 0,05 por búsqueda; hay tope diario.
+  const [aiSearching, setAiSearching] = useState(false);
+  async function searchWithAi() {
+    const family = research.family || planFamily;
+    if (!family || !session?.access_token || aiSearching) return;
+    const now = new Date().toISOString();
+    const scope = research.scope.trim() || 'todo el país';
+    const count = Math.min(Number(research.count) || 10, 10);
+    const job = {
+      id: crypto.randomUUID(), family, scope, count, notes: research.notes, status: 'Buscando con IA…', ai: true, createdAt: now, updatedAt: now,
+      prompt: buildResearchPrompt({ family, scope, count, exclusions: exclusionNames(clients, prospects), notes: research.notes }),
+    };
+    setData((current) => ({ ...current, researchJobs: [...(Array.isArray(current.researchJobs) ? current.researchJobs : []), job] }));
+    setAiSearching(true);
+    setMessage(`La IA está buscando ${family} en ${scope}… tarda entre 20 y 50 segundos.`);
+    try {
+      const { ok, payload } = await api({ action: 'ai-search', prompt: job.prompt });
+      if (!ok) { setJobStatus(job.id, 'Falló la investigación'); setMessage(payload.error || 'La búsqueda con IA no anduvo. Probá de nuevo.'); return; }
+      setJobText((current) => ({ ...current, [job.id]: payload.text }));
+      setJobStatus(job.id, 'Resultado listo');
+      analyzeImport(payload.text, job.id);
+      setMessage(`Listo: la IA hizo ${payload.cost?.searches ?? '?'} búsquedas (costo aprox. US$ ${Number(payload.cost?.usd || 0).toFixed(2)}; ${payload.usedToday} de ${payload.cap} hoy). Revisá la vista previa y cargá las que te sirvan.`);
+    } catch {
+      setJobStatus(job.id, 'Falló la investigación');
+      setMessage('Se cortó la búsqueda con IA. Revisá tu conexión y probá de nuevo.');
+    } finally {
+      setAiSearching(false);
+    }
+  }
+
   // Mientras haya pedidos esperando a Claude, consulta cada 20 s si ya hay resultado.
   const waitingIds = researchJobs.filter((job) => job.remote && !['Resultado listo', 'Importada', 'Falló la investigación'].includes(job.status)).map((job) => job.id).join(',');
   useEffect(() => {
@@ -739,9 +770,10 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
           </label>
         </div>
         <div className="prospect-search-actions">
-          {requests && <button type="button" className="primary big" onClick={requestFromClaude}><Search size={18} /> Pedir a Claude que investigue</button>}
-          <button type="button" className={requests ? 'secondary' : 'primary big'} onClick={prepareResearch}>{requests ? 'Preparar pedido para otra IA' : <><Search size={18} /> Preparar investigación</>}</button>
-          <span className="muted small">Se excluyen {exclusionNames(clients, prospects).length} empresas que ya tenés.</span>
+          {session?.access_token && <button type="button" className="primary big" disabled={aiSearching} onClick={searchWithAi}><Search size={18} /> {aiSearching ? 'Buscando con IA…' : 'Buscar con IA ahora'}</button>}
+          {requests && <button type="button" className="secondary" onClick={requestFromClaude}>Pedir a Claude (sin costo, tarda más)</button>}
+          <button type="button" className="secondary" onClick={prepareResearch}>{requests ? 'Preparar pedido para otra IA' : <><Search size={18} /> Preparar investigación</>}</button>
+          <span className="muted small">«Buscar con IA ahora» devuelve hasta 10 empresas en menos de un minuto (≈ US$ 0,05 cada búsqueda). Se excluyen {exclusionNames(clients, prospects).length} empresas que ya tenés.</span>
         </div>
 
         {researchJobs.length > 0 && (

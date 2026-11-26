@@ -22,7 +22,8 @@ export function isWrite(url, init = {}) {
       return !READ_OPS.has(String(body.op || ''));
     } catch { return true; }
   }
-  if (/\/api\/meta-subscribe|\/api\/prospeccion|\/api\/tasks/.test(text)) return true;
+  // /api/prospeccion solo busca y lee (mapa, sitios, búsqueda con IA): no guarda nada en la base, se deja pasar.
+  if (/\/api\/meta-subscribe|\/api\/tasks/.test(text)) return true;
   return false;
 }
 

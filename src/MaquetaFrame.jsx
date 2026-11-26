@@ -66,7 +66,7 @@ export function MaquetaFrame({ src, title, children = null, theme = null }) {
   return (
     <section className={`maqueta-frame${height != null ? " is-auto" : ""}${shown ? "" : " is-loading"}`}>
       {children}
-      <iframe ref={frameRef} src={withTema} title={title} loading="eager" style={height != null ? { height } : undefined} onLoad={() => frameRef.current?.contentWindow?.postMessage({ tipo: "crm:tema", tema: (theme || resolvedTheme()) }, origin)} />
+      <iframe ref={frameRef} src={withTema} title={title} allow="camera; clipboard-write" loading="eager" style={height != null ? { height } : undefined} onLoad={() => frameRef.current?.contentWindow?.postMessage({ tipo: "crm:tema", tema: (theme || resolvedTheme()) }, origin)} />
     </section>
   );
 }

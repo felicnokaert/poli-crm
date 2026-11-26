@@ -27,6 +27,7 @@ export const SUBMODULES = {
   profile: ['Mis datos', 'Contraseña'],
   settings: ['Conexiones', 'Datos'],
   team: ['Personas y roles', 'Módulos y submódulos de cada uno'],
+  avisos: ['Nuevos', 'Resueltos'],
 };
 
 // Módulos que todavía no existen dentro de la app: se muestran como «próximamente».

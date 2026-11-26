@@ -118,6 +118,7 @@ import { useMyAccess, useTeamStore } from "./team-store.js";
 import { TeamAccess } from "./TeamAccess.jsx";
 import { DemoModule } from "./DemoModules.jsx";
 import { QuoteBuilder } from "./QuoteBuilder.jsx";
+import { AppReports, ReportProblem } from "./ReportProblem.jsx";
 import { CONTEO_MODULES, ConteoMaqueta, MaquetaFrame } from "./MaquetaFrame.jsx";
 import { ExpeditionChip, ExpeditionGate, readExpeditionWho, saveExpeditionWho } from "./ExpeditionGate.jsx";
 import { AppPlanOverview, ModulePreview } from "./ModulePreview.jsx";
@@ -156,7 +157,7 @@ function loadState() {
 }
 
 const VIEW_KEY = "poliplast-current-view";
-const SAVED_VIEWS = new Set(["dashboard", "conversations", "inbox", "tasks", "sales", "clients", "prospecting", "mercadolibre", "shopify", "mejoras", "productos", "academy", "quoter", "entregas", "map", "techdocs", "profile", "settings", "plan", "team", "etiquetas", "conteo", "dosificado", "recibos", "facturacion", "compras"]);
+const SAVED_VIEWS = new Set(["dashboard", "conversations", "inbox", "tasks", "sales", "clients", "prospecting", "mercadolibre", "shopify", "mejoras", "productos", "academy", "quoter", "entregas", "map", "techdocs", "profile", "settings", "plan", "team", "avisos", "etiquetas", "conteo", "dosificado", "recibos", "facturacion", "compras"]);
 function readSavedView() {
   try {
     const saved = sessionStorage.getItem(VIEW_KEY);
@@ -261,6 +262,7 @@ export default function App() {
   const [showForm, setShowForm] = useState(false);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   const [theme, setTheme] = useState(readTheme);
   const [clientsTab, setClientsTab] = useState("empresas");
   const [showTaskForm, setShowTaskForm] = useState(false);
@@ -766,6 +768,7 @@ export default function App() {
           onThemeChange={setTheme}
           onOpenPalette={() => setShowPalette(true)}
           onOpenShortcuts={() => setShowShortcutsHelp(true)}
+          onReport={previewSite ? () => setShowReport(true) : null}
           profileLabel={data.profileName || session?.user?.email || ""}
           onLogConversation={LOG_CONVERSATION_VIEWS.includes(view) ? () => setShowForm(true) : null}
         />
@@ -774,6 +777,7 @@ export default function App() {
         <ErrorBoundary key={view} view={view}>
         {FUTURE_MODULES[view] && previewSite && CONTEO_MODULES[view] && <ConteoMaqueta key={view} module={view} access={previewAccess} who={isExpedition ? expeditionWho : null} />}
         {FUTURE_MODULES[view] && !(previewSite && CONTEO_MODULES[view]) && (demo ? <DemoModule key={view} id={view} access={previewAccess} /> : <ModulePreview id={view} />)}
+        {view === "avisos" && isAdminUser && <AppReports online={Boolean(onlineConfigured && session)} />}
         {view === "team" && isAdminUser && <TeamAccess team={team} onChange={teamStore.save} rolesTable={teamStore.rolesTable} status={teamStore.status} groups={NAV_GROUPS} onViewAs={(person) => pickPreviewRole(`person:${person.email}`)} />}
         {view === "plan" && <AppPlanOverview groups={NAV_GROUPS} role={previewRole} onRole={pickPreviewRole} onResetDemo={demo ? () => { if (window.confirm("¿Volver a cargar los datos de prueba? Se pierde lo que tocaste en la prueba.")) { setData((current) => withDemoData(current, { force: true })); } } : null} />}
 
@@ -1041,6 +1045,7 @@ export default function App() {
         )}
         </ErrorBoundary>
         )}
+        <ReportProblem open={showReport} onClose={() => setShowReport(false)} view={view} viewLabel={NAV_ITEMS.find(([id]) => id === view)?.[1] || view} name={isExpedition && expeditionWho ? `${expeditionWho.who} (expedición)` : data.profileName || ""} online={Boolean(onlineConfigured && session)} />
       </main>
 
       <Suspense fallback={null}>

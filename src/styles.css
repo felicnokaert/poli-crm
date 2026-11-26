@@ -1734,3 +1734,20 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
   .quote-line img, .quote-photo-empty { width: 48px; height: 48px; }
   .quote-line-controls { grid-column: 1 / -1; justify-content: space-between; }
 }
+/* Poliplast App: «Algo no anda» y Avisos del equipo. */
+.report-button { color: var(--brand-red); }
+.report-modal { width: min(520px, 100%); animation: quote-in 200ms ease-out; }
+.report-form, .report-sent { display: grid; gap: 12px; }
+.report-form h2, .report-sent h2 { margin: 0; font: 800 22px 'Manrope'; }
+.report-form textarea { width: 100%; border: 1px solid var(--color-border-input); border-radius: 12px; padding: 10px 12px; font: inherit; resize: vertical; }
+.report-severity { display: flex; flex-wrap: wrap; gap: 8px; }
+.report-severity label { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 999px; cursor: pointer; font-size: 0.9rem; }
+.report-severity label.selected { border-color: var(--brand-red); color: var(--brand-red); font-weight: 700; }
+.report-severity input { accent-color: var(--brand-red); }
+.app-reports-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.app-reports-list li { border: 1px solid var(--color-border); border-left: 4px solid var(--color-border); border-radius: 12px; padding: 10px 14px; display: grid; gap: 6px; }
+.app-reports-list li.sev-no-me-deja { border-left-color: var(--brand-red); }
+.app-reports-list li.sev-idea { border-left-color: #2563eb; }
+.app-reports-list p { margin: 0; white-space: pre-wrap; }
+.app-reports-head { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; }
+.app-reports-list .secondary { justify-self: start; padding: 6px 12px; }

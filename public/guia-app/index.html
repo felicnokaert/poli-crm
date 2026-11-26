@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light dark">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guía Poliplast App</title>
+<meta name="description" content="Guía de Poliplast App: una sola app para toda la empresa. Qué ve cada rol y cómo se usa.">
+<link rel="icon" href="/icon-192.png">
+<style>
+  :root { --bg:#f6f6f7; --card:#fff; --text:#1d1d1f; --muted:#5f6066; --line:#e4e4e7; --red:#ed1c24; --ok:#15803d; --okbg:#e7f6ec; --soft:#f1f1f3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#111214; --card:#1b1c1f; --text:#f2f2f3; --muted:#a3a4aa; --line:#2c2d31; --okbg:#173322; --ok:#4ade80; --soft:#232428; } }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { background:#1d1d1f; color:#fff; padding:22px 16px 26px; }
+  header .wrap { max-width:760px; margin:0 auto; }
+  header img { width:34px; height:34px; vertical-align:middle; margin-right:8px; }
+  header h1 { font-size:24px; margin:10px 0 6px; }
+  header p { margin:0; color:#c9c9cf; }
+  main { max-width:760px; margin:0 auto; padding:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; margin:0 0 14px; }
+  h2 { font-size:19px; margin:0 0 8px; }
+  h3 { font-size:16px; margin:18px 0 4px; }
+  .grupo { font-size:13px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin:22px 4px 8px; }
+  details.card { padding:0; }
+  details.card > summary { list-style:none; cursor:pointer; padding:14px 16px; display:flex; gap:12px; align-items:center; font-weight:700; font-size:17px; }
+  details.card > summary::-webkit-details-marker { display:none; }
+  details.card > summary .que { display:block; font-weight:400; font-size:14px; color:var(--muted); margin-top:1px; }
+  details.card > summary .flecha { margin-left:auto; transition:transform .2s; color:var(--muted); font-size:22px; }
+  details.card[open] > summary .flecha { transform:rotate(90deg); }
+  details.card .cuerpo { padding:4px 18px 18px; border-top:1px solid var(--line); }
+  .ico { flex:0 0 38px; height:38px; border-radius:10px; background:var(--soft); display:grid; place-items:center; font-size:19px; }
+  p, li { color:var(--text); }
+  .muted { color:var(--muted); font-size:14px; }
+  .donde { display:inline-block; font-size:13px; background:var(--soft); border-radius:8px; padding:2px 8px; margin:12px 0 2px; color:var(--muted); }
+  ul, ol { padding-left:20px; margin:8px 0; }
+  li { margin:4px 0; }
+  figure { margin:12px 0 0; }
+  figure picture { display:block; }
+  figure img { width:100%; max-width:340px; display:block; margin:0 auto; border-radius:14px; border:1px solid var(--line); }
+  figcaption { text-align:center; font-size:13px; color:var(--muted); margin-top:6px; }
+  .chip { display:inline-block; padding:1px 9px; border-radius:999px; font-size:13px; font-weight:600; background:var(--okbg); color:var(--ok); }
+  .links a { display:block; padding:12px 14px; margin:8px 0; border-radius:12px; background:var(--red); color:#fff; text-decoration:none; font-weight:600; text-align:center; }
+  .aviso { border-left:4px solid var(--red); }
+  .faq b { display:block; margin-top:10px; }
+  .indice { columns:2; column-gap:18px; padding-left:18px; }
+  .indice a { color:var(--text); }
+  @media (max-width:420px) { .indice { columns:1; } }
+  footer { text-align:center; color:var(--muted); font-size:13px; padding:10px 16px 40px; }
+  figure.ancha img { max-width:100%; }
+  .rol { display:inline-block; font-size:12px; font-weight:700; padding:2px 9px; border-radius:999px; background:var(--soft); margin:0 4px 4px 0; }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <img src="/poliplast-isotipo-blanco.png" alt=""> <strong>Grupo Poliplast</strong>
+  <h1>Guía de Poliplast App</h1>
+  <p>Una sola app para toda la empresa. Cada uno ve solo lo que usa: ventas, logística, administración. Se abre igual en la compu y en el celular.</p>
+</div></header>
+<main>
+<div class="card aviso"><b>Semana de prueba.</b> Si algo no anda, no te deja trabajar o se te ocurre una mejora, tocá <b>⚠ Algo no anda</b> arriba a la derecha y contalo en una línea. Lo recibe Felipe y se arregla en el día.</div>
+
+<div class="card">
+  <h2>Qué ve cada uno</h2>
+  <p class="muted">Cada persona tiene un rol. Felipe le puede sumar o sacar módulos a cada uno.</p>
+  <ul>
+    <li><span class="rol">Comercial</span> Ventas, Cotizador, Prospección, Clientes, Mapa, Mercado Libre, Shopify, Productos, Entregas (vista de vendedor), Tareas y Academia.</li>
+    <li><span class="rol">Jefe de depósito</span> Logística completa: Entregas, Etiquetas, Conteo y Dosificado. Sin datos de ventas.</li>
+    <li><span class="rol">Expedición</span> Una cuenta compartida: al entrar elegís <b>quién sos</b> y <b>desde qué depósito</b>. Entregas, Etiquetas, Conteo y Dosificado.</li>
+    <li><span class="rol">Administración</span> Clientes, Recibos, Facturación, Compras, Entregas y Tareas.</li>
+  </ul>
+</div>
+
+<p class="grupo">Para todos</p>
+<details class="card" id="inicio" open><summary><span class="ico">🏠</span><span>Inicio<span class="que">Tu día, ordenado a tu gusto</span></span><span class="flecha">›</span></summary><div class="cuerpo"><p>Arriba ves lo urgente. Abajo, tarjetas según tus módulos (expedición no ve tarjetas de ventas).</p><h3>Ordenar mi Inicio</h3><ol><li>Tocá <b>Ordenar mi Inicio</b>.</li><li>Subí o bajá cada tarjeta con las flechas.</li><li>Destildá las que no querés ver. Queda guardado en tu cuenta.</li></ol><figure><img src="img/inicio.webp" alt="Inicio en el celular" loading="lazy"><figcaption>Inicio en el celular</figcaption></figure><figure><img src="img/ordenar.webp" alt="Ordenar mi Inicio" loading="lazy"><figcaption>Ordenar mi Inicio</figcaption></figure></div></details>
+<details class="card" id="menu"><summary><span class="ico">☰</span><span>El menú<span class="que">Grupos que se abren y se cierran</span></span><span class="flecha">›</span></summary><div class="cuerpo"><p>En la compu, el menú está a la izquierda, por grupos (Ventas, Canales online, Logística, Administración, Equipo, Configuración). En el celular: abajo tenés los accesos rápidos y <b>Menú</b> abre todo. Con <b>Ctrl + K</b> (o la lupa) buscás cualquier cosa.</p><figure><img src="img/menu.webp" alt="Menú en el celular" loading="lazy"><figcaption>Menú en el celular</figcaption></figure></div></details>
+<details class="card" id="aviso"><summary><span class="ico">⚠️</span><span>Algo no anda<span class="que">Avisar un problema o una idea</span></span><span class="flecha">›</span></summary><div class="cuerpo"><ol><li>Tocá el ícono ⚠ arriba a la derecha.</li><li>Contá qué hiciste y qué pasó.</li><li>Elegí: <b>No me deja trabajar</b>, <b>Molesta pero sigo</b> o <b>Idea</b>. La app manda sola en qué pantalla estabas y si era celular o compu.</li></ol><figure><img src="img/algo-no-anda.webp" alt="Algo no anda" loading="lazy"><figcaption>Algo no anda</figcaption></figure></div></details>
+<details class="card" id="asistente"><summary><span class="ico">✨</span><span>El asistente<span class="que">Preguntale lo que necesites</span></span><span class="flecha">›</span></summary><div class="cuerpo"><p>El botón redondo de abajo a la derecha. Te ayuda a usar la app y responde sobre productos. Solo usa los datos de <b>tus</b> módulos: si no tenés Ventas, no te va a contestar cuánto compró un cliente.</p></div></details>
+
+<p class="grupo">Ventas</p>
+<details class="card" id="cotizador"><summary><span class="ico">🧮</span><span>Cotizador<span class="que">Precios en dólares, minorista y mayorista</span></span><span class="flecha">›</span></summary><div class="cuerpo"><ol><li>Elegí el cliente (o escribí el nombre).</li><li>Elegí <b>Minorista</b> o <b>Mayorista</b>.</li><li>Buscá el producto por nombre o SKU y poné la cantidad: el precio sale de la lista vigente y del tramo por cantidad.</li><li>Elegí la forma de pago.</li><li><b>Copiar para WhatsApp</b> arma el mensaje con el total en USD y en pesos (dólar BNA).</li></ol><p class="muted">Debajo de cada producto ves cuánto sale en Mercado Libre y en Shopify, para comparar. Si es mayorista de Penosil, te avisa si no llegás al mínimo (USD 1.800 neto). Una cotización <b>no es una venta</b>: no se carga en Ventas. «Coticé hoy» deja la marca en la ficha del cliente.</p></div></details>
+<details class="card" id="ventas"><summary><span class="ico">📋</span><span>Ventas, Prospección y Clientes<span class="que">Lo de siempre del CRM</span></span><span class="flecha">›</span></summary><div class="cuerpo"><p>Funcionan igual que en el CRM: cargar ventas, la Cola del día para contactar, las fichas de clientes con su historial de Contabilium y el mapa. La guía detallada sigue en <a href="/guia/">la guía del CRM</a>.</p></div></details>
+
+<p class="grupo">Logística</p>
+<details class="card" id="entregas"><summary><span class="ico">🚚</span><span>Entregas<span class="que">Pedidos, expedición, calendario</span></span><span class="flecha">›</span></summary><div class="cuerpo"><p>Es la Entregas de siempre, ahora adentro de la app. Los vendedores cargan el remito; expedición imprime, despacha, sube la guía y firma el remito en el celular.</p><figure class="ancha"><img src="img/entregas.webp" alt="Entregas · Expedición hoy" loading="lazy"><figcaption>Entregas · Expedición hoy</figcaption></figure></div></details>
+<details class="card" id="etiquetas"><summary><span class="ico">🏷️</span><span>Etiquetas<span class="que">Mercado Libre: escanear y devoluciones</span></span><span class="flecha">›</span></summary><div class="cuerpo"><ol><li><b>Escanear</b>: escaneá la etiqueta al preparar. Avisa si ya estaba o si el envío se canceló.</li><li><b>Pendientes</b>: lo que falta por corte (8, 10 y 12).</li><li><b>Devoluciones</b>: escaneá la etiqueta de vuelta y anotá el estado de cada producto.</li></ol><figure class="ancha"><img src="img/etiquetas.webp" alt="Etiquetas · Escanear" loading="lazy"><figcaption>Etiquetas · Escanear</figcaption></figure></div></details>
+<details class="card" id="conteo"><summary><span class="ico">📦</span><span>Conteo y Dosificado<span class="que">Stock del depósito y químicos</span></span><span class="flecha">›</span></summary><div class="cuerpo"><p><b>Conteo</b>: elegí la categoría y cargá lo contado. <b>Dosificado</b>: kits químicos, solo cantidad. Los dos con el nombre y el depósito que elegiste al entrar.</p><figure class="ancha"><img src="img/conteo.webp" alt="Conteo · Elegí categoría" loading="lazy"><figcaption>Conteo · Elegí categoría</figcaption></figure></div></details>
+<details class="card" id="expedicion"><summary><span class="ico">👤</span><span>Cuenta de expedición<span class="que">Una cuenta, varios usuarios</span></span><span class="flecha">›</span></summary><div class="cuerpo"><ol><li>Al entrar, tocá tu nombre y el depósito.</li><li>Arriba queda «Tu nombre · Depósito». Si agarra el celular otro, toca <b>Cambiar</b>.</li></ol><figure><img src="img/expedicion-quien.webp" alt="¿Quién sos? ¿Desde qué depósito?" loading="lazy"><figcaption>¿Quién sos? ¿Desde qué depósito?</figcaption></figure><figure><img src="img/expedicion-inicio.webp" alt="Inicio de expedición" loading="lazy"><figcaption>Inicio de expedición</figcaption></figure></div></details>
+
+<p class="grupo">Solo administradores</p>
+<details class="card" id="equipo"><summary><span class="ico">🔑</span><span>Equipo y cuentas<span class="que">Quién entra y qué ve cada uno</span></span><span class="flecha">›</span></summary><div class="cuerpo"><ol><li><b>Crear cuenta</b>: mail @grupopoliplast.com.ar, nombre y rol.</li><li><b>Qué ve</b>: tildá o destildá módulos y submódulos de esa persona.</li><li><b>Ver como</b>: mirá la app como la ve esa persona antes de dársela.</li></ol><figure class="ancha"><img src="img/equipo.webp" alt="Equipo y cuentas" loading="lazy"><figcaption>Equipo y cuentas</figcaption></figure></div></details>
+<details class="card" id="avisos"><summary><span class="ico">📬</span><span>Avisos del equipo<span class="que">Lo que mandaron con «Algo no anda»</span></span><span class="flecha">›</span></summary><div class="cuerpo"><p>Nuevos arriba, con quién lo mandó, en qué pantalla y si era celular o compu. «Marcar resuelto» cuando está arreglado.</p><figure class="ancha"><img src="img/avisos.webp" alt="Avisos del equipo" loading="lazy"><figcaption>Avisos del equipo</figcaption></figure></div></details>
+
+<div class="card faq"><h2>Preguntas</h2>
+<b>¿Se pierde algo de lo que tenía en el CRM?</b> No. Es la misma app con otro nombre y el menú ordenado; tus clientes, tareas y ventas siguen ahí.
+<b>¿Cambia el link?</b> No por ahora. Cuando la empresa tenga su dominio, el link viejo reenvía solo.
+<b>Veo un módulo que no uso.</b> Avisale a Felipe y te lo saca.
+</div>
+</main>
+<footer>Grupo Poliplast · Poliplast App · Guía de la semana de prueba (capturas con datos de ejemplo)</footer>
+</body>
+</html>

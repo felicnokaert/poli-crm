@@ -1,4 +1,4 @@
-import { Boxes, Building2, Calculator, ChevronRight, Menu, X, ClipboardList, Database, FileCheck2, GraduationCap, Inbox, LayoutDashboard, ListChecks, MapPin, MessageCircle, ReceiptText, Search, ShoppingBag, Store, Truck, UserCog, Tags, PackageSearch, FlaskConical, Receipt, FileText, ShoppingCart, Map as MapIcon, Users } from "lucide-react";
+import { Boxes, Building2, Calculator, ChevronRight, Menu, X, ClipboardList, Database, FileCheck2, GraduationCap, Inbox, LayoutDashboard, ListChecks, MapPin, MessageCircle, ReceiptText, Search, ShoppingBag, Store, Truck, UserCog, Tags, PackageSearch, FlaskConical, Receipt, FileText, ShoppingCart, Map as MapIcon, Users, MessageSquareWarning } from "lucide-react";
 import { useEffect, useState } from "react";
 import { onlineConfigured } from "./online";
 import { filterNav } from "./module-access.mjs";
@@ -46,6 +46,7 @@ export const NAV_GROUPS = [
   ["Configuración", [
     ["plan", "Cómo queda la app", MapIcon],
     ["team", "Equipo y cuentas", Users],
+    ["avisos", "Avisos del equipo", MessageSquareWarning],
     ["profile", "Perfil", UserCog],
     ["settings", "Datos y conexiones", Database],
   ]],

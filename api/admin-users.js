@@ -12,6 +12,7 @@ import { mercadoLibreAccountCron, mercadoLibreAdmin, mercadoLibreAdsCron, mercad
 import { runIntegrationCron } from '../lib/integration-crons.mjs';
 import { contabiliumAdmin, contabiliumCron } from '../lib/contabilium.mjs';
 import { assistantAi } from '../lib/assistant-ai.mjs';
+import { appReportsAdmin } from '../lib/app-reports.mjs';
 import { shopifyAdmin, shopifyCron } from '../lib/shopify.mjs';
 import { etiquetasHandler } from '../lib/etiquetas.mjs';
 import { entregasApiHandler } from '../lib/entregas-api.mjs';
@@ -103,6 +104,7 @@ export default async function handler(request, response) {
     : action === 'trello-plan' ? await trelloPlanAdmin(request)
     : action === 'whatsapp-auto' ? await whatsappAutoAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'automation-pause' ? await automationPauseAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
+    : action === 'app-report' ? await appReportsAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'gmail' ? await gmailAdmin(request)
     : action === 'training' ? await trainingAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'assistant' ? await assistantAi(request)

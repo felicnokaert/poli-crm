@@ -1,4 +1,4 @@
-import { HelpCircle, Plus, Search } from "lucide-react";
+import { HelpCircle, MessageSquareWarning, Plus, Search } from "lucide-react";
 import { Spinner } from "./ui-primitives";
 import { CHANNELS, longToday, profileInitials } from "./app-shared";
 import { applyTheme, nextTheme } from "./theme.mjs";
@@ -31,7 +31,7 @@ function displayedChannel(readiness, key) {
   };
 }
 
-export function AppTopbar({ title, myChannels, primaryChannel, readiness, syncStatus, onRetrySave, theme, onThemeChange, onOpenPalette, onOpenShortcuts, profileLabel, onLogConversation }) {
+export function AppTopbar({ title, myChannels, primaryChannel, readiness, syncStatus, onRetrySave, theme, onThemeChange, onOpenPalette, onOpenShortcuts, onReport = null, profileLabel, onLogConversation }) {
   return (
     <header className="topbar">
       <div>
@@ -90,6 +90,11 @@ export function AppTopbar({ title, myChannels, primaryChannel, readiness, syncSt
         >
           <Search size={18} />
         </button>
+        {onReport && (
+          <button type="button" className="icon-button report-button" aria-label="Algo no anda: avisar" title="Algo no anda: avisar" onClick={onReport}>
+            <MessageSquareWarning size={18} />
+          </button>
+        )}
         <button
           type="button"
           className="icon-button"

@@ -724,18 +724,14 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       {tab === 'limpieza' && <ProspectCleanup prospects={prospects} onDiscard={discardProspects} onKeep={keepProspects} />}
       {tab === 'buscar' && (<>
       <details className="panel research-panel" open>
-        <summary><strong>Investigación profunda: Claude investiga por vos en la web</strong></summary>
+        <summary><strong>Buscar empresas con IA</strong></summary>
         <div className="prospect-search-head">
           <div>
-            <h3>{requests ? 'Pedile a Claude una lista de empresas' : 'Investigación con IA externa'}</h3>
-            {requests && (
-              <ol className="muted small">
-                <li>Elegí familia, zona y cantidad.</li>
-                <li>Tocá «Pedir a Claude que investigue» (no cuesta nada extra).</li>
-                <li>Cuando Claude termina, las empresas aparecen solas en la cola de trabajo, con la fuente de cada dato.</li>
-              </ol>
-            )}
-            <p className="muted">La búsqueda de verdad: una IA con modo de investigación avanzada recorre Google, Maps, sitios y redes y devuelve una tabla con evidencia y fuente por empresa. Tarda entre {RESEARCH_MINUTES.min} y {RESEARCH_MINUTES.max} minutos y no cuesta nada extra: usa tu suscripción a Claude, ChatGPT, Gemini o Perplexity. La app arma el pedido (con las empresas que ya tenés excluidas) y después importa el resultado.</p>
+            <ol className="muted small">
+              <li>Elegí familia, zona y cantidad (hasta 10 por búsqueda).</li>
+              <li>Tocá «Buscar con IA ahora»: en menos de un minuto la IA busca en internet y te devuelve la lista con «Valor N/10», qué compraría y la fuente de cada dato.</li>
+              <li>Revisás la vista previa y cargás las que te sirvan: las de más valor suben solas en la Orden de llamada.</li>
+            </ol>
           </div>
         </div>
         <div className="research-form">
@@ -777,7 +773,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         </div>
 
         {researchJobs.length > 0 && (
-          <details className="research-history" open={researchJobs.some((job) => !['Importada', 'Falló la investigación'].includes(job.status))}>
+          <details className="research-history" open={researchJobs.some((job) => job.ai && job.status === 'Resultado listo')}>
           <summary><strong>Historial de pedidos</strong> <span className="muted small">{researchJobs.length} {researchJobs.length === 1 ? 'pedido' : 'pedidos'} · {researchJobs.filter((job) => job.status === 'Importada').length} importados</span></summary>
           <div className="history-list">
             {[...researchJobs].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).map((job) => {

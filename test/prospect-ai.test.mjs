@@ -27,3 +27,9 @@ test('Prospección con IA: respeta el tope diario y arma el pedido con búsqueda
   const again = await prospectAiSearch({ prompt: 'Actuá como investigador comercial… '.repeat(5) }, env, http, now);
   assert.equal(again.status, 429);
 });
+
+test('Prospección con IA: «Valor N/10» de la IA pasa a ser el puntaje del prospecto', async () => {
+  const { prospectFieldsFromRow } = await import('../src/prospect-import.mjs');
+  assert.equal(prospectFieldsFromRow({ company: 'Frío Sur', fit: 'Valor 8/10 · paneles de frío' }).sheetScore, 8);
+  assert.equal(prospectFieldsFromRow({ company: 'Otra', fit: 'Valor 9/10', sheetScore: '60' }).sheetScore, 60);
+});

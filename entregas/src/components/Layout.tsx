@@ -40,7 +40,7 @@ export function Layout({ ruta, children }: { ruta: Ruta; children: ReactNode }) 
     <div className="layout">
       <aside className="sidebar">
         <div className="brand">
-          <img src="/poliplast-isotipo-blanco.png" alt="" />
+          <img src={`${import.meta.env.BASE_URL}poliplast-isotipo-blanco.png`} alt="" />
           <div>
             <b>Entregas</b>
             <span>Grupo Poliplast</span>
@@ -70,7 +70,7 @@ export function Layout({ ruta, children }: { ruta: Ruta; children: ReactNode }) 
       </aside>
 
       <header className="mobile-top">
-        <img src="/poliplast-isotipo-blanco.png" alt="" />
+        <img src={`${import.meta.env.BASE_URL}poliplast-isotipo-blanco.png`} alt="" />
         <b>Entregas</b>
         <span className="spacer" />
         <a href={GUIA_URL} target="_blank" rel="noreferrer" aria-label="Guía de uso" style={{ color: '#c7c7c9', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, marginRight: 10 }}><BookOpen size={18} /> Guía</a>

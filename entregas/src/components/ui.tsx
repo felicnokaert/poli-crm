@@ -165,6 +165,11 @@ export function useCopiar() {
 /** Tipos de archivo que se aceptan para guías, remitos firmados y fotos: PDF y cualquier imagen. */
 export const ACEPTA_ARCHIVOS = 'image/*,application/pdf,.pdf,.jpg,.jpeg,.png,.webp,.heic,.heif'
 
+/** 26/11 (Felipe: «en la compu no me abras la cámara»): solo en un celular o tablet (pantalla táctil, dedo) se ofrece «Sacar foto». */
+export function esCelular(): boolean {
+  try { return window.matchMedia('(pointer: coarse)').matches && (navigator.maxTouchPoints ?? 0) > 0 } catch { return false }
+}
+
 /** Para que un botón de subir acepte también un archivo arrastrado encima (en la compu). */
 export function soltable(alSoltar: (archivos: FileList) => void) {
   return {

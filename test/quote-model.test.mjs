@@ -37,3 +37,12 @@ test('Cotizador: texto para WhatsApp sin inventar y referencias de canales por S
   assert.equal(refs.ml.price, 30000);
   assert.equal(refs.shopify.price, 27000);
 });
+
+test('Cotizador: ⚠ precio raro cuando ML o Shopify están a menos de la mitad o más de 2,5 veces de la lista', async () => {
+  const { rarePrice } = await import('../src/quote-model.mjs');
+  const rows = [{ wholesale: false, from: 1, to: null, gross: 10, net: 8.26, list: 'Maestro' }];
+  assert.equal(rarePrice({ rows, refs: { ml: { price: 15000 } } }, 1000), null);
+  assert.deepEqual(rarePrice({ rows, refs: { ml: { price: 40000 } } }, 1000), { channel: 'Mercado Libre', price: 40000, listArs: 10000, ratio: 4 });
+  assert.equal(rarePrice({ rows, refs: { shopify: { price: 3000 } } }, 1000).channel, 'Shopify');
+  assert.equal(rarePrice({ rows, refs: { ml: { price: 40000 } } }, null), null);
+});

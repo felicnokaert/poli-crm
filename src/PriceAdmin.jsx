@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Plus, Save, Search, Trash2 } from "lucide-react";
-import { searchVariants } from "./QuoteBuilder.jsx";
-import { diffTiers, isWholesaleList, tiersByList, validateMinimum, validatePayment, validateTiers } from "./price-admin.mjs";
+import { loadLineData, searchVariants } from "./QuoteBuilder.jsx";
+import { loadDollar } from "./product-hub-data.js";
+import { ars, rarePrice } from "./quote-model.mjs";
+import { bulkChange, diffTiers, isWholesaleList, tiersByList, validateMinimum, validatePayment, validateTiers } from "./price-admin.mjs";
 import { arToday } from "./ar-date.mjs";
 
 // Precios y condiciones del cotizador (26/11, solo administradores). Lo que se guarda acá lo usa el cotizador de toda la
@@ -82,6 +84,9 @@ function Prices({ supabase, who }) {
   const [variant, setVariant] = useState(null);
   const [lists, setLists] = useState([]);
   const [prices, setPrices] = useState(null);
+  const [reference, setReference] = useState(null);
+  const [dollar, setDollar] = useState(null);
+  useEffect(() => { loadDollar().then(setDollar).catch(() => {}); }, []);
   useEffect(() => { supabase.from("price_lists").select("id,name,brand,currency,vat_rate,valid_from,valid_until,status").eq("status", "vigente").order("valid_from").then(({ data }) => setLists(data || [])); }, [supabase]);
   async function search(event) {
     event.preventDefault();
@@ -91,9 +96,10 @@ function Prices({ supabase, who }) {
     if (!target) return;
     const { data } = await supabase.from("variant_prices").select("id,price_list_id,variant_id,min_quantity,max_quantity,amount,status,override_reason").eq("variant_id", target.id);
     setPrices(data || []);
+    try { setReference(await loadLineData(supabase, target, lists)); } catch { setReference(null); }
   }
   async function pick(item) {
-    setVariant(item); setPrices(null);
+    setVariant(item); setPrices(null); setReference(null);
     await loadPrices(item);
   }
   const brand = String(variant?.brand || "").toLowerCase();
@@ -117,6 +123,14 @@ function Prices({ supabase, who }) {
             <div><span className="eyebrow">{variant.brand || "Producto"} · {variant.sku}</span><h2>{variant.name}</h2></div>
             <button type="button" className="secondary" onClick={() => { setVariant(null); setPrices(null); }}>Elegir otro</button>
           </div>
+          {reference && (
+            <p className="quote-refs small">
+              {reference.refs?.ml ? <a href={reference.refs.ml.permalink} target="_blank" rel="noreferrer">Mercado Libre {ars(reference.refs.ml.price)}</a> : <span className="muted">Sin publicación activa en ML</span>}
+              {reference.refs?.shopify ? <span>Shopify {ars(reference.refs.shopify.price)}</span> : null}
+              {(() => { const rare = rarePrice(reference, dollar?.rate); return rare ? <span className="quote-warn">⚠ Precio raro: {rare.channel} {ars(rare.price)} contra la lista minorista {ars(rare.listArs)} ({String(rare.ratio).replace(".", ",")} veces). Revisá el precio o si el SKU es de otro tamaño o pack.</span> : null; })()}
+              {dollar?.rate ? <span className="muted">Dólar BNA {ars(dollar.rate)}</span> : null}
+            </p>
+          )}
           {prices === null ? <p className="muted">Cargando precios…</p> : shown.map((entry) => <TierEditor key={entry.list.id} supabase={supabase} entry={entry} variant={variant} who={who} onSaved={() => loadPrices()} />)}
         </section>
       )}
@@ -205,7 +219,85 @@ function Minimums({ supabase, who }) {
   );
 }
 
-const SECTIONS = [["precios", "Precios por producto"], ["pagos", "Formas de pago"], ["minimos", "Mínimos mayoristas"]];
+function Bulk({ supabase, who }) {
+  const [lists, setLists] = useState([]);
+  const [form, setForm] = useState({ list: "", filter: "", percent: "" });
+  const [preview, setPreview] = useState(null);
+  const [status, setStatus] = useState("");
+  useEffect(() => { supabase.from("price_lists").select("id,name,brand,currency,status").eq("status", "vigente").order("valid_from").then(({ data }) => setLists(data || [])); }, [supabase]);
+  async function loadRows() {
+    const all = [];
+    for (let from = 0; from < 6000; from += 1000) {
+      const { data, error } = await supabase.from("variant_prices").select("*").eq("price_list_id", form.list).in("status", ["confirmado", "excepcion_manual"]).order("id").range(from, from + 999);
+      if (error) throw error;
+      all.push(...(data || []));
+      if (!data || data.length < 1000) break;
+    }
+    if (!form.filter.trim()) return all;
+    const word = form.filter.trim();
+    const { data: products } = await supabase.from("catalog_products").select("id").or(`brand.ilike.%${word}%,family.ilike.%${word}%,name.ilike.%${word}%`).limit(1000);
+    const productIds = (products || []).map((row) => row.id);
+    if (!productIds.length) return [];
+    const variantIds = new Set();
+    for (let index = 0; index < productIds.length; index += 200) {
+      const { data } = await supabase.from("catalog_variants").select("id").in("product_id", productIds.slice(index, index + 200));
+      for (const row of data || []) variantIds.add(row.id);
+    }
+    return all.filter((row) => variantIds.has(row.variant_id));
+  }
+  async function showPreview() {
+    if (!form.list) { setStatus("Elegí la lista."); return; }
+    setStatus("Calculando…"); setPreview(null);
+    try {
+      const rows = await loadRows();
+      const result = bulkChange(rows, form.percent, { who, today: arToday() });
+      if (result.error) { setStatus(result.error); return; }
+      const sample = result.rows.slice(0, 12);
+      const { data: names } = sample.length ? await supabase.from("catalog_variants").select("id,name,sku").in("id", sample.map((row) => row.variant_id)) : { data: [] };
+      const byId = new Map((names || []).map((row) => [row.id, row]));
+      setPreview({ ...result, sample: sample.map((row) => ({ ...row, name: byId.get(row.variant_id)?.name || "", sku: byId.get(row.variant_id)?.sku || "" })) });
+      setStatus(result.rows.length ? "" : "No hay precios para cambiar con ese filtro.");
+    } catch (failed) { setStatus(`No se pudo leer: ${failed.message || failed}`); }
+  }
+  async function apply() {
+    if (!preview?.rows.length) return;
+    if (!window.confirm(`Se ${preview.pct > 0 ? "suben" : "bajan"} ${Math.abs(preview.pct)} % ${preview.rows.length} precios. ¿Seguimos?`)) return;
+    setStatus("Guardando…");
+    try {
+      for (let index = 0; index < preview.rows.length; index += 200) {
+        const chunk = preview.rows.slice(index, index + 200).map(({ _before, ...row }) => row);
+        const { error } = await supabase.from("variant_prices").upsert(chunk, { onConflict: "id" });
+        if (error) throw error;
+      }
+      setStatus(`${preview.rows.length} precios: ${savedText()}`);
+      setPreview(null);
+    } catch (failed) { setStatus(`No se pudo guardar: ${failed.message || failed}. Lo que ya se guardó queda anotado en cada precio.`); }
+  }
+  return (
+    <section className="panel">
+      <p className="muted small">Sube o baja un porcentaje todos los precios de una lista, o solo los de una marca o familia. Primero ves cómo quedaría; nada cambia hasta que tocás «Aplicar». Cada precio queda con el anterior anotado.</p>
+      <div className="condition-row">
+        <label>Lista<select value={form.list} onChange={(event) => { setForm({ ...form, list: event.target.value }); setPreview(null); }}><option value="">Elegí una lista</option>{lists.map((list) => <option key={list.id} value={list.id}>{list.name}</option>)}</select></label>
+        <label>Marca o familia (opcional)<input value={form.filter} onChange={(event) => { setForm({ ...form, filter: event.target.value }); setPreview(null); }} placeholder="ej. Penosil, Resinplast" /></label>
+        <label>Cambio %<input inputMode="decimal" value={form.percent} onChange={(event) => { setForm({ ...form, percent: event.target.value }); setPreview(null); }} placeholder="8 o -5" /></label>
+        <button type="button" className="secondary" onClick={showPreview}>Ver cómo quedaría</button>
+      </div>
+      {status && <p className="form-notice">{status}</p>}
+      {preview && preview.rows.length > 0 && (
+        <>
+          <p className="small"><strong>{preview.rows.length} precios</strong> {preview.pct > 0 ? "suben" : "bajan"} {Math.abs(preview.pct)} %. Algunos ejemplos:</p>
+          <div className="tier-table">
+            <div className="tier-row tier-head"><span>SKU</span><span>Desde</span><span>Antes → después</span><span>Producto</span><span /></div>
+            {preview.sample.map((row) => <div className="tier-row" key={row.id}><span className="small">{row.sku}</span><span className="small">{Number(row.min_quantity)} u.</span><span className="small">{usd(row._before)} → <strong>{usd(row.amount)}</strong></span><span className="muted small">{row.name}</span><span /></div>)}
+          </div>
+          <button type="button" className="primary" onClick={apply}><Save size={14} /> Aplicar a {preview.rows.length} precios</button>
+        </>
+      )}
+    </section>
+  );
+}
+
+const SECTIONS = [["precios", "Precios por producto"], ["lote", "Cambio por lote"], ["pagos", "Formas de pago"], ["minimos", "Mínimos mayoristas"]];
 
 export function PriceAdmin({ supabase, who = "" }) {
   const [section, setSection] = useState("precios");
@@ -216,6 +308,7 @@ export function PriceAdmin({ supabase, who = "" }) {
         {SECTIONS.map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={section === id} className={section === id ? "selected" : ""} onClick={() => setSection(id)}>{label}</button>)}
       </div>
       {section === "precios" && <Prices supabase={supabase} who={who} />}
+      {section === "lote" && <Bulk supabase={supabase} who={who} />}
       {section === "pagos" && <Payments supabase={supabase} />}
       {section === "minimos" && <Minimums supabase={supabase} who={who} />}
     </div>

@@ -71,3 +71,20 @@ export function validateMinimum(input = {}) {
   if (!(threshold > 0)) return { error: 'El mínimo tiene que ser mayor a 0 (USD neto).' };
   return { minimum: { brand: String(input.brand).trim(), threshold_net_usd: threshold, mix_products: input.mix_products !== false, active: input.active !== false } };
 }
+
+// Cambio por lote (26/11): sube o baja un % todos los precios de una lista (o solo una marca/familia). Redondea a 2
+// decimales. Devuelve las filas a guardar con el precio anterior anotado. percent: 8 = +8 %, -5 = -5 %.
+export function bulkChange(rows = [], percent, { who = '', today = '' } = {}) {
+  const pct = Number(String(percent).replace(',', '.'));
+  if (!Number.isFinite(pct) || pct === 0) return { error: 'Poné un porcentaje distinto de 0 (ej. 8 para subir 8 %, -5 para bajar 5 %).' };
+  if (pct < -50 || pct > 100) return { error: 'El cambio tiene que estar entre -50 % y +100 %. Si es más, revisalo producto por producto.' };
+  const changed = rows
+    .filter((row) => Number(row.amount) > 0)
+    .map((row) => {
+      const before = Number(row.amount);
+      const after = Math.round(before * (1 + pct / 100) * 100) / 100;
+      return { ...row, amount: after, override_reason: `Lote ${pct > 0 ? '+' : ''}${pct} % en Poliplast App por ${who || 'admin'} el ${today} (antes ${before})`, _before: before };
+    })
+    .filter((row) => row.amount !== row._before);
+  return { rows: changed, pct };
+}

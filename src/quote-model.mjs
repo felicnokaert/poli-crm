@@ -93,3 +93,22 @@ export function businessDaysFromToday(days = 2, now = Date.now()) {
   }
   return date.toISOString().slice(0, 10);
 }
+
+// ⚠ Precio raro (26/11, misma regla que Productos: src/product-hub.mjs RARE_PRICE). Compara el precio minorista de lista en
+// pesos (al dólar BNA) con Mercado Libre y Shopify: si un canal está a menos de la mitad o a más de 2,5 veces, casi seguro
+// la lista está mal cargada o el SKU es de otro tamaño/pack. Devuelve null si cierra o si falta algún dato.
+export const RARE_LOW = 0.5;
+export const RARE_HIGH = 2.5;
+export function rarePrice({ rows = [], refs = {} } = {}, rate = null) {
+  const retail = pickRow(rows, 'minorista', 1);
+  if (!retail || !rate) return null;
+  const listArs = retail.gross * rate;
+  if (!(listArs > 0)) return null;
+  for (const [channel, ref] of [['Mercado Libre', refs.ml], ['Shopify', refs.shopify]]) {
+    const price = Number(ref?.price);
+    if (!(price > 0)) continue;
+    const ratio = price / listArs;
+    if (ratio < RARE_LOW || ratio > RARE_HIGH) return { channel, price, listArs, ratio: Math.round(ratio * 10) / 10 };
+  }
+  return null;
+}

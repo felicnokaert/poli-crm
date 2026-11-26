@@ -28,3 +28,12 @@ test('Formas de pago y mínimos mayoristas', () => {
   assert.match(validateMinimum({ brand: 'Penosil', threshold_net_usd: 0 }).error, /mayor a 0/);
   assert.equal(validateMinimum({ brand: 'Penosil', threshold_net_usd: '1800' }).minimum.threshold_net_usd, 1800);
 });
+
+test('Cambio por lote: +8 % redondeado, anota el precio anterior y frena porcentajes absurdos', async () => {
+  const { bulkChange } = await import('../src/price-admin.mjs');
+  const { rows } = bulkChange([{ id: 'a', amount: 10 }, { id: 'b', amount: 0 }, { id: 'c', amount: 3.33 }], 8, { who: 'felipe@', today: '2026-11-26' });
+  assert.deepEqual(rows.map((row) => [row.id, row.amount]), [['a', 10.8], ['c', 3.6]]);
+  assert.match(rows[0].override_reason, /Lote \+8 % .*antes 10/);
+  assert.match(bulkChange([{ amount: 1 }], 0).error, /distinto de 0/);
+  assert.match(bulkChange([{ amount: 1 }], 150).error, /-50 % y \+100 %/);
+});

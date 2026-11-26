@@ -3,7 +3,7 @@ import { Copy, Search, Trash2 } from "lucide-react";
 import { currentListPrices } from "./assistant-prices.mjs";
 import { PriceAdmin } from "./PriceAdmin.jsx";
 import { loadDollar } from "./product-hub-data.js";
-import { MODES, ars, channelRefs, lineTotals, pickRow, quoteTotals, usd, whatsappText, wholesaleWarnings } from "./quote-model.mjs";
+import { MODES, ars, channelRefs, lineTotals, pickRow, quoteTotals, rarePrice, usd, whatsappText, wholesaleWarnings } from "./quote-model.mjs";
 import { STATUSES, linesFromItems, listQuotes, quoteNumber, quoteRow, saveQuote, setQuoteStatus } from "./quote-store.js";
 
 // Poliplast App (26/11): el cotizador adentro de la app, con el diseño de la app. Lee el catálogo y las listas de
@@ -34,7 +34,7 @@ export async function searchVariants(supabase, text) {
   });
 }
 
-async function loadLineData(supabase, variant, lists) {
+export async function loadLineData(supabase, variant, lists) {
   const [prices, photo, ml, shop] = await Promise.all([
     supabase.from("variant_prices").select("price_list_id,variant_id,min_quantity,max_quantity,amount,status").eq("variant_id", variant.id),
     supabase.from("catalog_product_photos").select("url").eq("product_id", variant.product_id).limit(1),
@@ -256,6 +256,7 @@ export function QuoteBuilder({ supabase, userId = "", clients = [], initialClien
                     {line.refs?.shopify ? <span>Shopify {ars(line.refs.shopify.price)}</span> : null}
                     {dollar?.rate && line.row ? <span className="muted">Lista en pesos {ars(line.row.gross * dollar.rate)}</span> : null}
                   </span>
+                  {(() => { const rare = rarePrice(line, dollar?.rate); return rare ? <span className="quote-warn small" title="Revisá el precio de lista o si el SKU es de otro tamaño o pack.">⚠ Precio raro: {rare.channel} {ars(rare.price)} contra la lista minorista {ars(rare.listArs)} ({String(rare.ratio).replace(".", ",")} veces)</span> : null; })()}
                 </div>
                 <div className="quote-line-controls">
                   <select aria-label="Lista del renglón" value={line.mode} onChange={(event) => update(line.key, { mode: event.target.value })}>{MODES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select>

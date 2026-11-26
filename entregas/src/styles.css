@@ -779,3 +779,10 @@ textarea.control { min-height: 70px; resize: vertical; }
 .en-app .sidebar { padding-left: max(12px, calc((100% - 980px) / 2)); padding-right: max(12px, calc((100% - 980px) / 2)); }
 .en-app .sidebar-foot { display: none; }
 .en-app .main { width: 100%; max-width: 980px; margin-left: auto; margin-right: auto; box-sizing: border-box; padding-left: 12px; padding-right: 12px; }
+
+/* Pantalla de Poliplast App (26/11, ?embed=app&marco=poliplast): la barra, el menú y la guía son los de Poliplast App; Entregas ocupa
+   el ancho del contenedor, sin fondo propio ni márgenes. «Cargar remito» queda como botón dentro de Pedidos. */
+html.marco-poliplast, html.marco-poliplast body { background: transparent !important; }
+html.marco-poliplast .layout { display: block; min-height: 0; }
+html.marco-poliplast .sidebar, html.marco-poliplast .bottom-nav, html.marco-poliplast .mobile-top, html.marco-poliplast .nav-guia { display: none !important; }
+html.marco-poliplast .main { max-width: none; width: 100%; margin: 0; padding: 0 0 24px; }

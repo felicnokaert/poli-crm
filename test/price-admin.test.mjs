@@ -37,3 +37,17 @@ test('Cambio por lote: +8 % redondeado, anota el precio anterior y frena porcent
   assert.match(bulkChange([{ amount: 1 }], 0).error, /distinto de 0/);
   assert.match(bulkChange([{ amount: 1 }], 150).error, /-50 % y \+100 %/);
 });
+
+test('Precios raros: lista minorista desde 1 contra ML y Shopify, del más desfasado al menos', async () => {
+  const { rareList } = await import('../src/price-admin.mjs');
+  const lists = [{ id: 'L', name: 'Catalogo Maestro', status: 'vigente', valid_from: '2026-09-11' }, { id: 'M', name: 'Penosil Mayorista', status: 'vigente', valid_from: '2026-09-14' }];
+  const variants = [{ id: 'v1', sku: 'A-1', name: 'A' }, { id: 'v2', sku: 'B-1', name: 'B' }, { id: 'v3', sku: 'C-1', name: 'C' }];
+  const prices = [
+    { variant_id: 'v1', price_list_id: 'L', min_quantity: 1, amount: 10, status: 'confirmado' },
+    { variant_id: 'v2', price_list_id: 'L', min_quantity: 1, amount: 10, status: 'confirmado' },
+    { variant_id: 'v3', price_list_id: 'M', min_quantity: 1, amount: 10, status: 'confirmado' },
+  ];
+  const mlItems = [{ sku: 'A-1', status: 'active', price: 60000, sold_quantity: 5 }, { sku: 'B-1', status: 'active', price: 12000 }, { sku: 'C-1', status: 'active', price: 90000 }];
+  const rows = rareList({ variants, prices, lists, mlItems, shopVariants: [{ sku: 'B-1', price: 3000 }], rate: 1000 });
+  assert.deepEqual(rows.map((row) => [row.variant.sku, row.channel, row.ratio]), [['A-1', 'Mercado Libre', 6], ['B-1', 'Shopify', 0.3]]);
+});

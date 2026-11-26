@@ -3,7 +3,7 @@ import { Plus, Save, Search, Trash2 } from "lucide-react";
 import { loadLineData, searchVariants } from "./QuoteBuilder.jsx";
 import { loadDollar } from "./product-hub-data.js";
 import { ars, rarePrice } from "./quote-model.mjs";
-import { bulkChange, diffTiers, isWholesaleList, tiersByList, validateMinimum, validatePayment, validateTiers } from "./price-admin.mjs";
+import { bulkChange, rareList, diffTiers, isWholesaleList, tiersByList, validateMinimum, validatePayment, validateTiers } from "./price-admin.mjs";
 import { arToday } from "./ar-date.mjs";
 
 // Precios y condiciones del cotizador (26/11, solo administradores). Lo que se guarda acá lo usa el cotizador de toda la
@@ -85,11 +85,50 @@ function Prices({ supabase, who }) {
   const [lists, setLists] = useState([]);
   const [prices, setPrices] = useState(null);
   const [reference, setReference] = useState(null);
+  const [rare, setRare] = useState(null); // null = filtro apagado; { loading } o { rows }
   const [dollar, setDollar] = useState(null);
   useEffect(() => { loadDollar().then(setDollar).catch(() => {}); }, []);
   useEffect(() => { supabase.from("price_lists").select("id,name,brand,currency,vat_rate,valid_from,valid_until,status").eq("status", "vigente").order("valid_from").then(({ data }) => setLists(data || [])); }, [supabase]);
+  async function pageAll(build) {
+    const all = [];
+    for (let from = 0; from < 10000; from += 1000) {
+      const { data, error } = await build().range(from, from + 999);
+      if (error) throw error;
+      all.push(...(data || []));
+      if (!data || data.length < 1000) break;
+    }
+    return all;
+  }
+  // Filtro «precios raros»: productos cuya lista minorista no cierra con Mercado Libre o Shopify.
+  async function showRare() {
+    if (rare) { setRare(null); return; }
+    setRare({ loading: true }); setResults(null); setVariant(null);
+    try {
+      const rate = dollar?.rate || (await loadDollar().catch(() => null))?.rate;
+      if (!rate) { setRare({ rows: [], error: "No se pudo leer el dólar BNA: sin él no se puede comparar." }); return; }
+      const retailIds = lists.filter((list) => !isWholesaleList(list)).map((list) => list.id);
+      const [variants, prices, mlItems, shopVariants] = await Promise.all([
+        pageAll(() => supabase.from("catalog_variants").select("id,sku,name,product_id").eq("active", true).order("id")),
+        pageAll(() => supabase.from("variant_prices").select("variant_id,price_list_id,min_quantity,amount,status").in("price_list_id", retailIds).eq("min_quantity", 1).order("id")),
+        pageAll(() => supabase.from("ml_items").select("sku,variation_skus,status,price,permalink,title,sold_quantity").eq("status", "active").order("id")),
+        pageAll(() => supabase.from("shopify_variants").select("sku,price,compare_at_price").order("sku")),
+      ]);
+      setRare({ rows: rareList({ variants, prices, lists, mlItems, shopVariants, rate }), rate });
+    } catch (failed) { setRare({ rows: [], error: `No se pudo calcular: ${failed.message || failed}` }); }
+  }
+  function downloadRare() {
+    const lines = [["SKU", "Producto", "Lista", "Precio lista USD", "Lista en pesos", "Canal", "Precio en el canal", "Veces"].join(";"),
+      ...rare.rows.map((row) => [row.variant.sku, row.variant.name, row.list, usd(row.gross), Math.round(row.listArs), row.channel, Math.round(row.price), String(row.ratio).replace(".", ",")].map((cell) => `"${String(cell ?? "").replace(/"/g, "\"\"")}"`).join(";"))];
+    const blob = new Blob([`\ufeff${lines.join("\n")}`], { type: "text/csv;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `precios-raros-${arToday()}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
   async function search(event) {
     event.preventDefault();
+    setRare(null);
     setResults(await searchVariants(supabase, query));
   }
   async function loadPrices(target = variant) {
@@ -111,7 +150,31 @@ function Prices({ supabase, who }) {
         <Search size={16} />
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar producto o SKU (ej. PU-46, resina epoxi 1 kg)" aria-label="Buscar producto" />
         <button type="submit" className="secondary">Buscar</button>
+        <button type="button" className={rare ? "primary" : "secondary"} aria-pressed={Boolean(rare)} onClick={showRare}>⚠ Solo precios raros{rare?.rows ? ` (${rare.rows.length})` : ""}</button>
       </form>
+      {rare && !variant && (
+        <section className="panel rare-prices">
+          {rare.loading ? <p className="muted">Comparando la lista con Mercado Libre y Shopify…</p> : rare.error ? <p className="form-notice">{rare.error}</p> : rare.rows.length === 0 ? <p className="muted">No hay precios raros: la lista cierra con Mercado Libre y Shopify.</p> : (
+            <>
+              <div className="panel-head">
+                <p className="muted small">{rare.rows.length} productos con la lista minorista (desde 1 u.) a menos de la mitad o a más de 2,5 veces de Mercado Libre o Shopify, al dólar BNA {ars(rare.rate)}. Casi siempre es un precio viejo o un SKU que en el canal es otro tamaño o pack. Tocá uno para corregirlo.</p>
+                <button type="button" className="secondary" onClick={downloadRare}>Descargar (CSV)</button>
+              </div>
+              <div className="rare-table" role="table">
+                <div className="rare-row rare-head" role="row"><span>Producto</span><span>Lista</span><span>Canal</span><span>Veces</span></div>
+                {rare.rows.map((row) => (
+                  <button type="button" className="rare-row" role="row" key={row.variant.id} onClick={() => pick(row.variant)}>
+                    <span><strong>{row.variant.sku}</strong> <span className="muted small">{row.variant.name}</span></span>
+                    <span className="small">USD {usd(row.gross)}<br /><span className="muted">{ars(row.listArs)}</span></span>
+                    <span className="small">{row.channel}<br />{ars(row.price)}</span>
+                    <span className={`badge ${row.ratio > 1 ? "warn" : "danger"}`}>{String(row.ratio).replace(".", ",")}×</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </section>
+      )}
       {results && !variant && (results.length === 0 ? <p className="muted">No encontré productos con eso.</p> : (
         <ul className="price-results">
           {results.map((item) => <li key={item.id}><button type="button" className="link-button" onClick={() => pick(item)}>{item.name}</button> <span className="muted small">{item.sku} · {item.brand}</span></li>)}

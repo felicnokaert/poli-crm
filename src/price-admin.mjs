@@ -1,3 +1,4 @@
+import { channelRefs, rarePrice } from './quote-model.mjs';
 // Poliplast App (26/11, Felipe: «el cotizador está muy verde: poder editar precios y condiciones, USD, minorista y
 // mayorista, con sus condiciones»). Lógica de la edición de precios de lista (solo administradores; la base ya lo
 // exige: price_lists/variant_prices/payment_policies/wholesale_order_policies se escriben solo con is_poliplast_crm_admin).
@@ -87,4 +88,40 @@ export function bulkChange(rows = [], percent, { who = '', today = '' } = {}) {
     })
     .filter((row) => row.amount !== row._before);
   return { rows: changed, pct };
+}
+
+// Filtro «precios raros» (26/11, Felipe): productos con precio minorista de lista (tramo desde 1) que no cierra con Mercado Libre
+// o Shopify (menos de la mitad o más de 2,5 veces, al dólar BNA). Ordenados del más desfasado al menos.
+const skuKey = (sku) => String(sku || '').trim().toUpperCase().replace(/\s+/g, '');
+export function rareList({ variants = [], prices = [], lists = [], mlItems = [], shopVariants = [], rate = null } = {}) {
+  if (!rate) return [];
+  const retail = new Map(lists.filter((list) => list.status === 'vigente' && !isWholesaleList(list)).map((list) => [list.id, list]));
+  const best = new Map();
+  for (const row of prices) {
+    const list = retail.get(row.price_list_id);
+    if (!list || Number(row.min_quantity) !== 1 || row.status !== 'confirmado' || !(Number(row.amount) > 0)) continue;
+    const current = best.get(row.variant_id);
+    if (!current || String(list.valid_from) > String(current.list.valid_from)) best.set(row.variant_id, { row, list });
+  }
+  const mlBySku = new Map();
+  for (const item of mlItems) {
+    for (const sku of [item.sku, ...(item.variation_skus || []).map((variation) => variation?.sku)]) {
+      const key = skuKey(sku);
+      if (!key) continue;
+      if (!mlBySku.has(key)) mlBySku.set(key, []);
+      mlBySku.get(key).push(item);
+    }
+  }
+  const shopBySku = new Map(shopVariants.map((variant) => [skuKey(variant.sku), variant]));
+  const out = [];
+  for (const variant of variants) {
+    const key = skuKey(variant.sku);
+    const found = best.get(variant.id);
+    if (!key || !found) continue;
+    const refs = channelRefs(variant.sku, { mlItems: mlBySku.get(key) || [], shopVariants: shopBySku.has(key) ? [shopBySku.get(key)] : [] });
+    const gross = Number(found.row.amount);
+    const rare = rarePrice({ rows: [{ wholesale: false, from: 1, to: null, gross, list: found.list.name }], refs }, rate);
+    if (rare) out.push({ variant, gross, list: found.list.name, refs, ...rare, off: Math.max(rare.ratio, 1 / rare.ratio) });
+  }
+  return out.sort((a, b) => b.off - a.off);
 }

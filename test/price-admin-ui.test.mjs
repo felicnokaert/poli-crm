@@ -15,7 +15,7 @@ function fakeSupabase(tables, writes) {
         select() { return chain; }, order() { return chain; }, limit() { return chain; }, neq() { return chain; },
         eq(column, value) { state.filters.push([column, value]); return chain; },
         in(column, values) { state.filters.push([column, values]); return chain; },
-        or() { return chain; }, ilike() { return chain; },
+        or() { return chain; }, ilike() { return chain; }, range() { return chain; },
         update(payload) { state.op = 'update'; state.payload = payload; return chain; },
         insert(payload) { state.op = 'insert'; state.payload = payload; return chain; },
         delete() { state.op = 'delete'; return chain; },
@@ -54,4 +54,24 @@ test('Precios y condiciones: editar un tramo manda un update con el precio anter
     assert.equal(writes[0].payload.amount, 12.5);
     assert.match(writes[0].payload.override_reason, /antes 10/);
   } finally { cleanup(); }
+});
+
+test('Precios y condiciones: el filtro «Solo precios raros» lista los que no cierran con Mercado Libre', async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ rate: 1000 }) });
+  try {
+    const tables = {
+      price_lists: [{ id: 'L1', name: 'Catalogo Maestro', currency: 'USD', status: 'vigente', valid_from: '2026-09-11' }],
+      catalog_variants: [{ id: 'V1', sku: 'PU-46', name: 'Espuma PU-46', product_id: 'P1', active: true }, { id: 'V2', sku: 'OK-1', name: 'Normal', product_id: 'P1', active: true }],
+      variant_prices: [{ id: 'R1', price_list_id: 'L1', variant_id: 'V1', min_quantity: 1, amount: 10, status: 'confirmado' }, { id: 'R2', price_list_id: 'L1', variant_id: 'V2', min_quantity: 1, amount: 10, status: 'confirmado' }],
+      ml_items: [{ sku: 'PU-46', status: 'active', price: 60000 }, { sku: 'OK-1', status: 'active', price: 12000 }],
+      shopify_variants: [],
+    };
+    render(React.createElement(PriceAdmin, { supabase: fakeSupabase(tables, []), who: 'felipe@grupopoliplast.com.ar' }));
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    fireEvent.click(screen.getByRole('button', { name: /Solo precios raros/ }));
+    await screen.findByText(/1 productos con la lista minorista/);
+    assert.ok(screen.getByText('PU-46'));
+    assert.ok(!screen.queryByText('OK-1'));
+  } finally { globalThis.fetch = realFetch; cleanup(); }
 });

@@ -4,7 +4,8 @@ import { monthGrid, tasksForDay } from "./trello-plan-import.mjs";
 import { routineForDate, specialsForDate } from "./routine.mjs";
 import { PLAN_HOLIDAYS, PLAN_LIGHT_DAYS } from "./plan-calendar.mjs";
 import { buildIcs } from "./ics.mjs";
-import { buildCalendar, layersFor } from "./unified-calendar.mjs";
+import { buildCalendar, holidayDetail, layersFor } from "./unified-calendar.mjs";
+import { CompanyDaysPanel, mergeCompanyDays } from "./CompanyDays.jsx";
 import { useSharedCalendar } from "./hooks/useSharedCalendar.js";
 
 const LAYERS_KEY = "poliplast-calendar-layers";
@@ -20,7 +21,7 @@ function timeOrder(a, b) {
   return (a.startTime || "99:99").localeCompare(b.startTime || "99:99");
 }
 
-export function Calendar({ tasks = [], date, onToggleTask, onOpenTask, onAddEvent, supabase = null, allows = () => true, demo = false }) {
+export function Calendar({ tasks = [], date, onToggleTask, onOpenTask, onAddEvent, supabase = null, allows = () => true, demo = false, isAdmin = false }) {
   const [form, setForm] = useState(null);
   const [exportOpen, setExportOpen] = useState(false);
   const [opts, setOpts] = useState({ routine: true, includeTasks: true, includeEvents: true });
@@ -33,8 +34,13 @@ export function Calendar({ tasks = [], date, onToggleTask, onOpenTask, onAddEven
   const [layersOn, setLayersOn] = useState(() => loadLayersOn() || new Set(sharedLayers.map((layer) => layer.id)));
   const days = useMemo(() => cells.filter(Boolean), [cells]);
   const shared = useSharedCalendar({ days, supabase, allows, demo });
-  const sharedMap = useMemo(() => buildCalendar({ days, holidays: shared.holidays, entregas: shared.entregas, cortes: shared.cortes, on: layersOn }), [days, shared, layersOn]);
-  const holidayDays = useMemo(() => new Set(shared.holidays.length ? shared.holidays.map((item) => item.fecha) : PLAN_HOLIDAYS), [shared.holidays]);
+  // Días cerrados de la empresa: los carga un administrador (CompanyDaysPanel); al guardar se ven al instante.
+  const [companyDays, setCompanyDays] = useState(null);
+  const [companyOpen, setCompanyOpen] = useState(false);
+  const holidays = useMemo(() => mergeCompanyDays(shared.holidays, companyDays), [shared.holidays, companyDays]);
+  const sharedMap = useMemo(() => buildCalendar({ days, holidays, entregas: shared.entregas, cortes: shared.cortes, on: layersOn }), [days, holidays, shared, layersOn]);
+  const holidayDays = useMemo(() => new Set(holidays.length ? holidays.filter((item) => item.tipo !== "empresa-medio-dia").map((item) => item.fecha) : PLAN_HOLIDAYS), [holidays]);
+  const halfDays = useMemo(() => new Set(holidays.filter((item) => item.tipo === "empresa-medio-dia").map((item) => item.fecha)), [holidays]);
   const toggleLayer = (id) => setLayersOn((current) => {
     const next = new Set(current);
     if (next.has(id)) next.delete(id); else next.add(id);
@@ -50,7 +56,7 @@ export function Calendar({ tasks = [], date, onToggleTask, onOpenTask, onAddEven
   const specials = specialsForDate(selected);
   const holiday = holidayDays.has(selected);
   const daySharedEvents = (sharedMap[selected] || []).filter((event) => event.layer !== "feriados");
-  const holidayName = (sharedMap[selected] || []).find((event) => event.layer === "feriados")?.title || shared.holidays.find((item) => item.fecha === selected)?.nombre;
+  const dayHoliday = holidays.find((item) => item.fecha === selected);
   const light = PLAN_LIGHT_DAYS.includes(selected);
   function submitEvent(event) {
     event.preventDefault();
@@ -85,6 +91,7 @@ export function Calendar({ tasks = [], date, onToggleTask, onOpenTask, onAddEven
         <div className="panel-head-actions">
           <button type="button" className="primary" onClick={() => setForm(form ? null : { title: "", date: selected, startTime: "10:00", endTime: "", place: "", company: "" })}><CalendarPlus size={15} /> Nuevo evento</button>
           <button type="button" className="secondary" onClick={() => setExportOpen(!exportOpen)}><Download size={15} /> Exportar a Google Calendar</button>
+          {isAdmin && <button type="button" className="secondary" onClick={() => setCompanyOpen(!companyOpen)}>Días cerrados</button>}
           <button type="button" className="secondary" aria-label="Mes anterior" onClick={() => move(-1)}><ChevronLeft size={16} /></button>
           <button type="button" className="secondary" aria-label="Mes siguiente" onClick={() => move(1)}><ChevronRight size={16} /></button>
         </div>
@@ -103,6 +110,7 @@ export function Calendar({ tasks = [], date, onToggleTask, onOpenTask, onAddEven
           </div>
         </form>
       )}
+      {isAdmin && companyOpen && <CompanyDaysPanel date={selected} items={companyDays} onItems={setCompanyDays} fallback={holidays} onClose={() => setCompanyOpen(false)} local={demo || !supabase} />}
       {exportOpen && (
         <div className="calendar-export">
           <p><strong>Exportar a Google Calendar</strong> <span className="muted small">de hoy al 31/12, sin feriados</span></p>
@@ -131,17 +139,20 @@ export function Calendar({ tasks = [], date, onToggleTask, onOpenTask, onAddEven
           const pending = list.filter((task) => !task.done).length;
           const weekend = index % 7 >= 5;
           const off = holidayDays.has(cell);
+          const half = halfDays.has(cell);
+          const companyOff = holidays.some((item) => item.fecha === cell && item.tipo === "empresa");
           const marks = [...new Set((sharedMap[cell] || []).filter((event) => event.layer !== "feriados").map((event) => event.layer))];
           return (
             <button
               type="button"
               key={cell}
-              className={`calendar-cell${weekend ? " weekend" : ""}${off ? " holiday" : ""}${cell === date ? " today" : ""}${cell === selected ? " selected" : ""}`}
+              className={`calendar-cell${weekend ? " weekend" : ""}${off ? " holiday" : ""}${half ? " half-day" : ""}${cell === date ? " today" : ""}${cell === selected ? " selected" : ""}`}
               aria-label={`${cell}: ${pending} pendientes`}
               onClick={() => setSelected(cell)}
             >
               <span className="calendar-day">{Number(cell.slice(8))}</span>
-              {off && <em>feriado</em>}
+              {off && <em>{companyOff ? "cerrado" : "feriado"}</em>}
+              {half && <em>medio día</em>}
               {pending > 0 && <strong className="calendar-count">{pending}</strong>}
               {marks.length > 0 && <span className="calendar-dots">{marks.map((layer) => <i key={layer} className={`dot-${layer}`} />)}</span>}
             </button>
@@ -150,7 +161,8 @@ export function Calendar({ tasks = [], date, onToggleTask, onOpenTask, onAddEven
       </div>
       <div className="calendar-detail">
         <h3>{selected}</h3>
-        {holiday && <p className="form-notice">{holidayName ? `Feriado: ${holidayName}.` : "Feriado."} Sin carga de trabajo.</p>}
+        {dayHoliday && <p className="form-notice"><strong>{dayHoliday.nombre}</strong> · {holidayDetail(dayHoliday)}{holiday ? ". Sin carga de trabajo." : "."}</p>}
+        {!dayHoliday && holiday && <p className="form-notice">Feriado. Sin carga de trabajo.</p>}
         {light && <p className="form-notice">Día liviano / puente (a confirmar): sin carga de trabajo.</p>}
         {!routine.weekend && block && <p className="muted small"><strong>Bloque del día:</strong> {block.title}</p>}
         {specials.map((line) => <p key={line} className="muted small">{line}</p>)}

@@ -922,6 +922,7 @@ export default function App() {
             supabase={onlineConfigured && session ? supabase : null}
             allows={allowsHomeModule}
             demo={demo}
+            isAdmin={isAdminUser}
             automations={data.automations}
             onAutomationsChange={(next) => setData((current) => ({ ...current, automations: next }))}
           />

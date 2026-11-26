@@ -14,6 +14,8 @@ import { contabiliumAdmin, contabiliumCron } from '../lib/contabilium.mjs';
 import { assistantAi } from '../lib/assistant-ai.mjs';
 import { appReportsAdmin } from '../lib/app-reports.mjs';
 import { appFirmaAdmin, publicKeyHandler } from '../lib/app-firma.mjs';
+import { asHolidays, companyDaysAdmin, readCompanyDays } from '../lib/company-days.mjs';
+import { db as storeFor } from '../lib/mercadolibre.mjs';
 import { feriadosHandler } from '../lib/feriados.mjs';
 import { shopifyAdmin, shopifyCron } from '../lib/shopify.mjs';
 import { etiquetasHandler } from '../lib/etiquetas.mjs';
@@ -88,7 +90,7 @@ export default async function handler(request, response) {
   // Entregas para expedición sin login (20/11): /api/entregas/<ruta> → ?entregas=<ruta>. Clave ENTREGAS_API_KEY en X-Api-Key.
   if (request.query?.entregas) return entregasApiHandler(request, response);
   if (request.query?.dolar) return bnaDollarHandler(request, response);
-  if (request.query?.feriados) return feriadosHandler(request, response);
+  if (request.query?.feriados) return feriadosHandler(request, response, fetch, async (year) => asHolidays(await readCompanyDays(storeFor(process.env, fetch)), year));
   if (request.query?.['app-firma-publica']) return publicKeyHandler(request, response);
   const cron = request.method === 'GET' ? CRONS[request.query?.cron] : null;
   if (cron) {
@@ -108,6 +110,7 @@ export default async function handler(request, response) {
     : action === 'trello-plan' ? await trelloPlanAdmin(request)
     : action === 'whatsapp-auto' ? await whatsappAutoAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'automation-pause' ? await automationPauseAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
+    : action === 'company-days' ? await companyDaysAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'app-firma' ? await appFirmaAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'app-report' ? await appReportsAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'gmail' ? await gmailAdmin(request)

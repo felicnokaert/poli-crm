@@ -32,3 +32,17 @@ test('Feriados: normaliza la fuente y trae el respaldo de 2026', () => {
   assert.equal(FALLBACK[2026].length, 20);
   assert.deepEqual(normalizeHolidays([{ fecha: '2026-12-25', nombre: 'Navidad', tipo: 'inamovible' }, { fecha: 'x' }]).length, 1);
 });
+
+test('Días de la empresa: cerrado corta los cortes; medio día los deja y avisa la hora', async () => {
+  const { cleanCompanyDay, asHolidays } = await import('../lib/company-days.mjs');
+  assert.ok(cleanCompanyDay({ fecha: '2026-12-02', nombre: 'x' }).error);
+  const a = cleanCompanyDay({ fecha: '2026-12-02', nombre: 'Día del plástico' }, { email: 'F@x' }).day;
+  const b = cleanCompanyDay({ fecha: '2026-12-23', nombre: 'Fiesta de fin de año', tipo: 'medio-dia', desde: '12:30' }).day;
+  assert.equal(a.tipo, 'cerrado'); assert.equal(b.desde, '12:30');
+  const holidays = asHolidays([a, b, { fecha: '2027-01-02', nombre: 'otro año', tipo: 'cerrado' }], 2026);
+  assert.equal(holidays.length, 2);
+  const map = buildCalendar({ days: ['2026-12-02', '2026-12-23'], holidays, cortes: { cortes: [8], calendario: {} } });
+  assert.ok(!map['2026-12-02'].some((event) => event.layer === 'cortes'));
+  assert.ok(map['2026-12-23'].some((event) => event.layer === 'cortes'));
+  assert.match(map['2026-12-23'].find((event) => event.layer === 'feriados').detail, /12:30/);
+});

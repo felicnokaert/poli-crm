@@ -14,6 +14,13 @@ export function layersFor(allows = () => true) {
   return LAYERS.filter((layer) => !layer.module || allows(layer.module));
 }
 
+export function holidayDetail(holiday = {}) {
+  if (holiday.tipo === 'empresa') return 'Cerrado (día de la empresa)';
+  if (holiday.tipo === 'empresa-medio-dia') return `Medio día: cerrado desde las ${holiday.desde || '13:00'}`;
+  if (holiday.tipo === 'puente') return 'Día no laborable';
+  return 'Feriado';
+}
+
 const add = (map, day, event) => { if (!day) return; (map[day] ||= []).push(event); };
 const weekday = (day) => new Date(`${day}T12:00:00Z`).getUTCDay();
 
@@ -21,8 +28,9 @@ const weekday = (day) => new Date(`${day}T12:00:00Z`).getUTCDay();
 export function buildCalendar({ days = [], holidays = [], tasks = [], entregas = [], cortes = null, on = new Set(LAYERS.map((layer) => layer.id)) } = {}) {
   const map = {};
   const inRange = new Set(days);
-  const holidayByDay = new Map(holidays.map((holiday) => [holiday.fecha, holiday]));
-  if (on.has('feriados')) for (const holiday of holidays) if (inRange.has(holiday.fecha)) add(map, holiday.fecha, { layer: 'feriados', id: `fer-${holiday.fecha}`, title: holiday.nombre, detail: holiday.tipo === 'puente' ? 'Día no laborable' : 'Feriado' });
+  // Medio día cerrado de la empresa: se trabaja a la mañana (los cortes de etiquetas siguen).
+  const holidayByDay = new Map(holidays.filter((holiday) => holiday.tipo !== 'empresa-medio-dia').map((holiday) => [holiday.fecha, holiday]));
+  if (on.has('feriados')) for (const holiday of holidays) if (inRange.has(holiday.fecha)) add(map, holiday.fecha, { layer: 'feriados', id: `fer-${holiday.fecha}-${holiday.tipo}`, title: holiday.nombre, detail: holidayDetail(holiday), half: holiday.tipo === 'empresa-medio-dia', company: String(holiday.tipo).startsWith('empresa') });
   if (on.has('tareas') || on.has('eventos')) {
     for (const task of tasks) {
       if (!task.dueDate || !inRange.has(task.dueDate) || task.deletedAt) continue;

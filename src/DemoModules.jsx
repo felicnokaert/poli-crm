@@ -57,7 +57,7 @@ function Etiquetas({ data, tab }) {
     setCode("");
   };
   const pending = rows.filter((row) => row.status === "Pendiente");
-  if (tab === "Escaneo") return (
+  if (tab === "Escanear") return (
     <>
       <form className="demo-scan" onSubmit={scan}>
         <input value={code} onChange={(event) => setCode(event.target.value)} placeholder="Escaneá o escribí el número de envío" aria-label="Número de envío" />
@@ -76,6 +76,7 @@ function Etiquetas({ data, tab }) {
       </>
     );
   }
+  if (tab === "Hecho") return <Table head={["Envío", "SKU", "Cant.", "Preparó", "Hora"]} rows={rows.filter((row) => row.status === "Preparado").map((row) => <tr key={row.id}><td>{row.id}</td><td>{row.sku}</td><td>{row.qty}</td><td>{row.by}</td><td>{row.at}</td></tr>)} />;
   if (tab === "Devoluciones") return <Table head={["Envío", "Cuenta", "Producto", "Estado"]} rows={rows.filter((row) => row.returned).map((row) => <tr key={row.id}><td>{row.id}</td><td>{row.account}</td><td>{row.title}</td><td><Pill tone="warn">Devolución en camino</Pill></td></tr>)} />;
   return <Table head={["Corte", "Lunes a viernes", "Cuentas"]} rows={["8:00", "10:00", "12:00"].map((cut) => <tr key={cut}><td>{cut}</td><td>Sí</td><td>Todas</td></tr>)} />;
 }
@@ -83,20 +84,21 @@ function Etiquetas({ data, tab }) {
 function Conteo({ data, tab }) {
   const [rows, setRows] = useState(data.conteo);
   const diffs = rows.filter((row) => row.counted !== null && row.counted !== row.expected);
-  if (tab === "Conteo de stock") return (
+  if (tab === "Categorías") return (
     <Table head={["SKU", "Producto", "Depósito", "Sistema", "Contado"]} rows={rows.map((row, index) => (
       <tr key={row.sku}><td>{row.sku}</td><td>{row.title}</td><td>{row.deposit}</td><td>{row.expected}</td>
         <td><input className="demo-count" type="number" inputMode="numeric" value={row.counted ?? ""} aria-label={`Contado ${row.sku}`} onChange={(event) => setRows((current) => current.map((item, i) => (i === index ? { ...item, counted: event.target.value === "" ? null : Number(event.target.value) } : item)))} /></td></tr>
     ))} />
   );
-  if (tab === "Diferencias") return <Table head={["SKU", "Producto", "Sistema", "Contado", "Diferencia"]} rows={diffs.map((row) => <tr key={row.sku}><td>{row.sku}</td><td>{row.title}</td><td>{row.expected}</td><td>{row.counted}</td><td><Pill tone={row.counted < row.expected ? "warn" : ""}>{row.counted - row.expected > 0 ? "+" : ""}{row.counted - row.expected}</Pill></td></tr>)} />;
+  if (tab === "Administración") return <Table head={["SKU", "Producto", "Sistema", "Contado", "Diferencia"]} rows={diffs.map((row) => <tr key={row.sku}><td>{row.sku}</td><td>{row.title}</td><td>{row.expected}</td><td>{row.counted}</td><td><Pill tone={row.counted < row.expected ? "warn" : ""}>{row.counted - row.expected > 0 ? "+" : ""}{row.counted - row.expected}</Pill></td></tr>)} />;
   return <Table head={["SKU", "Contó", "Depósito"]} rows={rows.filter((row) => row.by).map((row) => <tr key={row.sku}><td>{row.sku}</td><td>{row.by}</td><td>{row.deposit}</td></tr>)} />;
 }
 
 function Dosificado({ data, tab }) {
   const [rows, setRows] = useState(data.dosificado);
-  if (tab === "Fórmulas") return <Table head={["Fórmula", "Relación", "Nota"]} rows={[["618-SP", "100 : 110 en peso", "Espuma proyectada"], ["770-IR", "100 : 110 en peso", "Inyección rígida"], ["Poliurea", "1 : 1 en volumen", "Krypton"], ["Resina 608", "+ 1-2 % catalizador", "Fraccionado"]].map(([a, b, c]) => <tr key={a}><td>{a}</td><td>{b}</td><td>{c}</td></tr>)} />;
-  const list = tab === "Historial" ? rows.filter((row) => row.status !== "Para dosificar") : rows.filter((row) => row.status === "Para dosificar");
+  if (tab === "Kits") return <Table head={["Fórmula", "Relación", "Nota"]} rows={[["618-SP", "100 : 110 en peso", "Espuma proyectada"], ["770-IR", "100 : 110 en peso", "Inyección rígida"], ["Poliurea", "1 : 1 en volumen", "Krypton"], ["Resina 608", "+ 1-2 % catalizador", "Fraccionado"]].map(([a, b, c]) => <tr key={a}><td>{a}</td><td>{b}</td><td>{c}</td></tr>)} />;
+  if (tab === "Resumen") return <Stats items={[["Para dosificar", rows.filter((row) => row.status === "Para dosificar").length], ["Kg del día", rows.reduce((sum, row) => sum + row.kg, 0)]]} />;
+  const list = tab === "Registros" ? rows.filter((row) => row.status !== "Para dosificar") : rows.filter((row) => row.status === "Para dosificar");
   return (
     <Table head={["Pedido", "Cliente", "Fórmula", "Kg", "Para", "Estado", ""]} rows={list.map((row) => (
       <tr key={row.id}><td>{row.id}</td><td>{row.client}</td><td>{row.formula}</td><td>{row.kg}</td><td>{row.due}</td><td><Pill>{row.status}</Pill>{row.by && <span className="muted small"> {row.by}</span>}</td>

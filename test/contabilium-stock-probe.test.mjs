@@ -32,7 +32,7 @@ test('stock por depósito: solo Villa Domínico y Mar del Plata, por páginas', 
     return json({ Items: [] });
   };
   const store = memoryStore();
-  const result = await syncStock({ key: 'POLIPLAST' }, env, http, store, { deadline: Date.now() + 5000 });
+  const result = await syncStock({ key: 'POLIPLAST' }, env, http, store, { deadline: Date.now() + 5000, pause: 0, retryWait: 0 });
   assert.equal(result.done, true);
   assert.deepEqual(result.depots, ['VILLA DOMINICO', 'MAR DEL PLATA']);
   assert.ok(!calls.some((url) => /id=3|id=4/.test(url)));
@@ -45,8 +45,24 @@ test('stock por depósito: solo Villa Domínico y Mar del Plata, por páginas', 
 test('sin depósitos visibles termina y lo deja dicho', async () => {
   const http = async (url) => (url.endsWith('/token') ? json({ access_token: 'T' }) : json([]));
   const store = memoryStore();
-  const result = await syncStock({ key: 'POLIPLAST' }, env, http, store, { deadline: Date.now() + 5000 });
+  const result = await syncStock({ key: 'POLIPLAST' }, env, http, store, { deadline: Date.now() + 5000, pause: 0, retryWait: 0 });
   assert.equal(result.done, true);
   assert.deepEqual(store.detail.companies.POLIPLAST.depots, []);
   assert.deepEqual(depotsFrom({ Items: [{ ID: 7, Nombre: 'X' }] }), [{ id: 7, name: 'X', active: true }]);
+});
+
+test('ante un 429 de Contabilium espera y reintenta', async () => {
+  let hits = 0;
+  const http = async (url) => {
+    if (url.endsWith('/token')) return json({ access_token: 'T' });
+    if (url.includes('getDepositos')) return json([{ Id: 1, Nombre: 'VILLA DOMINICO' }]);
+    hits += 1;
+    if (hits === 1) return json({ Message: 'Too many' }, 429);
+    return json({ Items: [{ Codigo: 'A', StockActual: 2 }], TotalPage: 1 });
+  };
+  const store = memoryStore();
+  const result = await syncStock({ key: 'POLIPLAST' }, env, http, store, { deadline: Date.now() + 5000, pause: 0, retryWait: 1 });
+  assert.equal(result.error, null);
+  assert.equal(result.done, true);
+  assert.equal(store.detail.companies.POLIPLAST.items.A.d.vd, 2);
 });

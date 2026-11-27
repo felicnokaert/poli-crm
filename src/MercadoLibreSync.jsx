@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { adminFetch } from "./admin-api.mjs";
 import { RefreshCw, Store } from "lucide-react";
 import { mlCallbackParams } from "./ml-callback.mjs";
-import { clipIdsFrom } from "./ml-clips.mjs";
 
 // Más → Datos → Mercado Libre (solo Felipe, 20/10): conectar las cuentas de Mercado Libre y traer sus
 // publicaciones y preguntas ya respondidas como conocimiento para Academia y el futuro asistente.
@@ -160,60 +159,6 @@ export function MercadoLibreSync({ supabase, session }) {
     setProgress(""); setBusy("");
     await loadAccounts();
     await loadCounts();
-  }
-
-  // Clips pegados desde Mercado Libre (la API no los deja leer).
-  const [clipText, setClipText] = useState("");
-  const [clipComplete, setClipComplete] = useState(true);
-  const [clipHas, setClipHas] = useState(true); // false = pegó las que NO tienen clip
-  const [clipSeller, setClipSeller] = useState("");
-  const [clipOpen, setClipOpen] = useState(false);
-  async function saveClips() {
-    setError(""); setMessage(""); setBusy("clips");
-    try {
-      const items = [];
-      for (let page = 0; page < 5; page += 1) {
-        const { data } = await supabase.from("ml_items").select("id,title,seller_id").order("id").range(page * 1000, page * 1000 + 999);
-        items.push(...(data || []));
-        if (!data || data.length < 1000) break;
-      }
-      const { ids, titles } = clipIdsFrom(clipText, clipSeller ? items.filter((item) => item.seller_id === clipSeller) : items);
-      const result = await callApi(session, { op: "clips", ids, complete: clipComplete && Boolean(clipSeller), has: clipHas, sellerId: clipSeller });
-      setMessage(`Clips: se marcaron ${result.marked} publicaciones ${clipHas ? "con" : "sin"} clip${titles ? ` (${titles} por título)` : ""}.${clipComplete ? ` Las demás activas quedan como “${clipHas ? "sin" : "con"} clip”.` : ""}`);
-      setClipText(""); setClipOpen(false);
-    } catch (clipError) { setError(clipError.message); }
-    setBusy("");
-  }
-
-  // Reportes de competencia pegados desde Mercado Libre (Métricas → Competencia / mejores vendedores).
-  const [reports, setReports] = useState([]);
-  // Prueba temporal del control de etiquetas (19/11): busca un envío en cada cuenta y muestra qué devuelve ML. Se borra cuando esté la app de preparación.
-  const [labelsProbe, setLabelsProbe] = useState({ open: false, shipmentId: "", busy: false, results: null, error: "" });
-  async function runLabelsProbe() {
-    setLabelsProbe((current) => ({ ...current, busy: true, results: null, error: "" }));
-    try {
-      const body = await callApi(session, { op: "labels-probe", shipmentId: labelsProbe.shipmentId });
-      setLabelsProbe((current) => ({ ...current, busy: false, results: body.results || [] }));
-    } catch (failure) { setLabelsProbe((current) => ({ ...current, busy: false, error: failure.message || "No se pudo probar." })); }
-  }
-  const [report, setReport] = useState({ open: false, account: "", section: "Competencia", content: "" });
-  useEffect(() => {
-    if (!supabase?.from) return;
-    try { Promise.resolve(supabase.from("ml_competition_reports").select("id,account,section,created_at,content").order("created_at", { ascending: false }).limit(30)).then(({ data }) => setReports(data || []), () => {}); } catch { /* sin reportes */ }
-  }, [supabase]);
-  async function saveReport() {
-    setError(""); setBusy("report");
-    const row = { account: report.account, section: report.section, content: report.content.trim().slice(0, 60000) };
-    const { data, error: saveError } = await supabase.from("ml_competition_reports").insert(row).select("id,account,section,created_at,content");
-    setBusy("");
-    if (saveError || !data?.length) { setError("No se pudo guardar el reporte."); return; }
-    setReports((current) => [data[0], ...current]);
-    setReport({ open: false, account: "", section: "Competencia", content: "" });
-    setMessage("Reporte guardado: el asistente ya lo puede usar.");
-  }
-  async function removeReport(id) {
-    const { error: deleteError } = await supabase.from("ml_competition_reports").delete().eq("id", id);
-    if (!deleteError) setReports((current) => current.filter((item) => item.id !== id));
   }
 
   return (

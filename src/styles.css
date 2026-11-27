@@ -2088,3 +2088,5 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
   .sidebar-status.on::before { background: #22c55e; }
 }
 @media (max-width: 760px) { .sidebar .brand-iso, .sidebar .nav-mini-toggle { display: none; } }
+
+th.nowrap, td.nowrap { white-space: nowrap; }

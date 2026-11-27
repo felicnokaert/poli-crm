@@ -30,7 +30,7 @@ const PX_BAD = new Set(['red', 'orange', 'yellow']);
 export function mlEntries(items = [], health = []) {
   const active = items.filter((item) => item.status === 'active');
   const byId = new Map(health.map((row) => [String(row.id), row]));
-  const entries = ML_ISSUES.map(([key, label, test]) => ({ channel: 'ml', key, label, count: active.filter(test).length, total: active.length, why: ML_WHY[key] || '', clean: ML_CLEAN.has(key) }));
+  const entries = ML_ISSUES.map(([key, label, test, name]) => ({ channel: 'ml', key, label: name || label, count: active.filter(test).length, total: active.length, why: ML_WHY[key] || '', clean: ML_CLEAN.has(key) }));
   const checked = active.filter((item) => byId.has(String(item.id)));
   if (checked.length) {
     entries.push({ channel: 'ml', key: 'calidad-ml', label: 'Calidad menor a Profesional', count: checked.filter((item) => lowQuality(byId.get(String(item.id)))).length, total: checked.length, why: ML_WHY['calidad-ml'], clean: true, partial: checked.length < active.length });

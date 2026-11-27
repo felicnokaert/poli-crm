@@ -18,17 +18,27 @@ const detailed = (item) => Boolean(item.item_updated_at);
 export const ML_ISSUES = [
   // 20/11: sin SKU ni en la publicación ni en sus variaciones (el SKU de las publicaciones con colores o talles vive en cada variación).
   // Solo cuenta si la fila trae las columnas sku/variation_skus (sin ellas no se sabe).
-  ['sin-sku', 'Sin SKU', (item) => typeof item.sku === 'string' && !item.sku && !(Array.isArray(item.variation_skus) && item.variation_skus.length)],
+  // 27/11: también las que tienen ALGUNA variante sin SKU («N variantes sin SKU»).
+  ['sin-sku', (item) => (variantsWithoutSku(item) ? `${variantsWithoutSku(item)} ${variantsWithoutSku(item) === 1 ? 'variante' : 'variantes'} sin SKU` : 'Sin SKU'), (item) => (typeof item.sku === 'string' && !item.sku && !(Array.isArray(item.variation_skus) && item.variation_skus.length)) || variantsWithoutSku(item) > 0, 'Sin SKU'],
   ['sin-clip', 'Sin clip', (item) => item.clips_count === 0],
   ['pocas-fotos', 'Menos de 3 fotos', (item) => typeof item.pictures_count === 'number' && item.pictures_count < 3],
-  ['sin-descripcion', 'Sin descripción', (item) => (Number(item.description_length) || 0) < 30],
+  // 27/11: sin dato (null = no se pudo leer) no cuenta como «sin descripción».
+  ['sin-descripcion', 'Sin descripción', (item) => item.description_length != null && Number(item.description_length) < 30],
   ['calidad-baja', 'Calidad baja', (item) => typeof item.health === 'number' && item.health < 0.7],
   ['sin-stock', 'Activa sin stock', (item) => item.status === 'active' && item.available_quantity === 0],
   ['sin-ventas', 'Activa sin ventas', (item) => item.status === 'active' && item.sold_quantity === 0],
   ['visitas-sin-ventas', 'Muchas visitas, nunca vendió', (item) => item.sold_quantity === 0 && (Number(item.visits_30d) || 0) >= 100],
 ];
 
-export const issuesOf = (item) => ML_ISSUES.filter(([, , test]) => test(item)).map(([key, label]) => ({ key, label }));
+// Variantes sin SKU: las variaciones que tiene la publicación menos las que traen SKU (variations_count lo guarda la sincronización).
+export function variantsWithoutSku(item = {}) {
+  const total = Number(item.variations_count) || 0;
+  const withSku = Array.isArray(item.variation_skus) ? item.variation_skus.length : 0;
+  return total > withSku ? total - withSku : 0;
+}
+// Nombre fijo de cada problema (para filtros y contadores).
+export const issueName = ([, label, , name]) => name || label;
+export const issuesOf = (item) => ML_ISSUES.filter(([, , test]) => test(item)).map(([key, label]) => ({ key, label: typeof label === 'function' ? label(item) : label }));
 
 export function summarizeBoard(items = []) {
   const byStatus = Object.fromEntries(ML_STATUS.map(([key]) => [key, 0]));

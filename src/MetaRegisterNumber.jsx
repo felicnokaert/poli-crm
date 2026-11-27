@@ -50,8 +50,8 @@ export default function MetaRegisterNumber({ session }) {
 
   return (
     <div className="panel" style={{ marginTop: 12 }}>
-      <strong>Volver a registrar el número General en la API</strong>
-      <p className="muted small">Hacelo si el diagnóstico dice <code>ON_PREMISE</code>: el número está en la aplicación y el CRM no recibe mensajes. Necesitás poder recibir el código por SMS o llamada en ese número.</p>
+      <strong>Volver a registrar el número General en la API (último recurso)</strong>
+      <p className="muted small">Si el diagnóstico dice <code>ON_PREMISE</code>, primero usá «Conectar mi número con Meta» → «Conectar una cuenta existente de WhatsApp Business» y escaneá el QR: así vuelve la coexistencia y siguen andando la aplicación y WhatsApp Web. Esto de acá saca el número de la aplicación y de WhatsApp Web; usalo solo si decidieron que el número quede solo en el CRM. Si el código no llega (error 136024), lo más probable es que el número siga activo en la aplicación.</p>
       {step === 0 && (
         <p>
           <button type="button" className="secondary" disabled={busy} onClick={() => askCode("SMS")}>1. Pedir código por SMS</button>{" "}

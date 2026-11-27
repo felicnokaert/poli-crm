@@ -16,3 +16,10 @@ test('el SKU de cada variación sale del atributo SELLER_SKU', () => {
   const item = { variations: [{ id: 1, attributes: [{ id: 'SELLER_SKU', value_name: 'gn-100 neg' }] }, { id: 2, seller_custom_field: 'GN-100-ROS' }] };
   assert.deepEqual(variationSkus(item), [{ id: '1', sku: 'GN-100NEG' }, { id: '2', sku: 'GN-100-ROS' }]);
 });
+
+test('scopeInfo: detecta si el token de Mercado Libre trae permiso de escritura', async () => {
+  const { scopeInfo } = await import('../lib/mercadolibre.mjs');
+  assert.deepEqual(scopeInfo('offline_access read write'), { scopes: ['offline_access', 'read', 'write'], write: true });
+  assert.equal(scopeInfo('offline_access read').write, false);
+  assert.equal(scopeInfo('').write, false);
+});

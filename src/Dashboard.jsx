@@ -18,7 +18,8 @@ import { buildCustomerBase } from "./customer-base.mjs";
 import { overdueQueue } from "./daily-queues.mjs";
 import { businessFacts } from "./assistant-business.mjs";
 import { weekActivity, weeklySummaryText } from "./weekly-summary.mjs";
-import { availableBlocks, moveBlock, normalizeLayout, toggleBlock, visibleBlockIds } from "./home-layout.mjs";
+import { addBlock, addableBlocks, editableLayout, factoryLayout, hideBlock, moveVisible, reorderBlock, visibleBlockIds } from "./home-layout.mjs";
+import { HomeEditBar, WidgetBoard, WidgetGallery } from "./HomeEditor.jsx";
 import { useTeamSharedNotes } from "./hooks/useSharedNotesSync";
 import { findColdQuotes } from "./cold-quotes.mjs";
 import { findStaleHotLeads } from "./hot-leads-radar.mjs";
@@ -513,9 +514,15 @@ function DashboardBase({
   // Poliplast App (prueba): tarjetas según los módulos de la persona, en el orden que ella eligió.
   const allows = allowsModule || (() => true);
   const layout = homeLayout || null;
-  const [arranging, setArranging] = useState(false);
-  const changeLayout = (next) => onHomeLayout?.(next);
-  const shownIds = visibleBlockIds(layout, allows, isAdmin);
+  // Editar como widgets (27/11): se trabaja sobre un borrador y «Listo» lo guarda; «Cancelar» lo descarta.
+  const [draft, setDraft] = useState(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const editing = Boolean(draft);
+  const working = editing ? draft : layout;
+  const shownIds = visibleBlockIds(working, allows, isAdmin);
+  const startEditing = () => setDraft(editableLayout(layout, allows));
+  const finishEditing = () => { if (draft) onHomeLayout?.(draft); setDraft(null); setGalleryOpen(false); };
+  const cancelEditing = () => { setDraft(null); setGalleryOpen(false); };
   const targets = resolveWeeklyTargets(weeklyTargets);
   const clientsById = new Map(clients.map((client) => [client.id, client]));
   const now = today();
@@ -591,8 +598,37 @@ function DashboardBase({
           <button type="button" className="secondary" onClick={() => onNavigate("settings")}>Ir a Datos para el diagnóstico</button>
         </section>
       )}
-      <HomeArranger open={arranging} onToggle={() => setArranging((value) => !value)} layout={layout} onChange={changeLayout} allows={allows} isAdmin={isAdmin} />
-      {shownIds.map((id) => {
+      {onHomeLayout && (
+        <HomeEditBar
+          editing={editing}
+          onStart={startEditing}
+          onDone={finishEditing}
+          onCancel={cancelEditing}
+          onReset={() => setDraft(factoryLayout(allows))}
+          onOpenGallery={() => setGalleryOpen(true)}
+          addableCount={editing ? addableBlocks(draft, allows, isAdmin).length : 0}
+        />
+      )}
+      {editing && (
+        <WidgetGallery
+          open={galleryOpen}
+          blocks={addableBlocks(draft, allows, isAdmin)}
+          onAdd={(id) => { setDraft((current) => addBlock(current, id)); setGalleryOpen(false); }}
+          onClose={() => setGalleryOpen(false)}
+        />
+      )}
+      {editing ? (
+        <WidgetBoard
+          ids={shownIds}
+          render={renderBlock}
+          onRemove={(id) => setDraft((current) => hideBlock(current, id))}
+          onReorder={(id, target, place) => setDraft((current) => reorderBlock(current, id, target, place))}
+          onMove={(id, direction) => setDraft((current) => moveVisible(current, id, direction, allows, isAdmin))}
+        />
+      ) : shownIds.map((id) => renderBlock(id))}
+    </div>
+  );
+  function renderBlock(id) {
         if (id === "miDia") return !showWelcome && showRoutine ? <MyDay key={id} planChecks={planChecks || {}} tasks={tasks} onNavigate={onNavigate} /> : null;
         if (id === "plan") return (
           <DayMode
@@ -631,9 +667,7 @@ function DashboardBase({
         if (id === "logistica") return <LogisticsCard key={id} onNavigate={onNavigate} allows={allows} />;
         if (id === "conexiones") return supabase && isAdmin ? <IntegrationsAlert key={id} supabase={supabase} onNavigate={onNavigate} /> : null;
         return null;
-      })}
-    </div>
-  );
+  }
 }
 
 // Clientes que se pasaron de su frecuencia de compra (22/10), con la facturación de Contabilium. Espera unos
@@ -783,34 +817,6 @@ function LogisticsCard({ onNavigate, allows }) {
         </ul>
       )}
     </section>
-  );
-}
-
-// Poliplast App (prueba): «Ordenar mi Inicio»: subir, bajar y ocultar tarjetas (solo las de sus módulos).
-function HomeArranger({ open, onToggle, layout, onChange, allows, isAdmin }) {
-  const blocks = availableBlocks(layout, allows, isAdmin);
-  const { hidden } = normalizeLayout(layout);
-  return (
-    <div className="home-arranger">
-      <button type="button" className="secondary" onClick={onToggle} aria-expanded={open}>{open ? "Listo" : "Ordenar mi Inicio"}</button>
-      {open && blocks.length === 0 && <p className="muted small">Con tus módulos no hay tarjetas para ordenar.</p>}
-      {open && blocks.length > 0 && (
-        <ol className="home-arranger-list">
-          {blocks.map((block, index) => (
-            <li key={block.id} className={hidden.includes(block.id) ? "is-hidden" : ""}>
-              <label>
-                <input type="checkbox" checked={!hidden.includes(block.id)} onChange={() => onChange(toggleBlock(layout, block.id))} />
-                {block.label}
-              </label>
-              <span className="home-arranger-moves">
-                <button type="button" className="secondary" disabled={index === 0} onClick={() => onChange(moveBlock(layout, block.id, -1, allows, isAdmin))} aria-label={`Subir ${block.label}`}>↑</button>
-                <button type="button" className="secondary" disabled={index === blocks.length - 1} onClick={() => onChange(moveBlock(layout, block.id, 1, allows, isAdmin))} aria-label={`Bajar ${block.label}`}>↓</button>
-              </span>
-            </li>
-          ))}
-        </ol>
-      )}
-    </div>
   );
 }
 

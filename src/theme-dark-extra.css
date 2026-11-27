@@ -77,3 +77,7 @@
 }
 :root[data-theme="dark"] .matrix-chart { background: linear-gradient(135deg, #0d776422, transparent 55%), #1c1c1f; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .matrix-chart { background: linear-gradient(135deg, #0d776422, transparent 55%), #1c1c1f; } }
+
+/* Inicio como widgets (27/11): la barra de edición queda oscura en los dos temas, un poco más clara que el fondo. */
+:root[data-theme="dark"] .home-edit-bar { background: #2b2b30; color: #fff; border: 1px solid rgba(255, 255, 255, .08); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .home-edit-bar { background: #2b2b30; color: #fff; border: 1px solid rgba(255, 255, 255, .08); } }

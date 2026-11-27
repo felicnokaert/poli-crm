@@ -1,4 +1,5 @@
 import { CustomerBasePanel } from "./CustomerBasePanel.jsx";
+import { MissingEmailNotice } from "./ClientEmails.jsx";
 import { useEffect, useState } from "react";
 import { ExternalLink, X } from "lucide-react";
 import { formatDate } from "./utils.mjs";
@@ -397,6 +398,7 @@ export function ClientDetail({
                 </p>
               </article>
             </div>
+            <MissingEmailNotice client={client} supabase={supabase} onSave={onSave} />
             <div className="client-facts">
               <Fact label="Tipo" value={client.sourceType} />
               <Fact label="CUIT" value={client.cuit} />

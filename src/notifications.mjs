@@ -3,7 +3,7 @@
 const DAY = 86400000;
 const daysBetween = (from, to) => Math.round((Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / DAY);
 
-export function buildNotifications({ tasks = [], alerts = [], reports = [], today, allows = () => true } = {}) {
+export function buildNotifications({ tasks = [], alerts = [], reports = [], noEmail = 0, today, allows = () => true } = {}) {
   const items = [];
   if (allows('tasks')) {
     for (const task of tasks) {
@@ -29,6 +29,11 @@ export function buildNotifications({ tasks = [], alerts = [], reports = [], toda
   for (const report of reports) {
     if (report.status !== 'nuevo') continue;
     items.push({ id: `report:${report.id}`, kind: report.severity === 'idea' ? 'info' : 'action', group: 'Avisos del equipo', view: 'avisos', title: report.text, detail: `${report.name || report.by || ''} · ${report.viewLabel || report.view || ''}`, at: String(report.at || '').slice(0, 10), weight: report.severity === 'no-me-deja' ? 3 : 1 });
+  }
+  // Clientes de la cartera sin mail (27/11): un aviso por semana mientras queden.
+  if (noEmail > 0 && allows('clients')) {
+    const monday = new Date(`${today}T12:00:00Z`); monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+    items.push({ id: `noemail:${monday.toISOString().slice(0, 10)}`, kind: 'action', group: 'Clientes', view: 'clients', clientsTab: 'sinmail', title: `${noEmail} cliente${noEmail === 1 ? '' : 's'} de tu cartera sin mail`, detail: 'Pedíselo en el próximo presupuesto o factura y cargalo', at: today, weight: 0 });
   }
   return items.sort((a, b) => b.weight - a.weight || String(b.at).localeCompare(String(a.at)));
 }

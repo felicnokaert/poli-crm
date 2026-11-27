@@ -161,6 +161,8 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
     // Matriz de automatizaciones (solo lo que Felipe editó o agregó, por idea): gana lo de este navegador.
     ...(local.automations || remote.automations ? { automations: Object.fromEntries(Object.entries({ ...(remote.automations || {}), ...(local.automations || {}) }).filter(([, row]) => row)) } : {}),
     ...(local.commissionFloor || remote.commissionFloor ? { commissionFloor: local.commissionFloor || remote.commissionFloor } : {}),
+    // Nombres de los vendedores de Contabilium (IDVendedor → persona), los pone un administrador en Empresas → Sin mail.
+    ...(local.contabiliumVendors || remote.contabiliumVendors ? { contabiliumVendors: { ...(remote.contabiliumVendors || {}), ...(local.contabiliumVendors || {}) } } : {}),
     ...(local.weeklyTargets || remote.weeklyTargets ? { weeklyTargets: local.weeklyTargets || remote.weeklyTargets } : {}),
     ...(local.welcomeDismissed || remote.welcomeDismissed ? { welcomeDismissed: true } : {}),
     // Poliplast App: notificaciones leídas (se juntan las de todos los equipos de la persona; últimas 600).

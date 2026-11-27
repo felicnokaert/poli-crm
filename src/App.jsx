@@ -89,6 +89,7 @@ const Sales = lazy(() => import("./Sales"));
 const Clients = lazyNamed(() => import("./Clients"), "Clients");
 const Prospeccion = lazyNamed(() => import("./Prospeccion"), "Prospeccion");
 const Contacts = lazyNamed(() => import("./Clients"), "Contacts");
+const ClientEmails = lazyNamed(() => import("./ClientEmails.jsx"), "ClientEmails");
 const Conversations = lazyNamed(() => import("./Conversations"), "Conversations");
 const WhatsAppInbox = lazyNamed(() => import("./WhatsAppInbox"), "WhatsAppInbox");
 const Profile = lazyNamed(() => import("./Settings"), "Profile");
@@ -119,6 +120,7 @@ import { TeamAccess } from "./TeamAccess.jsx";
 import { DemoModule } from "./DemoModules.jsx";
 import { QuoteBuilder } from "./QuoteBuilder.jsx";
 import { StockView } from "./StockView.jsx";
+import { myClientsWithoutEmail } from "./client-emails.mjs";
 import { businessDaysFromToday } from "./quote-model.mjs";
 import { AppReports, ReportProblem } from "./ReportProblem.jsx";
 import { NotificationBell } from "./NotificationBell.jsx";
@@ -274,7 +276,9 @@ export default function App() {
     const timer = setInterval(load, 5 * 60000);
     return () => { alive = false; clearInterval(timer); };
   }, [previewSite, session, isAdminUser]);
-  const notificationItems = useMemo(() => buildNotifications({ tasks: data.tasks || [], alerts: opsAlerts || [], reports: teamReports, today: today(), allows: (module) => accessAllows(previewAccess, module) }), [data.tasks, opsAlerts, teamReports, previewAccess]);
+  // Clientes de la cartera sin mail (27/11): el conteo va en la pestaña y en la campanita.
+  const clientsWithoutEmail = useMemo(() => myClientsWithoutEmail(data.clients || []).length, [data.clients]);
+  const notificationItems = useMemo(() => buildNotifications({ tasks: data.tasks || [], alerts: opsAlerts || [], reports: teamReports, noEmail: clientsWithoutEmail, today: today(), allows: (module) => accessAllows(previewAccess, module) }), [data.tasks, opsAlerts, teamReports, previewAccess, clientsWithoutEmail]);
   const markNotificationsRead = useCallback((ids) => setData((current) => ({ ...current, notificationsRead: [...new Set([...(current.notificationsRead || []), ...ids])].slice(-600) })), []);
   const setHomeLayout = useCallback((layout) => setData((current) => ({ ...current, homeLayout: layout })), []);
   const [mapTab, setMapTab] = useState("aplicadores");
@@ -796,7 +800,7 @@ export default function App() {
           onOpenPalette={() => setShowPalette(true)}
           onOpenShortcuts={() => setShowShortcutsHelp(true)}
           onReport={previewSite ? () => setShowReport(true) : null}
-          notifications={previewSite ? <NotificationBell items={notificationItems} read={data.notificationsRead || EMPTY_ARRAY} onRead={markNotificationsRead} onNavigate={(item) => { if (item.taskId) setSelectedTaskId(item.taskId); else setView(item.view); }} /> : null}
+          notifications={previewSite ? <NotificationBell items={notificationItems} read={data.notificationsRead || EMPTY_ARRAY} onRead={markNotificationsRead} onNavigate={(item) => { if (item.taskId) setSelectedTaskId(item.taskId); else { if (item.clientsTab) setClientsTab(item.clientsTab); setView(item.view); } }} /> : null}
           profileLabel={data.profileName || session?.user?.email || ""}
           onLogConversation={LOG_CONVERSATION_VIEWS.includes(view) ? () => setShowForm(true) : null}
         />
@@ -950,10 +954,23 @@ export default function App() {
         )}
         {view === "clients" && (
           <div className="segmented routine-tabs" role="tablist" aria-label="Empresas y contactos" style={{ marginBottom: 12, width: "fit-content" }}>
-            {[["empresas", "Empresas"], ["contactos", "Personas de contacto"]].map(([key, label]) => (
+            {[["empresas", "Empresas"], ["contactos", "Personas de contacto"], ["sinmail", `Sin mail${clientsWithoutEmail ? ` · ${clientsWithoutEmail}` : ""}`]].map(([key, label]) => (
               <button key={key} type="button" role="tab" aria-selected={clientsTab === key} className={clientsTab === key ? "selected" : ""} onClick={() => setClientsTab(key)}>{label}</button>
             ))}
           </div>
+        )}
+        {view === "clients" && clientsTab === "sinmail" && (
+          <Suspense fallback={<Splash text="Cargando…" />}>
+            <ClientEmails
+              clients={data.clients}
+              supabase={onlineConfigured && session ? supabase : null}
+              isAdmin={isAdminUser}
+              onOpenClient={setSelectedClientId}
+              onSaveEmail={(id, email) => { const client = (data.clients || []).find((item) => item.id === id); if (client) updateClient({ ...client, email }); }}
+              vendorNames={data.contabiliumVendors || {}}
+              onVendorNames={(next) => setData((current) => ({ ...current, contabiliumVendors: next }))}
+            />
+          </Suspense>
         )}
         {view === "clients" && clientsTab === "contactos" && (
           <Suspense fallback={<Splash text="Cargando contactos…" />}>

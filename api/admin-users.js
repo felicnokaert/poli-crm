@@ -16,6 +16,7 @@ import { assistantAi } from '../lib/assistant-ai.mjs';
 import { appReportsAdmin } from '../lib/app-reports.mjs';
 import { appFirmaAdmin, publicKeyHandler } from '../lib/app-firma.mjs';
 import { asHolidays, companyDaysAdmin, readCompanyDays } from '../lib/company-days.mjs';
+import { pricingEngineAdmin } from '../lib/pricing-engine.mjs';
 import { db as storeFor } from '../lib/mercadolibre.mjs';
 import { feriadosHandler } from '../lib/feriados.mjs';
 import { shopifyAdmin, shopifyCron } from '../lib/shopify.mjs';
@@ -113,6 +114,7 @@ export default async function handler(request, response) {
     : action === 'shopify' ? await shopifyAdmin(request)
     : action === 'alerts' ? await alertsAdmin(request)
     : action === 'trello-plan' ? await trelloPlanAdmin(request)
+    : action === 'pricing-engine' ? await pricingEngineAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'company-days' ? await companyDaysAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'whatsapp-auto' ? await whatsappAutoAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'automation-pause' ? await automationPauseAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })

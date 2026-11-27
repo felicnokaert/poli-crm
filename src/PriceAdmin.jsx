@@ -5,6 +5,7 @@ import { loadDollar } from "./product-hub-data.js";
 import { ars, rarePrice } from "./quote-model.mjs";
 import { bulkChange, rareList, diffTiers, isWholesaleList, tiersByList, validateMinimum, validatePayment, validateTiers } from "./price-admin.mjs";
 import { arToday } from "./ar-date.mjs";
+import { PricingEngine } from "./PricingEngine.jsx";
 
 // Precios y condiciones del cotizador (26/11, solo administradores). Lo que se guarda acá lo usa el cotizador de toda la
 // empresa en la próxima cotización. En el link de prueba nada se guarda (se ve cómo quedaría).
@@ -222,7 +223,7 @@ function Payments({ supabase }) {
   if (rows === null) return <p className="muted">Cargando…</p>;
   return (
     <section className="panel">
-      <p className="muted small">El descuento o recargo se aplica al total de la cotización. El texto es lo que lee el cliente.</p>
+      <p className="muted small">El descuento o recargo se aplica al total de la cotización y también lo usa el Motor de precios. El texto es lo que lee el cliente.</p>
       <div className="condition-list">
         {rows.map((row) => (
           <div className="condition-row" key={row.id}>
@@ -360,9 +361,9 @@ function Bulk({ supabase, who }) {
   );
 }
 
-const SECTIONS = [["precios", "Precios por producto"], ["lote", "Cambio por lote"], ["pagos", "Formas de pago"], ["minimos", "Mínimos mayoristas"]];
+const SECTIONS = [["motor", "Motor de precios"], ["precios", "Precios por producto"], ["lote", "Cambio por lote"], ["pagos", "Formas de pago"], ["minimos", "Mínimos mayoristas"]];
 
-export function PriceAdmin({ supabase, who = "" }) {
+export function PriceAdmin({ supabase, who = "", clients = [] }) {
   const [section, setSection] = useState("precios");
   return (
     <div className="content-stack price-admin">
@@ -370,6 +371,7 @@ export function PriceAdmin({ supabase, who = "" }) {
       <div className="segmented" role="tablist" aria-label="Precios y condiciones">
         {SECTIONS.map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={section === id} className={section === id ? "selected" : ""} onClick={() => setSection(id)}>{label}</button>)}
       </div>
+      {section === "motor" && <PricingEngine supabase={supabase} clients={clients} />}
       {section === "precios" && <Prices supabase={supabase} who={who} />}
       {section === "lote" && <Bulk supabase={supabase} who={who} />}
       {section === "pagos" && <Payments supabase={supabase} />}

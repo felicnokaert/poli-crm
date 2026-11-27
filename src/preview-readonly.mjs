@@ -4,7 +4,7 @@
 // de Supabase (es el primer import de main.jsx), así todas las llamadas pasan por acá.
 import { isPreviewSite } from './demo-mode.mjs';
 
-const READ_OPS = new Set(['status', 'list', 'activity', 'probe', 'scopes', 'sent-ids']);
+const READ_OPS = new Set(['status', 'list', 'activity', 'probe', 'scopes', 'sent-ids', 'get', 'quote']);
 
 // ¿Esta llamada escribe? (PostgREST: todo lo que no es GET/HEAD, salvo las funciones rpc que solo leen;
 // Storage: subir o borrar; servidor de la app: las acciones que no son de lectura.)

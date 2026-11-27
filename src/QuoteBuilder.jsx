@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Copy, Search, Trash2 } from "lucide-react";
 import { currentListPrices } from "./assistant-prices.mjs";
 import { PriceAdmin } from "./PriceAdmin.jsx";
+import { PriceCalculator, usePricingState } from "./PricingEngine.jsx";
 import { loadDollar } from "./product-hub-data.js";
 import { MODES, ars, channelRefs, lineTotals, pickRow, quoteTotals, rarePrice, usd, whatsappText, wholesaleWarnings } from "./quote-model.mjs";
 import { STATUSES, linesFromItems, listQuotes, quoteNumber, quoteRow, saveQuote, setQuoteStatus } from "./quote-store.js";
@@ -166,10 +167,12 @@ export function QuoteBuilder({ supabase, userId = "", clients = [], initialClien
     <div className="segmented quote-screens" role="tablist" aria-label="Cotizador">
       <button type="button" role="tab" aria-selected={screen === "nueva"} className={screen === "nueva" ? "selected" : ""} onClick={() => setScreen("nueva")}>{saved ? `Cotización ${saved.number}` : "Nueva cotización"}</button>
       <button type="button" role="tab" aria-selected={screen === "historial"} className={screen === "historial" ? "selected" : ""} onClick={() => { setScreen("historial"); loadHistory(); }}>Mis cotizaciones</button>
+      <button type="button" role="tab" aria-selected={screen === "calcular"} className={screen === "calcular" ? "selected" : ""} onClick={() => setScreen("calcular")}>Calcular precio</button>
       {isAdmin && <button type="button" role="tab" aria-selected={screen === "precios"} className={screen === "precios" ? "selected" : ""} onClick={() => setScreen("precios")}>Precios y condiciones</button>}
     </div>
   );
-  if (screen === "precios" && isAdmin) return <div className="quote-builder content-stack">{tabs}<PriceAdmin supabase={supabase} who={who} /></div>;
+  if (screen === "precios" && isAdmin) return <div className="quote-builder content-stack">{tabs}<PriceAdmin supabase={supabase} who={who} clients={clients} /></div>;
+  if (screen === "calcular") return <div className="quote-builder content-stack">{tabs}<CalculatorScreen supabase={supabase} clients={clients} /></div>;
   if (screen === "historial") return (
     <div className="quote-builder content-stack">
       {tabs}
@@ -295,4 +298,11 @@ export function QuoteBuilder({ supabase, userId = "", clients = [], initialClien
       {message && <p className="muted small" role="status">{message}</p>}
     </div>
   );
+}
+
+// Pestaña «Calcular precio» (motor de precios de Juan): todo el equipo; el costo y el margen solo los ve quien maneja precios.
+function CalculatorScreen({ supabase, clients }) {
+  const [state] = usePricingState();
+  if (!state) return <p className="muted">Cargando…</p>;
+  return <PriceCalculator supabase={supabase} clients={clients} state={state} />;
 }

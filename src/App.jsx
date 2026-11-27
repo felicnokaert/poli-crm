@@ -926,7 +926,7 @@ export default function App() {
             />
           </Suspense>
         )}
-        {view === "stock" && <StockView />}
+        {view === "stock" && <StockView supabase={onlineConfigured && session ? supabase : null} isAdmin={isChannelAdmin(session?.user?.email)} />}
         {view === "quoter" && (
           <Suspense fallback={<Splash text="Cargando cotizador…" />}>
             <CotizadorFrame session={session} client={quoterClient} />

@@ -1664,14 +1664,22 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .exam-results .badge.warn { background: #fff1d6; color: #7a5200; }
 .exam-results .badge.danger { background: #fde2e2; color: #9b1c1c; }
 
-/* Stock (27/11): último conteo − dosificado. */
+/* Stock en una sola hoja (27/11): una fila por producto, conteo y Contabilium por depósito; en el celular, tarjetas. */
 .stock-table { display: grid; gap: 4px; margin-top: 10px; }
-.stock-row { display: grid; grid-template-columns: minmax(0, 2.4fr) 1fr 1.3fr 1.1fr 100px; gap: 10px; align-items: center; border-bottom: 1px solid var(--color-border); padding: 8px 4px; }
+.stock-row { display: grid; grid-template-columns: minmax(0, 2.2fr) repeat(4, minmax(0, 1fr)) 100px; gap: 10px; align-items: center; border-bottom: 1px solid var(--color-border); padding: 8px 4px; }
+.stock-cell { display: inline-flex; align-items: center; gap: 6px; }
+.stock-info { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--color-border); background: transparent; color: var(--color-text-gray); padding: 0; cursor: help; }
+.stock-info:hover, .stock-info:focus-visible { color: var(--brand-red); border-color: var(--brand-red); }
 .stock-head { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-gray); border-bottom: 0; }
 .stock-row .badge.ok { background: var(--color-success-bg); color: var(--color-success); }
 .stock-row .badge.warn { background: #fff1d6; color: #7a5200; }
 .stock-row .badge.danger { background: #fde2e2; color: #9b1c1c; }
-@media (max-width: 760px) { .stock-row { grid-template-columns: minmax(0, 1fr) auto; } .stock-row > span:nth-child(2), .stock-row > span:nth-child(3), .stock-row > span:nth-child(4) { grid-column: 1; } .stock-head { display: none; } }
+@media (max-width: 760px) {
+  .stock-head { display: none; }
+  .stock-row { grid-template-columns: 1fr 1fr; gap: 6px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 10px 12px; }
+  .stock-row > span:first-child { grid-column: 1 / -1; }
+  .stock-row > [data-label]::before { content: attr(data-label); display: block; font-size: 11px; color: var(--color-text-gray); }
+}
 
 
 /* Calendario único (26/11): capas compartidas (feriados, entregas, cortes) y lo personal. */

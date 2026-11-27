@@ -72,15 +72,20 @@ export function LoginScreen() {
   }
 
   return (
-    <div className="login-shell">
+    <div className="login-shell login-app">
+      <aside className="login-brand" aria-hidden="true">
+        <img className="login-brand-mark" src="/poliplast-isotipo-blanco.png" alt="" />
+        <p className="login-brand-group">Grupo Poliplast</p>
+        <p className="login-brand-name">Poliplast <span>App</span></p>
+        <p className="login-brand-line">Ventas, entregas, depósito y canales online en un solo lugar.</p>
+      </aside>
       <section className="login-card">
         <img
           className="login-logo"
           src="/poliplast-logo.png"
           alt="Grupo Poliplast"
         />
-        <span className="eyebrow">Acceso privado</span>
-        <h1>Poliplast Sales Copilot</h1>
+        <h1>Poliplast App</h1>
         <p>
           {mode === "signup"
             ? `Creá tu cuenta con un correo ${SIGNUP_DOMAIN} — cada usuario tiene su propio espacio de trabajo.`

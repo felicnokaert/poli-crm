@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Database, UserCog } from "lucide-react";
 import { onlineConfigured, saveOnlineState, supabase } from "./online";
 import { removeExplicitTestData, testDataCandidates } from "./data-hygiene.mjs";
-import { DEFAULT_WEEKLY_TARGETS, WEEKLY_TARGET_FIELDS, normalizeTarget, resolveWeeklyTargets } from "./weekly-targets.mjs";
 import { MIN_PASSWORD, authErrorEs, passwordProblem } from "./password-policy.mjs";
 
 export function TestCleanupPanel({ data, setData, session }) {
@@ -67,32 +66,6 @@ export function Profile({ data, setData, session }) {
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const [targets, setTargets] = useState(() => resolveWeeklyTargets(data.weeklyTargets));
-  const [targetsMessage, setTargetsMessage] = useState("");
-
-  function saveTargets(event) {
-    event.preventDefault();
-    const next = {};
-    for (const [key, label] of WEEKLY_TARGET_FIELDS) {
-      const value = normalizeTarget(targets[key]);
-      if (!value) {
-        setTargetsMessage(`"${label}": escribí un número (15) o un rango (8–10).`);
-        return;
-      }
-      next[key] = value;
-    }
-    setTargets(next);
-    setData({ ...data, weeklyTargets: next });
-    setTargetsMessage("Metas guardadas.");
-  }
-
-  function resetTargets() {
-    setTargets({ ...DEFAULT_WEEKLY_TARGETS });
-    const { weeklyTargets: _removed, ...rest } = data;
-    setData(rest);
-    setTargetsMessage("Volviste a las metas por defecto.");
-  }
-
   function saveName(event) {
     event.preventDefault();
     setData({ ...data, profileName: name.trim() });
@@ -146,33 +119,6 @@ export function Profile({ data, setData, session }) {
             <button className="primary" type="submit">Guardar nombre</button>
           </div>
         </form>
-      </section>
-      <section className="panel">
-        <div className="panel-head">
-          <div>
-            <span className="eyebrow">Tu semana</span>
-            <h2>Metas semanales</h2>
-          </div>
-        </div>
-        <p>Son las metas que ves en Inicio. Podés usar un número (15) o un rango (8–10).</p>
-        <form className="form-grid" onSubmit={saveTargets}>
-          {WEEKLY_TARGET_FIELDS.map(([key, label]) => (
-            <label key={key}>
-              {label}
-              <input
-                value={targets[key]}
-                onChange={(event) => setTargets({ ...targets, [key]: event.target.value })}
-                placeholder={DEFAULT_WEEKLY_TARGETS[key]}
-                inputMode="numeric"
-              />
-            </label>
-          ))}
-          <div className="modal-actions span-2">
-            <button className="secondary" type="button" onClick={resetTargets}>Valores por defecto</button>
-            <button className="primary" type="submit">Guardar metas</button>
-          </div>
-        </form>
-        {targetsMessage && <div className="system-message">{targetsMessage}</div>}
       </section>
       <section className="panel">
         <div className="panel-head">

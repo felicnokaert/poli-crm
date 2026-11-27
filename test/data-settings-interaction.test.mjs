@@ -19,7 +19,7 @@ import { loadJsxModule } from "./helpers/load-jsx.mjs";
 
 afterEach(cleanup);
 
-describe("DataSettings.jsx - interacción real", () => {
+describe("ClientsDataTools.jsx (Empresas → Directorio e importar; antes en Datos) - interacción real", () => {
   // Props mínimas realistas: App.jsx (línea ~1704) pasa data, setData,
   // session y syncStatus. `data` necesita clients/interactions/tasks/inbox
   // (usados en el resumen "Contenido guardado" y en el merge de CSV).
@@ -33,16 +33,19 @@ describe("DataSettings.jsx - interacción real", () => {
   }
 
   test("importar un CSV de clientes muestra la vista previa y, al confirmar, actualiza data.clients", async () => {
-    const mod = await loadJsxModule("src/DataSettings.jsx");
+    const mod = await loadJsxModule("src/ClientsDataTools.jsx");
     let data = baseData();
     const setDataCalls = [];
     function Wrapper() {
       const [state, setState] = React.useState(data);
-      return React.createElement(mod.DataSettings, {
+      return React.createElement(mod.ClientsDataTools, {
         data: state,
         setData: (next) => {
-          setDataCalls.push(next);
-          setState(next);
+          setState((current) => {
+            const value = typeof next === "function" ? next(current) : next;
+            setDataCalls.push(value);
+            return value;
+          });
         },
         session: { user: { email: "felipe@grupopoliplast.com.ar" } },
         syncStatus: "Sincronizado",
@@ -74,11 +77,11 @@ describe("DataSettings.jsx - interacción real", () => {
   });
 
   test("un CSV sin columna Empresa/Razón social muestra un error y no modifica data", async () => {
-    const mod = await loadJsxModule("src/DataSettings.jsx");
+    const mod = await loadJsxModule("src/ClientsDataTools.jsx");
     const data = baseData();
     const setDataCalls = [];
     render(
-      React.createElement(mod.DataSettings, {
+      React.createElement(mod.ClientsDataTools, {
         data,
         setData: (next) => setDataCalls.push(next),
         session: { user: { email: "felipe@grupopoliplast.com.ar" } },
@@ -97,7 +100,7 @@ describe("DataSettings.jsx - interacción real", () => {
   });
 
   test("cambiar la familia del selector de exportación actualiza el valor seleccionado", async () => {
-    const mod = await loadJsxModule("src/DataSettings.jsx");
+    const mod = await loadJsxModule("src/ClientsDataTools.jsx");
     const data = {
       ...baseData(),
       clients: [
@@ -106,7 +109,7 @@ describe("DataSettings.jsx - interacción real", () => {
       ],
     };
     render(
-      React.createElement(mod.DataSettings, {
+      React.createElement(mod.ClientsDataTools, {
         data,
         setData: () => {},
         session: { user: { email: "felipe@grupopoliplast.com.ar" } },

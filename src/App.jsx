@@ -827,6 +827,9 @@ export default function App() {
             onUpdateTask={updateTask}
             personal={isFelipeTools}
             onAddEvent={addEvent}
+            supabase={onlineConfigured && session ? supabase : null}
+            allows={(module) => canSeeModule(session?.user?.email, deniedModules, module)}
+            isAdmin={isChannelAdmin(session?.user?.email)}
             automations={data.automations}
             onAutomationsChange={(next) => setData((current) => ({ ...current, automations: next }))}
           />

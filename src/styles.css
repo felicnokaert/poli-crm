@@ -1981,3 +1981,21 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
   .login-brand-line { animation-delay: .12s; }
   @keyframes login-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 }
+
+/* Ranking de ventas (27/11): barras horizontales finas, una sola serie (un tono), valor en tinta de texto. */
+.ph-tabs { align-self: flex-start; }
+.ranking-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+.ranking-filters select, .ranking-filters input[type="search"] { min-width: 0; flex: 1 1 160px; max-width: 260px; }
+.ranking-bars { list-style: none; margin: 12px 0 8px; padding: 0; display: grid; gap: 2px; }
+.ranking-bar { display: grid; grid-template-columns: 28px minmax(0, 1.6fr) minmax(80px, 2fr) auto; gap: 10px; align-items: center; padding: 6px 4px; border-radius: var(--radius-sm, 6px); }
+.ranking-bar:hover { background: rgba(127, 127, 127, .08); }
+.ranking-pos { font-variant-numeric: tabular-nums; color: var(--color-text-gray); text-align: right; font-size: 12px; }
+.ranking-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ranking-track { height: 10px; background: rgba(127, 127, 127, .10); border-radius: 0 4px 4px 0; overflow: hidden; }
+.ranking-track i { display: block; height: 100%; background: var(--brand-red, #ed1c24); border-radius: 0 4px 4px 0; transition: width .3s ease; }
+.ranking-value { font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+@media (prefers-reduced-motion: reduce) { .ranking-track i { transition: none; } }
+@media (max-width: 760px) {
+  .ranking-bar { grid-template-columns: 24px minmax(0, 1fr) auto; }
+  .ranking-track { grid-column: 2 / 4; grid-row: 2; }
+}

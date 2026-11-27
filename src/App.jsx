@@ -128,7 +128,7 @@ import { buildNotifications } from "./notifications.mjs";
 import { useOpsAlerts } from "./hooks/useOpsAlerts.js";
 import { adminFetch } from "./admin-api.mjs";
 import { CONTEO_MODULES, ConteoMaqueta, EntregasEmbed } from "./MaquetaFrame.jsx";
-import { ExpeditionChip, ExpeditionGate, readExpeditionWho, saveExpeditionWho } from "./ExpeditionGate.jsx";
+import { ExpeditionChip, ExpeditionGate, readExpeditionWho, saveExpeditionWho, useExpeditionOperators } from "./ExpeditionGate.jsx";
 import { AppPlanOverview, ModulePreview } from "./ModulePreview.jsx";
 import { isDemoMode, isPreviewSite, withDemoData } from "./demo-mode.mjs";
 import { canSee as canSeeModule, firstAllowedView } from "./module-access.mjs";
@@ -264,6 +264,7 @@ export default function App() {
   // Cuenta de expedición (compartida): antes de usar la app se elige quién es y el depósito.
   const isExpedition = previewAccess.role === "expedicion" || signedEmail.toLowerCase() === "expedicion@grupopoliplast.com.ar";
   const [expeditionWho, setExpeditionWhoState] = useState(readExpeditionWho);
+  const expeditionOperators = useExpeditionOperators(onlineConfigured && session ? supabase : null);
   const setExpeditionWho = (value) => { setExpeditionWhoState(value); saveExpeditionWho(value); };
   // Campanita (26/11): tareas vencidas o de hoy, alertas abiertas y, para administradores, avisos del equipo.
   const opsAlerts = useOpsAlerts(previewSite && onlineConfigured && session ? supabase : null);
@@ -811,7 +812,7 @@ export default function App() {
           </div>
         )}
         {isExpedition && <ExpeditionChip value={expeditionWho} onChange={setExpeditionWho} />}
-        {isExpedition && !expeditionWho ? <ExpeditionGate onPick={setExpeditionWho} /> : (
+        {isExpedition && !expeditionWho ? <ExpeditionGate operators={expeditionOperators} onPick={setExpeditionWho} /> : (
         <ErrorBoundary key={view} view={view}>
         <div className={previewSite ? "view-enter" : undefined}>
         {FUTURE_MODULES[view] && previewSite && CONTEO_MODULES[view] && <ConteoMaqueta key={view} module={view} access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} />}
@@ -1013,7 +1014,7 @@ export default function App() {
         {view === "stock" && <StockView supabase={onlineConfigured && session ? supabase : null} isAdmin={isAdminUser} />}
         {view === "productos" && (
           <Suspense fallback={<Splash text="Cargando Productos…" />}>
-            <ProductHub supabase={supabase} />
+            <ProductHub supabase={supabase} isAdmin={isChannelAdmin(session?.user?.email)} />
           </Suspense>
         )}
         {view === "mejoras" && (

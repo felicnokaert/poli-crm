@@ -320,7 +320,6 @@
 :root[data-theme="dark"] .product-hub .ph-alert { background: #1c1c1f; }
 :root[data-theme="dark"] .product-hub .ph-alert.ph-alta { background: #26262a; }
 :root[data-theme="dark"] .product-hub .ph-alert.ph-media { background: #26262a; }
-:root[data-theme="dark"] .home-arranger-list { background: #1c1c1f; }
 :root[data-theme="dark"] .demo-msg { background: #26262a; }
 :root[data-theme="dark"] .expedition-chip { background: #26262a; }
 :root[data-theme="dark"] .quote-search { background: #1c1c1f; }
@@ -342,6 +341,12 @@
 :root[data-theme="dark"] .stock-row .badge.warn { background: #26262a; }
 :root[data-theme="dark"] .stock-row .badge.danger { background: #26262a; }
 :root[data-theme="dark"] .login-app { background: #1c1c1f; }
+:root[data-theme="dark"] .home-edit-bar .ghost { background: #1c1c1f; }
+:root[data-theme="dark"] .home-edit-bar .secondary { background: #1c1c1f; }
+:root[data-theme="dark"] .home-edit-bar .ghost:hover { background: #1c1c1f; }
+:root[data-theme="dark"] .home-edit-bar .secondary:hover { background: #1c1c1f; }
+:root[data-theme="dark"] .home-widget { background: #1c1c1f; }
+:root[data-theme="dark"] .widget-gallery { background: #1c1c1f; }
 :root[data-theme="dark"] :root { color: #e7e7e9; }
 :root[data-theme="dark"] .link-button { color: #b4b5b9; }
 :root[data-theme="dark"] .link-button:hover { color: #b4b5b9; }
@@ -460,6 +465,7 @@
 :root[data-theme="dark"] .rare-row .badge.danger { color: #e7e7e9; }
 :root[data-theme="dark"] .stock-row .badge.warn { color: #b4b5b9; }
 :root[data-theme="dark"] .stock-row .badge.danger { color: #e7e7e9; }
+:root[data-theme="dark"] .home-widget-remove { color: #e7e7e9; }
 :root[data-theme="dark"] body, :root[data-theme="dark"] .login-shell { background: #121214; }
 :root[data-theme="dark"] .commercial-guidance, :root[data-theme="dark"] .prospect-glass::before { background: #1c1c1f; }
 :root[data-theme="dark"] .segmented { background: #2a2a2e; }
@@ -790,7 +796,6 @@
   :root:not([data-theme="light"]) .product-hub .ph-alert { background: #1c1c1f; }
   :root:not([data-theme="light"]) .product-hub .ph-alert.ph-alta { background: #26262a; }
   :root:not([data-theme="light"]) .product-hub .ph-alert.ph-media { background: #26262a; }
-  :root:not([data-theme="light"]) .home-arranger-list { background: #1c1c1f; }
   :root:not([data-theme="light"]) .demo-msg { background: #26262a; }
   :root:not([data-theme="light"]) .expedition-chip { background: #26262a; }
   :root:not([data-theme="light"]) .quote-search { background: #1c1c1f; }
@@ -812,6 +817,12 @@
   :root:not([data-theme="light"]) .stock-row .badge.warn { background: #26262a; }
   :root:not([data-theme="light"]) .stock-row .badge.danger { background: #26262a; }
   :root:not([data-theme="light"]) .login-app { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .home-edit-bar .ghost { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .home-edit-bar .secondary { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .home-edit-bar .ghost:hover { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .home-edit-bar .secondary:hover { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .home-widget { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .widget-gallery { background: #1c1c1f; }
   :root:not([data-theme="light"]) :root { color: #e7e7e9; }
   :root:not([data-theme="light"]) .link-button { color: #b4b5b9; }
   :root:not([data-theme="light"]) .link-button:hover { color: #b4b5b9; }
@@ -930,6 +941,7 @@
   :root:not([data-theme="light"]) .rare-row .badge.danger { color: #e7e7e9; }
   :root:not([data-theme="light"]) .stock-row .badge.warn { color: #b4b5b9; }
   :root:not([data-theme="light"]) .stock-row .badge.danger { color: #e7e7e9; }
+  :root:not([data-theme="light"]) .home-widget-remove { color: #e7e7e9; }
   :root:not([data-theme="light"]) body, :root:not([data-theme="light"]) .login-shell { background: #121214; }
   :root:not([data-theme="light"]) .commercial-guidance, :root:not([data-theme="light"]) .prospect-glass::before { background: #1c1c1f; }
   :root:not([data-theme="light"]) .segmented { background: #2a2a2e; }

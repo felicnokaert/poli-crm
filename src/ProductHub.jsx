@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AccountTag } from "./MlAccountTag";
 import { filterHub, HUB_FILTERS, listingLabel } from "./product-hub.mjs";
 import { loadProductHub } from "./product-hub-data.js";
+import { ProductRanking } from "./ProductRanking.jsx";
 
 // 20/11: Productos = una ficha por SKU que junta cotizador, Mercado Libre y Shopify, con dónde conviene venderlo
 // y avisos (⚠ precio raro, catálogo perdido, calidad, tendencia). Solo mira: no cambia nada en ningún canal.
@@ -52,7 +53,24 @@ function Detail({ row }) {
   );
 }
 
-export function ProductHub({ supabase }) {
+// 27/11: dos miradas de los productos: por canal (esta) y el ranking de ventas de Contabilium.
+export function ProductHub({ supabase, isAdmin = false }) {
+  const [tab, setTab] = useState("canales");
+  const tabs = (
+    <div className="segmented ph-tabs" role="tablist" aria-label="Productos">
+      <button type="button" role="tab" aria-selected={tab === "canales"} className={tab === "canales" ? "selected" : ""} onClick={() => setTab("canales")}>Por canal</button>
+      <button type="button" role="tab" aria-selected={tab === "ranking"} className={tab === "ranking" ? "selected" : ""} onClick={() => setTab("ranking")}>Ranking de ventas</button>
+    </div>
+  );
+  return (
+    <div className="content-stack">
+      {tabs}
+      {tab === "ranking" ? <ProductRanking supabase={supabase} isAdmin={isAdmin} /> : <ProductChannels supabase={supabase} />}
+    </div>
+  );
+}
+
+function ProductChannels({ supabase }) {
   const [state, setState] = useState({ status: "loading", rows: [], dollar: null });
   const [filter, setFilter] = useState("todos");
   const [query, setQuery] = useState("");

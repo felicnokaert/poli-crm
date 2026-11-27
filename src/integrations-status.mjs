@@ -16,6 +16,7 @@ export const INTEGRATIONS = [
   { key: 'integration:mercadolibre-ventas-5', name: 'Mercado Libre: resumen de ventas (5.ª cuenta)', when: '07:50' },
   { key: 'integration:mercadolibre-ventas-6', name: 'Mercado Libre: resumen de ventas (6.ª cuenta)', when: '08:05' },
   { key: 'integration:contabilium', name: 'Contabilium: comprobantes y fichas de clientes', when: '07:00' },
+  { key: 'integration:contabilium-renglones-1', name: 'Contabilium: renglones de las ventas (ranking de productos)', when: '01:25' },
   { key: 'integration:shopify', name: 'Shopify: productos y pedidos', when: '07:30' },
   { key: 'integration:alertas', name: 'Alertas de Qué atender hoy', when: '08:45' },
   { key: 'integration:mercadolibre-publicidad', name: 'Mercado Libre: inversión en Publicidad (TACoS)', when: '08:30' },

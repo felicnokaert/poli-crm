@@ -12,6 +12,7 @@ import { listClientErrors, logClientError } from '../lib/error-log.mjs';
 import { mercadoLibreAccountCron, mercadoLibreAdmin, mercadoLibreAdsCron, mercadoLibreCron, mercadoLibreMarketCron, mercadoLibreClipsCron, mercadoLibreSalesCron } from '../lib/mercadolibre.mjs';
 import { runIntegrationCron } from '../lib/integration-crons.mjs';
 import { contabiliumAdmin, contabiliumCron } from '../lib/contabilium.mjs';
+import { contabiliumItemsAdmin, contabiliumItemsCron } from '../lib/contabilium-items.mjs';
 import { assistantAi } from '../lib/assistant-ai.mjs';
 import { appReportsAdmin } from '../lib/app-reports.mjs';
 import { appFirmaAdmin, publicKeyHandler } from '../lib/app-firma.mjs';
@@ -64,6 +65,11 @@ const CRONS = {
   'mercadolibre-ventas-6': mercadoLibreSalesCron(5),
   'mercadolibre-publicidad': mercadoLibreAdsCron,
   contabilium: contabiliumCron,
+  // 27/11: renglones de los comprobantes (ranking de productos), varias pasadas de madrugada hasta ponerse al día.
+  'contabilium-renglones-1': contabiliumItemsCron,
+  'contabilium-renglones-2': contabiliumItemsCron,
+  'contabilium-renglones-3': contabiliumItemsCron,
+  'contabilium-renglones-4': contabiliumItemsCron,
   shopify: shopifyCron,
   alertas: alertsCron,
   'trello-plan': trelloPlanCron,
@@ -111,6 +117,7 @@ export default async function handler(request, response) {
     : action === 'listErrors' ? await listClientErrors(request)
     : action === 'mercadolibre' ? await mercadoLibreAdmin(request)
     : action === 'contabilium' ? await contabiliumAdmin(request)
+    : action === 'contabilium-items' ? await contabiliumItemsAdmin(request)
     : action === 'shopify' ? await shopifyAdmin(request)
     : action === 'alerts' ? await alertsAdmin(request)
     : action === 'trello-plan' ? await trelloPlanAdmin(request)

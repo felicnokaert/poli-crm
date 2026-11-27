@@ -91,3 +91,20 @@ test('Contabilium: concepto con stock por depósito, tolerante con los nombres',
   const map = contabiliumByCode({ companies: { POLIPLAST: { items: { 'IF-1517': { n: 'ISO', t: 5, d: { vd: 3 } } } } } });
   assert.deepEqual(map.get('IF-1517'), { vd: 3, mdq: null, total: 5 });
 });
+
+import { adjustList, adjustCsv, countedUnits } from '../src/stock-model.mjs';
+
+test('para ajustar: pasa lo contado a la unidad de Contabilium y separa diferencias y negativos', () => {
+  const products = [
+    { sku: 'IF-1517', name: 'ISO', mdq: { count: 2, cap: 220, unit: 'Tambor', at: '2026-11-27T10:00', by: 'Braian' }, cbMdq: 460, cbVd: 0, vd: null },
+    { sku: 'BL-10', name: 'Balde', vd: { count: 10, cap: 12, unit: 'Caja' }, cbVd: 100 },
+    { sku: 'PM1', name: 'O-ring', vd: { count: 5, unit: 'Unidad' }, cbVd: 5, mdq: null, cbMdq: -3 },
+  ];
+  assert.equal(countedUnits(products[0].mdq), 440);
+  const { rows, checked, matching, pct } = adjustList(products);
+  assert.equal(checked, 3);
+  assert.equal(matching, 1);
+  assert.equal(pct, 33);
+  assert.deepEqual(rows.map((row) => [row.sku, row.depot, row.diff]), [['IF-1517', 'Mar del Plata', -20], ['BL-10', 'Villa Domínico', 20], ['PM1', 'Mar del Plata', null]]);
+  assert.match(adjustCsv(rows), /IF-1517/);
+});

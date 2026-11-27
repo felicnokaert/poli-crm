@@ -993,7 +993,7 @@ export default function App() {
             <MercadoLibreBoard hiddenTabs={deniedModules} email={session?.user?.email} supabase={supabase} session={session} isAdmin={isChannelAdmin(session?.user?.email)} canSeeAds={isFelipeTools} ads={data.mlAds || {}} onAdsChange={(next) => setData((current) => ({ ...current, mlAds: next }))} />
           </Suspense>
         )}
-        {view === "stock" && <StockView />}
+        {view === "stock" && <StockView supabase={onlineConfigured && session ? supabase : null} isAdmin={isAdminUser} />}
         {view === "productos" && (
           <Suspense fallback={<Splash text="Cargando Productos…" />}>
             <ProductHub supabase={supabase} />

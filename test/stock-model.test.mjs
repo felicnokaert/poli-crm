@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { daysSince, dosifiedSince, latestCounts, searchStock, stamp, stockNow } from '../src/stock-model.mjs';
+import { depotLabel, isOldDepot } from '../src/stock-model.mjs';
 
 const logs = [
   { key: 'log:mardel:Braian:2026-11-13', value: [{ sku: 'SP-618', nombre: '618 SP', cant: 4, cap: 220, unidad: 'Tambor', depId: 'mardel', depNombre: 'Mar del Plata', fecha: '13/11/2026', hora: '12:50', contador: 'Braian', catNombre: 'Espumas' }] },
@@ -38,4 +39,54 @@ test('Stock: búsqueda sin acentos y antigüedad del conteo', () => {
   const rows = latestCounts(logs);
   assert.deepEqual(searchStock(rows, 'pasta').map((row) => row.sku), ['PG-NEGRO']);
   assert.equal(daysSince('2026-11-20T09:13', Date.parse('2026-11-26T12:00:00-03:00')), 6);
+});
+
+test('Berazategui es el depósito viejo', () => {
+  assert.equal(isOldDepot('Berazategui'), true);
+  assert.equal(isOldDepot('Villa Dominico'), false);
+  assert.equal(depotLabel('Berazategui'), 'Berazategui (depósito viejo)');
+});
+
+import { contabiliumByCode, countInfo, depotSlot, pivotStock } from '../src/stock-model.mjs';
+import { stockFromConcept, depotKey } from '../lib/contabilium.mjs';
+
+const cell = (over) => ({ sku: 'IF-1517', name: '1517 ISO', category: 'Isocianatos', unit: 'tambor', count: 1, kg: 250, kgNow: 250, status: 'hay', usedKg: 0, by: 'Marcos', at: '2026-11-20T09:00', ...over });
+
+test('una fila por producto con V. Domínico y MDQ; Berazategui aparte', () => {
+  const rows = [
+    cell({ depot: 'Mar del Plata', by: 'Braian', at: '2026-10-22T10:00' }),
+    cell({ depot: 'Villa Dominico', at: '2026-11-25T09:00', count: 2, kg: 500, kgNow: 500 }),
+    cell({ depot: 'Berazategui', at: '2026-09-17T09:00', count: 0, kg: 0, kgNow: 0, status: 'sin' }),
+  ];
+  const [product] = pivotStock(rows, new Map([['IF-1517', { vd: 3, mdq: null, total: 3 }]]));
+  assert.equal(product.vd.kgNow, 500);
+  assert.equal(product.mdq.by, 'Braian');
+  assert.equal(product.old.depot, 'Berazategui');
+  assert.equal(product.cbVd, 3);
+  assert.equal(product.cbMdq, null);
+  assert.equal(product.status, 'hay');
+});
+
+test('en cada depósito queda el ÚLTIMO conteo y la «i» dice quién y cuándo', () => {
+  const rows = [cell({ depot: 'Villa Dominico', by: 'Marcos', at: '2026-11-01T08:00' }), cell({ depot: 'Villa Dominico', by: 'Neyen', at: '2026-11-26T15:30' })];
+  const [product] = pivotStock(rows);
+  assert.equal(product.vd.by, 'Neyen');
+  const text = countInfo(product.vd, Date.parse('2026-11-27T12:00:00-03:00'));
+  assert.match(text, /Neyen, el 26\/11\/2026 a las 15:30 \(hace 0 días\)|Neyen, el 26\/11\/2026 a las 15:30 \(hace 1 día\)/);
+  assert.equal(countInfo(null), 'Sin conteo en este depósito.');
+});
+
+test('depósitos por nombre', () => {
+  assert.equal(depotSlot('Villa Domínico'), 'vd');
+  assert.equal(depotSlot('MDQ'), 'mdq');
+  assert.equal(depotSlot('Berazategui'), 'old');
+  assert.equal(depotKey('Depósito Mar del Plata'), 'mdq');
+});
+
+test('Contabilium: concepto con stock por depósito, tolerante con los nombres', () => {
+  const row = stockFromConcept({ Codigo: 'if-1517 ', Nombre: 'ISO', Stock: '5', Depositos: [{ Deposito: { Nombre: 'Villa Dominico' }, Stock: 3 }, { NombreDeposito: 'Mar del Plata', Cantidad: '2' }] });
+  assert.deepEqual(row, { code: 'IF-1517', name: 'ISO', total: 5, depots: { vd: 3, mdq: 2 } });
+  assert.equal(stockFromConcept({ Nombre: 'sin código' }), null);
+  const map = contabiliumByCode({ companies: { POLIPLAST: { items: { 'IF-1517': { n: 'ISO', t: 5, d: { vd: 3 } } } } } });
+  assert.deepEqual(map.get('IF-1517'), { vd: 3, mdq: null, total: 5 });
 });

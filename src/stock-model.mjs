@@ -3,7 +3,8 @@
 //  - último conteo de cada producto en cada depósito (kv_store log:<dep>:<contador>:<día>, cada renglón con cant, unidad y
 //    cap = cuánto trae cada unidad, ej. tambor = 220 kg);
 //  - menos lo que se DOSIFICÓ desde ese conteo (dosif_planillas + dosif_lineas: kits × cantidad → kilos de cada componente).
-// Las ventas (Mercado Libre, Shopify, remitos de Entregas) se restan en la etapa 2: hace falta acordar con Diego el cruce por SKU.
+// Las ventas se restan cuando Diego lo defina. Regla de Contabilium (Felipe 27/11): la mercadería se descuenta con la VENTA,
+// no con el remito: FC y COT restan; NC y NCOT (notas de crédito) suman. El remito es papel y no siempre se hace.
 
 // «20/11/2026» + «09:13» → «2026-11-20T09:13»
 export function stamp(fecha = '', hora = '') {
@@ -76,4 +77,64 @@ export function searchStock(rows = [], query = '') {
     const text = `${row.sku} ${row.name} ${row.category}`.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
     return words.every((word) => text.includes(word));
   });
+}
+
+// Depósitos que ya no se usan (Felipe 27/11: Berazategui es el depósito viejo; se mudaron a Villa Domínico).
+export const OLD_DEPOT = /berazategui/i;
+export const isOldDepot = (depot) => OLD_DEPOT.test(String(depot || ''));
+export const depotLabel = (depot) => (isOldDepot(depot) ? `${depot} (depósito viejo)` : depot);
+
+// Una sola hoja (Felipe 27/11): una fila por producto con el stock de cada depósito (conteo) y el de Contabilium.
+// Berazategui (depósito viejo) no es columna: queda en `old` por si se quiere ver aparte.
+export function depotSlot(name = '') {
+  const text = String(name).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (/berazategui/.test(text)) return 'old';
+  if (/dominico|\bvd\b/.test(text)) return 'vd';
+  if (/mar del plata|\bmdq\b|\bmdp\b/.test(text)) return 'mdq';
+  return 'other';
+}
+
+const normCode = (code = '') => String(code).trim().toUpperCase().replace(/\s+/g, '');
+
+// contabilium: { companies: { POLIPLAST: { items: { CODIGO: { n, t, d: { vd, mdq } } } } } } → mapa CODIGO → { vd, mdq, total }.
+export function contabiliumByCode(detail = {}) {
+  const out = new Map();
+  for (const company of Object.values(detail?.companies || {})) {
+    for (const [code, item] of Object.entries(company?.items || {})) {
+      const current = out.get(normCode(code)) || { vd: null, mdq: null, total: null };
+      const depots = item?.d || {};
+      const add = (a, b) => (b == null ? a : (a || 0) + Number(b));
+      out.set(normCode(code), { vd: add(current.vd, depots.vd), mdq: add(current.mdq, depots.mdq), total: add(current.total, item?.t) });
+    }
+  }
+  return out;
+}
+
+// rows = stockNow(...) (una fila por depósito y SKU) → una fila por producto.
+export function pivotStock(rows = [], contabilium = new Map()) {
+  const bySku = new Map();
+  for (const row of rows) {
+    const product = bySku.get(row.sku) || { sku: row.sku, name: row.name, category: row.category, vd: null, mdq: null, old: null, other: [] };
+    const slot = depotSlot(row.depot);
+    if (slot === 'other') product.other.push(row);
+    else if (!product[slot] || product[slot].at < row.at) product[slot] = row;
+    if (row.name && row.name !== row.sku) product.name = row.name;
+    if (row.category) product.category = row.category;
+    bySku.set(row.sku, product);
+  }
+  return [...bySku.values()].map((product) => {
+    const cb = contabilium.get(normCode(product.sku)) || null;
+    const live = [product.vd, product.mdq].filter(Boolean);
+    const status = !live.length ? 'sin-conteo' : live.every((cell) => cell.status === 'sin') ? 'sin' : live.some((cell) => cell.status === 'hay') ? 'hay' : 'poco';
+    return { ...product, cbVd: cb?.vd ?? null, cbMdq: cb?.mdq ?? null, cbTotal: cb?.total ?? null, status };
+  });
+}
+
+// Texto del ícono «i»: quién contó y cuándo (el último conteo).
+export function countInfo(cell, now = Date.now()) {
+  if (!cell) return 'Sin conteo en este depósito.';
+  const [day, time] = String(cell.at || '').split('T');
+  const date = day ? day.split('-').reverse().join('/') : '';
+  const days = daysSince(cell.at, now);
+  return `Último conteo: ${cell.by || 'sin nombre'}, el ${date}${time ? ` a las ${time}` : ''}${days != null ? ` (hace ${days} ${days === 1 ? 'día' : 'días'})` : ''}.${cell.usedKg ? ` Después se dosificaron ${cell.usedKg} kg.` : ''}`;
 }

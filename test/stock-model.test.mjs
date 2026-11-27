@@ -21,7 +21,7 @@ test('Stock: último conteo por depósito y SKU, en kilos cuando se puede', () =
   assert.equal(counts.find((row) => row.sku === 'PG-NEGRO').kg, 25);
 });
 
-test('Stock: resta lo dosificado después del conteo en el mismo depósito', () => {
+test('Stock: lo dosificado NO se resta (tambor abierto, Diego 27/11), queda como dato; con la opción sí se resta', () => {
   const counts = latestCounts(logs);
   const moves = dosifiedSince(
     [{ id: 'p1', fecha: '2026-11-21', hora: '10:00:00', deposito: 'Mar del Plata' }, { id: 'p0', fecha: '2026-11-19', hora: '10:00', deposito: 'Mar del Plata' }],
@@ -30,8 +30,9 @@ test('Stock: resta lo dosificado después del conteo en el mismo depósito', () 
   const now = stockNow(counts, moves);
   const sp = now.find((row) => row.sku === 'SP-618');
   assert.equal(sp.usedKg, 15);
-  assert.equal(sp.kgNow, 425);
+  assert.equal(sp.kgNow, 440);
   assert.equal(sp.status, 'hay');
+  assert.equal(stockNow(counts, moves, { subtractDosified: true }).find((row) => row.sku === 'SP-618').kgNow, 425);
   assert.equal(now.find((row) => row.sku === 'BAL-10').status, 'sin');
 });
 

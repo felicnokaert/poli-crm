@@ -55,12 +55,13 @@ export function dosifiedSince(planillas = [], lineas = []) {
 
 const plainDepot = (text = '') => String(text).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
-// Stock estimado = último conteo − lo dosificado después de ese conteo en el mismo depósito.
-export function stockNow(counts = [], moves = []) {
+// Diego (27/11): al dosificar se separa un tambor y ese tambor ya no se cuenta (se cuenta por tambor cerrado), así que lo
+// dosificado NO se resta del conteo: kgNow = lo contado. usedKg queda solo como dato («después se dosificaron N kg»).
+export function stockNow(counts = [], moves = [], { subtractDosified = false } = {}) {
   return counts.map((count) => {
     const used = moves.filter((move) => move.sku === count.sku && plainDepot(move.depot) === plainDepot(count.depot) && move.at > count.at);
     const usedKg = used.reduce((sum, move) => sum + move.kg, 0);
-    const kgNow = count.kg == null ? null : Math.max(0, Math.round((count.kg - usedKg) * 100) / 100);
+    const kgNow = count.kg == null ? null : Math.max(0, Math.round((count.kg - (subtractDosified ? usedKg : 0)) * 100) / 100);
     return { ...count, usedKg: Math.round(usedKg * 100) / 100, kgNow, status: count.count <= 0 ? 'sin' : kgNow != null && count.kg && kgNow / count.kg < 0.2 ? 'poco' : 'hay' };
   });
 }
@@ -136,5 +137,5 @@ export function countInfo(cell, now = Date.now()) {
   const [day, time] = String(cell.at || '').split('T');
   const date = day ? day.split('-').reverse().join('/') : '';
   const days = daysSince(cell.at, now);
-  return `Último conteo: ${cell.by || 'sin nombre'}, el ${date}${time ? ` a las ${time}` : ''}${days != null ? ` (hace ${days} ${days === 1 ? 'día' : 'días'})` : ''}.${cell.usedKg ? ` Después se dosificaron ${cell.usedKg} kg.` : ''}`;
+  return `Último conteo: ${cell.by || 'sin nombre'}, el ${date}${time ? ` a las ${time}` : ''}${days != null ? ` (hace ${days} ${days === 1 ? 'día' : 'días'})` : ''}.${cell.usedKg ? ` Después se dosificaron ${cell.usedKg} kg (de un tambor abierto, que no entra en el conteo).` : ''}`;
 }

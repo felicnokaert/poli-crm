@@ -4,7 +4,7 @@ import { contabiliumByCode, countInfo, dosifiedSince, latestCounts, pivotStock, 
 import { adminFetch } from "./admin-api.mjs";
 
 // Stock en una sola hoja (Felipe 27/11): una fila por producto con el último conteo de Villa Domínico y de Mar del Plata
-// (app de conteo, menos lo dosificado después) y el stock de Contabilium de cada depósito. Solo lee.
+// (app de conteo, tal como se contó) y el stock de Contabilium de cada depósito. Solo lee.
 // Ventas: todavía NO se restan (cuando Diego lo defina: FC y COT restan, NC y NCOT suman).
 const CONTEO_URL = "https://coldwrbfxpdfutbekysr.supabase.co";
 const CONTEO_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvbGR3cmJmeHBkZnV0YmVreXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNjE0MzAsImV4cCI6MjEwMzkzNzQzMH0.7CloDCuNcsm4E3TcEO712RNZdTUvL_BmCrmXWHRRrrc";
@@ -93,7 +93,7 @@ export function StockView({ supabase = null, isAdmin = false }) {
         <div><span className="eyebrow">Logística</span><h2>Stock</h2></div>
         {isAdmin ? <button type="button" className="secondary" disabled={Boolean(cbBusy) && cbBusy.startsWith("Leyendo")} onClick={refreshCb}>Traer stock de Contabilium</button> : null}
       </div>
-      <p className="muted small">Una fila por producto. «Conteo» es lo último que contó cada depósito en la app de conteo, menos lo que se dosificó después (tocá la «i» para ver quién contó y cuándo). «Contabilium» es el stock que figura allá. Si algo no cierra, avisale a Diego. Las ventas todavía no se restan: se restan cuando Diego lo defina.</p>
+      <p className="muted small">Una fila por producto. «Conteo» es lo último que contó cada depósito en la app de conteo, por bulto cerrado, tambor o tira (tocá la «i» para ver quién contó y cuándo). Lo dosificado no se resta: sale de un tambor abierto que no se cuenta. «Contabilium» es el stock que figura allá. Si algo no cierra, avisale a Diego. Puede no coincidir con Contabilium: allá descuenta el depósito que se elige al facturar.</p>
       {cbBusy ? <p className="form-notice">{cbBusy}</p> : null}
       {cb.loaded && !cbHasDepots ? <p className="muted small">Contabilium todavía no trae el stock separado por depósito: esas columnas quedan «sin dato»{cb.at ? ` (última lectura ${new Date(cb.at).toLocaleString("es-AR")})` : ""}.</p> : null}
       <div className="list-toolbar">

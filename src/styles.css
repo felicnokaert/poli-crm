@@ -1935,3 +1935,12 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .rare-row .badge.warn { background: #fff1d6; color: #7a5200; }
 .rare-row .badge.danger { background: #fde2e2; color: #9b1c1c; }
 @media (max-width: 760px) { .rare-row { grid-template-columns: minmax(0, 1fr) auto; } .rare-row > span:nth-child(2), .rare-row > span:nth-child(3) { grid-column: 1; } .rare-head { display: none; } }
+
+/* Stock (26/11): conteo − dosificado. */
+.stock-table { display: grid; gap: 4px; margin-top: 10px; }
+.stock-row { display: grid; grid-template-columns: minmax(0, 2.4fr) 1fr 1.3fr 1.1fr 100px; gap: 10px; align-items: center; border-bottom: 1px solid var(--color-border); padding: 8px 4px; }
+.stock-head { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-gray); border-bottom: 0; }
+.stock-row .badge.ok { background: var(--color-success-bg); color: var(--color-success); }
+.stock-row .badge.warn { background: #fff1d6; color: #7a5200; }
+.stock-row .badge.danger { background: #fde2e2; color: #9b1c1c; }
+@media (max-width: 760px) { .stock-row { grid-template-columns: minmax(0, 1fr) auto; } .stock-row > span:nth-child(2), .stock-row > span:nth-child(3), .stock-row > span:nth-child(4) { grid-column: 1; } .stock-head { display: none; } }

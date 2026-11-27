@@ -14,6 +14,7 @@ export const SUBMODULES = {
   shopify: ['Resumen', 'Qué mejorar', 'Productos', 'Precios vs ML', 'Faltan en Shopify', 'Operación', 'Ordenar catálogo'],
   productos: ['Por SKU: cotizador, ML y Shopify'],
   mejoras: ['Qué atender hoy', 'Lista de mejoras'],
+  stock: ['Stock hoy (conteo − dosificado)'],
   entregas: ['Pedidos', 'Expedición hoy', 'Calendario', 'Tablero del depósito'],
   etiquetas: ['Escanear', 'Pendientes', 'Hecho', 'Devoluciones', 'Cortes'],
   conteo: ['Categorías', 'Administración'],
@@ -71,19 +72,19 @@ export const ROLES = [
   { id: 'admin', label: 'Administrador', modules: ALL },
   {
     id: 'comercial', label: 'Comercial',
-    modules: ['dashboard', 'sales', 'quoter', 'prospecting', 'clients', 'map', 'mercadolibre', 'shopify', 'productos', 'mejoras', 'entregas', 'tasks', 'academy', 'techdocs', 'settings'],
+    modules: ['dashboard', 'sales', 'quoter', 'prospecting', 'clients', 'map', 'mercadolibre', 'shopify', 'productos', 'mejoras', 'stock', 'entregas', 'tasks', 'academy', 'techdocs', 'settings'],
   },
   {
     id: 'deposito', label: 'Jefe de depósito',
-    modules: ['dashboard', 'entregas', 'etiquetas', 'conteo', 'dosificado', 'tasks', 'techdocs', 'settings'],
+    modules: ['dashboard', 'stock', 'entregas', 'etiquetas', 'conteo', 'dosificado', 'tasks', 'techdocs', 'settings'],
   },
   {
     id: 'expedicion', label: 'Expedición',
-    modules: ['dashboard', 'entregas', 'etiquetas', 'conteo', 'dosificado'],
+    modules: ['dashboard', 'stock', 'entregas', 'etiquetas', 'conteo', 'dosificado'],
   },
   {
     id: 'administrativo', label: 'Administrativo',
-    modules: ['dashboard', 'clients', 'recibos', 'facturacion', 'compras', 'entregas', 'tasks', 'settings'],
+    modules: ['dashboard', 'clients', 'recibos', 'facturacion', 'compras', 'stock', 'entregas', 'tasks', 'settings'],
   },
 ];
 

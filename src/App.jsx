@@ -118,6 +118,7 @@ import { useMyAccess, useTeamStore } from "./team-store.js";
 import { TeamAccess } from "./TeamAccess.jsx";
 import { DemoModule } from "./DemoModules.jsx";
 import { QuoteBuilder } from "./QuoteBuilder.jsx";
+import { StockView } from "./StockView.jsx";
 import { businessDaysFromToday } from "./quote-model.mjs";
 import { AppReports, ReportProblem } from "./ReportProblem.jsx";
 import { NotificationBell } from "./NotificationBell.jsx";
@@ -162,7 +163,7 @@ function loadState() {
 }
 
 const VIEW_KEY = "poliplast-current-view";
-const SAVED_VIEWS = new Set(["dashboard", "conversations", "inbox", "tasks", "sales", "clients", "prospecting", "mercadolibre", "shopify", "mejoras", "productos", "academy", "quoter", "entregas", "map", "techdocs", "profile", "settings", "plan", "team", "avisos", "etiquetas", "conteo", "dosificado", "recibos", "facturacion", "compras"]);
+const SAVED_VIEWS = new Set(["dashboard", "conversations", "inbox", "tasks", "sales", "clients", "prospecting", "mercadolibre", "shopify", "mejoras", "productos", "academy", "quoter", "entregas", "map", "techdocs", "profile", "settings", "plan", "team", "avisos", "etiquetas", "conteo", "dosificado", "recibos", "facturacion", "compras", "stock"]);
 function readSavedView() {
   try {
     const saved = sessionStorage.getItem(VIEW_KEY);
@@ -992,6 +993,7 @@ export default function App() {
             <MercadoLibreBoard hiddenTabs={deniedModules} email={session?.user?.email} supabase={supabase} session={session} isAdmin={isChannelAdmin(session?.user?.email)} canSeeAds={isFelipeTools} ads={data.mlAds || {}} onAdsChange={(next) => setData((current) => ({ ...current, mlAds: next }))} />
           </Suspense>
         )}
+        {view === "stock" && <StockView />}
         {view === "productos" && (
           <Suspense fallback={<Splash text="Cargando Productos…" />}>
             <ProductHub supabase={supabase} />

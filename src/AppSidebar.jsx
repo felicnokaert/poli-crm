@@ -1,4 +1,4 @@
-import { Boxes, Building2, Calculator, ChevronRight, Menu, X, ClipboardList, Database, FileCheck2, GraduationCap, Inbox, LayoutDashboard, ListChecks, MapPin, MessageCircle, ReceiptText, Search, ShoppingBag, Store, Truck, UserCog, Tags, PackageSearch, FlaskConical, Receipt, FileText, ShoppingCart, Map as MapIcon, Users, MessageSquareWarning, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Boxes, Building2, Calculator, ChevronRight, Menu, X, ClipboardList, Database, FileCheck2, GraduationCap, Inbox, LayoutDashboard, ListChecks, MapPin, MessageCircle, ReceiptText, Search, ShoppingBag, Store, Truck, UserCog, Tags, PackageSearch, FlaskConical, Receipt, FileText, ShoppingCart, Map as MapIcon, Users, MessageSquareWarning, PanelLeftClose, PanelLeftOpen, Warehouse } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { onlineConfigured } from "./online";
@@ -31,6 +31,7 @@ export const NAV_GROUPS = [
     ["mejoras", "Centro de mejoras", ListChecks],
   ]],
   ["Logística", [
+    ["stock", "Stock", Warehouse],
     ["entregas", "Entregas", Truck],
     ["etiquetas", "Etiquetas", Tags],
     ["conteo", "Conteo", PackageSearch],

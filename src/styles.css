@@ -2052,3 +2052,29 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
   .home-widget, .home-widget-remove, .widget-option { transition: none; }
   .home-widget.is-lifted { transform: none; }
 }
+/* Menú sin barra de desplazamiento (27/11, Felipe): Inicio suelto arriba, ítems y títulos más compactos, pie en dos
+   renglones (Ver como + estado y links legales) y la barra del menú oculta. Si lo abierto no entra, el menú cierra solo
+   los grupos que no son el de la pantalla actual (AppSidebar.jsx). */
+@media (min-width: 761px) {
+  .sidebar { padding: 10px 10px 8px; }
+  .sidebar .brand { height: 58px; padding: 2px 2px 12px; }
+  .sidebar .brand-logo { height: 40px; }
+  .sidebar nav:not(.mobile-tabbar) { gap: 4px; scrollbar-width: none; }
+  .sidebar nav:not(.mobile-tabbar)::-webkit-scrollbar { display: none; }
+  .sidebar .nav-group { gap: 1px; }
+  .sidebar .nav-group-title { padding: 5px 10px 3px; font-size: 9.5px; }
+  .sidebar nav button:not(.nav-group-title), .app-shell.densa .sidebar nav button:not(.nav-group-title) { padding: 6px 10px; font-size: 13px; gap: 9px; }
+  .sidebar nav button:not(.nav-group-title) svg { width: 17px; height: 17px; flex: 0 0 auto; }
+  .sidebar .nav-solo { margin-bottom: 4px; padding-bottom: 6px; border-bottom: 1px solid #ffffff14; }
+  .app-shell.nav-mini .sidebar .nav-solo { border-bottom: 0; }
+  .sidebar-note { padding: 8px 6px 0; border-top-color: #ffffff1a; }
+  .sidebar-note .preview-role { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .sidebar-note .preview-role .eyebrow { margin: 0; white-space: nowrap; font-size: 9.5px; }
+  .sidebar-note .preview-role select { flex: 1 1 auto; min-width: 0; padding: 4px 8px; font-size: 12.5px; border-radius: 8px; height: 30px; }
+  .sidebar-note .legal-links { margin-top: 0; gap: 4px 10px; align-items: center; flex-wrap: nowrap; overflow: hidden; }
+  .sidebar-note .legal-links a { font-size: 10.5px; white-space: nowrap; color: #9aa3a0; }
+  .sidebar-status { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; color: #9aa3a0; white-space: nowrap; }
+  .sidebar-status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #9aa3a0; }
+  .sidebar-status.on::before { background: #22c55e; }
+}
+@media (max-width: 760px) { .sidebar .brand-iso, .sidebar .nav-mini-toggle { display: none; } }

@@ -90,6 +90,8 @@ const Clients = lazyNamed(() => import("./Clients"), "Clients");
 const Prospeccion = lazyNamed(() => import("./Prospeccion"), "Prospeccion");
 const Contacts = lazyNamed(() => import("./Clients"), "Contacts");
 const ClientEmails = lazyNamed(() => import("./ClientEmails.jsx"), "ClientEmails");
+const ClientsDataTools = lazyNamed(() => import("./ClientsDataTools.jsx"), "ClientsDataTools");
+const WeeklyTargets = lazyNamed(() => import("./WeeklyTargets.jsx"), "WeeklyTargets");
 const Conversations = lazyNamed(() => import("./Conversations"), "Conversations");
 const WhatsAppInbox = lazyNamed(() => import("./WhatsAppInbox"), "WhatsAppInbox");
 const Profile = lazyNamed(() => import("./Settings"), "Profile");
@@ -951,14 +953,20 @@ export default function App() {
               onDelete={deleteSale}
               onDeleteMany={deleteSales}
             />
+            <WeeklyTargets data={data} setData={setData} />
           </Suspense>
         )}
         {view === "clients" && (
           <div className="segmented routine-tabs" role="tablist" aria-label="Empresas y contactos" style={{ marginBottom: 12, width: "fit-content" }}>
-            {[["empresas", "Empresas"], ["contactos", "Personas de contacto"], ["sinmail", `Sin mail${clientsWithoutEmail ? ` · ${clientsWithoutEmail}` : ""}`]].map(([key, label]) => (
+            {[["empresas", "Empresas"], ["contactos", "Personas de contacto"], ["sinmail", `Sin mail${clientsWithoutEmail ? ` · ${clientsWithoutEmail}` : ""}`], ["directorio", "Directorio e importar"]].map(([key, label]) => (
               <button key={key} type="button" role="tab" aria-selected={clientsTab === key} className={clientsTab === key ? "selected" : ""} onClick={() => setClientsTab(key)}>{label}</button>
             ))}
           </div>
+        )}
+        {view === "clients" && clientsTab === "directorio" && (
+          <Suspense fallback={<Splash text="Cargando…" />}>
+            <ClientsDataTools data={data} setData={setData} supabase={supabase} session={session} online={Boolean(onlineConfigured && session)} />
+          </Suspense>
         )}
         {view === "clients" && clientsTab === "sinmail" && (
           <Suspense fallback={<Splash text="Cargando…" />}>

@@ -7,10 +7,8 @@ import {
   Inbox,
   Link2,
   Target,
-  Upload,
 } from "lucide-react";
 import { onlineConfigured, supabase } from "./online";
-import { SharedDirectory } from "./SharedDirectory.jsx";
 import { AdminUsers } from "./AdminUsers.jsx";
 import { DataHealth } from "./DataHealth.jsx";
 import { WorkspaceCleanup } from "./WorkspaceCleanup.jsx";
@@ -28,12 +26,9 @@ import {
   fetchCommercialMaster,
   mergeCommercialMaster,
 } from "./commercial-master";
-import { clientsToCsv, mergeClientsCsv } from "./client-csv.mjs";
-import { readFileSmart } from "./text-decode.mjs";
 import { CHANNEL_ADMINS, channelsForEmail, isChannelAdmin } from "./user-channels.mjs";
 import { ChannelsAdmin } from "./ChannelsAdmin";
 import { DATA_SECTION_KEY, IntegrationsStatus } from "./IntegrationsStatus.jsx";
-import { WhatsAppAutoReply } from "./WhatsAppAutoReply.jsx";
 import { CHANNELS, initialState, today } from "./app-shared";
 
 // `data` y `session` llegan como la misma referencia mientras nadie edita
@@ -45,11 +40,10 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
   const isAdmin = isChannelAdmin(session?.user?.email);
   // Pestañas (QA 16/10: para Felipe eran ~10 paneles apilados). Cada uno ve solo las que puede usar.
   const sections = [
-    ["respaldos", "Respaldos"],
-    ...(onlineConfigured ? [["directorio", "Directorio"]] : []),
+    ["respaldos", "Respaldo"],
     ...(myChannels.length > 0 || (onlineConfigured && isAdmin) ? [["whatsapp", "WhatsApp"]] : []),
     ...(onlineConfigured && isAdmin ? [["equipo", "Equipo y cuentas"], ["conexiones", "Conexiones"], ["mercadolibre", "Mercado Libre"], ["contabilium", "Contabilium"], ["asistente", "Asistente"]] : []),
-    ...((onlineConfigured && isAdmin) || devPanel ? [["errores", "Errores y pruebas"]] : []),
+    ...((onlineConfigured && isAdmin) || devPanel || !onlineConfigured ? [["errores", "Errores y pruebas"]] : []),
   ];
   const [section, setSection] = useState(() => {
     if (mlCallbackParams()) return "mercadolibre";
@@ -62,8 +56,6 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
   const [messageIsError, setMessageIsError] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [diagnosis, setDiagnosis] = useState("");
-  const [exportFamily, setExportFamily] = useState("Todas");
-  const [pendingClientImport, setPendingClientImport] = useState(null);
 
   // Un solo estado `message` servía tanto para avisos de éxito como de error,
   // sin distinción visual (todos se veían iguales) - con esto los errores se
@@ -219,55 +211,6 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
     showMessage("Respaldo exportado correctamente.");
   }
 
-  function exportClients() {
-    const clients =
-      exportFamily === "Todas"
-        ? data.clients
-        : data.clients.filter(
-            (client) => (client.family || "Sin definir") === exportFamily,
-          );
-    const blob = new Blob([clientsToCsv(clients)], {
-      type: "text/csv;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `clientes-${exportFamily === "Todas" ? "todos" : exportFamily.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")}-${today()}.csv`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-    showMessage(
-      `CSV exportado: ${clients.length} fichas${exportFamily === "Todas" ? "" : ` de ${exportFamily}`}.`,
-    );
-  }
-
-  async function importClients(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    try {
-      const result = mergeClientsCsv(data.clients, await readFileSmart(file));
-      setPendingClientImport({ ...result, fileName: file.name });
-      showMessage(
-        `Vista previa lista: ${result.added} empresas nuevas, ${result.updated} actualizadas y ${result.skipped} filas omitidas. Todavía no se guardó nada.`,
-      );
-    } catch (error) {
-      showError(error.message || "No se pudo importar el CSV.");
-    } finally {
-      event.target.value = "";
-    }
-  }
-
-  function confirmClientImport() {
-    if (!pendingClientImport) return;
-    setData({ ...data, clients: pendingClientImport.clients });
-    const duplicateNote = pendingClientImport.duplicatePhones?.length
-      ? ` ${pendingClientImport.duplicatePhones.length} teléfonos compartidos quedaron señalados para revisión, sin fusionarse.`
-      : "";
-    showMessage(
-      `CSV incorporado: ${pendingClientImport.added} empresas nuevas, ${pendingClientImport.updated} actualizadas y ${pendingClientImport.skipped} filas omitidas.${duplicateNote}`,
-    );
-    setPendingClientImport(null);
-  }
-
   async function importBackup(event) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -333,10 +276,6 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
     }
   }
 
-  const clientFamilies = [
-    "Todas",
-    ...new Set(data.clients.map((client) => client.family || "Sin definir")),
-  ];
   return (
     <div className="content-stack">
       {sections.length > 1 && (
@@ -457,7 +396,6 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
       </>)}
       {shown === "conexiones" && onlineConfigured && isAdmin && (<>
         <IntegrationsStatus supabase={supabase} />
-        <WhatsAppAutoReply />
         <DataHealth supabase={supabase} />
       </>)}
       {shown === "mercadolibre" && onlineConfigured && isAdmin && <MercadoLibreSync supabase={supabase} session={session} />}
@@ -465,54 +403,41 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
       {shown === "asistente" && onlineConfigured && isAdmin && <AssistantTraining supabase={supabase} />}
       {shown === "errores" && (<>
         {onlineConfigured && isAdmin && <ErrorLog session={session} />}
+        {(!onlineConfigured || isAdmin) && (
+          <section className="panel">
+            <div className="panel-head"><div><span className="eyebrow">Prueba de la bandeja</span><h2>Importar eventos de WhatsApp</h2></div></div>
+            <div className="data-cards">
+<article>
+            <Inbox size={24} />
+            <h3>Importar eventos WhatsApp</h3>
+            <p>
+              Prueba la bandeja con eventos normalizados. Deduplica por ID y
+              omite estados técnicos.
+            </p>
+            <label className="secondary upload-button">
+              Elegir eventos
+              <input
+                type="file"
+                accept="application/json,.json"
+                onChange={importWebhookEvents}
+              />
+            </label>
+          </article>
+            </div>
+          </section>
+        )}
         {devPanel}
       </>)}
-      {shown === "directorio" && onlineConfigured && <SharedDirectory supabase={supabase} session={session} clients={data.clients || []} setClients={(clients) => setData((current) => ({ ...current, clients }))} />}
       {shown === "respaldos" && (<>
       <section className="panel">
         <div className="panel-head">
           <div>
-            <span className="eyebrow">Portabilidad</span>
-            <h2>Datos y respaldos</h2>
+            <span className="eyebrow">Todo tu espacio</span>
+            <h2>Respaldo completo</h2>
           </div>
           <Database size={22} />
         </div>
         <div className="data-cards">
-          <article>
-            <Download size={24} />
-            <h3>Exportar contactos CSV</h3>
-            <p>
-              Descargá toda la cartera o una familia. Cada persona o teléfono
-              ocupa una fila y conserva su empresa.
-            </p>
-            <select aria-label="Familia a exportar"
-              value={exportFamily}
-              onChange={(event) => setExportFamily(event.target.value)}
-            >
-              {clientFamilies.map((family) => (
-                <option key={family}>{family}</option>
-              ))}
-            </select>
-            <button className="primary" onClick={exportClients}>
-              Descargar CSV
-            </button>
-          </article>
-          <article>
-            <Upload size={24} />
-            <h3>Importar clientes CSV</h3>
-            <p>
-              Primero muestra una vista previa. Deduplica por CUIT y empresa;
-              nunca fusiona en silencio un teléfono compartido.
-            </p>
-            <label className="secondary upload-button">
-              Analizar CSV
-              <input
-                type="file"
-                accept="text/csv,.csv"
-                onChange={importClients}
-              />
-            </label>
-          </article>
           <article>
             <Download size={24} />
             <h3>Respaldo integral</h3>
@@ -532,61 +457,7 @@ function DataSettingsBase({ data, setData, session, syncStatus, myChannels: myCh
               />
             </label>
           </article>
-          {/* Herramienta de prueba de la bandeja: solo Felipe la ve (16/10). */}
-          {(!onlineConfigured || isChannelAdmin(session?.user?.email)) && <article>
-            <Inbox size={24} />
-            <h3>Importar eventos WhatsApp</h3>
-            <p>
-              Prueba la bandeja con eventos normalizados. Deduplica por ID y
-              omite estados técnicos.
-            </p>
-            <label className="secondary upload-button">
-              Elegir eventos
-              <input
-                type="file"
-                accept="application/json,.json"
-                onChange={importWebhookEvents}
-              />
-            </label>
-          </article>}
-          <article>
-            <Upload size={24} />
-            <h3>Fichas técnicas</h3>
-            <p>
-              Se suben desde Base técnica → "Subir fichas y documentos": PDF,
-              Word, Excel, PowerPoint o el .md de MarkItDown, eligiendo familia
-              y carpeta, con aviso si el archivo ya existe.
-            </p>
-          </article>
         </div>
-        {pendingClientImport && (
-          <div className="import-preview">
-            <strong>Vista previa · {pendingClientImport.fileName}</strong>
-            <p>
-              {pendingClientImport.added} empresas nuevas ·{" "}
-              {pendingClientImport.updated} actualizadas ·{" "}
-              {pendingClientImport.skipped} filas omitidas ·{" "}
-              {pendingClientImport.duplicatePhones?.length || 0} teléfonos
-              compartidos para revisar.
-            </p>
-            <div className="modal-actions">
-              <button
-                className="secondary"
-                type="button"
-                onClick={() => setPendingClientImport(null)}
-              >
-                Cancelar
-              </button>
-              <button
-                className="primary"
-                type="button"
-                onClick={confirmClientImport}
-              >
-                Confirmar importación
-              </button>
-            </div>
-          </div>
-        )}
       </section>
       <section className="panel">
         <div className="panel-head">

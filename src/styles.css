@@ -1672,3 +1672,21 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .stock-row .badge.warn { background: #fff1d6; color: #7a5200; }
 .stock-row .badge.danger { background: #fde2e2; color: #9b1c1c; }
 @media (max-width: 760px) { .stock-row { grid-template-columns: minmax(0, 1fr) auto; } .stock-row > span:nth-child(2), .stock-row > span:nth-child(3), .stock-row > span:nth-child(4) { grid-column: 1; } .stock-head { display: none; } }
+
+
+/* Calendario único (26/11): capas compartidas (feriados, entregas, cortes) y lo personal. */
+.calendar-layers { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0 10px; }
+.calendar-layer { --layer: #999; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--color-border, #e4e4e7); background: transparent; color: inherit; border-radius: 999px; padding: 4px 10px; font-size: 12px; cursor: pointer; opacity: .55; transition: opacity .15s ease, background .15s ease; }
+.calendar-layer.on, .calendar-layer.mine { opacity: 1; }
+.calendar-layer.mine { cursor: default; }
+.calendar-layer i { width: 8px; height: 8px; border-radius: 50%; background: var(--layer); }
+.calendar-dots { display: flex; gap: 3px; justify-self: start; }
+.calendar-dots i { width: 6px; height: 6px; border-radius: 50%; }
+.calendar-dots .dot-entregas, .calendar-task.layer-entregas .calendar-tag { background: #2563eb; }
+.calendar-dots .dot-cortes, .calendar-task.layer-cortes .calendar-tag { background: #d97706; }
+.calendar-task.shared { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.calendar-tag { color: #fff; font-size: 11px; border-radius: 999px; padding: 1px 8px; }
+.calendar-cell.half-day { background: linear-gradient(180deg, transparent 50%, rgba(237, 28, 36, .08) 50%); }
+.calendar-cell.half-day em { color: var(--brand-red); }
+.company-days-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.company-days-list li { display: flex; justify-content: space-between; gap: 10px; align-items: center; border-bottom: 1px solid var(--color-border); padding-bottom: 6px; }

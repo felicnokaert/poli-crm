@@ -791,3 +791,7 @@ html.marco-poliplast .sidebar, html.marco-poliplast .bottom-nav, html.marco-poli
 html.marco-poliplast .main { max-width: none; width: 100%; margin: 0; padding: 0 0 24px; }
 .modo-prueba { margin-bottom: 12px; }
 .subir-par { display: inline-flex; gap: 4px; }
+
+/* Depósito de salida obligatorio (27/11): se marca en rojo si falta al guardar. */
+.field-falta .depositos-pick { outline: 2px solid var(--brand-red, #d0141b); outline-offset: 3px; border-radius: 10px; }
+.falta-texto { color: var(--brand-red, #d0141b); font-weight: 700; }

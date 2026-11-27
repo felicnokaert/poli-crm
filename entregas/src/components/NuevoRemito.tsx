@@ -9,6 +9,7 @@ import { CRITERIO_LABEL, emparejarGuia, type Emparejamiento } from '../lib/empar
 import { leerRemito, PEDIDO_VACIO, type Aviso } from '../lib/leerRemito'
 import { mensajeGrupo } from '../lib/mensajes'
 import { depositoActual } from '../lib/operador'
+import { faltaDeposito } from '../lib/depositoSalida'
 import { normalizarNumeroRemito } from '../lib/remitoParser'
 import { ir } from '../lib/ruta'
 import type { ItemRemito, NuevoPedido, Pedido } from '../lib/types'
@@ -38,6 +39,7 @@ export function NuevoRemito() {
   const [encima, setEncima] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [faltaDep, setFaltaDep] = useState(false)
   const [creado, setCreado] = useState<Pedido | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -96,6 +98,8 @@ export function NuevoRemito() {
     if (!n) { setError('Falta el número de remito.'); return }
     if (!form.cliente.trim()) { setError('Falta el cliente.'); return }
     if (!form.expreso_id) { setError('Elegí por dónde va.'); return }
+    const sinDeposito = faltaDeposito(form.deposito_salida)
+    if (sinDeposito) { setFaltaDep(true); setError(sinDeposito); return }
     if (!vendedorId) { setError('Elegí de qué vendedor es el remito.'); return }
     if (duplicado) { setError('Ese remito ya está cargado. Abrilo desde el aviso de arriba.'); return }
     setGuardando(true)
@@ -111,7 +115,7 @@ export function NuevoRemito() {
   }
 
   function otro() {
-    setForm(vacio()); setArchivo(null); setAviso(null); setGuia(null); setDuplicado(null); setCreado(null); setError(null)
+    setForm(vacio()); setArchivo(null); setAviso(null); setGuia(null); setDuplicado(null); setCreado(null); setError(null); setFaltaDep(false)
   }
 
   if (lote) return <CargaVarios archivos={lote} onSalir={() => setLote(null)} />
@@ -203,7 +207,7 @@ export function NuevoRemito() {
               ))}
             </div>
           </div>
-          <DepositoSalida valor={form.deposito_salida ?? null} onChange={(v) => set('deposito_salida', v)} />
+          <DepositoSalida falta={faltaDep && !!faltaDeposito(form.deposito_salida)} valor={form.deposito_salida ?? null} onChange={(v) => set('deposito_salida', v)} />
         </div>
 
         <div className="panel panel-pad stack">

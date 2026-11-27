@@ -6,11 +6,12 @@ import { useDatos } from '../lib/datos'
 
 const POR_DEFECTO = ['Villa Domínico', 'Mar del Plata']
 
-export function DepositoSalida({ valor, onChange, titulo = '¿Desde dónde sale?', compacto }: {
+export function DepositoSalida({ valor, onChange, titulo = '¿Desde dónde sale?', compacto, falta }: {
   valor: string | null
   onChange: (v: string | null) => void
   titulo?: string
   compacto?: boolean
+  falta?: boolean
 }) {
   const { config } = useDatos()
   const DEPOSITOS_SALIDA = config.depositos?.length ? config.depositos : POR_DEFECTO
@@ -26,8 +27,8 @@ export function DepositoSalida({ valor, onChange, titulo = '¿Desde dónde sale?
   }, [valor])
 
   return (
-    <div className="field">
-      {titulo && <span>{titulo}</span>}
+    <div className={`field${falta ? ' field-falta' : ''}`}>
+      {titulo && <span>{titulo}{falta ? <b className="falta-texto"> · obligatorio</b> : null}</span>}
       <div className={`expresos-pick depositos-pick${compacto ? ' compacto' : ''}`} style={{ '--n': DEPOSITOS_SALIDA.length + 1 } as CSSProperties}>
         {DEPOSITOS_SALIDA.map((d) => (
           <button key={d} type="button" className="expreso-opt" aria-pressed={!otro && valor === d} onClick={() => { setOtro(false); onChange(d) }}>

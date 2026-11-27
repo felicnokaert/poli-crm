@@ -13,6 +13,7 @@ import type { NuevoPedido, Pedido } from '../lib/types'
 import { DepositoSalida } from './DepositoSalida'
 import { columnasPick, ItemsMini } from './NuevoRemito'
 import { EstadoChip, useCopiar } from './ui'
+import { faltaDeposito } from '../lib/depositoSalida'
 
 interface Item {
   key: string
@@ -91,6 +92,7 @@ export function CargaVarios({ archivos, onSalir }: { archivos: File[]; onSalir: 
     if (!it.form.n_remito.trim()) return 'Falta el N° de remito'
     if (!it.form.cliente.trim()) return 'Falta el cliente'
     if (!it.form.expreso_id) return 'Elegí por dónde va'
+    if (faltaDeposito(it.form.deposito_salida)) return 'Elegí desde dónde sale'
     if (it.duplicado) return `Ya está cargado (pedido #${it.duplicado.codigo})`
     if (repetidos.has(it.key)) return 'Está repetido en esta tanda'
     return null
@@ -249,7 +251,7 @@ export function CargaVarios({ archivos, onSalir }: { archivos: File[]; onSalir: 
                   {!prob && !it.error && it.aviso && it.aviso.tipo !== 'ok' && <div className={`aviso ${it.aviso.tipo}`}><AlertTriangle size={15} /> {it.aviso.texto}</div>}
                   {it.abierto && (
                     <div className="stack" style={{ gap: 10 }}>
-                      <DepositoSalida compacto valor={it.form.deposito_salida ?? null} onChange={(v) => setCampo(it.key, 'deposito_salida', v)} />
+                      <DepositoSalida compacto falta={!!faltaDeposito(it.form.deposito_salida)} valor={it.form.deposito_salida ?? null} onChange={(v) => setCampo(it.key, 'deposito_salida', v)} />
                       <div className="grid-3">
                         <label className="field"><span>N° de remito</span>
                           <input className="control mono" value={it.form.n_remito} onChange={(ev) => setCampo(it.key, 'n_remito', ev.target.value)}

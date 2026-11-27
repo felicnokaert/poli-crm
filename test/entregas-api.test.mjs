@@ -128,3 +128,11 @@ test('operario de sistema «Resumen diario»: puede leer, no puede cambiar estad
   assert.equal(w.code, 400);
   assert.match(w.body.error, /solo puede consultar/);
 });
+
+test('checkWho acepta el depósito y el operario sin tilde y devuelve el nombre de la lista', async () => {
+  const { checkWho } = await import('../lib/entregas-api.mjs');
+  const config = { operadores: ['Marcos', 'Jeremías'], depositos: ['Villa Domínico', 'Mar del Plata'] };
+  assert.deepEqual(checkWho(config, 'jeremias', 'Villa Dominico'), { operador: 'Jeremías', deposito: 'Villa Domínico' });
+  assert.ok(checkWho(config, 'Inventado', 'Villa Domínico').error);
+  assert.ok(checkWho(config, 'Marcos', 'Berazategui').error);
+});

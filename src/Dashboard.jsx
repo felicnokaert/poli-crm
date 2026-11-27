@@ -1,5 +1,4 @@
 import { AttentionPanel } from "./AttentionPanel.jsx";
-import { AutomationPause } from "./AutomationPause.jsx";
 import { memo, useEffect, useMemo, useState } from "react";
 import { resolveWeeklyTargets } from "./weekly-targets.mjs";
 import {
@@ -591,13 +590,6 @@ function DashboardBase({
           onToggle={onToggle}
         />
       )}
-      {whatsappHealth && whatsappHealth.ok === false && myChannels.includes("general") && (
-        <section className="panel whatsapp-alert" role="alert">
-          <strong>WhatsApp: hay algo para revisar</strong>
-          <ul>{whatsappHealth.problems.map((line, index) => <li key={index}>{line}</li>)}</ul>
-          <button type="button" className="secondary" onClick={() => onNavigate("settings")}>Ir a Datos para el diagnóstico</button>
-        </section>
-      )}
       {onHomeLayout && (
         <HomeEditBar
           editing={editing}
@@ -659,7 +651,6 @@ function DashboardBase({
           </section>
         );
         if (id === "semana") return supabase && showWeekly ? <WeeklySummaryCard key={id} supabase={supabase} clients={clients} prospects={prospects} tasks={tasks} isAdmin={isAdmin} /> : null;
-        if (id === "pausa") return supabase && isAdmin ? <AutomationPause key={id} /> : null;
         if (id === "atender") return supabase && isAdmin ? <AttentionPanel key={id} supabase={supabase} session={session} isAdmin={isAdmin} onNavigate={onNavigate} compact /> : null;
         if (id === "atrasados") return supabase ? <OverdueCard key={id} supabase={supabase} clients={clients} onNavigate={onNavigate} /> : null;
         if (id === "alertas") return <AlertsPanel key={id} showInbox={isAdmin} hotLeads={hotLeads} coldQuotes={coldQuotes} expiredQuotes={expiredQuotes} staleClients={staleClients} repurchaseRadar={repurchaseRadar} onNavigate={onNavigate} />;

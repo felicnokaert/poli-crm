@@ -11,7 +11,6 @@ import {
 } from "./app-shared";
 import { Tasks, TaskDetail, TaskForm } from "./Tasks";
 import { WhatsAppDerivations } from "./WhatsAppDerivations";
-import { AutomationPause } from "./AutomationPause.jsx";
 // Tras una publicación nueva, la parte pedida puede llegar vacía ("Cannot read properties of undefined (reading 'Clients')"):
 // se reintenta una vez y, si sigue sin venir, se recarga la página una sola vez para tomar la versión nueva.
 // 21/11 (Felipe: «que las pestañas tarden lo menos posible»): cada pantalla se baja aparte, pero ahora se precargan
@@ -869,7 +868,6 @@ export default function App() {
         )}
         {view === "inbox" && (
           <Suspense fallback={<Splash text="Cargando bandeja…" />}>
-            {onlineConfigured && session && isChannelAdmin(session?.user?.email) && <AutomationPause />}
             {onlineConfigured && session && (
               <WhatsAppDerivations
                 supabase={supabase}

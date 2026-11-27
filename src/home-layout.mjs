@@ -13,7 +13,6 @@ export const HOME_BLOCKS = [
   { id: 'semana', label: 'Resumen de la semana', module: 'sales', desc: 'Resumen para copiar y mandar por WhatsApp.', words: 'resumen semana informe reporte whatsapp' },
   { id: 'automatico', label: 'Lo automático', module: 'tasks', desc: 'Lo que la app hizo sola: tareas creadas y procesos.', words: 'automatico robot procesos solo' },
   { id: 'logistica', label: 'Logística de hoy', module: 'entregas', desc: 'Entregas, etiquetas y depósito del día.', words: 'logistica entregas etiquetas deposito expedicion envios stock' },
-  { id: 'pausa', label: 'Pausar lo automático', module: 'settings', admin: true, desc: 'Botón para frenar los envíos automáticos.', words: 'pausa frenar automatico envios' },
   { id: 'conexiones', label: 'Actualizaciones automáticas', module: 'settings', admin: true, desc: 'Si alguna conexión (ML, Shopify, Contabilium) falló.', words: 'conexiones actualizaciones cron errores contabilium shopify mercado libre' },
 ];
 

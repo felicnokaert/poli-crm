@@ -6,9 +6,9 @@ test('Inicio: sin orden guardado arranca corto (lo que avisa la campanita queda 
   const all = visibleBlockIds(null, () => true, true);
   assert.deepEqual(all, HOME_BLOCKS.map((block) => block.id).filter((id) => !DEFAULT_HIDDEN.includes(id) && id !== 'logistica'));
   assert.ok(visibleBlockIds(null, (module) => module === 'entregas', false).includes('logistica'));
-  assert.ok(all.includes('plan') && all.includes('metricas') && all.includes('pausa'));
+  assert.ok(all.includes('plan') && all.includes('metricas') && !all.includes('pausa'));
   const noAdmin = visibleBlockIds(null, () => true, false);
-  assert.ok(!noAdmin.includes('pausa') && !noAdmin.includes('atender'));
+  assert.ok(!noAdmin.includes('atender'));
 });
 
 test('Inicio: expedición (sin ventas ni tareas) no ve tarjetas de ventas', () => {
@@ -38,10 +38,10 @@ import { addBlock, addableBlocks, editableLayout, factoryLayout, hideBlock, move
 test('Widgets: arrastrar pone la tarjeta antes o después de otra', () => {
   const all = () => true;
   let layout = editableLayout(null, all);
-  layout = reorderBlock(layout, 'pausa', 'miDia', 'before');
-  assert.equal(visibleBlockIds(layout, all, true)[0], 'pausa');
-  layout = reorderBlock(layout, 'pausa', 'plan', 'after');
-  assert.deepEqual(visibleBlockIds(layout, all, true).slice(0, 3), ['miDia', 'plan', 'pausa']);
+  layout = reorderBlock(layout, 'metricas', 'miDia', 'before');
+  assert.equal(visibleBlockIds(layout, all, true)[0], 'metricas');
+  layout = reorderBlock(layout, 'metricas', 'plan', 'after');
+  assert.deepEqual(visibleBlockIds(layout, all, true).slice(0, 3), ['miDia', 'plan', 'metricas']);
   assert.deepEqual(reorderBlock(layout, 'plan', 'plan').order, normalizeLayout(layout).order);
 });
 

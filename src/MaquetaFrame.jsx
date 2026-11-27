@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { SUBMODULES } from "./poliplast-app-plan.mjs";
-import { accessAllows } from "./team-access.mjs";
+import { accessAllows, tabSubs } from "./team-access.mjs";
 import { resolvedTheme, visibleSlice } from "./embedded-frame-view.mjs";
 
 // Poliplast App (25-26/11): muestra otra app del grupo (Entregas, la app de conteo) adentro de la app, desde el
@@ -81,7 +80,7 @@ function SubTabs({ subs, value, onChange, label }) {
 }
 
 const useSub = (module, access) => {
-  const subs = (SUBMODULES[module] || []).filter((sub) => !access || accessAllows(access, module, sub));
+  const subs = tabSubs(module).filter((sub) => !access || accessAllows(access, module, sub));
   const [picked, setPicked] = useState(subs[0] || "");
   return [subs, subs.includes(picked) ? picked : subs[0] || "", setPicked];
 };
@@ -110,7 +109,9 @@ export function ConteoMaqueta({ module, access = null, who = null, base = "/cont
     return () => { alive = false; clearTimeout(timer); };
   }, [getFirma, persona, deposito]);
   if (firma === undefined) return <div className="maqueta-frame is-loading" aria-busy="true" />;
-  const params = new URLSearchParams({ embebida: "1", marco: "poliplast", persona, deposito, ...(firma ? { firma } : {}) });
+  // Productividad del equipo (Etiquetas → Cortes): solo quien lo tiene tildado en «Qué ve cada persona».
+  const productividad = module === "etiquetas" && access ? accessAllows(access, "etiquetas", "Productividad del equipo") : false;
+  const params = new URLSearchParams({ embebida: "1", marco: "poliplast", persona, deposito, productividad: productividad ? "1" : "0", ...(firma ? { firma } : {}) });
   return (
     <MaquetaFrame src={`${base}?${params}#${info.hash(HASH_OF[sub] || "")}`} title={info.title} theme={info.lightOnly ? "light" : null}>
       <SubTabs subs={subs} value={sub} onChange={setSub} label={`Submódulos de ${info.title}`} />

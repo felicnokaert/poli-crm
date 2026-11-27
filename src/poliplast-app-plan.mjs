@@ -3,6 +3,12 @@
 // Ver docs/PLAN_POLIPLAST_APP.md. Nada de esto toca datos: es cómo se vería.
 
 // Submódulos de cada módulo (los que ya existen como pestañas y los nuevos).
+// Permisos que arrancan APAGADOS para todos (Felipe 27/11): se le habilitan a mano a quien corresponda en
+// «Qué ve cada persona». «Productividad del equipo» (dentro de Etiquetas → Cortes) es solo para Diego.
+export const OPT_IN = new Set(['etiquetas.productividad-del-equipo']);
+// No son pestañas propias: solo permisos (se ven dentro de otra pestaña).
+export const PERMISSION_ONLY = new Set(['etiquetas.productividad-del-equipo']);
+
 export const SUBMODULES = {
   dashboard: ['Panel personal (tarjetas que cada uno ordena)'],
   sales: ['Ventas', 'Historial en gráficos', 'Piso de comisión'],
@@ -16,7 +22,7 @@ export const SUBMODULES = {
   mejoras: ['Qué atender hoy', 'Lista de mejoras'],
   stock: ['Stock hoy (conteo − dosificado)'],
   entregas: ['Pedidos', 'Expedición hoy', 'Calendario', 'Tablero del depósito'],
-  etiquetas: ['Escanear', 'Pendientes', 'Hecho', 'Devoluciones', 'Cortes'],
+  etiquetas: ['Escanear', 'Pendientes', 'Hecho', 'Devoluciones', 'Cortes', 'Productividad del equipo'],
   conteo: ['Categorías', 'Administración'],
   dosificado: ['Cargar', 'Kits', 'Registros', 'Resumen'],
   recibos: ['Comprobantes recibidos', 'Clientes y saldos', 'Enlaces de carga', 'Entrenamiento'],

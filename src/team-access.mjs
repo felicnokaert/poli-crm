@@ -1,6 +1,6 @@
 // Poliplast App (25/11): qué ve cada persona = su ROL (conjunto de módulos) + lo que Felipe le suma o le saca
 // a mano (overrides: { 'modulo': true/false, 'modulo.submodulo': false }). Solo administradores lo cambian.
-import { ROLES, SUBMODULES, roleAllows } from './poliplast-app-plan.mjs';
+import { OPT_IN, PERMISSION_ONLY, ROLES, SUBMODULES, roleAllows } from './poliplast-app-plan.mjs';
 import { demoTeam } from './demo-data.mjs';
 import { MODULES } from './module-access.mjs';
 
@@ -19,8 +19,11 @@ export function accessAllows(access = {}, module, child = '') {
   const base = module in overrides ? Boolean(overrides[module]) : (access.role ? roleAllows(access.role, module) : true);
   if (!base || !child) return base;
   const key = childKey(module, child);
-  return key in overrides ? Boolean(overrides[key]) : true;
+  return key in overrides ? Boolean(overrides[key]) : !OPT_IN.has(key);
 }
+
+// Submódulos que son pestañas (sin los que son solo permiso).
+export const tabSubs = (module) => (SUBMODULES[module] || []).filter((sub) => !PERMISSION_ONLY.has(childKey(module, sub)));
 
 export function navForAccess(groups, access) {
   return groups
@@ -38,8 +41,9 @@ export function toggleAccess(person, module, child = '') {
   const overrides = { ...(person.overrides || {}) };
   if (child) {
     const key = childKey(module, child);
-    const now = key in overrides ? overrides[key] : true;
-    if (now) overrides[key] = false; else delete overrides[key];
+    const byDefault = !OPT_IN.has(key);
+    const next = !(key in overrides ? overrides[key] : byDefault);
+    if (next === byDefault) delete overrides[key]; else overrides[key] = next;
   } else {
     const roleDefault = person.role ? roleAllows(person.role, module) : true;
     const now = module in overrides ? overrides[module] : roleDefault;

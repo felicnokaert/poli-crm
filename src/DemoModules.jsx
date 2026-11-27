@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { demoModules } from "./demo-data.mjs";
-import { FUTURE_MODULES, SUBMODULES } from "./poliplast-app-plan.mjs";
-import { accessAllows } from "./team-access.mjs";
+import { FUTURE_MODULES } from "./poliplast-app-plan.mjs";
+import { accessAllows, tabSubs } from "./team-access.mjs";
 
 // Poliplast App (prueba, 25/11): cómo se verían Etiquetas, Conteo, Dosificado, Recibos, Facturación, Compras y
 // Entregas adentro de la app, con datos INVENTADOS. Lo que se toca acá queda solo en esta pantalla (no se guarda).
@@ -179,7 +179,7 @@ const LABELS = { entregas: "Entregas" };
 export function DemoModule({ id, access = null }) {
   const data = useMemo(() => demoModules(), []);
   // Solo los submódulos que la persona que se está mirando tiene habilitados.
-  const subs = (SUBMODULES[id] || []).filter((sub) => !access || accessAllows(access, id, sub));
+  const subs = tabSubs(id).filter((sub) => !access || accessAllows(access, id, sub));
   const [picked, setTab] = useState(subs[0] || "");
   const tab = subs.includes(picked) ? picked : subs[0] || "";
   const Screen = SCREENS[id];

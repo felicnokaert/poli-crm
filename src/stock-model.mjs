@@ -108,6 +108,11 @@ export function contabiliumByCode(detail = {}) {
       out.set(normCode(code), { vd: add(current.vd, depots.vd), mdq: add(current.mdq, depots.mdq), total: add(current.total, item?.t) });
     }
   }
+  // El Excel del reporte de stock (por depósito) manda sobre lo de la API, que solo trae el total.
+  for (const [code, item] of Object.entries(detail?.excel?.items || {})) {
+    const d = item?.d || {};
+    out.set(normCode(code), { vd: d.vd ?? 0, mdq: d.mdq ?? 0, full: d.full ?? null, carr: d.carr ?? null, total: item?.t ?? null, excel: true });
+  }
   return out;
 }
 
@@ -127,7 +132,7 @@ export function pivotStock(rows = [], contabilium = new Map()) {
     const cb = contabilium.get(normCode(product.sku)) || null;
     const live = [product.vd, product.mdq].filter(Boolean);
     const status = !live.length ? 'sin-conteo' : live.every((cell) => cell.status === 'sin') ? 'sin' : live.some((cell) => cell.status === 'hay') ? 'hay' : 'poco';
-    return { ...product, cbVd: cb?.vd ?? null, cbMdq: cb?.mdq ?? null, cbTotal: cb?.total ?? null, status };
+    return { ...product, cbVd: cb?.vd ?? null, cbMdq: cb?.mdq ?? null, cbFull: cb?.full ?? null, cbCarr: cb?.carr ?? null, cbTotal: cb?.total ?? null, status };
   });
 }
 

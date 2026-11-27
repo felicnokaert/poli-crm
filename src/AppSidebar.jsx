@@ -1,5 +1,5 @@
 import { Boxes, Building2, Calculator, ChevronRight, Menu, X, ClipboardList, Database, FileCheck2, GraduationCap, Inbox, LayoutDashboard, ListChecks, MapPin, MessageCircle, ReceiptText, Search, ShoppingBag, Store, Truck, UserCog, Tags, PackageSearch, FlaskConical, Receipt, FileText, ShoppingCart, Map as MapIcon, Users, MessageSquareWarning, PanelLeftClose, PanelLeftOpen, Warehouse } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { onlineConfigured } from "./online";
 import { filterNav } from "./module-access.mjs";
@@ -12,17 +12,18 @@ import { isChannelAdmin } from "./user-channels.mjs";
 // Menú lateral de Poliplast App (rama de prueba, 25/11): 7 grupos según docs/PLAN_POLIPLAST_APP.md.
 // Lo marcado como futuro (Etiquetas, Conteo, Dosificado, Recibos, Facturación, Compras) abre una vista «próximamente».
 export const NAV_GROUPS = [
+  // Inicio va suelto arriba (27/11, Felipe: «que no sea un menú»): el grupo no muestra título ni se pliega.
   ["Inicio", [
     ["dashboard", "Inicio", LayoutDashboard],
-    ["inbox", "Por revisar", Inbox],
   ]],
   ["Ventas", [
     ["sales", "Ventas", ReceiptText],
     ["quoter", "Cotizador", Calculator],
     ["prospecting", "Prospección", Search],
     ["clients", "Clientes y contactos", Building2],
-    ["map", "Mapa", MapPin],
+    ["inbox", "Por revisar", Inbox],
     ["conversations", "Historial", MessageCircle],
+    ["map", "Mapa", MapPin],
   ]],
   ["Canales online", [
     ["mercadolibre", "Mercado Libre", Store],
@@ -57,6 +58,8 @@ export const NAV_GROUPS = [
 ];
 
 export const NAV_ITEMS = NAV_GROUPS.flatMap(([, items]) => items);
+// Grupos que no se pliegan ni muestran título (Inicio).
+export const SOLO_GROUPS = ["Inicio"];
 
 // Atajos de la barra inferior del celular (con nombre, no solo ícono). Lo demás está en "Menú".
 const QUICK_IDS = ["dashboard", "tasks", "sales", "clients"];
@@ -68,7 +71,10 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
   const allowedItems = baseGroups.flatMap(([, items]) => items);
   const quickIds = quickAccessIds(quick, allowedItems.map(([id]) => id));
   const quickItems = quickIds.map((id) => allowedItems.find(([itemId]) => itemId === id)).filter(Boolean);
-  const groups = quickItems.length ? [["Acceso rápido", quickItems], ...baseGroups] : baseGroups;
+  // Inicio queda primero, arriba de Acceso rápido.
+  const soloGroups = baseGroups.filter(([name]) => SOLO_GROUPS.includes(name));
+  const restGroups = baseGroups.filter(([name]) => !SOLO_GROUPS.includes(name));
+  const groups = [...soloGroups, ...(quickItems.length ? [["Acceso rápido", quickItems]] : []), ...restGroups];
   const togglePin = (id) => setQuick((current) => { const next = pinToggle(current, id); saveQuick(next); return next; });
   useEffect(() => { if (view && view !== "plan") setQuick((current) => { const next = countUse(current, view); saveQuick(next); return next; }); }, [view]);
   const [sheet, setSheet] = useState(false);
@@ -92,6 +98,23 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
     const group = NAV_GROUPS.find(([, items]) => items.some(([id]) => id === view))?.[0];
     if (group) setCollapsedNavGroups((current) => (current.includes(group) ? NAV_GROUPS.map(([name]) => name).filter((name) => name !== group) : current));
   }, [view, setCollapsedNavGroups]);
+  // Sin barra de desplazamiento (27/11, Felipe): si lo abierto no entra en el alto de la pantalla, se cierran solos
+  // los grupos que no son el de la pantalla actual (primero Acceso rápido), de a uno, hasta que entre.
+  const navRef = useRef(null);
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav || narrowScreen || mini || nav.clientHeight === 0) return;
+    if (nav.scrollHeight <= nav.clientHeight + 1) return;
+    const activeGroup = groups.find(([name, items]) => name !== "Acceso rápido" && items.some(([id]) => id === view))?.[0];
+    const open = groups.map(([name]) => name).filter((name) => !SOLO_GROUPS.includes(name) && !collapsedNavGroups.includes(name));
+    const candidate = open.find((name) => name === "Acceso rápido" && activeGroup) || open.find((name) => name !== activeGroup && name !== "Acceso rápido");
+    if (candidate) setCollapsedNavGroups((current) => (current.includes(candidate) ? current : [...current, candidate]));
+  });
+  useEffect(() => {
+    const onResize = () => setCollapsedNavGroups((current) => [...current]);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [setCollapsedNavGroups]);
   return (
   <aside className="sidebar">
     <div className="brand">
@@ -110,21 +133,22 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
         <Menu size={20} /> <span>{current}</span>
       </button>
     </div>
-    <nav>
+    <nav ref={navRef}>
       {groups.map(([group, items]) => {
         // En el celular los títulos de sección no se muestran, así que nunca se colapsa.
         // Minimizado: se ven todos los íconos (sin títulos de grupo, con una línea entre grupos).
-        const collapsed = collapsedNavGroups.includes(group) && !narrowScreen && !mini;
+        const solo = SOLO_GROUPS.includes(group);
+        const collapsed = !solo && collapsedNavGroups.includes(group) && !narrowScreen && !mini;
         return (
-          <div className={`nav-group ${collapsed ? "collapsed" : ""}`} key={group}>
-            <button
+          <div className={`nav-group ${collapsed ? "collapsed" : ""}${solo ? " nav-solo" : ""}`} key={group}>
+            {!solo && <button
               type="button"
               className="nav-group-title"
               onClick={() =>
                 // Acordeón (26/11, Felipe): al abrir un grupo se cierran los demás.
                 setCollapsedNavGroups((current) =>
                   current.includes(group)
-                    ? groups.map(([name]) => name).filter((name) => name !== group && name !== "Acceso rápido")
+                    ? groups.map(([name]) => name).filter((name) => name !== group && name !== "Acceso rápido" && !SOLO_GROUPS.includes(name))
                     : [...current, group],
                 )
               }
@@ -132,7 +156,7 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
               <ChevronRight size={12} className="nav-group-caret" />
               {group}
               {collapsed && <span className="nav-group-count">{items.length}</span>}
-            </button>
+            </button>}
             {!collapsed &&
               items.map(([id, label, Icon]) => (
                 <button
@@ -175,15 +199,8 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
           </select>
         </label>
       )}
-      <span className="eyebrow">
-        {onlineConfigured ? "Equipo conectado" : "MVP local"}
-      </span>
-      <p>
-        {onlineConfigured
-          ? "La cartera se comparte con los usuarios autorizados."
-          : "La información permanece en este navegador durante el piloto."}
-      </p>
-      <div className="legal-links">
+      <div className="legal-links" title={onlineConfigured ? "Equipo conectado: la cartera se comparte con los usuarios autorizados." : "Modo local: la información queda en este navegador."}>
+        <span className={`sidebar-status${onlineConfigured ? " on" : ""}`}>{onlineConfigured ? "Conectado" : "Local"}</span>
         <a href="/privacidad.html" target="_blank" rel="noreferrer">
           Privacidad
         </a>
@@ -191,7 +208,7 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
           Términos
         </a>
         <a href="/eliminacion-datos.html" target="_blank" rel="noreferrer">
-          Eliminar datos
+          Datos
         </a>
       </div>
     </div>

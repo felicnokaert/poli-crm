@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { adminFetch } from "./admin-api.mjs";
 import { RefreshCw, Store } from "lucide-react";
 import { mlCallbackParams } from "./ml-callback.mjs";
-import { clipIdsFrom } from "./ml-clips.mjs";
 
 // Más → Datos → Mercado Libre (solo Felipe, 20/10): conectar las cuentas de Mercado Libre y traer sus
 // publicaciones y preguntas ya respondidas como conocimiento para Academia y el futuro asistente.
@@ -162,60 +161,6 @@ export function MercadoLibreSync({ supabase, session }) {
     await loadCounts();
   }
 
-  // Clips pegados desde Mercado Libre (la API no los deja leer).
-  const [clipText, setClipText] = useState("");
-  const [clipComplete, setClipComplete] = useState(true);
-  const [clipHas, setClipHas] = useState(true); // false = pegó las que NO tienen clip
-  const [clipSeller, setClipSeller] = useState("");
-  const [clipOpen, setClipOpen] = useState(false);
-  async function saveClips() {
-    setError(""); setMessage(""); setBusy("clips");
-    try {
-      const items = [];
-      for (let page = 0; page < 5; page += 1) {
-        const { data } = await supabase.from("ml_items").select("id,title,seller_id").order("id").range(page * 1000, page * 1000 + 999);
-        items.push(...(data || []));
-        if (!data || data.length < 1000) break;
-      }
-      const { ids, titles } = clipIdsFrom(clipText, clipSeller ? items.filter((item) => item.seller_id === clipSeller) : items);
-      const result = await callApi(session, { op: "clips", ids, complete: clipComplete && Boolean(clipSeller), has: clipHas, sellerId: clipSeller });
-      setMessage(`Clips: se marcaron ${result.marked} publicaciones ${clipHas ? "con" : "sin"} clip${titles ? ` (${titles} por título)` : ""}.${clipComplete ? ` Las demás activas quedan como “${clipHas ? "sin" : "con"} clip”.` : ""}`);
-      setClipText(""); setClipOpen(false);
-    } catch (clipError) { setError(clipError.message); }
-    setBusy("");
-  }
-
-  // Reportes de competencia pegados desde Mercado Libre (Métricas → Competencia / mejores vendedores).
-  const [reports, setReports] = useState([]);
-  // Prueba temporal del control de etiquetas (19/11): busca un envío en cada cuenta y muestra qué devuelve ML. Se borra cuando esté la app de preparación.
-  const [labelsProbe, setLabelsProbe] = useState({ open: false, shipmentId: "", busy: false, results: null, error: "" });
-  async function runLabelsProbe() {
-    setLabelsProbe((current) => ({ ...current, busy: true, results: null, error: "" }));
-    try {
-      const body = await callApi(session, { op: "labels-probe", shipmentId: labelsProbe.shipmentId });
-      setLabelsProbe((current) => ({ ...current, busy: false, results: body.results || [] }));
-    } catch (failure) { setLabelsProbe((current) => ({ ...current, busy: false, error: failure.message || "No se pudo probar." })); }
-  }
-  const [report, setReport] = useState({ open: false, account: "", section: "Competencia", content: "" });
-  useEffect(() => {
-    if (!supabase?.from) return;
-    try { Promise.resolve(supabase.from("ml_competition_reports").select("id,account,section,created_at,content").order("created_at", { ascending: false }).limit(30)).then(({ data }) => setReports(data || []), () => {}); } catch { /* sin reportes */ }
-  }, [supabase]);
-  async function saveReport() {
-    setError(""); setBusy("report");
-    const row = { account: report.account, section: report.section, content: report.content.trim().slice(0, 60000) };
-    const { data, error: saveError } = await supabase.from("ml_competition_reports").insert(row).select("id,account,section,created_at,content");
-    setBusy("");
-    if (saveError || !data?.length) { setError("No se pudo guardar el reporte."); return; }
-    setReports((current) => [data[0], ...current]);
-    setReport({ open: false, account: "", section: "Competencia", content: "" });
-    setMessage("Reporte guardado: el asistente ya lo puede usar.");
-  }
-  async function removeReport(id) {
-    const { error: deleteError } = await supabase.from("ml_competition_reports").delete().eq("id", id);
-    if (!deleteError) setReports((current) => current.filter((item) => item.id !== id));
-  }
-
   return (
     <section className="panel">
       <div className="panel-head">
@@ -231,67 +176,7 @@ export function MercadoLibreSync({ supabase, session }) {
       </div>
       <p className="muted small">"Actualizar todo" hace, para cada cuenta, publicaciones, preguntas, visitas, calidad (que trae si tiene clip) y el resumen (ventas, comisiones y envíos), y después la competencia y las tendencias. Tarda varios minutos: dejá la pestaña abierta. Todos los días se hace solo: de madrugada se revisa el clip de las que no tienen, y antes de las 7 una versión más corta del resto.</p>
       <p className="muted small">Para conectar otra cuenta (por ejemplo FOAM), primero cerrá sesión en Mercado Libre o entrá con esa cuenta; Mercado Libre conecta la que esté abierta.</p>
-      <div className="ml-clips">
-        <button type="button" className="link-button" onClick={() => setClipOpen(!clipOpen)}>{clipOpen ? "Cerrar clips" : "Cargar a mano qué publicaciones tienen clip (respaldo: ya se lee solo de la calidad)"}</button>
-        {clipOpen && (
-          <div className="ml-clips-form">
-            <p className="muted small">Mercado Libre no deja leer los clips desde el CRM. En Mercado Libre → Publicaciones, filtrá Activas y "Sin videos publicados" (o las que tienen), copiá cada página (Ctrl+A, Ctrl+C) y pegalas todas acá, una abajo de la otra. Se reconocen los códigos (#…, MLA…), los links y los títulos.</p>
-            <select value={clipSeller} onChange={(event) => setClipSeller(event.target.value)} aria-label="Cuenta de los clips">
-              <option value="">Cuenta…</option>
-              {(accounts || []).map((account) => <option key={account.seller_id} value={account.seller_id}>{account.nickname}</option>)}
-            </select>
-            <div className="assistant-teach-actions small">
-              <label><input type="radio" checked={clipHas} onChange={() => setClipHas(true)} /> Pegué las que <strong>tienen</strong> clip</label>
-              <label><input type="radio" checked={!clipHas} onChange={() => setClipHas(false)} /> Pegué las que <strong>no tienen</strong> clip</label>
-            </div>
-            <textarea rows={6} value={clipText} onChange={(event) => setClipText(event.target.value)} placeholder={"https://articulo.mercadolibre.com.ar/MLA-3218666158-…\nMLA2212937382\nResina Epoxi Poxiplast 750gr…"} />
-            <label className="small"><input type="checkbox" checked={clipComplete} onChange={(event) => setClipComplete(event.target.checked)} /> Es la lista completa de esta cuenta (las demás activas de la cuenta quedan al revés)</label>
-            <button type="button" className="primary" disabled={!clipText.trim() || !clipSeller || Boolean(busy)} onClick={saveClips}>{busy === "clips" ? "Guardando…" : "Guardar clips"}</button>
-          </div>
-        )}
-      </div>
-      <div className="ml-clips">
-        <button type="button" className="link-button" onClick={() => setReport((current) => ({ ...current, open: !current.open }))}>{report.open ? "Cerrar" : "Pegar un reporte de competencia de Mercado Libre"}</button>
-        {report.open && (
-          <div className="ml-clips-form">
-            <p className="muted small">Mercado Libre no entrega la competencia por la API. Abrí Métricas → Competencia (o mejores vendedores) en la cuenta, seleccioná todo (Ctrl+A), copiá (Ctrl+C) y pegalo acá. Queda guardado con la fecha y el asistente lo usa para responder.</p>
-            <div className="assistant-teach-actions">
-              <select value={report.account} onChange={(event) => setReport((current) => ({ ...current, account: event.target.value }))} aria-label="Cuenta">
-                <option value="">Cuenta…</option>
-                {(accounts || []).map((account) => <option key={account.seller_id} value={account.nickname}>{account.nickname}</option>)}
-              </select>
-              <select value={report.section} onChange={(event) => setReport((current) => ({ ...current, section: event.target.value }))} aria-label="Sección">
-                {["Competencia", "Mejores vendedores", "Métricas del negocio", "Otro"].map((name) => <option key={name}>{name}</option>)}
-              </select>
-            </div>
-            <textarea rows={8} value={report.content} onChange={(event) => setReport((current) => ({ ...current, content: event.target.value }))} placeholder="Pegá acá lo que copiaste de Mercado Libre" />
-            <button type="button" className="primary" disabled={!report.content.trim() || Boolean(busy)} onClick={saveReport}>{busy === "report" ? "Guardando…" : "Guardar reporte"}</button>
-          </div>
-        )}
-        {reports.length > 0 && (
-          <ul className="assistant-rivals">
-            {reports.map((item) => <li key={item.id} className="small">{new Date(item.created_at).toLocaleDateString("es-AR")} · {item.section}{item.account ? ` · ${item.account}` : ""} · {item.content.length.toLocaleString("es-AR")} caracteres <button type="button" className="link-button" onClick={() => removeReport(item.id)}>Borrar</button></li>)}
-          </ul>
-        )}
-      </div>
-      <div className="ml-clips">
-        <button type="button" className="link-button" onClick={() => setLabelsProbe((current) => ({ ...current, open: !current.open }))}>{labelsProbe.open ? "Cerrar prueba de etiquetas" : "Prueba temporal: etiquetas y envíos"}</button>
-        {labelsProbe.open && (
-          <div className="ml-clips-form">
-            <p className="muted small">Busca un envío en cada cuenta y muestra qué devuelve Mercado Libre (estado, tipo, productos, historial). Solo lee y no muestra datos del comprador. El número de envío es el que trae el código de barras de la etiqueta.</p>
-            <input value={labelsProbe.shipmentId} onChange={(event) => setLabelsProbe((current) => ({ ...current, shipmentId: event.target.value }))} placeholder="Número de envío, ej. 48485907441" aria-label="Número de envío" />
-            <button type="button" className="primary" disabled={labelsProbe.busy} onClick={runLabelsProbe}>{labelsProbe.busy ? "Probando…" : "Probar"}</button>
-            {labelsProbe.error && <div className="system-message error">{labelsProbe.error}</div>}
-            {labelsProbe.results && (
-              <ul className="assistant-rivals">
-                {labelsProbe.results.map((row, index) => (
-                  <li key={index} className="small"><strong>{row.ok ? "✔" : "✖"} {row.name}</strong> · {row.status} · {row.detail}{row.sample ? <pre style={{ whiteSpace: "pre-wrap", margin: "4px 0" }}>{JSON.stringify(row.sample, null, 1)}</pre> : null}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-      </div>
+      <p className="muted small">Los clips se leen solos de la calidad de cada publicación y la competencia sale del catálogo (Ventas → Mercado Libre → Mercado). Ya no hace falta pegar nada a mano.</p>
       {message && <div className="system-message">{message}</div>}
       {error && <div className="system-message error">{error}</div>}
       {progress && <p className="muted" role="status">{progress}</p>}

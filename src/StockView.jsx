@@ -77,6 +77,17 @@ export function StockView({ supabase = null, isAdmin = false }) {
     } catch (error) { setCbBusy(`No se pudo: ${error.message}`); }
   };
 
+  const probeCb = async () => {
+    setCbBusy("Leyendo Contabilium… probando de dónde sale el stock por depósito (tarda ~30 s)");
+    try {
+      const response = await adminFetch({ action: "contabilium", op: "stock-probe", company: "POLIPLAST" });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || body.error) { setCbBusy(`No se pudo: ${body.error || `HTTP ${response.status}`}`); return; }
+      const found = (body.results || []).filter((row) => row.status === 200).length;
+      setCbBusy(`Listo: ${found} de ${(body.results || []).length} rutas respondieron. Avisale a Claude que mire el resultado.`);
+    } catch (error) { setCbBusy(`No se pudo: ${error.message}`); }
+  };
+
   const products = useMemo(() => pivotStock(data?.rows || [], cb.map), [data, cb.map]);
   const hasOld = products.some((row) => row.old);
   const shown = useMemo(() => {
@@ -92,6 +103,7 @@ export function StockView({ supabase = null, isAdmin = false }) {
       <div className="panel-head">
         <div><span className="eyebrow">Logística</span><h2>Stock</h2></div>
         {isAdmin ? <button type="button" className="secondary" disabled={Boolean(cbBusy) && cbBusy.startsWith("Leyendo")} onClick={refreshCb}>Traer stock de Contabilium</button> : null}
+        {isAdmin && !cbHasDepots ? <button type="button" className="ghost" disabled={Boolean(cbBusy) && cbBusy.startsWith("Leyendo")} onClick={probeCb}>Probar stock por depósito</button> : null}
       </div>
       <p className="muted small">Una fila por producto. «Conteo» es lo último que contó cada depósito en la app de conteo, por bulto cerrado, tambor o tira (tocá la «i» para ver quién contó y cuándo). Lo dosificado no se resta: sale de un tambor abierto que no se cuenta. «Contabilium» es el stock que figura allá. Si algo no cierra, avisale a Diego. Puede no coincidir con Contabilium: allá descuenta el depósito que se elige al facturar.</p>
       {cbBusy ? <p className="form-notice">{cbBusy}</p> : null}

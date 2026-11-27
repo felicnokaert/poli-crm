@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { Info, Search } from "lucide-react";
-import { readStockFile } from "./contabilium-stock-file.mjs";
 import { contabiliumByCode, countInfo, dosifiedSince, latestCounts, pivotStock, searchStock, stockNow } from "./stock-model.mjs";
 import { adminFetch } from "./admin-api.mjs";
 
@@ -70,28 +69,11 @@ export function StockView({ supabase = null, isAdmin = false }) {
         const response = await adminFetch({ action: "contabilium", op: "stock", company: "POLIPLAST" });
         const body = await response.json().catch(() => ({}));
         if (!response.ok || body.error) { setCbBusy(`No se pudo: ${body.error || `HTTP ${response.status}`}`); return; }
-        setCbBusy(`Leyendo Contabilium… ${body.products} productos`);
+        setCbBusy(`Leyendo Contabilium… ${body.products || 0} productos`);
         if (body.done) break;
       }
       await loadCb();
       setCbBusy("");
-    } catch (error) { setCbBusy(`No se pudo: ${error.message}`); }
-  };
-
-  const uploadCb = async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    setCbBusy(`Leyendo ${file.name}…`);
-    try {
-      const parsed = await readStockFile(file);
-      if (!parsed.products) { setCbBusy("El archivo no trajo productos con stock por depósito."); return; }
-      setCbBusy(`Guardando ${parsed.products} productos…`);
-      const response = await adminFetch({ action: "contabilium", op: "stock-upload", items: parsed.items });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok || body.error) { setCbBusy(`No se pudo: ${body.error || `HTTP ${response.status}`}`); return; }
-      await loadCb();
-      setCbBusy(`Listo: ${body.products} productos de Contabilium con su stock por depósito.`);
     } catch (error) { setCbBusy(`No se pudo: ${error.message}`); }
   };
 
@@ -104,7 +86,10 @@ export function StockView({ supabase = null, isAdmin = false }) {
     return [...rows].sort((a, b) => a.name.localeCompare(b.name, "es"));
   }, [products, query, onlyMissing, showOld]);
   const matched = products.filter((row) => row.cbVd != null || row.cbMdq != null).length;
-  const fullCount = products.filter((row) => row.cbFull || row.cbCarr).length;
+  const cbCompanies = Object.values(cb.detail?.companies || {});
+  const cbAt = cbCompanies.map((company) => company.at).filter(Boolean).sort().pop() || "";
+  const cbDepotNames = [...new Set(cbCompanies.flatMap((company) => company.allDepots || []))];
+  const cbNoDepots = cbCompanies.some((company) => company.at && Array.isArray(company.depots)) && !cbCompanies.some((company) => company.depots?.length);
   const cbHasDepots = [...cb.map.values()].some((item) => item.vd != null || item.mdq != null);
 
   return (
@@ -112,12 +97,10 @@ export function StockView({ supabase = null, isAdmin = false }) {
       <div className="panel-head">
         <div><span className="eyebrow">Logística</span><h2>Stock</h2></div>
         {isAdmin ? <button type="button" className="secondary" disabled={Boolean(cbBusy) && cbBusy.startsWith("Leyendo")} onClick={refreshCb}>Traer stock de Contabilium</button> : null}
-        {isAdmin ? <label className="secondary stock-upload" title="Contabilium → Reportes → Productos → Stock → botón de descarga">Subir Excel de stock de Contabilium<input type="file" accept=".xlsx,.csv" hidden onChange={uploadCb} /></label> : null}
       </div>
       <p className="muted small">Una fila por producto. «Conteo» es lo último que contó cada depósito en la app de conteo, por bulto cerrado, tambor o tira (tocá la «i» para ver quién contó y cuándo). Lo dosificado no se resta: sale de un tambor abierto que no se cuenta. «Contabilium» es el stock que figura allá. Si algo no cierra, avisale a Diego. Puede no coincidir con Contabilium: allá descuenta el depósito que se elige al facturar.</p>
       {cbBusy ? <p className="form-notice">{cbBusy}</p> : null}
-      {cb.loaded && !cbHasDepots ? <p className="muted small">La API de Contabilium no da el stock por depósito. Para verlo: en Contabilium, Reportes → Productos → Stock → botón de descarga, y subí ese archivo con «Subir Excel de stock de Contabilium».</p> : null}
-      {cb.detail?.excel?.at ? <p className="muted small">Stock de Contabilium por depósito: Excel subido el {new Date(cb.detail.excel.at).toLocaleString("es-AR")}{cb.detail.excel.by ? ` por ${cb.detail.excel.by.split("@")[0]}` : ""} · {matched} de {products.length} productos contados lo encontraron por código.{fullCount ? ` ${fullCount} tienen stock en Full o Carrozados (no figura en estas columnas).` : ""}</p> : null}
+      {cb.loaded ? <p className="muted small">{cbHasDepots ? `Stock de Contabilium (Villa Domínico y Mar del Plata) actualizado ${cbAt ? new Date(cbAt).toLocaleString("es-AR") : ""}: se sincroniza solo 3 veces por día. ${matched} de ${products.length} productos contados lo encontraron por código.` : cbNoDepots ? `Contabilium no le muestra los depósitos al usuario de la API${cbDepotNames.length ? ` (ve: ${cbDepotNames.join(", ")})` : ""}: hay que darle acceso a Villa Domínico y Mar del Plata en Contabilium.` : "Contabilium: falta la primera sincronización del stock por depósito (tocá «Traer stock de Contabilium» o esperá la automática)."}</p> : null}
       <div className="list-toolbar">
         <label className="search"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar producto o SKU (ej. 618, iso, balde)" aria-label="Buscar en el stock" /></label>
         <label className="small"><input type="checkbox" checked={onlyMissing} onChange={(event) => setOnlyMissing(event.target.checked)} /> Solo sin stock o con poco</label>

@@ -10,6 +10,7 @@ export const MODULES = [
   { id: 'sales', label: 'Ventas' },
   { id: 'quoter', label: 'Cotizador' },
   { id: 'entregas', label: 'Entregas' },
+  { id: 'stock', label: 'Stock' },
   { id: 'prospecting', label: 'Prospección' },
   { id: 'conversations', label: 'Historial' },
   { id: 'mejoras', label: 'Centro de mejoras' },

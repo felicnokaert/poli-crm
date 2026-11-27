@@ -112,6 +112,7 @@ import { useInboxActions } from "./hooks/useInboxActions";
 import { useRapypClients } from "./hooks/useRapypClients";
 import { useClientActions } from "./hooks/useClientActions";
 import { AppSidebar, NAV_ITEMS } from "./AppSidebar.jsx";
+import { StockView } from "./StockView.jsx";
 import { canSee as canSeeModule, firstAllowedView } from "./module-access.mjs";
 import { useModuleAccess } from "./hooks/useModuleAccess.js";
 import { AppTopbar } from "./AppTopbar.jsx";
@@ -145,7 +146,7 @@ function loadState() {
 }
 
 const VIEW_KEY = "poliplast-current-view";
-const SAVED_VIEWS = new Set(["dashboard", "conversations", "inbox", "tasks", "sales", "clients", "prospecting", "mercadolibre", "shopify", "mejoras", "productos", "academy", "quoter", "entregas", "map", "techdocs", "profile", "settings"]);
+const SAVED_VIEWS = new Set(["dashboard", "conversations", "inbox", "tasks", "sales", "clients", "prospecting", "mercadolibre", "shopify", "mejoras", "productos", "academy", "quoter", "entregas", "stock", "map", "techdocs", "profile", "settings"]);
 function readSavedView() {
   try {
     const saved = sessionStorage.getItem(VIEW_KEY);
@@ -922,6 +923,7 @@ export default function App() {
             />
           </Suspense>
         )}
+        {view === "stock" && <StockView />}
         {view === "quoter" && (
           <Suspense fallback={<Splash text="Cargando cotizador…" />}>
             <CotizadorFrame session={session} client={quoterClient} />

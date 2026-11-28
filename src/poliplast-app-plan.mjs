@@ -39,7 +39,7 @@ export const SUBMODULES = {
 
 // Módulos que todavía no existen dentro de la app: se muestran como «próximamente».
 export const FUTURE_MODULES = {
-  // 28/11: Etiquetas, Conteo y Dosificado ya no son «próximamente»: son la app de conteo real (ConteoMaqueta, /conteo-app/).
+  // 28/11: Etiquetas, Conteo y Dosificado ya no son «próximamente»: son pantallas nativas de la app (src/logistica/).
   recibos: {
     label: 'Recibos',
     status: 'Ya funciona en su propia app (Poli-Recibos)',

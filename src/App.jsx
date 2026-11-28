@@ -50,6 +50,7 @@ const TechnicalDocumentsAdmin = lazyNamed(() => import("./TechnicalDocuments"), 
 const MapaCobertura = lazyNamed(() => import("./MapaCobertura"), "MapaCobertura");
 const CotizadorFrame = lazyNamed(() => import("./CotizadorFrame"), "CotizadorFrame");
 const EntregasFrame = lazyNamed(() => import("./EntregasFrame"), "EntregasFrame");
+const LOGISTICS_NATIVE = new Set(["dosificado", "conteo", "etiquetas"]);
 const EntregasNativa = lazyNamed(() => import("./EntregasNativa"), "default");
 const DosificadoNativo = lazyNamed(() => import("./logistica/LogisticaNativo.jsx"), "DosificadoNativo");
 const ConteoNativo = lazyNamed(() => import("./logistica/LogisticaNativo.jsx"), "ConteoNativo");
@@ -132,7 +133,7 @@ import { NotificationBell } from "./NotificationBell.jsx";
 import { buildNotifications } from "./notifications.mjs";
 import { useOpsAlerts } from "./hooks/useOpsAlerts.js";
 import { adminFetch } from "./admin-api.mjs";
-import { CONTEO_MODULES, ConteoMaqueta, EntregasEmbed } from "./MaquetaFrame.jsx";
+import { EntregasEmbed } from "./MaquetaFrame.jsx";
 import { ExpeditionChip, ExpeditionGate, readExpeditionWho, saveExpeditionWho, useExpeditionOperators } from "./ExpeditionGate.jsx";
 import { AppPlanOverview, ModulePreview } from "./ModulePreview.jsx";
 import { isDemoMode, isPreviewSite, withDemoData } from "./demo-mode.mjs";
@@ -820,14 +821,11 @@ export default function App() {
         {isExpedition && !expeditionWho ? <ExpeditionGate operators={expeditionOperators} onPick={setExpeditionWho} /> : (
         <ErrorBoundary key={view} view={view}>
         <div className={previewSite ? "view-enter" : undefined}>
-        {/* 28/11 (Logística): Etiquetas, Conteo y Dosificado son la app de conteo REAL en /conteo-app/ (mismo origen, datos
-            reales); en el link de prueba sigue la maqueta (/conteo-maqueta/: datos inventados, no escribe nada de verdad). */}
-        {/* 28/11 (Felipe: «una sola app»): Dosificado ya es una pantalla propia; Etiquetas y Conteo siguen con el puente hasta pasarlos. */}
+        {/* 28/11 (Felipe: «una sola app»): Dosificado, Conteo y Etiquetas son pantallas propias de la app (sin iframe). */}
         {view === "dosificado" && <Suspense fallback={<Splash text="Cargando dosificado…" />}><DosificadoNativo access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} /></Suspense>}
         {view === "conteo" && <Suspense fallback={<Splash text="Cargando conteo…" />}><ConteoNativo access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} /></Suspense>}
         {view === "etiquetas" && <Suspense fallback={<Splash text="Cargando etiquetas…" />}><EtiquetasNativa access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} /></Suspense>}
-        {CONTEO_MODULES[view] && view !== "dosificado" && view !== "conteo" && view !== "etiquetas" && <ConteoMaqueta key={view} module={view} base={previewSite ? "/conteo-maqueta/" : "/conteo-app/"} access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} />}
-        {FUTURE_MODULES[view] && !CONTEO_MODULES[view] && (demo ? <DemoModule key={view} id={view} access={previewAccess} /> : <ModulePreview id={view} />)}
+        {FUTURE_MODULES[view] && !LOGISTICS_NATIVE.has(view) && (demo ? <DemoModule key={view} id={view} access={previewAccess} /> : <ModulePreview id={view} />)}
         {view === "avisos" && isAdminUser && <AppReports online={Boolean(onlineConfigured && session)} />}
         {view === "team" && isAdminUser && <TeamAccess team={team} onChange={teamStore.save} rolesTable={teamStore.rolesTable} status={teamStore.status} groups={NAV_GROUPS} onViewAs={(person) => pickPreviewRole(`person:${person.email}`)} />}
         {view === "plan" && <AppPlanOverview groups={NAV_GROUPS} role={previewRole} onRole={pickPreviewRole} onResetDemo={demo ? () => { if (window.confirm("¿Volver a cargar los datos de prueba? Se pierde lo que tocaste en la prueba.")) { setData((current) => withDemoData(current, { force: true })); } } : null} />}

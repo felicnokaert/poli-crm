@@ -16,10 +16,10 @@ export function pinToggle(value, id) {
   const pins = value.pins || [];
   return { ...value, pins: pins.includes(id) ? pins.filter((item) => item !== id) : [...pins, id].slice(-QUICK_MAX) };
 }
-// Fijadas primero; después las más usadas (al menos 3 veces), sin Inicio (ya está arriba); solo las permitidas.
+// Fijadas primero; después las más usadas (al menos 2 veces), sin Inicio (ya está arriba); solo las permitidas.
 export function quickAccessIds(value, allowedIds = []) {
   const allowed = new Set(allowedIds);
   const pins = (value.pins || []).filter((id) => allowed.has(id));
-  const used = Object.entries(value.uses || {}).filter(([id, count]) => allowed.has(id) && id !== 'dashboard' && count >= 3 && !pins.includes(id)).sort((a, b) => b[1] - a[1]).map(([id]) => id);
+  const used = Object.entries(value.uses || {}).filter(([id, count]) => allowed.has(id) && id !== 'dashboard' && count >= 2 && !pins.includes(id)).sort((a, b) => b[1] - a[1]).map(([id]) => id);
   return [...pins, ...used].slice(0, QUICK_MAX);
 }

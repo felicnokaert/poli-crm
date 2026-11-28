@@ -74,7 +74,8 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
   // Inicio queda primero, arriba de Acceso rápido.
   const soloGroups = baseGroups.filter(([name]) => SOLO_GROUPS.includes(name));
   const restGroups = baseGroups.filter(([name]) => !SOLO_GROUPS.includes(name));
-  const groups = [...soloGroups, ...(quickItems.length ? [["Acceso rápido", quickItems]] : []), ...restGroups];
+  // 28/11 (Felipe: «recordá lo de acceso rápido»): el grupo se ve siempre; vacío, explica cómo fijar.
+  const groups = [...soloGroups, ...(quickItems.length || !mini ? [["Acceso rápido", quickItems]] : []), ...restGroups];
   const togglePin = (id) => setQuick((current) => { const next = pinToggle(current, id); saveQuick(next); return next; });
   useEffect(() => { if (view && view !== "plan") setQuick((current) => { const next = countUse(current, view); saveQuick(next); return next; }); }, [view]);
   const [sheet, setSheet] = useState(false);
@@ -157,6 +158,9 @@ export function AppSidebar({ view, onSelect, collapsedNavGroups, setCollapsedNav
               {group}
               {collapsed && <span className="nav-group-count">{items.length}</span>}
             </button>}
+            {!collapsed && group === "Acceso rápido" && items.length === 0 && (
+              <p className="nav-hint">Tocá la <Star size={11} /> de cualquier pantalla para fijarla acá. Lo que más usás aparece solo.</p>
+            )}
             {!collapsed &&
               items.map(([id, label, Icon]) => (
                 <button

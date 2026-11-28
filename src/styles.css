@@ -2131,3 +2131,8 @@ th.nowrap, td.nowrap { white-space: nowrap; }
 .logistics-tile-text strong { font-size: 15px; color: var(--color-text-dark); }
 .logistics-tile-text small { color: var(--color-text-gray); font-size: 12.5px; line-height: 1.35; }
 @media (prefers-reduced-motion: reduce) { .logistics-tile { transition: none; } .logistics-tile:hover { transform: none; } }
+
+/* Acceso rápido vacío: cómo fijar (28/11). La estrella se ve tenue siempre, no solo al pasar el mouse. */
+.nav-hint { margin: 2px 12px 8px; font-size: 11.5px; line-height: 1.35; color: #9a9a9f; }
+.nav-hint svg { vertical-align: -1px; color: #fbbf24; }
+@media (hover: hover) { .sidebar nav button .nav-pin { opacity: .28; } .sidebar nav button:hover .nav-pin, .nav-pin.is-pinned { opacity: 1; } }

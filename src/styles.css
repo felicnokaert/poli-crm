@@ -2209,3 +2209,15 @@ th.nowrap, td.nowrap { white-space: nowrap; }
   .topbar > div:first-child { flex: 1 1 auto; min-width: 0; }
   .topbar .top-actions { flex: 0 0 auto; }
 }
+
+/* 28/11: paginador común (src/Pager.jsx) */
+.pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-top: 12px; }
+.pager-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.pager-btn { min-width: 34px; height: 34px; padding: 0 8px; border-radius: 9px; border: 1px solid #dfe5e1; background: var(--color-white); color: var(--color-text-body); font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.pager-btn:hover:not(:disabled) { border-color: var(--brand-red, #ed1c24); color: var(--brand-red, #ed1c24); }
+.pager-btn.is-current { background: var(--brand-red, #ed1c24); border-color: var(--brand-red, #ed1c24); color: #fff; }
+.pager-btn:disabled { opacity: .4; cursor: default; }
+.pager-gap { padding: 0 4px; color: var(--color-text-gray); }
+@media (max-width: 640px) { .pager { justify-content: center; } .pager-info { width: 100%; text-align: center; } }
+/* 28/11: en modo compacto el ícono de las tarjetas de ML/Shopify quedaba de 5 px (17 px de caja con 12 px de relleno). */
+.app-shell.densa .ml-board .metric-card > svg { width: 28px; height: 28px; padding: 5px; }

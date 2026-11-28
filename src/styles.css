@@ -1680,6 +1680,21 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
   .stock-row > span:first-child { grid-column: 1 / -1; }
   .stock-row > [data-label]::before { content: attr(data-label); display: block; font-size: 11px; color: var(--color-text-gray); }
 }
+/* Hoja completa (28/11): 9 columnas que se ordenan tocando el título, filtros y páginas de 30. */
+.stock-row.stock-row-sheet { grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr) minmax(0, .9fr) repeat(4, minmax(0, 1fr)) 72px 96px; }
+.stock-row.stock-row-review { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.2fr) repeat(2, minmax(0, 1fr)); }
+.stock-sort { all: unset; cursor: pointer; font: inherit; text-transform: inherit; letter-spacing: inherit; color: inherit; }
+.stock-sort:hover, .stock-sort:focus-visible { color: var(--brand-red); }
+.stock-filters { flex-wrap: wrap; gap: 8px; }
+.stock-filters select { min-width: 0; max-width: 100%; }
+.stock-sort-select { display: none; }
+.stock-pager { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.stock-pager .secondary { display: inline-flex; align-items: center; gap: 4px; }
+@media (max-width: 760px) {
+  .stock-row.stock-row-sheet, .stock-row.stock-row-review { grid-template-columns: 1fr 1fr; }
+  .stock-sort-select { display: block; }
+  .stock-filters > * { flex: 1 1 100%; }
+}
 
 
 /* Calendario único (26/11): capas compartidas (feriados, entregas, cortes) y lo personal. */

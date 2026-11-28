@@ -2,7 +2,7 @@
 import { ApiError, type Api } from './api'
 
 export const AVISO_SOLO_LECTURA = 'Modo prueba: no se guarda.'
-const ESCRITURAS = ['guardarExpreso', 'guardarConfig', 'asignarRol', 'crearPedido', 'cambiarEstado', 'editarPedido', 'comentar', 'subirArchivo', 'borrarArchivo'] as const
+const ESCRITURAS = ['guardarExpreso', 'guardarConfig', 'asignarRol', 'crearPedido', 'cambiarEstado', 'editarPedido', 'comentar', 'subirArchivo', 'borrarArchivo', 'marcarPasoShopify'] as const
 
 export function soloLectura(base: Api): Api {
   const frenada = { ...base } as Api

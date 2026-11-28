@@ -4,7 +4,7 @@ import { sha256Hex } from './hash'
 import { comprimirFoto } from './comprimirFoto'
 import { avisarSinSesionAlCrm, isEmbeddedInCrm } from './embed'
 import { headerDeposito, headerOperador } from './operador'
-import { CONFIG_DEFAULT, type Archivo, type Config, type Evento, type Expreso, type Pedido, type Rol, type RolAsignado, type Usuario } from './types'
+import { CONFIG_DEFAULT, type Archivo, type Config, type Evento, type Expreso, type Pedido, type PedidoShopify, type Rol, type RolAsignado, type Usuario } from './types'
 
 const BUCKET = 'entregas'
 
@@ -287,6 +287,21 @@ async function usuarioActualLento(): Promise<Usuario | null> {
       return (data ?? []) as Evento[]
     },
 
+    async pedidosShopify() {
+      const desde = new Date(Date.now() - 60 * 86_400_000).toISOString()
+      const { data, error } = await sb.from('shopify_pedidos').select('id,name,created_at,total,currency,delivery,shipping_title,items,cliente,cancelado,factura_at,remito_at,produccion_at,pasos_por')
+        .is('remito_at', null).eq('cancelado', false).gte('created_at', desde).order('created_at', { ascending: true }).limit(50)
+      if (error) lanzar(error)
+      return (data ?? []) as PedidoShopify[]
+    },
+
+    async marcarPasoShopify(id, paso, hecho) {
+      const { data: sesion } = await sb.auth.getUser()
+      const quien = sesion?.user?.email ?? null
+      const { error } = await sb.from('shopify_pedidos').update({ [`${paso}_at`]: hecho ? new Date().toISOString() : null, pasos_por: quien }).eq('id', id)
+      if (error) lanzar(error)
+    },
+
     escuchar(cb) {
       let timer: ReturnType<typeof setTimeout> | undefined
       const avisar = () => {
@@ -297,6 +312,7 @@ async function usuarioActualLento(): Promise<Usuario | null> {
         .channel(`entregas-${Math.random().toString(36).slice(2)}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'entregas_pedidos' }, avisar)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'entregas_eventos' }, avisar)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'shopify_pedidos' }, avisar)
         .subscribe()
       return () => {
         clearTimeout(timer)

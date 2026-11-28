@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
+  "git": { "deploymentEnabled": { "@(!(main|poliplast-app))": false, "*/**": false } },
   "cleanUrls": true,
   "crons": [
     { "path": "/api/cron-daily-maintenance", "schedule": "0 6 * * *" },
@@ -79,7 +80,8 @@
     { "source": "/api/etiquetas/:route", "destination": "/api/admin-users?etiquetas=:route" },
     { "source": "/api/dolar", "destination": "/api/admin-users?dolar=1" },
     { "source": "/api/feriados/:year", "destination": "/api/admin-users?feriados=:year" },
-    { "source": "/api/gmail-callback", "destination": "/api/admin-users?gmail=callback" }
+    { "source": "/api/gmail-callback", "destination": "/api/admin-users?gmail=callback" },
+    { "source": "/api/shopify-webhook", "destination": "/api/whatsapp-webhook?shopify=1" }
   ],
   "headers": [
     {

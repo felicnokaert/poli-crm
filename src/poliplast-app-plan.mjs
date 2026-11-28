@@ -39,21 +39,7 @@ export const SUBMODULES = {
 
 // Módulos que todavía no existen dentro de la app: se muestran como «próximamente».
 export const FUTURE_MODULES = {
-  etiquetas: {
-    label: 'Etiquetas',
-    status: 'Hoy está en la app de conteo',
-    text: 'Control de etiquetas de Mercado Libre: se escanea cada etiqueta al preparar, avisa si se repite o si el envío se canceló, y muestra lo pendiente por corte (8, 10 y 12).',
-  },
-  conteo: {
-    label: 'Conteo',
-    status: 'Hoy está en la app de conteo',
-    text: 'Conteo de stock del depósito con el celular, diferencias contra lo esperado e historial de cada conteo.',
-  },
-  dosificado: {
-    label: 'Dosificado',
-    status: 'Hoy está en la app de conteo',
-    text: 'Poliol e isocianato fraccionados por kilo: qué hay que dosificar, con qué fórmula y quién lo hizo.',
-  },
+  // 28/11: Etiquetas, Conteo y Dosificado ya no son «próximamente»: son la app de conteo real (ConteoMaqueta, /conteo-app/).
   recibos: {
     label: 'Recibos',
     status: 'Ya funciona en su propia app (Poli-Recibos)',

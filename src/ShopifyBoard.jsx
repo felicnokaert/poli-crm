@@ -1,3 +1,4 @@
+import { Pager, usePaged } from "./Pager.jsx";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, ExternalLink, Layers, PackageCheck, RefreshCw, ShoppingBag, TriangleAlert, Truck, Wallet } from "lucide-react";
 import { adminFetch } from "./admin-api.mjs";
@@ -119,6 +120,7 @@ function Products({ rows, issue, setIssue }) {
   const [stock, setStock] = useState("");
   const options = useMemo(() => facets(rows), [rows]);
   const shown = useMemo(() => filterRows(rows, { status, issue, query, sort, vendor, type, stock }), [rows, status, issue, query, sort, vendor, type, stock]);
+  const paged = usePaged(shown, 25, [status, issue, query, sort, vendor, type, stock].join("|"));
   return (
     <section className="panel">
       <div className="panel-head">
@@ -141,7 +143,7 @@ function Products({ rows, issue, setIssue }) {
       {shown.length === 0 ? <p className="muted">No hay productos con ese filtro.</p> : (
         <div className="table-scroll"><table className="sales-history-table ml-board-table">
           <thead><tr><th>Producto</th><th>Estado</th><th>Variantes</th><th>Precio</th><th>Stock</th><th>Problemas</th></tr></thead>
-          <tbody>{shown.slice(0, 300).map((row) => {
+          <tbody>{paged.rows.map((row) => {
             const [label, tone] = SHOPIFY_STATUS[row.product.status] || [statusLabel(row.product.status), ""];
             return (
               <tr key={row.product.id}>
@@ -156,7 +158,7 @@ function Products({ rows, issue, setIssue }) {
           })}</tbody>
         </table></div>
       )}
-      {shown.length > 300 && <p className="muted small">Se muestran los primeros 300; usá el buscador o los filtros.</p>}
+      <Pager paged={paged} label="productos" />
     </section>
   );
 }
@@ -173,6 +175,7 @@ function downloadText(name, text) {
 function Organize({ products, variants, session }) {
   const proposals = useMemo(() => groupProposals(products, variants), [products, variants]);
   const [open, setOpen] = useState("");
+  const paged = usePaged(proposals, 10, proposals.length);
   if (proposals.length === 0) return <Empty title="Nada para agrupar" text="No hay productos que parezcan el mismo con distinto tamaño, color o presentación." />;
   const saved = proposals.reduce((total, item) => total + item.products.length - 1, 0);
   return (
@@ -180,7 +183,7 @@ function Organize({ products, variants, session }) {
       <p className="muted small">Propuesta: {proposals.length} grupos que juntarían {proposals.reduce((total, item) => total + item.products.length, 0)} productos en {proposals.length} (quedan {saved} menos). Nada se cambia solo: cada grupo tiene un botón que lo crea como BORRADOR (sin tocar los originales; necesita el permiso write_products de la app). Revisá cada grupo: si dos productos distintos quedaron juntos, es un error de la propuesta.</p>
       <p className="muted small"><strong>Orden para ejecutar:</strong> 1) corregir los SKU repetidos, 2) fusionar un grupo por vez (el stock 999 es a propósito: se mantiene), 3) crear redirecciones 301 de los productos que desaparecen y revisar qué links de Mercado Libre o Instagram apuntaban a ellos. Si hay más de 3 opciones, la propuesta ya parte el grupo en varios productos (por capacidad y por línea).</p>
       <button type="button" className="ghost" onClick={() => downloadText(`shopify-agrupar-${argentinaToday()}.csv`, proposalsCsv(proposals))}>Descargar propuesta (CSV)</button>
-      {proposals.map((item) => (
+      {paged.rows.map((item) => (
         <section key={item.key} className="panel">
           <button type="button" className="proposal-head" aria-expanded={open === item.key} onClick={() => setOpen(open === item.key ? "" : item.key)}>
             {open === item.key ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" />}
@@ -198,6 +201,7 @@ function Organize({ products, variants, session }) {
           )}
         </section>
       ))}
+      <Pager paged={paged} label="grupos" />
     </div>
   );
 }
@@ -260,6 +264,7 @@ function Prices({ products, variants, mlItems }) {
   const [query, setQuery] = useState("");
   const [activeOnly, setActiveOnly] = useState(true);
   const shown = useMemo(() => filterPriceRows(rows, { state, query, activeOnly }), [rows, state, query, activeOnly]);
+  const paged = usePaged(shown, 25, [state, query, activeOnly].join("|"));
   if (!mlItems.length) return <Empty title="Faltan las publicaciones de Mercado Libre" text="Para cruzar precios hace falta tener copiadas las publicaciones de Mercado Libre (Más → Datos → Mercado Libre → Actualizar todo)." />;
   const pct = (value) => (value == null ? "—" : `${value > 0 ? "+" : ""}${Math.round(value * 100)} %`);
   const chips = [["", "Todas"], ["alinear_bajar", "Para bajar"], ["alinear_subir", "Para subir"], ["ok", "Dentro de la regla"], ["revisar", "Revisar"], ["ml_inactiva", "ML inactiva"], ["sin_ml", "Sin ML"], ["sin_sku", "Sin SKU"], ["sin_precio", "Sin precio"]];
@@ -287,7 +292,7 @@ function Prices({ products, variants, mlItems }) {
         {shown.length === 0 ? <Empty title="Nada para mostrar" text="Probá con otro filtro." /> : (
           <div className="table-scroll"><table className="sales-history-table ml-board-table">
             <thead><tr><th>Producto</th><th>Estado</th><th>Shopify</th><th>ML</th><th>Objetivo</th><th>Dif.</th><th>Propuesta</th></tr></thead>
-            <tbody>{shown.slice(0, 300).map((row) => {
+            <tbody>{paged.rows.map((row) => {
               const [label, tone] = PRICE_STATES[row.state];
               return (
                 <tr key={row.variantId}>
@@ -303,7 +308,7 @@ function Prices({ products, variants, mlItems }) {
             })}</tbody>
           </table></div>
         )}
-        {shown.length > 300 && <p className="muted small">Se muestran las primeras 300; usá los filtros o descargá el CSV.</p>}
+        <Pager paged={paged} label="variantes" />
       </section>
     </div>
   );
@@ -331,6 +336,16 @@ function Missing({ supabase, products, variants, session }) {
     try { await callShopify({ op: "missing-decision", skus: [sku], state, note }, session); }
     catch (error) { setDecisions(before); setDecideError(error.message); }
   };
+  // 28/11: los «casi iguales» (mismo producto con otro formato de SKU) se marcan todos juntos como «Ya existe».
+  const decideMany = async (skus, state, note = "") => {
+    if (!skus.length) return;
+    const before = decisions;
+    setDecideError("");
+    const at = new Date().toISOString();
+    setDecisions((current) => ({ ...current, ...Object.fromEntries(skus.map((sku) => [sku, { state, note, at }])) }));
+    try { for (let index = 0; index < skus.length; index += 100) await callShopify({ op: "missing-decision", skus: skus.slice(index, index + 100), state, note }, session); }
+    catch (error) { setDecisions(before); setDecideError(error.message); }
+  };
   useEffect(() => {
     let alive = true;
     readAll(() => supabase.from("ml_items").select("id,sku,title,status,price,sold_quantity,visits_30d,pictures_count,available_quantity,description,attributes,picture_url,thumbnail,permalink").eq("status", "active").order("id"))
@@ -341,6 +356,7 @@ function Missing({ supabase, products, variants, session }) {
   const result = useMemo(() => missingFromShopify({ products, variants, mlItems: full.items }), [products, variants, full.items]);
   const shown = useMemo(() => filterMissing(result.rows, { query, view, decisions }), [result.rows, query, view, decisions]);
   const cleanup = useMemo(() => skuCleanup(full.items), [full.items]);
+  const paged = usePaged(shown, 25, [query, view].join("|"));
   if (full.status === "loading") return <div className="ml-skeleton" aria-busy="true"><i /><i /><i /></div>;
   if (full.status === "error") return <Empty title="No se pudieron leer las publicaciones de Mercado Libre" text={full.error} />;
   if (!full.items.length) return <Empty title="Faltan las publicaciones de Mercado Libre" text="Más → Datos → Mercado Libre → Actualizar todo." />;
@@ -368,16 +384,25 @@ function Missing({ supabase, products, variants, session }) {
           <button type="button" className="ghost" onClick={() => downloadText(`shopify-borradores-${argentinaToday()}.csv`, shopifyImportCsv(shown))}>CSV para importar como borrador</button>
           <button type="button" className="ghost" onClick={() => downloadText(`faltan-en-shopify-${argentinaToday()}.csv`, missingReviewCsv(shown))}>Hoja de revisión (todo lo sugerido)</button>
         </div>
+        {view === "dudosos" && (() => {
+          const twins = shown.filter((row) => row.twin);
+          return twins.length > 0 && (
+            <div className="ml-toolbar">
+              <span className="muted small">{twins.length} tienen un SKU casi igual a uno de la tienda (por ejemplo PS-EMPU46M-1 y PS-EMPU46MSP-1): casi seguro ya están cargados.</span>
+              <button type="button" className="secondary" onClick={() => { if (window.confirm(`Se marcan ${twins.length} como «Ya existe en la tienda». Salen de la lista y no se crean. Se puede deshacer desde «Decididos». ¿Seguimos?`)) decideMany(twins.map((row) => row.sku), "existe", "SKU casi igual"); }}>Marcar los {twins.length} casi iguales como «Ya existe»</button>
+            </div>
+          );
+        })()}
         {decideError && <p className="system-message" role="alert">No se pudo guardar la decisión: {decideError}</p>}
         {shown.length === 0 ? <Empty title="Nada para mostrar" text="Probá con otro filtro." /> : (
           <div className="table-scroll"><table className="sales-history-table ml-board-table">
             <thead><tr><th>Producto en ML</th><th>Vendidas</th><th>Visitas 30 d</th><th>Precio ML</th><th>Shopify sugerido</th><th>Qué hacer</th></tr></thead>
-            <tbody>{shown.slice(0, 200).map((row) => (
+            <tbody>{paged.rows.map((row) => (
               <FragmentRow key={row.sku} row={row} decision={decisions[row.sku]} onDecide={(state, note) => decide(row.sku, state, note)} open={open === row.sku} toggle={() => setOpen(open === row.sku ? "" : row.sku)} />
             ))}</tbody>
           </table></div>
         )}
-        {shown.length > 200 && <p className="muted small">Se muestran los primeros 200; usá los filtros o descargá el CSV.</p>}
+        <Pager paged={paged} label="productos" />
       </section>
       {(cleanup.similar.length > 0 || cleanup.suggestions.length > 0) && (
         <section className="panel">

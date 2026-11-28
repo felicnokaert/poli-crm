@@ -2210,6 +2210,7 @@ th.nowrap, td.nowrap { white-space: nowrap; }
   .topbar .top-actions { flex: 0 0 auto; }
 }
 
+<<<<<<< HEAD
 /* Recibos (28/11): accesos a PoliRecibos */
 .recibos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 12px; }
 .recibos-card { display: grid; gap: 4px; padding: 12px 14px; border: 1px solid var(--color-border, #e3e3e5); border-radius: 12px; background: var(--color-bg-soft, #f6f6f7); color: inherit; text-decoration: none; transition: border-color .15s ease, transform .15s ease; }
@@ -2223,3 +2224,19 @@ th.nowrap, td.nowrap { white-space: nowrap; }
 .stock-badge.is-none { background: #fbe7e3; color: #a33a2f; }
 :root[data-theme="dark"] .stock-badge.is-ok { background: #1d3a2b; color: #8fd4ad; }
 :root[data-theme="dark"] .stock-badge.is-none { background: #3e2220; color: #f0a59b; }
+=======
+/* 28/11: paginador común (src/Pager.jsx) */
+.pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-top: 12px; }
+.pager-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.pager-btn { min-width: 34px; height: 34px; padding: 0 8px; border-radius: 9px; border: 1px solid #dfe5e1; background: var(--color-white); color: var(--color-text-body); font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.pager-btn:hover:not(:disabled) { border-color: var(--brand-red, #ed1c24); color: var(--brand-red, #ed1c24); }
+.pager-btn.is-current { background: var(--brand-red, #ed1c24); border-color: var(--brand-red, #ed1c24); color: #fff; }
+.pager-btn:disabled { opacity: .4; cursor: default; }
+.pager-gap { padding: 0 4px; color: var(--color-text-gray); }
+@media (max-width: 640px) { .pager { justify-content: center; } .pager-info { width: 100%; text-align: center; } }
+/* 28/11: en modo compacto el ícono de las tarjetas de ML/Shopify quedaba de 5 px (17 px de caja con 12 px de relleno). */
+.app-shell.densa .ml-board .metric-card > svg { width: 28px; height: 28px; padding: 5px; }
+/* 28/11: Arreglar en tanda (Mercado Libre) */
+.ml-fix-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.ml-fix-list li { border: 1px solid var(--color-border, #e5e5e5); border-radius: 10px; padding: 8px 10px; overflow-wrap: anywhere; }
+>>>>>>> origin/claude/paginas-y-orden

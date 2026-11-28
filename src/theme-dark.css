@@ -356,6 +356,7 @@
 :root[data-theme="dark"] .my-routine-item { background: #26262a; }
 :root[data-theme="dark"] .stock-badge.is-ok { background: #26262a; }
 :root[data-theme="dark"] .stock-badge.is-none { background: #26262a; }
+:root[data-theme="dark"] .pager-btn { background: #1c1c1f; }
 :root[data-theme="dark"] :root { color: #e7e7e9; }
 :root[data-theme="dark"] .link-button { color: #b4b5b9; }
 :root[data-theme="dark"] .link-button:hover { color: #b4b5b9; }
@@ -843,6 +844,7 @@
   :root:not([data-theme="light"]) .my-routine-item { background: #26262a; }
   :root:not([data-theme="light"]) .stock-badge.is-ok { background: #26262a; }
   :root:not([data-theme="light"]) .stock-badge.is-none { background: #26262a; }
+  :root:not([data-theme="light"]) .pager-btn { background: #1c1c1f; }
   :root:not([data-theme="light"]) :root { color: #e7e7e9; }
   :root:not([data-theme="light"]) .link-button { color: #b4b5b9; }
   :root:not([data-theme="light"]) .link-button:hover { color: #b4b5b9; }

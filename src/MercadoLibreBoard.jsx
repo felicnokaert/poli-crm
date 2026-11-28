@@ -1,7 +1,9 @@
+import { Pager, usePaged } from "./Pager.jsx";
 import { canSee } from "./module-access.mjs";
 import { TACOS_STATE, TACOS_TARGET, tacosFor } from "./ml-tacos.mjs";
 import { useEffect, useMemo, useState } from "react";
 import { MlImprove } from "./MlImprove.jsx";
+import { MlFixPanel } from "./MlFixPanel.jsx";
 import { MlCompetition, MlTrends } from "./MlCompetition.jsx";
 import { MlEconomics } from "./MlEconomics.jsx";
 import { adminFetch } from "./admin-api.mjs";
@@ -300,12 +302,11 @@ function Listings({ items, accounts, nickname, questionCounts, seller, issue, se
   const [status, setStatus] = useState("active");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("vendidas");
-  const [pageSize, setPageSize] = useState(PAGE);
-  useEffect(() => setPageSize(PAGE), [seller, status, issue, query, sort]);
   const ofSeller = useMemo(() => items.filter((item) => !seller || item.seller_id === seller), [items, seller]);
   const summary = useMemo(() => summarizeBoard(ofSeller), [ofSeller]);
   const shown = useMemo(() => filterBoard(items, { seller, status, issue, query, sort }, questionCounts), [items, seller, status, issue, query, sort, questionCounts]);
-  const page = shown.slice(0, pageSize);
+  const paged = usePaged(shown, 25, [seller, status, issue, query, sort].join("|"));
+  const page = paged.rows;
   const lastUpdate = accounts.map((account) => account.last_refresh_at || account.last_sync_at).filter(Boolean).sort().at(-1);
 
   return (<>
@@ -371,7 +372,7 @@ function Listings({ items, accounts, nickname, questionCounts, seller, issue, se
           </tbody>
         </table></div>
       )}
-      {shown.length > page.length && <button type="button" className="secondary" onClick={() => setPageSize((size) => size + PAGE)}>Ver {Math.min(PAGE, shown.length - page.length)} más (de {shown.length})</button>}
+      <Pager paged={paged} label="publicaciones" />
     </section>
   </>);
 }
@@ -469,6 +470,7 @@ export function MercadoLibreBoard({ supabase, session = null, isAdmin = false, c
       {items && items.length > 0 && tab === "resumen" && (
         <Summary ads={ads} canSeeAds={canSeeAds} accounts={accounts} metricsBySeller={metricsBySeller} seller={seller} items={items} nickname={nickname} permalinks={permalinks} onIssue={showIssue} isAdmin={isAdmin} session={session} supabase={supabase} onReload={() => setReload((value) => value + 1)} />
       )}
+      {items && items.length > 0 && tab === "mejorar" && isAdmin && session && <MlFixPanel session={session} nickname={nickname} />}
       {items && items.length > 0 && tab === "mejorar" && <MlImprove supabase={supabase} items={items} seller={seller} nickname={nickname} />}
       {items && items.length > 0 && tab === "stock" && <MlEconomics supabase={supabase} session={session} isAdmin={isAdmin} items={items} seller={seller} nickname={nickname} />}
       {items && items.length > 0 && tab === "competencia" && <MlCompetition supabase={supabase} session={session} isAdmin={isAdmin} items={items} nickname={nickname} />}

@@ -1022,7 +1022,7 @@ export default function App() {
         {view === "stock" && <StockView supabase={onlineConfigured && session ? supabase : null} isAdmin={isAdminUser} />}
         {view === "productos" && (
           <Suspense fallback={<Splash text="Cargando Productos…" />}>
-            <ProductHub supabase={supabase} isAdmin={isChannelAdmin(session?.user?.email)} />
+            <ProductHub supabase={supabase} isAdmin={isChannelAdmin(session?.user?.email)} userEmail={session?.user?.email || ""} />
           </Suspense>
         )}
         {view === "mejoras" && (

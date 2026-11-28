@@ -8,6 +8,6 @@ export const CONTEO_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXB
 
 let client = null;
 export function conteoDb() {
-  if (!client) client = createClient(CONTEO_URL, CONTEO_ANON, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: "poliplast-conteo-db" } });
+  if (!client) client = createClient(CONTEO_URL, CONTEO_ANON, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: "conteo-db" } });
   return client;
 }

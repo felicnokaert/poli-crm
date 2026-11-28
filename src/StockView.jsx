@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Info, Search } from "lucide-react";
-import { contabiliumByCode, countInfo, dosifiedSince, latestCounts, pivotStock, searchStock, stockNow } from "./stock-model.mjs";
+import { adjustCsv, adjustList, contabiliumByCode, countInfo, dosifiedSince, latestCounts, pivotStock, searchStock, stockNow } from "./stock-model.mjs";
 import { adminFetch } from "./admin-api.mjs";
 
 // Stock en una sola hoja (Felipe 27/11): una fila por producto con el último conteo de Villa Domínico y de Mar del Plata
@@ -38,6 +38,7 @@ export function StockView({ supabase = null, isAdmin = false }) {
   const [query, setQuery] = useState("");
   const [onlyMissing, setOnlyMissing] = useState(false);
   const [showOld, setShowOld] = useState(false);
+  const [view, setView] = useState("hoja");
   const [cbBusy, setCbBusy] = useState("");
 
   useEffect(() => {
@@ -69,7 +70,7 @@ export function StockView({ supabase = null, isAdmin = false }) {
         const response = await adminFetch({ action: "contabilium", op: "stock", company: "POLIPLAST" });
         const body = await response.json().catch(() => ({}));
         if (!response.ok || body.error) { setCbBusy(`No se pudo: ${body.error || `HTTP ${response.status}`}`); return; }
-        setCbBusy(`Leyendo Contabilium… ${body.products} productos`);
+        setCbBusy(`Leyendo Contabilium… ${body.products || 0} productos`);
         if (body.done) break;
       }
       await loadCb();
@@ -85,6 +86,18 @@ export function StockView({ supabase = null, isAdmin = false }) {
     if (!showOld) rows = rows.filter((row) => row.vd || row.mdq || row.cbVd != null || row.cbMdq != null);
     return [...rows].sort((a, b) => a.name.localeCompare(b.name, "es"));
   }, [products, query, onlyMissing, showOld]);
+  const matched = products.filter((row) => row.cbVd != null || row.cbMdq != null).length;
+  const adjust = useMemo(() => adjustList(products), [products]);
+  const downloadAdjust = () => {
+    const url = URL.createObjectURL(new Blob([adjustCsv(adjust.rows)], { type: "text/csv;charset=utf-8" }));
+    const link = Object.assign(document.createElement("a"), { href: url, download: `para-ajustar-${new Date().toISOString().slice(0, 10)}.csv` });
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+  const cbCompanies = Object.values(cb.detail?.companies || {});
+  const cbAt = cbCompanies.map((company) => company.at).filter(Boolean).sort().pop() || "";
+  const cbDepotNames = [...new Set(cbCompanies.flatMap((company) => company.allDepots || []))];
+  const cbNoDepots = cbCompanies.some((company) => company.at && Array.isArray(company.depots)) && !cbCompanies.some((company) => company.depots?.length);
   const cbHasDepots = [...cb.map.values()].some((item) => item.vd != null || item.mdq != null);
 
   return (
@@ -95,7 +108,35 @@ export function StockView({ supabase = null, isAdmin = false }) {
       </div>
       <p className="muted small">Una fila por producto. «Conteo» es lo último que contó cada depósito en la app de conteo, por bulto cerrado, tambor o tira (tocá la «i» para ver quién contó y cuándo). Lo dosificado no se resta: sale de un tambor abierto que no se cuenta. «Contabilium» es el stock que figura allá. Si algo no cierra, avisale a Diego. Puede no coincidir con Contabilium: allá descuenta el depósito que se elige al facturar.</p>
       {cbBusy ? <p className="form-notice">{cbBusy}</p> : null}
-      {cb.loaded && !cbHasDepots ? <p className="muted small">Contabilium todavía no trae el stock separado por depósito: esas columnas quedan «sin dato»{cb.at ? ` (última lectura ${new Date(cb.at).toLocaleString("es-AR")})` : ""}.</p> : null}
+      {cb.loaded ? <p className="muted small">{cbHasDepots ? `Stock de Contabilium (Villa Domínico y Mar del Plata) actualizado ${cbAt ? new Date(cbAt).toLocaleString("es-AR") : ""}: se sincroniza solo 3 veces por día. ${matched} de ${products.length} productos contados lo encontraron por código.` : cbNoDepots ? `Contabilium no le muestra los depósitos al usuario de la API${cbDepotNames.length ? ` (ve: ${cbDepotNames.join(", ")})` : ""}: hay que darle acceso a Villa Domínico y Mar del Plata en Contabilium.` : "Contabilium: falta la primera sincronización del stock por depósito (tocá «Traer stock de Contabilium» o esperá la automática)."}</p> : null}
+      {cbHasDepots ? (
+        <div className="segmented" role="tablist" aria-label="Vista del stock">
+          <button type="button" role="tab" aria-selected={view === "hoja"} className={view === "hoja" ? "selected" : ""} onClick={() => setView("hoja")}>Hoja de stock</button>
+          <button type="button" role="tab" aria-selected={view === "ajustar"} className={view === "ajustar" ? "selected" : ""} onClick={() => setView("ajustar")}>Para ajustar ({adjust.rows.length})</button>
+        </div>
+      ) : null}
+      {cbHasDepots && view === "ajustar" ? (
+        <div className="stock-adjust">
+          <p className="small">{adjust.pct == null ? "Todavía no hay productos contados que figuren en Contabilium." : <><strong>{adjust.pct} %</strong> de lo contado coincide con Contabilium ({adjust.matching} de {adjust.checked}). Lo contado se pasa a la unidad de Contabilium (tambores × kg, cajas × unidades). Tolerancia: 1 unidad o 2 %.</>}</p>
+          {adjust.rows.length ? <button type="button" className="secondary" onClick={downloadAdjust}>Descargar CSV para el ajuste</button> : null}
+          {adjust.rows.length === 0 ? <p className="muted">Nada para ajustar.</p> : (
+            <div className="stock-table" role="table">
+              <div className="stock-row stock-head" role="row"><span>Producto</span><span>Depósito</span><span>Contado</span><span>Contabilium</span><span>Diferencia</span><span>Contó</span></div>
+              {adjust.rows.map((row) => (
+                <div className="stock-row" role="row" key={`${row.sku}|${row.depot}`}>
+                  <span><strong>{row.name}</strong><br /><span className="muted small">{row.sku}</span></span>
+                  <span data-label="Depósito">{row.depot}</span>
+                  <span data-label="Contado">{row.counted == null ? "—" : qty(row.counted)}</span>
+                  <span data-label="Contabilium" style={row.cb < 0 ? { color: "var(--color-danger-text)" } : undefined}>{qty(row.cb)}</span>
+                  <span data-label="Diferencia"><span className={`badge ${row.reason === "negativo" ? "danger" : "warn"}`}>{row.diff == null ? "negativo" : `${row.diff > 0 ? "+" : ""}${qty(row.diff)}`}</span></span>
+                  <span data-label="Contó" className="muted small">{row.by || "—"}{row.at ? ` · ${row.at.slice(8, 10)}/${row.at.slice(5, 7)}` : ""}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
+      {view === "ajustar" && cbHasDepots ? null : <>
       <div className="list-toolbar">
         <label className="search"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar producto o SKU (ej. 618, iso, balde)" aria-label="Buscar en el stock" /></label>
         <label className="small"><input type="checkbox" checked={onlyMissing} onChange={(event) => setOnlyMissing(event.target.checked)} /> Solo sin stock o con poco</label>
@@ -119,6 +160,7 @@ export function StockView({ supabase = null, isAdmin = false }) {
           })}
         </div>
       )}
+      </>}
     </section>
   );
 }

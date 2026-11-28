@@ -25,6 +25,7 @@ export function MercadoLibreSync({ supabase, session }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
   const [progress, setProgress] = useState("");
+  const [writeProbe, setWriteProbe] = useState(null);
 
   async function loadCounts() {
     if (!supabase) return;
@@ -176,6 +177,19 @@ export function MercadoLibreSync({ supabase, session }) {
       </div>
       <p className="muted small">"Actualizar todo" hace, para cada cuenta, publicaciones, preguntas, visitas, calidad (que trae si tiene clip) y el resumen (ventas, comisiones y envíos), y después la competencia y las tendencias. Tarda varios minutos: dejá la pestaña abierta. Todos los días se hace solo: de madrugada se revisa el clip de las que no tienen, y antes de las 7 una versión más corta del resto.</p>
       <p className="muted small">Para conectar otra cuenta (por ejemplo FOAM), primero cerrá sesión en Mercado Libre o entrá con esa cuenta; Mercado Libre conecta la que esté abierta.</p>
+      <div className="ml-clips">
+        <button type="button" className="secondary" disabled={writeProbe?.busy} onClick={async () => {
+          setWriteProbe({ busy: true });
+          try {
+            const response = await adminFetch({ action: "mercadolibre", op: "write-probe" }, session?.access_token);
+            const body = await response.json().catch(() => ({}));
+            setWriteProbe(response.ok ? { results: body.results || [] } : { error: body.error || `HTTP ${response.status}` });
+          } catch (caught) { setWriteProbe({ error: caught.message }); }
+        }}>{writeProbe?.busy ? "Probando…" : "Probar permiso de escritura"}</button>
+        <p className="muted small">Solo lee: muestra si cada cuenta deja que el CRM escriba en Mercado Libre (descripciones, fotos). No cambia ninguna publicación.</p>
+        {writeProbe?.error && <div className="system-message error">{writeProbe.error}</div>}
+        {writeProbe?.results && <ul className="assistant-rivals">{writeProbe.results.map((row) => <li key={row.name} className="small"><strong>{row.ok ? "✔ puede escribir" : "✖ solo lectura"} · {row.name}</strong> · {row.detail}</li>)}</ul>}
+      </div>
       <p className="muted small">Los clips se leen solos de la calidad de cada publicación y la competencia sale del catálogo (Ventas → Mercado Libre → Mercado). Ya no hace falta pegar nada a mano.</p>
       {message && <div className="system-message">{message}</div>}
       {error && <div className="system-message error">{error}</div>}

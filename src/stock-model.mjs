@@ -139,3 +139,44 @@ export function countInfo(cell, now = Date.now()) {
   const days = daysSince(cell.at, now);
   return `Último conteo: ${cell.by || 'sin nombre'}, el ${date}${time ? ` a las ${time}` : ''}${days != null ? ` (hace ${days} ${days === 1 ? 'día' : 'días'})` : ''}.${cell.usedKg ? ` Después se dosificaron ${cell.usedKg} kg (de un tambor abierto, que no entra en el conteo).` : ''}`;
 }
+
+// «Para ajustar» (Diego 27/11): diferencias entre lo contado y Contabilium en cada depósito, en la unidad de Contabilium
+// (lo contado × lo que trae cada bulto/tambor/tira; si se contó en kilos, los kilos), más los negativos de Contabilium.
+// Tolerancia: 1 unidad o el 2 %. Devuelve la lista y cuánto coincide, para que Diego cargue el ajuste en Contabilium.
+export function countedUnits(cell) {
+  if (!cell) return null;
+  if (KG_UNITS.test(String(cell.unit || ''))) return Number(cell.count) || 0;
+  return cell.cap ? (Number(cell.count) || 0) * cell.cap : Number(cell.count) || 0;
+}
+
+const DEPOTS = [['vd', 'cbVd', 'Villa Domínico'], ['mdq', 'cbMdq', 'Mar del Plata']];
+export function adjustList(products = []) {
+  const rows = [];
+  let checked = 0;
+  let matching = 0;
+  for (const product of products) {
+    for (const [slot, cbKey, depot] of DEPOTS) {
+      const cb = product[cbKey];
+      const cell = product[slot];
+      if (cb == null) continue;
+      if (!cell) {
+        if (cb < 0) rows.push({ sku: product.sku, name: product.name, depot, counted: null, cb, diff: null, reason: 'negativo' });
+        continue;
+      }
+      const counted = Math.round(countedUnits(cell) * 100) / 100;
+      const diff = Math.round((counted - cb) * 100) / 100;
+      checked += 1;
+      if (Math.abs(diff) <= Math.max(1, Math.max(Math.abs(counted), Math.abs(cb)) * 0.02)) { matching += 1; continue; }
+      rows.push({ sku: product.sku, name: product.name, depot, counted, cb, diff, unit: cell.unit, at: cell.at, by: cell.by, reason: cb < 0 ? 'negativo' : 'diferencia' });
+    }
+  }
+  rows.sort((a, b) => Math.abs(b.diff ?? b.cb) - Math.abs(a.diff ?? a.cb));
+  return { rows, checked, matching, pct: checked ? Math.round((matching / checked) * 100) : null };
+}
+
+export function adjustCsv(rows = []) {
+  const cell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+  const lines = [['Depósito', 'Código', 'Producto', 'Contado (unidad Contabilium)', 'Contabilium', 'Diferencia (contado − Contabilium)', 'Contó', 'Cuándo'].map(cell).join(';')];
+  for (const row of rows) lines.push([row.depot, row.sku, row.name, row.counted ?? '', row.cb, row.diff ?? '', row.by || '', row.at || ''].map(cell).join(';'));
+  return `﻿${lines.join('\n')}`;
+}

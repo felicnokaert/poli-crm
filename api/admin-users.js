@@ -11,8 +11,8 @@ import { technicalAdmin } from '../lib/technical-admin.mjs';
 import { listClientErrors, logClientError } from '../lib/error-log.mjs';
 import { mercadoLibreAccountCron, mercadoLibreAdmin, mercadoLibreAdsCron, mercadoLibreCron, mercadoLibreMarketCron, mercadoLibreClipsCron, mercadoLibreSalesCron } from '../lib/mercadolibre.mjs';
 import { runIntegrationCron } from '../lib/integration-crons.mjs';
-import { contabiliumAdmin, contabiliumCron } from '../lib/contabilium.mjs';
 import { contabiliumItemsAdmin, contabiliumItemsCron } from '../lib/contabilium-items.mjs';
+import { contabiliumAdmin, contabiliumCron, contabiliumStockCron } from '../lib/contabilium.mjs';
 import { assistantAi } from '../lib/assistant-ai.mjs';
 import { appReportsAdmin } from '../lib/app-reports.mjs';
 import { appFirmaAdmin, publicKeyHandler } from '../lib/app-firma.mjs';
@@ -70,6 +70,10 @@ const CRONS = {
   'contabilium-renglones-2': contabiliumItemsCron,
   'contabilium-renglones-3': contabiliumItemsCron,
   'contabilium-renglones-4': contabiliumItemsCron,
+  // 27/11: stock por depósito de Contabilium (Villa Domínico y Mar del Plata), 3 veces por día.
+  'contabilium-stock-1': contabiliumStockCron,
+  'contabilium-stock-2': contabiliumStockCron,
+  'contabilium-stock-3': contabiliumStockCron,
   shopify: shopifyCron,
   alertas: alertsCron,
   'trello-plan': trelloPlanCron,

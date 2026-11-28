@@ -2196,3 +2196,16 @@ th.nowrap, td.nowrap { white-space: nowrap; }
 
 .ph-photos summary { cursor: pointer; padding: 4px 0; }
 .ph-photos[open] summary { margin-bottom: 10px; }
+
+/* QA 28/11 (celular): la barra de arriba se estiraba en pantallas con poco contenido (la grilla repartía el alto sobrante) y
+   la fecha, la hora y el clima ocupaban ~200 px en cada pantalla. Ahora la barra queda de su alto y el clima solo en Inicio,
+   en una línea. */
+@media (max-width: 760px) {
+  .app-shell { grid-template-rows: auto 1fr; align-content: start; }
+  .topbar.is-compact .eyebrow, .topbar.is-compact .local-info { display: none; }
+  .topbar .local-info { display: flex; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 6px 0 0; max-width: 100%; }
+  .topbar .local-info::-webkit-scrollbar { display: none; }
+  .topbar .local-chip { flex: 0 0 auto; }
+  .topbar > div:first-child { flex: 1 1 auto; min-width: 0; }
+  .topbar .top-actions { flex: 0 0 auto; }
+}

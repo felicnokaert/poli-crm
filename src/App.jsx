@@ -797,6 +797,7 @@ export default function App() {
       <main>
         <AppTopbar
           title={NAV_ITEMS.find(([id]) => id === view)?.[1]}
+          compact={view !== "dashboard"}
           myChannels={myChannels}
           primaryChannel={data.primaryChannel}
           readiness={readiness}

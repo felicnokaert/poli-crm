@@ -31,9 +31,9 @@ function displayedChannel(readiness, key) {
   };
 }
 
-export function AppTopbar({ title, myChannels, primaryChannel, readiness, syncStatus, onRetrySave, theme, onThemeChange, onOpenPalette, onOpenShortcuts, onReport = null, notifications = null, profileLabel, onLogConversation }) {
+export function AppTopbar({ title, myChannels, primaryChannel, readiness, syncStatus, onRetrySave, theme, onThemeChange, onOpenPalette, onOpenShortcuts, onReport = null, notifications = null, profileLabel, onLogConversation, compact = false }) {
   return (
-    <header className="topbar">
+    <header className={`topbar${compact ? " is-compact" : ""}`}>
       <div>
         <span className="eyebrow">{longToday()}</span>
         <LocalInfo />

@@ -233,7 +233,11 @@ function ConteoInterno({ admin = null }) {
 
   const dep = (depId) => config.deps.find((d) => d.id === depId);
 
+  const [intento, setIntento] = useState(0); // «Reintentar» vuelve a cargar sin recargar toda la app
   useEffect(() => {
+    let vivo = true;
+    // 28/11 (QA): sin red la carga no termina nunca; a los 15 s se muestra el aviso con «Reintentar» (como Etiquetas y Dosificado).
+    const limite = setTimeout(() => { if (vivo) setAppState((e) => (e === 'loading' ? 'error' : e)); }, 15000);
     (async () => {
       try {
         let cfg = await getShared(CONFIG_KEY, null);
@@ -246,12 +250,13 @@ function ConteoInterno({ admin = null }) {
         setConfig(cfg);
         setOverrides(normalizarOverrides(ov));
         setExtra(normalizarExtra(ex));
-        setAppState('ready');
+        if (vivo) setAppState('ready');
       } catch (e) {
-        setAppState('error');
-      }
+        if (vivo) setAppState('error');
+      } finally { clearTimeout(limite); }
     })();
-  }, []);
+    return () => { vivo = false; clearTimeout(limite); };
+  }, [intento]);
 
   function showToast(msg) {
     clearTimeout(toastTimer.current);
@@ -656,8 +661,8 @@ function ConteoInterno({ admin = null }) {
   }
   if (appState === 'error') {
     return (<div className="pantalla-centro">
-      <div className="cargando-txt">No se pudo conectar con el almacenamiento.</div>
-      <div className="btn btnmarca" style={{ marginTop: 16, width: 220 }} onClick={() => window.location.reload()}>Reintentar</div>
+      <div className="cargando-txt">No se pudo cargar el conteo. Revisá la conexión y probá de nuevo.</div>
+      <button type="button" className="primary" style={{ marginTop: 16 }} onClick={() => { setAppState('loading'); setIntento((n) => n + 1); }}>Reintentar</button>
     </div>);
   }
 

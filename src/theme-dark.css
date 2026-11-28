@@ -357,6 +357,11 @@
 :root[data-theme="dark"] .stock-badge.is-ok { background: #26262a; }
 :root[data-theme="dark"] .stock-badge.is-none { background: #26262a; }
 :root[data-theme="dark"] .pager-btn { background: #1c1c1f; }
+:root[data-theme="dark"] .purchasing-chip { background: #26262a; }
+:root[data-theme="dark"] .purchasing-chip.is-sin-stock { background: #26262a; }
+:root[data-theme="dark"] .purchasing-chip.is-critico { background: #26262a; }
+:root[data-theme="dark"] .purchasing-chip.is-bajo { background: #1c1c1f; }
+:root[data-theme="dark"] .purchasing-chip.is-ok { background: #26262a; }
 :root[data-theme="dark"] :root { color: #e7e7e9; }
 :root[data-theme="dark"] .link-button { color: #b4b5b9; }
 :root[data-theme="dark"] .link-button:hover { color: #b4b5b9; }
@@ -478,6 +483,11 @@
 :root[data-theme="dark"] .home-widget-remove { color: #e7e7e9; }
 :root[data-theme="dark"] .stock-badge.is-ok { color: #b4b5b9; }
 :root[data-theme="dark"] .stock-badge.is-none { color: #b4b5b9; }
+:root[data-theme="dark"] .purchasing-chip { color: #b4b5b9; }
+:root[data-theme="dark"] .purchasing-chip.is-sin-stock { color: #b4b5b9; }
+:root[data-theme="dark"] .purchasing-chip.is-critico { color: #b4b5b9; }
+:root[data-theme="dark"] .purchasing-chip.is-bajo { color: #b4b5b9; }
+:root[data-theme="dark"] .purchasing-chip.is-ok { color: #b4b5b9; }
 :root[data-theme="dark"] body, :root[data-theme="dark"] .login-shell { background: #121214; }
 :root[data-theme="dark"] .commercial-guidance, :root[data-theme="dark"] .prospect-glass::before { background: #1c1c1f; }
 :root[data-theme="dark"] .segmented { background: #2a2a2e; }
@@ -845,6 +855,11 @@
   :root:not([data-theme="light"]) .stock-badge.is-ok { background: #26262a; }
   :root:not([data-theme="light"]) .stock-badge.is-none { background: #26262a; }
   :root:not([data-theme="light"]) .pager-btn { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .purchasing-chip { background: #26262a; }
+  :root:not([data-theme="light"]) .purchasing-chip.is-sin-stock { background: #26262a; }
+  :root:not([data-theme="light"]) .purchasing-chip.is-critico { background: #26262a; }
+  :root:not([data-theme="light"]) .purchasing-chip.is-bajo { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .purchasing-chip.is-ok { background: #26262a; }
   :root:not([data-theme="light"]) :root { color: #e7e7e9; }
   :root:not([data-theme="light"]) .link-button { color: #b4b5b9; }
   :root:not([data-theme="light"]) .link-button:hover { color: #b4b5b9; }
@@ -966,6 +981,11 @@
   :root:not([data-theme="light"]) .home-widget-remove { color: #e7e7e9; }
   :root:not([data-theme="light"]) .stock-badge.is-ok { color: #b4b5b9; }
   :root:not([data-theme="light"]) .stock-badge.is-none { color: #b4b5b9; }
+  :root:not([data-theme="light"]) .purchasing-chip { color: #b4b5b9; }
+  :root:not([data-theme="light"]) .purchasing-chip.is-sin-stock { color: #b4b5b9; }
+  :root:not([data-theme="light"]) .purchasing-chip.is-critico { color: #b4b5b9; }
+  :root:not([data-theme="light"]) .purchasing-chip.is-bajo { color: #b4b5b9; }
+  :root:not([data-theme="light"]) .purchasing-chip.is-ok { color: #b4b5b9; }
   :root:not([data-theme="light"]) body, :root:not([data-theme="light"]) .login-shell { background: #121214; }
   :root:not([data-theme="light"]) .commercial-guidance, :root:not([data-theme="light"]) .prospect-glass::before { background: #1c1c1f; }
   :root:not([data-theme="light"]) .segmented { background: #2a2a2e; }

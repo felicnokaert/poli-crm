@@ -27,7 +27,7 @@ export const SUBMODULES = {
   dosificado: ['Cargar', 'Kits', 'Registros', 'Resumen'],
   recibos: ['Bandeja de pagos', 'Cobranzas', 'Recibos', 'Cheques', 'Cajas', 'Salidas de caja', 'Cierre de caja', 'Resumen', 'Conciliación', 'Cruce con el diario', 'Cuentas', 'Clientes', 'Guía'],
   facturacion: ['Comprobantes (Contabilium)', 'Saldos', 'Notas de crédito'],
-  compras: ['Qué se termina', 'Proveedores sugeridos', 'Pedidos y negociación'],
+  compras: ['Qué se termina'],
   tasks: ['Tareas', 'Rutina / Cierre del día', 'Calendario', 'Automatizaciones'],
   academy: ['Productos', 'Práctica', 'Competencia', 'Equipo'],
   techdocs: ['Documentos', 'Qué productos tienen ficha', 'Catálogo ↔ Mercado Libre'],
@@ -59,16 +59,7 @@ export const RECIBOS_LINKS = [
 
 export const FUTURE_MODULES = {
   // 28/11: Etiquetas, Conteo y Dosificado ya no son «próximamente»: son pantallas nativas de la app (src/logistica/).
-  facturacion: {
-    label: 'Facturación',
-    status: 'Futuro',
-    text: 'Los comprobantes de Contabilium (que hoy ya se copian para la ficha del cliente) en una pantalla propia: saldos, notas de crédito y facturas por empresa.',
-  },
-  compras: {
-    label: 'Compras',
-    status: 'Futuro',
-    text: 'A partir del consumo de Contabilium y Mercado Libre: qué se está por terminar, quién lo vende, proveedores sugeridos y negociación por mail o WhatsApp siempre con aprobación de una persona.',
-  },
+  // 28/11: Facturación y Compras ya son pantallas reales (src/Facturacion.jsx, src/Compras.jsx).
 };
 
 // Roles = conjuntos de módulos (después se ajusta por persona en Equipo y cuentas). Perfil y Datos siempre.

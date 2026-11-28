@@ -2210,7 +2210,6 @@ th.nowrap, td.nowrap { white-space: nowrap; }
   .topbar .top-actions { flex: 0 0 auto; }
 }
 
-<<<<<<< HEAD
 /* Recibos (28/11): accesos a PoliRecibos */
 .recibos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 12px; }
 .recibos-card { display: grid; gap: 4px; padding: 12px 14px; border: 1px solid var(--color-border, #e3e3e5); border-radius: 12px; background: var(--color-bg-soft, #f6f6f7); color: inherit; text-decoration: none; transition: border-color .15s ease, transform .15s ease; }
@@ -2224,7 +2223,6 @@ th.nowrap, td.nowrap { white-space: nowrap; }
 .stock-badge.is-none { background: #fbe7e3; color: #a33a2f; }
 :root[data-theme="dark"] .stock-badge.is-ok { background: #1d3a2b; color: #8fd4ad; }
 :root[data-theme="dark"] .stock-badge.is-none { background: #3e2220; color: #f0a59b; }
-=======
 /* 28/11: paginador común (src/Pager.jsx) */
 .pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-top: 12px; }
 .pager-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
@@ -2239,4 +2237,31 @@ th.nowrap, td.nowrap { white-space: nowrap; }
 /* 28/11: Arreglar en tanda (Mercado Libre) */
 .ml-fix-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
 .ml-fix-list li { border: 1px solid var(--color-border, #e5e5e5); border-radius: 10px; padding: 8px 10px; overflow-wrap: anywhere; }
->>>>>>> origin/claude/paginas-y-orden
+
+/* Facturación y Compras (28/11) */
+.billing-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; }
+.billing-filters .search { display: inline-flex; align-items: center; gap: 6px; flex: 1 1 220px; min-width: 0; padding: 6px 10px; border: 1px solid var(--color-border, #e3e3e5); border-radius: 10px; background: var(--color-input-bg, #fff); }
+.billing-filters .search input { border: 0; outline: 0; background: transparent; width: 100%; min-width: 0; }
+.billing-filters select { max-width: 100%; }
+.billing-table { width: 100%; border-collapse: collapse; }
+.billing-table th, .billing-table td { padding: 8px 10px; border-bottom: 1px solid var(--color-border, #ececee); text-align: left; vertical-align: top; }
+.billing-table th { font-size: 12px; color: var(--color-text-gray, #6b6c70); font-weight: 700; }
+.billing-table .num { text-align: right; white-space: nowrap; }
+.billing-due { color: var(--color-danger-text, #a33a2f); font-weight: 700; }
+.billing-totals, .purchasing-counts { margin: 8px 0; }
+.purchasing-state { cursor: pointer; text-align: left; font: inherit; border: 1px solid var(--color-border, #e3e3e5); }
+.purchasing-state.selected { border-color: var(--brand-red, #ed1c24); box-shadow: 0 0 0 2px #ed1c2422; }
+.purchasing-state.is-sin-stock strong, .purchasing-state.is-critico strong { color: var(--color-danger-text, #a33a2f); }
+.purchasing-chip { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 12px; font-weight: 700; background: #efeff0; color: #5c5d60; }
+.purchasing-chip.is-sin-stock, .purchasing-chip.is-critico { background: #fbe7e3; color: #a33a2f; }
+.purchasing-chip.is-bajo { background: #fff4dc; color: #8a5a12; }
+.purchasing-chip.is-ok { background: #e7f3ec; color: #22684a; }
+@media (max-width: 760px) {
+  .billing-table thead { display: none; }
+  .billing-table tr { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; padding: 8px 0; border-bottom: 1px solid var(--color-border, #ececee); }
+  .billing-table td { border: 0; padding: 2px 0; }
+  .billing-table td:first-child { grid-column: 1 / -1; }
+  .billing-table td::before { content: attr(data-label); display: block; font-size: 11px; color: var(--color-text-gray, #6b6c70); }
+  .billing-table td:first-child::before { display: none; }
+  .billing-table .num { text-align: left; }
+}

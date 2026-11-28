@@ -50,6 +50,8 @@ const TechnicalDocumentsAdmin = lazyNamed(() => import("./TechnicalDocuments"), 
 const MapaCobertura = lazyNamed(() => import("./MapaCobertura"), "MapaCobertura");
 const CotizadorFrame = lazyNamed(() => import("./CotizadorFrame"), "CotizadorFrame");
 const LOGISTICS_NATIVE = new Set(["dosificado", "conteo", "etiquetas"]);
+const Facturacion = lazyNamed(() => import("./Facturacion.jsx"), "default");
+const Compras = lazyNamed(() => import("./Compras.jsx"), "default");
 const EntregasNativa = lazyNamed(() => import("./EntregasNativa"), "default");
 const DosificadoNativo = lazyNamed(() => import("./logistica/LogisticaNativo.jsx"), "DosificadoNativo");
 const ConteoNativo = lazyNamed(() => import("./logistica/LogisticaNativo.jsx"), "ConteoNativo");
@@ -810,6 +812,9 @@ export default function App() {
         {view === "conteo" && <Suspense fallback={<Splash text="Cargando conteo…" />}><ConteoNativo access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} /></Suspense>}
         {view === "etiquetas" && <Suspense fallback={<Splash text="Cargando etiquetas…" />}><EtiquetasNativa access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} /></Suspense>}
         {view === "recibos" && !demo && <RecibosHub access={previewAccess} />}
+        {view === "facturacion" && !demo && <Suspense fallback={<Splash text="Cargando facturación…" />}><Facturacion supabase={onlineConfigured && session ? supabase : null} access={previewAccess} /></Suspense>}
+        {view === "compras" && !demo && <Suspense fallback={<Splash text="Cargando compras…" />}><Compras supabase={onlineConfigured && session ? supabase : null} /></Suspense>}
+        {(view === "facturacion" || view === "compras") && demo && <DemoModule key={view} id={view} access={previewAccess} />}
         {view === "recibos" && demo && <DemoModule key={view} id={view} access={previewAccess} />}
         {FUTURE_MODULES[view] && !LOGISTICS_NATIVE.has(view) && (demo ? <DemoModule key={view} id={view} access={previewAccess} /> : <ModulePreview id={view} />)}
         {view === "avisos" && isAdminUser && <AppReports online={Boolean(onlineConfigured && session)} />}

@@ -119,6 +119,7 @@ import { useRapypClients } from "./hooks/useRapypClients";
 import { useClientActions } from "./hooks/useClientActions";
 import { AppSidebar, NAV_GROUPS, NAV_ITEMS } from "./AppSidebar.jsx";
 import { FUTURE_MODULES, PREVIEW_ROLE_KEY } from "./poliplast-app-plan.mjs";
+import { RecibosHub } from "./RecibosHub.jsx";
 import { accessAllows } from "./team-access.mjs";
 import { useMyAccess, useTeamStore } from "./team-store.js";
 import { TeamAccess } from "./TeamAccess.jsx";
@@ -808,6 +809,8 @@ export default function App() {
         {view === "dosificado" && <Suspense fallback={<Splash text="Cargando dosificado…" />}><DosificadoNativo access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} /></Suspense>}
         {view === "conteo" && <Suspense fallback={<Splash text="Cargando conteo…" />}><ConteoNativo access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} /></Suspense>}
         {view === "etiquetas" && <Suspense fallback={<Splash text="Cargando etiquetas…" />}><EtiquetasNativa access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} /></Suspense>}
+        {view === "recibos" && !demo && <RecibosHub access={previewAccess} />}
+        {view === "recibos" && demo && <DemoModule key={view} id={view} access={previewAccess} />}
         {FUTURE_MODULES[view] && !LOGISTICS_NATIVE.has(view) && (demo ? <DemoModule key={view} id={view} access={previewAccess} /> : <ModulePreview id={view} />)}
         {view === "avisos" && isAdminUser && <AppReports online={Boolean(onlineConfigured && session)} />}
         {view === "team" && isAdminUser && <TeamAccess team={team} onChange={teamStore.save} rolesTable={teamStore.rolesTable} status={teamStore.status} groups={NAV_GROUPS} onViewAs={(person) => pickPreviewRole(`person:${person.email}`)} />}

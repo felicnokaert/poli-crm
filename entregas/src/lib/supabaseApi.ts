@@ -17,10 +17,14 @@ function lanzar(error: unknown): never {
   throw error
 }
 
-export function crearSupabaseApi(): Api & { client: SupabaseClient } {
+/**
+ * `externo`: dentro de Poliplast App (módulo nativo, 28/11) se usa el MISMO cliente de Supabase de la app, con su sesión:
+ * no hay segundo login ni segunda sesión guardada.
+ */
+export function crearSupabaseApi(externo?: SupabaseClient): Api & { client: SupabaseClient } {
   const url = import.meta.env.VITE_SUPABASE_URL
   const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-  if (!url || !anonKey) throw new Error('Faltan VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY en el entorno.')
+  if (!externo && (!url || !anonKey)) throw new Error('Faltan VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY en el entorno.')
   // Las llamadas a la API de datos llevan el nombre de quién usa la cuenta compartida de expedición y el depósito.
   const fetchConOperador: typeof fetch = (input, init) => {
     const op = headerOperador()
@@ -34,7 +38,7 @@ export function crearSupabaseApi(): Api & { client: SupabaseClient } {
   }
   // Dentro del CRM la sesión la maneja el CRM (ver embed.ts): acá ni se guarda ni se renueva.
   const embebido = typeof window !== 'undefined' && isEmbeddedInCrm()
-  const sb = createClient(url, anonKey, {
+  const sb = externo ?? createClient(url, anonKey, {
     global: { fetch: fetchConOperador },
     ...(embebido ? { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } } : {}),
   })

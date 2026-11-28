@@ -4,6 +4,7 @@
 //   «entregas-crm» de la app de conteo, que guarda la clave del CRM (expedicionApi). Nunca hay sesión de expedicion@ en el navegador.
 // - `npm run maqueta`: datos de ejemplo en el navegador.
 import { crearDemoApi } from '../dev/demoApi'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Api } from './api'
 import { soloLectura } from './soloLectura'
 export { AVISO_SOLO_LECTURA, soloLectura } from './soloLectura'
@@ -22,8 +23,28 @@ export const MODO_CONTEO = import.meta.env.MODE === 'conteo'
 export const SOLO_LECTURA = (() => {
   try { return enMarcoPoliplast() && new URLSearchParams(window.location.search).get('solo-lectura') === '1' } catch { return false }
 })()
-const apiBase: Api = MAQUETA ? crearDemoApi() : MODO_CONTEO ? crearExpedicionApi() : crearSupabaseApi()
-export const api: Api = SOLO_LECTURA ? soloLectura(apiBase) : apiBase
+/** Sin cliente propio (módulo nativo de Poliplast App, sin variables de entorno de Entregas): avisa recién al usarse. */
+function sinCliente(): Api {
+  return new Proxy({} as Api, { get: (_t, prop) => (prop === 'then' ? undefined : () => { throw new Error('Entregas: falta conectar la base.') }) })
+}
+function crearBase(): Api {
+  if (MAQUETA) return crearDemoApi()
+  if (MODO_CONTEO) return crearExpedicionApi()
+  try { return crearSupabaseApi() } catch { return sinCliente() }
+}
+const conSoloLectura = (base: Api): Api => (SOLO_LECTURA ? soloLectura(base) : base)
+// `let` a propósito: el módulo nativo de Poliplast App lo cambia por uno con el cliente de la app (los demás módulos leen `api.x`
+// en el momento de usarlo, así que toman el nuevo).
+// Se crea recién al primer uso: dentro de Poliplast App nunca se arma un segundo cliente de Supabase (pisaría la sesión de la app).
+let real: Api | null = null
+const perezosa = new Proxy({} as Api, { get: (_t, prop) => (real ??= conSoloLectura(crearBase()))[prop as keyof Api] })
+export let api: Api = perezosa
+
+/** Poliplast App (28/11): Entregas como pantalla nativa, con el cliente de Supabase y la sesión de la app. */
+export function usarClienteDeLaApp(cliente: SupabaseClient, opciones: { soloLectura?: boolean } = {}): void {
+  const base = crearSupabaseApi(cliente)
+  api = opciones.soloLectura ? soloLectura(base) : base
+}
 
 /** «Cargar remito»: en conteo no (los remitos los cargan los vendedores, Felipe 21/11). */
 export const CON_ARCHIVOS = !MODO_CONTEO
@@ -38,3 +59,8 @@ export const TIPOS_SUBIDA: readonly string[] | null = MODO_CONTEO ? ['guia', 're
 export const GUIA_LEIDA_AL_SUBIR = MODO_CONTEO
 /** Ver el remito y las guías ya cargadas. */
 export const CON_VER_ARCHIVOS = true
+
+/** Para pruebas del módulo nativo (datos de ejemplo, sin base). */
+export function usarApi(otra: Api): void {
+  api = otra
+}

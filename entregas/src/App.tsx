@@ -24,7 +24,9 @@ import type { Usuario } from './lib/types'
 
 type Sesion = { estado: 'cargando' } | { estado: 'fuera' } | { estado: 'sin_acceso'; email: string } | { estado: 'dentro'; yo: Usuario }
 
-export default function App() {
+/** `nativo`: pantalla de Poliplast App (28/11). La sesión y el cliente son los de la app (usarClienteDeLaApp): sin login propio,
+ *  sin mensajes con un marco y sin barra propia. */
+export default function App({ nativo = false }: { nativo?: boolean } = {}) {
   const [sesion, setSesion] = useState<Sesion>({ estado: 'cargando' })
   const [error, setError] = useState<string | null>(null)
   const [operador, setOperadorEstado] = useState(operadorActual())
@@ -45,6 +47,12 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    if (nativo) {
+      const pendiente = camaraPendiente()
+      if (pendiente && window.location.hash !== `#/p/${pendiente.codigo}`) window.location.hash = `#/p/${pendiente.codigo}`
+      void comprobar()
+      return api.alCambiarSesion(() => void comprobar())
+    }
     // Pestaña del CRM: espera la sesión del CRM (y sus renovaciones). Si no llega en unos segundos, login normal.
     if (isEmbeddedInCrm()) {
       document.documentElement.classList.add('embebido')
@@ -77,10 +85,10 @@ export default function App() {
     void comprobar()
     const dejarSesion = api.alCambiarSesion(() => void comprobar())
     return () => { dejarSesion(); dejarAltoMarco() }
-  }, [comprobar])
+  }, [comprobar, nativo])
 
   // Dentro del CRM: avisar que ya se ve la pantalla, así el CRM saca su P de carga.
-  useEffect(() => { if (sesion.estado === 'dentro' || sesion.estado === 'sin_acceso') avisarVisibleAlCrm() }, [sesion.estado])
+  useEffect(() => { if (!nativo && (sesion.estado === 'dentro' || sesion.estado === 'sin_acceso')) avisarVisibleAlCrm() }, [sesion.estado, nativo])
 
   // En la cuenta compartida de expedición, la persona que usa el dispositivo pasa a ser "yo".
   const yo = useMemo(() => {
@@ -90,12 +98,14 @@ export default function App() {
   }, [sesion, operador])
 
   // Dentro del CRM, mientras arranca se ve la P del CRM (encima): acá no se muestra nada. Suelta o en la app de conteo, la P propia.
-  if (sesion.estado === 'cargando') return isEmbeddedInCrm() || enMarcoPoliplast()
+  if (sesion.estado === 'cargando') return nativo || isEmbeddedInCrm() || enMarcoPoliplast()
     ? <div className="centrado" />
     : <div className="centrado cargando-p" role="status" aria-label="Cargando"><span className="anillo" /><img src={`${import.meta.env.BASE_URL}poliplast-isotipo-color.png`} alt="" /></div>
+  if (sesion.estado === 'sin_acceso' && nativo) return <div className="aviso warn" style={{ margin: 16 }}>Tu cuenta todavía no tiene acceso a Entregas. Pedíselo a Felipe.</div>
   if (sesion.estado === 'sin_acceso') return <Login sinAcceso={sesion.email || 'actual'} onSalir={() => void api.cerrarSesion()} />
   // Dentro del CRM nunca se pide usuario y contraseña (25/11, Felipe: «Entregas es parte del CRM»): si la sesión no sirve,
   // se le avisa al CRM, que la renueva (y la reenvía) o muestra su propio ingreso.
+  if (sesion.estado === 'fuera' && nativo) return <div className="aviso err" style={{ margin: 16 }}>{error || 'Tu sesión venció: volvé a entrar a Poliplast App.'}</div>
   if (sesion.estado === 'fuera' && isEmbeddedInCrm()) return <div className="centrado" />
   if (sesion.estado === 'fuera') return (
     <>

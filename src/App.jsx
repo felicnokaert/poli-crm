@@ -50,6 +50,7 @@ const TechnicalDocumentsAdmin = lazyNamed(() => import("./TechnicalDocuments"), 
 const MapaCobertura = lazyNamed(() => import("./MapaCobertura"), "MapaCobertura");
 const CotizadorFrame = lazyNamed(() => import("./CotizadorFrame"), "CotizadorFrame");
 const EntregasFrame = lazyNamed(() => import("./EntregasFrame"), "EntregasFrame");
+const EntregasNativa = lazyNamed(() => import("./EntregasNativa"), "default");
 // Único de los cinco named exports de Academy.jsx que se usa acá - los
 // otros (CommercialKnowledge, Coach, QuickReplies, Training) son internos,
 // consumidos solo por el propio <Academy> - así que separarla en su propio
@@ -1068,7 +1069,12 @@ export default function App() {
             <CotizadorFrame session={session} client={quoterClient} />
           </Suspense>
         )}
-        {view === "entregas" && previewSite && !demo && <EntregasEmbed base="/entregas-app/" access={previewAccess} who={isExpedition ? expeditionWho : null} />}
+        {/* 28/11 (Felipe: «una sola app, no una adentro de otra»): en el link de prueba Entregas es una pantalla NATIVA (sin iframe). */}
+        {view === "entregas" && previewSite && !demo && (
+          <Suspense fallback={<Splash text="Cargando entregas…" />}>
+            <EntregasNativa supabase={onlineConfigured && session ? supabase : null} access={previewAccess} readOnly={Boolean(typeof window !== "undefined" && window.__poliplastReadOnly)} />
+          </Suspense>
+        )}
         {view === "entregas" && demo && <EntregasEmbed base="/entregas-maqueta/" access={previewAccess} who={isExpedition ? expeditionWho : null} />}
         {/* 25/11 (Felipe: «Entregas demora muchísimo»): se precarga escondida unos segundos después de abrir y queda abierta al
             cambiar de pestaña, así al tocar Entregas ya está lista. */}

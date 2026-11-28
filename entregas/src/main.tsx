@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles.css'
+import './components/pantalla.css'
 import App from './App.tsx'
 import { MODO_CONTEO } from './lib/cliente'
 import { seguirTemaDelCrm } from './lib/tema'

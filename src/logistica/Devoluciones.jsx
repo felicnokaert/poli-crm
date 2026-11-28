@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { conteoDb } from './conteo-db.js';
+import { useConfirm } from '../ConfirmDialog.jsx';
 import { getPersona, getDeposito } from './identidad.js';
 
 const supabase = conteoDb(); // Devoluciones dentro de Poliplast App (28/11): misma base que la app de conteo
@@ -174,6 +175,7 @@ function Resolver({ d, por, cerrar, listo }) {
 }
 
 function Recibir({ carga, setCarga, por, deposito, alGuardar }) {
+  const confirm = useConfirm();
   const [ocup, setOcup] = useState(false);
   const [subiendo, setSubiendo] = useState(0);
   const [err, setErr] = useState('');
@@ -202,7 +204,7 @@ function Recibir({ carga, setCarga, por, deposito, alGuardar }) {
     setOcup(false);
     if (error) { setErr('No se pudo guardar. Revisá internet y probá de nuevo.'); return; }
     if (data && data.duplicado) {
-      if (window.confirm('Esta etiqueta ya la recibió ' + data.por + ' el ' + fecha(data.creado) + ' a las ' + hhmm(data.creado) + '. ¿Es otra devolución distinta y la querés cargar igual?')) guardar(true);
+      if (await confirm('Esta etiqueta ya la recibió ' + data.por + ' el ' + fecha(data.creado) + ' a las ' + hhmm(data.creado) + '. ¿Es otra devolución distinta y la querés cargar igual?')) guardar(true);
       return;
     }
     if (!data || !data.ok) { setErr((data && data.error) || 'No se pudo guardar.'); return; }
@@ -275,7 +277,7 @@ function Recibir({ carga, setCarga, por, deposito, alGuardar }) {
         <div className={'dev-resultado ' + res}>{res === 'ok' ? '✓ Queda OK' : 'Queda «A revisar» → Ventas ecommerce (' + VENTAS_ECOMMERCE + ')'}</div>
         {err && <div className="etq-alerta">{err}</div>}
         <button type="button" className="dz-btn dz-primary" disabled={ocup || subiendo > 0 || !!falta || !por} onClick={() => guardar(false)}>{ocup ? 'Guardando…' : falta || 'Guardar devolución'}</button>
-        <button type="button" className="dz-btn dz-secondary" onClick={() => { if (window.confirm('¿Salir sin guardar?')) setCarga(null); }}>Cancelar</button>
+        <button type="button" className="dz-btn dz-secondary" onClick={async () => { if (await confirm('¿Salir sin guardar?')) setCarga(null); }}>Cancelar</button>
       </div>
     </div>
   );

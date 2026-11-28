@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { conteoDb } from './conteo-db.js';
+import { useConfirm } from '../ConfirmDialog.jsx';
 import { getPersona, getDeposito, setDeposito as setDepositoCompartido, setIdentidad } from './identidad.js';
 import './dosificado.css';
 
@@ -163,6 +164,8 @@ function useBusqueda(catalogo, soloSimples) {
 
 /* ---------------- pantalla: cargar (guardado automático en vivo) ---------------- */
 function Cargar({ catalogo, cfg, avisar, guardarEnCatalogo, irKits, irRegistros }) {
+  const confirm = useConfirm();
+  const [otroOperario, setOtroOperario] = useState(null);
   const [deposito, setDeposito] = useState(() => { const d = getDeposito() || lsGet('dosif_deposito', ''); return cfg.depositos.includes(d) ? d : ''; });
   const [operario, setOperario] = useState(() => getPersona() || lsGet('dosif_operario', ''));
   const [extras, setExtras] = useState(() => lsGet('dosif_operarios_extra', []));
@@ -320,8 +323,9 @@ function Cargar({ catalogo, cfg, avisar, guardarEnCatalogo, irKits, irRegistros 
     }
   }
 
-  function agregarOperario() {
-    const n = (window.prompt('Nombre del operario:') || '').trim();
+  function agregarOperario(nombre) {
+    const n = String(nombre || '').trim();
+    setOtroOperario(null);
     if (!n) return;
     if (!operarios.some((o) => norm(o) === norm(n))) { const e = [...extras, n]; setExtras(e); lsSet('dosif_operarios_extra', e); }
     setOperario(n);
@@ -338,9 +342,9 @@ function Cargar({ catalogo, cfg, avisar, guardarEnCatalogo, irKits, irRegistros 
     avisar('SKU ' + sku + ' agregado al catálogo.');
   }
 
-  function nuevaPlanilla() {
-    const pendientes = lineas.filter((l) => l.estado === 'pendiente' || l.estado === 'guardando' || l.estado === 'error');
-    if (pendientes.length && !window.confirm('Hay ' + pendientes.length + ' línea(s) sin guardar o incompletas. Se van a descartar. ¿Seguir?')) return;
+  async function nuevaPlanilla() {
+    const pendientes = lineas.filter((l) => l.estado === 'borrador' || l.estado === 'pendiente' || l.estado === 'guardando' || l.estado === 'error');
+    if (pendientes.length && !await confirm('Hay ' + pendientes.length + ' línea(s) sin guardar o incompletas. Se van a descartar. ¿Seguir?')) return;
     Object.values(timers.current).forEach(clearTimeout);
     lsDel(LS_PLANILLA); planillaRef.current = null; hdrGuardado.current = null; creandoRef.current = null; colas.current = {};
     setLineas([]); setQ(''); setFecha(hoyISO());
@@ -374,7 +378,13 @@ function Cargar({ catalogo, cfg, avisar, guardarEnCatalogo, irKits, irRegistros 
             <div className="dz-label">¿Quién dosifica?</div>
             <div className="dz-chips">
               {operarios.map((o) => <button type="button" key={o} className={'dz-chip' + (operario === o ? ' on' : '')} onClick={() => setOperario(o)}>{o}</button>)}
-              <button type="button" className="dz-chip" onClick={agregarOperario}>＋ Otro</button>
+              {otroOperario == null
+                ? <button type="button" className="dz-chip" onClick={() => setOtroOperario('')}>＋ Otro</button>
+                : <form className="dz-otro" onSubmit={(e) => { e.preventDefault(); agregarOperario(otroOperario); }}>
+                    <input className="dz-inp" autoFocus aria-label="Nombre del operario" placeholder="Nombre del operario" value={otroOperario} onChange={(e) => setOtroOperario(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') setOtroOperario(null); }} />
+                    <button type="submit" className="dz-chip">Agregar</button>
+                    <button type="button" className="dz-chip" onClick={() => setOtroOperario(null)}>Cancelar</button>
+                  </form>}
             </div>
           </div>
           <div>
@@ -467,6 +477,7 @@ function Cargar({ catalogo, cfg, avisar, guardarEnCatalogo, irKits, irRegistros 
 
 /* ---------------- pantalla: kits y recetas ---------------- */
 function Kits({ catalogo, avisar, guardarEnCatalogo, guardarVarios, admin, editor, setEditor }) {
+  const confirm = useConfirm();
   const [importar, setImportar] = useState(false);
   const [bk, setBk] = useState('');
   const todosKits = catalogo.filter((c) => c.tipo === 'kit' && c.activo !== false);
@@ -476,7 +487,7 @@ function Kits({ catalogo, avisar, guardarEnCatalogo, guardarVarios, admin, edito
   const archivados = catalogo.filter((c) => c.tipo === 'kit' && c.activo === false);
 
   async function archivar(k) {
-    if (!window.confirm('¿Archivar el kit ' + k.sku + '? Deja de aparecer en el buscador (el historial se conserva).')) return;
+    if (!await confirm('¿Archivar el kit ' + k.sku + '? Deja de aparecer en el buscador (el historial se conserva).')) return;
     const { data, error } = await supabase.from('dosif_catalogo').update({ activo: false }).eq('sku', k.sku).select('sku');
     if (error || !data || !data.length) { avisar('No se pudo archivar.', true); return; }
     guardarEnCatalogo({ ...k, activo: false }); avisar('Kit archivado.');
@@ -525,6 +536,7 @@ function Kits({ catalogo, avisar, guardarEnCatalogo, guardarVarios, admin, edito
 }
 
 function KitEditor({ catalogo, inicial, onCerrar, avisar, guardarEnCatalogo }) {
+  const confirm = useConfirm();
   const [sku, setSku] = useState(inicial.sku || '');
   const [descripcion, setDescripcion] = useState(inicial.descripcion || '');
   const [comps, setComps] = useState(() => (inicial.componentes && inicial.componentes.length ? inicial.componentes.map((c) => ({ ...c, kg: String(c.kg), unidad: unidadDe(c) })) : [{ sku: '', descripcion: '', kg: '', unidad: 'kg' }, { sku: '', descripcion: '', kg: '', unidad: 'kg' }]));
@@ -542,7 +554,7 @@ function KitEditor({ catalogo, inicial, onCerrar, avisar, guardarEnCatalogo }) {
     const limpias = comps.filter((c) => c.descripcion.trim() || c.sku.trim() || n0(c.kg) > 0);
     if (!limpias.length || limpias.some((c) => !(n0(c.kg) > 0) || !(c.descripcion.trim() || c.sku.trim()))) { avisar('Cada componente necesita nombre y cantidad.', true); return; }
     const existente = catalogo.find((c) => c.sku === s);
-    if (!inicial.existente && existente && !window.confirm('Ya existe ' + s + (existente.tipo === 'kit' ? ' como kit' : ' como producto') + '. ¿Reemplazarlo?')) return;
+    if (!inicial.existente && existente && !await confirm('Ya existe ' + s + (existente.tipo === 'kit' ? ' como kit' : ' como producto') + '. ¿Reemplazarlo?')) return;
     const it = { sku: s, descripcion: descripcion.trim(), tipo: 'kit', activo: true, componentes: limpias.map((c) => ({ sku: c.sku.trim().toUpperCase(), descripcion: c.descripcion.trim() || c.sku.trim(), kg: n0(c.kg), unidad: unidadDe(c) })) };
     setGuardando(true);
     const { error } = await supabase.from('dosif_catalogo').upsert(it);
@@ -592,6 +604,7 @@ function KitEditor({ catalogo, inicial, onCerrar, avisar, guardarEnCatalogo }) {
 
 /* ---------------- pantalla: registros (en vivo) ---------------- */
 function Registros({ avisar, cfg, admin, adminSes }) {
+  const confirm = useConfirm();
   const [filas, setFilas] = useState(null);
   const [error, setError] = useState(false);
   const [vivo, setVivo] = useState(false);
@@ -694,13 +707,13 @@ function Registros({ avisar, cfg, admin, adminSes }) {
   }
 
   async function eliminarLinea(f) {
-    if (!window.confirm('¿Eliminar esta línea (' + f.sku + ')? No se puede deshacer.')) return;
+    if (!await confirm('¿Eliminar esta línea (' + f.sku + ')? No se puede deshacer.')) return;
     const { data: del, error: err } = await supabase.from('dosif_lineas').delete().eq('id', f.id).select('id');
     if (err || !del || !del.length) { avisar('No se pudo eliminar.', true); cargar(); return; }
     setVer(null); avisar('Línea eliminada.'); cargar();
   }
   async function eliminarPlanilla(f) {
-    if (!window.confirm('¿Eliminar TODA la planilla (' + f.deposito + ', ' + fechaAR(f.fecha) + ', ' + f.operario + ') con todas sus líneas? No se puede deshacer.')) return;
+    if (!await confirm('¿Eliminar TODA la planilla (' + f.deposito + ', ' + fechaAR(f.fecha) + ', ' + f.operario + ') con todas sus líneas? No se puede deshacer.')) return;
     const { data: del, error: err } = await supabase.from('dosif_planillas').delete().eq('id', f.planillaId).select('id');
     if (err || !del || !del.length) { avisar('No se pudo eliminar.', true); cargar(); return; }
     setVer(null); avisar('Planilla eliminada.'); cargar();
@@ -807,6 +820,7 @@ const hace = (dias) => { const dt = new Date(); dt.setDate(dt.getDate() - dias);
 const desdePeriodo = (p) => (p === 'todo' ? '' : p === 'hoy' ? hoyISO() : hace(parseInt(p, 10)));
 
 function Resumen({ avisar, cfg, catalogo, admin }) {
+  const confirm = useConfirm();
   const movil = useMovil();
   const [lineas, setLineas] = useState(null);
   const [movs, setMovs] = useState([]);
@@ -925,7 +939,7 @@ function Resumen({ avisar, cfg, catalogo, admin }) {
   const activos = productos.filter((p) => p.dosif > 0).length;
 
   async function quitarMov(m) {
-    if (!window.confirm('¿Quitar este movimiento (' + m.tipo + ' de ' + fmt(m.cant) + ' · ' + m.sku + ')?')) return;
+    if (!await confirm('¿Quitar este movimiento (' + m.tipo + ' de ' + fmt(m.cant) + ' · ' + m.sku + ')?')) return;
     const { data, error: err } = await supabase.from('dosif_movimientos').delete().eq('id', m.id).select('id');
     if (err || !data || !data.length) { avisar('No se pudo quitar.', true); return; }
     avisar('Movimiento quitado.'); cargar();
@@ -1277,6 +1291,7 @@ function descargarPlantillaCSV() {
 }
 
 function ImportarCSV({ catalogo, avisar, guardarVarios, onCerrar }) {
+  const confirm = useConfirm();
   const [filas, setFilas] = useState(null);
   const [nombre, setNombre] = useState('');
   const [sinEnvases, setSinEnvases] = useState(true);
@@ -1304,7 +1319,7 @@ function ImportarCSV({ catalogo, avisar, guardarVarios, onCerrar }) {
   async function aplicar() {
     const aplicables = [...nuevos, ...cambian];
     if (!aplicables.length) return;
-    if (!window.confirm('Se van a crear ' + nuevos.length + ' y actualizar ' + cambian.length + ' (las recetas de los que cambian se reemplazan completas). ¿Seguir?')) return;
+    if (!await confirm('Se van a crear ' + nuevos.length + ' y actualizar ' + cambian.length + ' (las recetas de los que cambian se reemplazan completas). ¿Seguir?')) return;
     setAplicando(true);
     try {
       for (let i = 0; i < aplicables.length; i += 100) {

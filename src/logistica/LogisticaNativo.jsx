@@ -4,6 +4,7 @@ import { conteoDb } from "./conteo-db.js";
 import Dosificado from "./Dosificado.jsx";
 import Conteo from "./Conteo.jsx";
 import Etiquetas from "./Etiquetas.jsx";
+import "./theme-dark.css";
 
 // Logística nativa (28/11): las pantallas de la app de conteo, ya dentro de Poliplast App (sin iframes). Acá se resuelve lo
 // que antes hacía el marco: quién sos y depósito (de la app) y si es administrador de Logística: la app firma

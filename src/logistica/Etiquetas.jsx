@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { conteoDb } from './conteo-db.js';
+import { useConfirm } from '../ConfirmDialog.jsx';
 import { getPersona, getDeposito, adminDeApp, setIdentidad, personaDeLaApp, elegirPersona } from './identidad.js';
 import './dosificado.css';
 import './etiquetas.css';
@@ -489,6 +490,7 @@ function Pendientes({ porId, escaneos, avisar }) {
 
 /* ---------------- pantalla: hecho (historial) + carga masiva de respaldo + borrado de administrador ---------------- */
 function Historial({ por, canceladas, escaneos, admin, pedirAdmin, salirAdmin, recargar, avisar, escanear }) {
+  const confirm = useConfirm();
   const [masivo, setMasivo] = useState('');
   const [prog, setProg] = useState(null);
   const [filtro, setFiltro] = useState('');
@@ -510,13 +512,13 @@ function Historial({ por, canceladas, escaneos, admin, pedirAdmin, salirAdmin, r
   };
 
   const borrar = async (envio) => {
-    if (!window.confirm('¿Borrar el escaneo ' + envio + '?')) return;
+    if (!await confirm('¿Borrar el escaneo ' + envio + '?')) return;
     const { data } = await supabase.rpc('etq_borrar', { p_nombre: admin.nombre, p_pin: admin.pin, p_envio: envio });
     if (data === true) { avisar('Borrado.'); recargar(); } else avisar('No se pudo borrar.', true);
   };
 
   const deshacer = async (envio) => {
-    if (!window.confirm('¿Deshacer el escaneo ' + envio + '?')) return;
+    if (!await confirm('¿Deshacer el escaneo ' + envio + '?')) return;
     const { data } = await supabase.rpc('etq_deshacer', { p_envio: envio, p_por: por });
     if (data === true) { avisar('Deshecho.'); recargar(); } else avisar('Ya pasaron más de 10 minutos: pedile a un administrador.', true);
   };

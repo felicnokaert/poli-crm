@@ -251,3 +251,5 @@ div.dz-lm-row:active { background: transparent; }
 @media (min-width: 981px) {
   .dz-tabs { left: 50%; right: auto; width: 980px; transform: translateX(-50%); border-radius: 16px 16px 0 0; }
 }
+.logi-dosif .dz-otro { display: inline-flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.logi-dosif .dz-otro .dz-inp { width: 180px; }

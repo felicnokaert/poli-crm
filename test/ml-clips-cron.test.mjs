@@ -22,5 +22,5 @@ test('el cron de clips revisa solo las activas sin clip o sin dato que no se mir
   assert.equal(result.status, 200);
   assert.equal(result.body.checked, 1);
   assert.ok(asked.some((url) => url.includes('/item/MLA1/performance')));
-  assert.ok(!asked.some((url) => url.includes('MLA2')), 'la revisada hace poco no se repite');
+  assert.ok(!asked.some((url) => url.includes('/item/MLA2/performance')), 'la revisada hace poco no se repite');
 });

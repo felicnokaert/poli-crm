@@ -140,7 +140,7 @@ function Products({ rows, issue, setIssue }) {
       {shown.length > 0 && <div className="panel-head-actions"><button type="button" className="secondary" onClick={() => downloadCsv(shown)}>Descargar CSV ({shown.length})</button></div>}
       {shown.length === 0 ? <p className="muted">No hay productos con ese filtro.</p> : (
         <div className="table-scroll"><table className="sales-history-table ml-board-table">
-          <thead><tr><th>Producto</th><th>Estado</th><th>Variantes</th><th>Precio</th><th>Stock</th><th>Le falta</th></tr></thead>
+          <thead><tr><th>Producto</th><th>Estado</th><th>Variantes</th><th>Precio</th><th>Stock</th><th>Problemas</th></tr></thead>
           <tbody>{shown.slice(0, 300).map((row) => {
             const [label, tone] = SHOPIFY_STATUS[row.product.status] || [statusLabel(row.product.status), ""];
             return (
@@ -150,7 +150,7 @@ function Products({ rows, issue, setIssue }) {
                 <td data-label="Variantes">{row.variants.length}{row.variants.length > 1 ? <small className="muted"> ({[...new Set(row.variants.flatMap((variant) => variant.options.map((option) => option.name)))].filter((name) => name !== "Title").join(" · ") || "—"})</small> : null}</td>
                 <td data-label="Precio">{row.minPrice == null ? "—" : row.minPrice === row.maxPrice ? money(row.minPrice) : `${money(row.minPrice)} – ${money(row.maxPrice)}`}</td>
                 <td data-label="Stock">{number(row.product.total_inventory)}</td>
-                <td data-label="Le falta">{row.issues.length === 0 ? <span className="muted small">—</span> : row.issues.map((key) => <span key={key} className="badge warn" title={issueLabel(key)}>{issueLabel(key)}</span>)}</td>
+                <td data-label="Problemas">{row.issues.length === 0 ? <span className="muted small">—</span> : row.issues.map((key) => <span key={key} className="badge warn" title={issueLabel(key)}>{issueLabel(key)}</span>)}</td>
               </tr>
             );
           })}</tbody>

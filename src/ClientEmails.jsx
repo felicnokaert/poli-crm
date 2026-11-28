@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Copy, Mail } from "lucide-react";
 import { askText, contabiliumIndex, emailsOfClient, splitEmails, contabiliumWithoutEmail, groupByVendor, myClientsWithoutEmail, normalizeEmail } from "./client-emails.mjs";
 import { useContabiliumEmails } from "./hooks/useContabiliumEmails.js";
+import { Pager, usePaged } from "./Pager.jsx";
 
 // Empresas → «Sin mail» (27/11). Cada comercial ve los clientes de SU cartera sin mail y lo carga; los administradores
 // además ven los clientes de Contabilium que compraron en 12 meses sin mail, por vendedor, con el texto para pedírselo.
@@ -29,6 +30,8 @@ export function ClientEmails({ clients = [], supabase = null, isAdmin = false, o
   const [vendor, setVendor] = useState("");
   const [copied, setCopied] = useState("");
   const current = groups.find((group) => group.vendor === vendor) || groups[0];
+  const minePaged = usePaged(mine, 25);
+  const vendorPaged = usePaged(current?.rows || [], 25, current?.vendor || "");
   const copy = async (group) => {
     try { await navigator.clipboard.writeText(askText(group)); setCopied(group.vendor); setTimeout(() => setCopied(""), 2000); } catch { /* sin portapapeles */ }
   };
@@ -38,9 +41,8 @@ export function ClientEmails({ clients = [], supabase = null, isAdmin = false, o
         <div className="panel-head"><div><span className="eyebrow">Empresas</span><h2>Clientes de tu cartera sin mail</h2></div><span className="badge">{mine.length}</span></div>
         <p className="muted small">No tienen mail en la ficha ni en sus contactos. Pedíselo cuando les pases un presupuesto o una factura y cargalo acá. Si Contabilium ya tiene uno, aparece sugerido: revisalo antes de guardar.</p>
         {mine.length === 0 ? <p className="muted">Todos tus clientes tienen mail. 👏</p> : (
-          <ul className="mail-list">{mine.slice(0, 200).map((row) => <EmailRow key={row.id} row={row} onSave={onSaveEmail} onOpen={onOpenClient} />)}</ul>
+          <><ul className="mail-list">{minePaged.rows.map((row) => <EmailRow key={row.id} row={row} onSave={onSaveEmail} onOpen={onOpenClient} />)}</ul><Pager paged={minePaged} label="clientes" /></>
         )}
-        {mine.length > 200 ? <p className="muted small">Se muestran los primeros 200 de {mine.length}.</p> : null}
       </section>
       {isAdmin && (
         <section className="panel">
@@ -58,7 +60,7 @@ export function ClientEmails({ clients = [], supabase = null, isAdmin = false, o
                     <button type="button" className="secondary" onClick={() => copy(current)}><Copy size={14} /> {copied === current.vendor ? "Copiado" : "Copiar lista para pedírselos"}</button>
                   </div>
                   <ul className="mail-list">
-                    {current.rows.slice(0, 150).map((row) => (
+                    {vendorPaged.rows.map((row) => (
                       <li key={row.key} className="mail-row">
                         <strong>{row.name}</strong>
                         <span className="muted small">{row.company} · {[row.cuit && `CUIT ${row.cuit}`, row.phone].filter(Boolean).join(" · ")} · última {row.lastType} {row.lastAt}</span>
@@ -66,7 +68,8 @@ export function ClientEmails({ clients = [], supabase = null, isAdmin = false, o
                       </li>
                     ))}
                   </ul>
-                  {current.rows.length > 150 ? <p className="muted small">Se muestran 150 de {current.rows.length}; la lista copiada trae los primeros 40.</p> : null}
+                  <Pager paged={vendorPaged} label="clientes" />
+                  {current.rows.length > 40 ? <p className="muted small">La lista copiada trae los primeros 40.</p> : null}
                 </>
               )}
             </>

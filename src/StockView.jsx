@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Info, Search } from "lucide-react";
 import { adjustCsv, adjustList, contabiliumByCode, countInfo, dosifiedSince, latestCounts, pivotStock, searchStock, stockNow } from "./stock-model.mjs";
 import { adminFetch } from "./admin-api.mjs";
+import { Pager, usePaged } from "./Pager.jsx";
 import { buildSheet, contabiliumIndex, facets, filterSheet, paginate, reviewList, salesIndex, sortSheet } from "./stock-sheet.mjs";
 
 // Stock en una sola hoja (Felipe 27/11): una fila por producto con el último conteo de Villa Domínico y de Mar del Plata
@@ -126,6 +127,7 @@ export function StockView({ supabase = null, isAdmin = false }) {
   const COLUMNS = sales ? [...BASE_COLUMNS.slice(0, 8), ...SALES_COLUMNS, BASE_COLUMNS[8]] : BASE_COLUMNS;
   const sheet = useMemo(() => buildSheet({ catalog: catalog.rows, products, cb: cbIndex, sales }), [catalog.rows, products, cbIndex, sales]);
   const review = useMemo(() => reviewList(cbIndex, sheet, sales), [cbIndex, sheet, sales]);
+  const reviewPaged = usePaged(review, 25, view);
   const facet = useMemo(() => facets(sheet), [sheet]);
   const filtered = useMemo(() => sortSheet(filterSheet(sheet, { query, ...filters }), sort.key, sort.dir), [sheet, query, filters, sort]);
   const paged = paginate(filtered, page, PAGE);
@@ -190,7 +192,7 @@ export function StockView({ supabase = null, isAdmin = false }) {
           {review.length === 0 ? <p className="muted">Nada para revisar.</p> : (
             <div className="stock-table" role="table">
               <div className={`stock-row stock-row-review${sales ? " with-sales" : ""} stock-head`} role="row"><span>Código</span><span>Empresa</span><span>V. Domínico</span><span>MDQ</span>{sales ? <><span>Ventas 12 m</span><span>Última venta</span></> : null}</div>
-              {review.slice(0, 300).map((row) => (
+              {reviewPaged.rows.map((row) => (
                 <div className={`stock-row stock-row-review${sales ? " with-sales" : ""}`} role="row" key={row.sku}>
                   <span><strong>{row.sku}</strong>{row.name ? <><br /><span className="muted small">{row.name}</span></> : null}</span>
                   <span data-label="Empresa" className="small">{row.companies.map(companyName).join(", ")}</span>
@@ -199,6 +201,7 @@ export function StockView({ supabase = null, isAdmin = false }) {
                   {sales ? <><span data-label="Ventas 12 m">{row.sales12 == null ? "—" : qty(row.sales12)}</span><span data-label="Última venta" className="small">{row.lastSale ? shortDate(row.lastSale) + "/" + row.lastSale.slice(2, 4) : "—"}</span></> : null}
                 </div>
               ))}
+              <Pager paged={reviewPaged} label="códigos" />
               {review.length > 300 ? <p className="muted small">Se muestran los 300 con más stock (de {review.length}).</p> : null}
             </div>
           )}

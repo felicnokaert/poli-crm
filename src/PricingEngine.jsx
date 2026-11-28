@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Calculator, Plus, Save, Search, Trash2 } from "lucide-react";
 import { adminFetch } from "./admin-api.mjs";
+import { Pager, usePaged } from "./Pager.jsx";
 import { loadLineData, searchVariants } from "./QuoteBuilder.jsx";
 import { loadDollar } from "./product-hub-data.js";
 import { ars, pickRow, rarePrice } from "./quote-model.mjs";
@@ -170,7 +171,8 @@ function ParamsEditor({ params, onChange, onSave, status }) {
 function CostsEditor({ costs, onSaved }) {
   const [text, setText] = useState("");
   const [status, setStatus] = useState("");
-  const entries = Object.entries(costs || {}).sort((a, b) => a[0].localeCompare(b[0]));
+  const entries = useMemo(() => Object.entries(costs || {}).sort((a, b) => a[0].localeCompare(b[0])), [costs]);
+  const costsPaged = usePaged(entries, 25);
   async function save() {
     const { rows, errors } = parseCostPaste(text);
     if (!rows.length) { setStatus("Pegá renglones «SKU;costo en USD»."); return; }
@@ -192,8 +194,9 @@ function CostsEditor({ costs, onSaved }) {
       <p className="muted small">{entries.length} productos con costo.</p>
       {entries.length > 0 && (
         <div className="table-scroll"><table><thead><tr><th scope="col">SKU</th><th scope="col">Costo USD</th><th scope="col">Cargó</th></tr></thead>
-          <tbody>{entries.slice(0, 200).map(([sku, row]) => <tr key={sku}><td>{sku}</td><td>{usd(row.usd)}</td><td className="muted small">{String(row.by || "").split("@")[0]} {String(row.at || "").slice(0, 10)}</td></tr>)}</tbody></table></div>
+          <tbody>{costsPaged.rows.map(([sku, row]) => <tr key={sku}><td>{sku}</td><td>{usd(row.usd)}</td><td className="muted small">{String(row.by || "").split("@")[0]} {String(row.at || "").slice(0, 10)}</td></tr>)}</tbody></table></div>
       )}
+      <Pager paged={costsPaged} label="costos" />
     </section>
   );
 }

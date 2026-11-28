@@ -66,3 +66,10 @@ test('serie diaria: completa con ceros los días sin pedidos (fecha argentina)',
   assert.deepEqual(series.map((entry) => entry.orders), [0, 2, 0, 0]);
   assert.equal(series[1].amount, 500);
 });
+
+test('28/11: un producto activo sin seguimiento de stock no es «stock 0» (se compra siempre)', async () => {
+  const { issuesOf } = await import('../src/shopify-board.mjs');
+  const product = { status: 'ACTIVE', description_length: 100, seo_title: 'x', media_count: 3, total_inventory: 0 };
+  assert.ok(issuesOf(product, [{ sku: 'A', inventory_policy: 'DENY', weight_grams: 500 }]).includes('stock_cero'));
+  assert.ok(!issuesOf({ ...product, tracks_inventory: false }, [{ sku: 'A', inventory_policy: 'DENY', weight_grams: 500 }]).includes('stock_cero'));
+});

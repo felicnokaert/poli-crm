@@ -27,7 +27,8 @@ export function issuesOf(product, variants = [], skuCounts = new Map()) {
   if (!product.seo_title && !product.seo_description) issues.push('sin_seo');
   if (!(product.media_count > 0)) issues.push('sin_foto');
   // Las variantes con "seguir vendiendo sin stock" no cuentan: se pueden comprar igual.
-  const sellsWithoutStock = variants.some((variant) => variant.inventory_policy === 'CONTINUE');
+  // 28/11: tampoco los que no siguen el stock (tracks_inventory false): Shopify deja comprarlos siempre.
+  const sellsWithoutStock = product.tracks_inventory === false || variants.some((variant) => variant.inventory_policy === 'CONTINUE');
   if (active && !(product.total_inventory > 0) && !sellsWithoutStock) issues.push('stock_cero');
   if (active && variants.some((variant) => variant.weight_grams === 0)) issues.push('sin_peso');
   if (variants.some((variant) => (variant.inventory_quantity || 0) >= 900)) issues.push('stock_relleno');

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildSheet, contabiliumIndex, facets, filterSheet, isNotProduct, paginate, reviewList, sortSheet } from '../src/stock-sheet.mjs';
+import { buildSheet, contabiliumIndex, salesIndex, facets, filterSheet, isNotProduct, paginate, reviewList, sortSheet } from '../src/stock-sheet.mjs';
 
 const detail = { companies: {
   POLIOCHO: { items: { 'SP-618': { n: '', d: { vd: 880, mdq: 220 } }, 'FLETE-1': { n: 'FLETE A CLIENTE', d: { vd: 3 } }, ZZ9: { n: '', d: { vd: 5 } }, CERO: { n: '', d: { vd: 0 } } } },
@@ -59,4 +59,16 @@ test('Stock: filtros, orden (vacíos al final) y páginas de 30', () => {
   assert.deepEqual(f.families, ['Baldes', 'Contado, fuera del catálogo', 'POLIURETANOS', 'RESINPLAST']);
   assert.deepEqual(f.subfamilies('RESINPLAST'), ['Resinas Epoxi']);
   assert.deepEqual(f.companies, ['FOAMFACTORY', 'POLIOCHO']);
+});
+
+test('Stock: con ventas por código, columnas de 6/12 meses, filtro obsoleto y Revisar ordenado por ventas', () => {
+  const cb = contabiliumIndex(detail);
+  const sales = salesIndex([{ codigo: 'sp-618', unidades_6m: 3, unidades_12m: 10, ultima_venta: '2026-11-20' }, { codigo: 'NUEVO-1', nombre: 'Producto nuevo', unidades_6m: 4, unidades_12m: 8, ultima_venta: '2026-11-01' }, { codigo: 'IMP', nombre: 'IMPUESTO INTERNO', unidades_12m: 50 }]);
+  const sheet = buildSheet({ catalog, products, cb, sales });
+  assert.equal(sheet.find((row) => row.sku === 'SP-618').sales12, 10);
+  assert.equal(sheet.find((row) => row.sku === 'RE-608-1').sales12, 0);
+  assert.deepEqual(filterSheet(sheet, { status: 'obsoleto' }).map((row) => row.sku).sort(), ['BLBL-20-1', 'RE-608-1', 'VIEJO-1']);
+  assert.deepEqual(filterSheet(sheet, { status: 'vende' }).map((row) => row.sku), ['SP-618']);
+  assert.deepEqual(reviewList(cb, sheet, sales).map((row) => row.sku), ['NUEVO-1', 'ZZ9']);
+  assert.equal(buildSheet({ catalog, products, cb }).find((row) => row.sku === 'SP-618').sales12, null);
 });

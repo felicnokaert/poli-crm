@@ -30,8 +30,20 @@ export function contabiliumIndex(detail = {}) {
   return out;
 }
 
-// catalog: [{ sku, name, family, subfamily }] (activas) · products: pivotStock(...) (contados) · cb: contabiliumIndex(...).
-export function buildSheet({ catalog = [], products = [], cb = new Map() } = {}) {
+// Ventas por código (vista contabilium_ventas_por_codigo, cuando exista) → mapa CODIGO → { u6, u12, last, name }.
+export function salesIndex(rows = []) {
+  const out = new Map();
+  for (const row of rows) {
+    const key = normCode(row.codigo);
+    if (!key) continue;
+    out.set(key, { u6: Number(row.unidades_6m) || 0, u12: Number(row.unidades_12m) || 0, last: row.ultima_venta || '', name: row.nombre || '' });
+  }
+  return out;
+}
+
+// catalog: [{ sku, name, family, subfamily }] (activas) · products: pivotStock(...) (contados) · cb: contabiliumIndex(...)
+// · sales: salesIndex(...) o null si todavía no hay ventas por producto.
+export function buildSheet({ catalog = [], products = [], cb = new Map(), sales = null } = {}) {
   const rows = new Map();
   for (const item of catalog) {
     const key = normCode(item.sku);
@@ -48,7 +60,11 @@ export function buildSheet({ catalog = [], products = [], cb = new Map() } = {})
     const item = cb.get(key);
     const ats = [row.vd?.at, row.mdq?.at].filter(Boolean).sort();
     const status = row.counted ? row.countStatus : 'sin-conteo';
+    const sale = sales ? sales.get(key) || { u6: 0, u12: 0, last: '' } : null;
     return {
+      sales6: sale ? sale.u6 : null,
+      sales12: sale ? sale.u12 : null,
+      lastSale: sale ? sale.last : '',
       ...row,
       family: row.family || (row.inCatalog ? '' : 'Contado, fuera del catálogo'),
       companies: item?.companies || [],
@@ -62,15 +78,21 @@ export function buildSheet({ catalog = [], products = [], cb = new Map() } = {})
 }
 
 // En Contabilium con stock (distinto de 0) y que no está ni en el catálogo ni contado: para que Felipe/Diego decidan.
-export function reviewList(cb = new Map(), sheet = []) {
+// Con ventas: también entra lo vendido en 12 meses aunque no tenga stock, y se ordena por ventas (lo que vende primero).
+export function reviewList(cb = new Map(), sheet = [], sales = null) {
   const known = new Set(sheet.map((row) => normCode(row.sku)));
+  const codes = new Set([...cb.keys(), ...(sales ? sales.keys() : [])]);
   const out = [];
-  for (const [code, item] of cb.entries()) {
-    if (known.has(code) || !item.total) continue;
-    if (item.name && isNotProduct(item.name)) continue;
-    out.push({ sku: code, name: item.name || '', companies: item.companies, cbVd: item.vd, cbMdq: item.mdq, cbTotal: item.total });
+  for (const code of codes) {
+    if (known.has(code)) continue;
+    const item = cb.get(code) || { vd: null, mdq: null, total: null, companies: [], name: '' };
+    const sale = sales?.get(code) || null;
+    if (!item.total && !(sale && sale.u12 > 0)) continue;
+    const name = sale?.name || item.name || '';
+    if (name && isNotProduct(name)) continue;
+    out.push({ sku: code, name, companies: item.companies, cbVd: item.vd, cbMdq: item.mdq, cbTotal: item.total, sales12: sale ? sale.u12 : null, lastSale: sale?.last || '' });
   }
-  return out.sort((a, b) => Math.abs(b.cbTotal) - Math.abs(a.cbTotal));
+  return out.sort((a, b) => (b.sales12 ?? -1) - (a.sales12 ?? -1) || Math.abs(b.cbTotal || 0) - Math.abs(a.cbTotal || 0));
 }
 
 const STATUS_ORDER = { sin: 0, poco: 1, hay: 2, 'sin-conteo': 3 };
@@ -84,6 +106,8 @@ const SORTERS = {
   cbVd: (row) => row.cbVd,
   cbMdq: (row) => row.cbMdq,
   lastAt: (row) => row.lastAt || null,
+  sales12: (row) => row.sales12,
+  lastSale: (row) => row.lastSale || null,
   status: (row) => STATUS_ORDER[row.status] ?? 9,
 };
 export const SORT_KEYS = Object.keys(SORTERS);
@@ -95,7 +119,9 @@ export function filterSheet(rows = [], { query = '', company = '', family = '', 
     if (family && row.family !== family) return false;
     if (subfamily && row.subfamily !== subfamily) return false;
     if (status === 'falta' && !(row.status === 'sin' || row.status === 'poco')) return false;
-    if (status && status !== 'falta' && row.status !== status) return false;
+    if (status === 'obsoleto' && !(row.sales12 != null && row.sales12 <= 0)) return false;
+    if (status === 'vende' && !(row.sales12 > 0)) return false;
+    if (status && !['falta', 'obsoleto', 'vende'].includes(status) && row.status !== status) return false;
     if (!words.length) return true;
     const text = plain(`${row.sku} ${row.name} ${row.family} ${row.subfamily} ${row.countCategory || ''}`);
     return words.every((word) => text.includes(word));

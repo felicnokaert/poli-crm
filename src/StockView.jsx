@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Info, Search } from "lucide-react";
 import { adjustCsv, adjustList, contabiliumByCode, countInfo, dosifiedSince, latestCounts, pivotStock, searchStock, stockNow } from "./stock-model.mjs";
 import { adminFetch } from "./admin-api.mjs";
-import { buildSheet, contabiliumIndex, facets, filterSheet, paginate, reviewList, sortSheet } from "./stock-sheet.mjs";
+import { buildSheet, contabiliumIndex, facets, filterSheet, paginate, reviewList, salesIndex, sortSheet } from "./stock-sheet.mjs";
 
 // Stock en una sola hoja (Felipe 27/11): una fila por producto con el último conteo de Villa Domínico y de Mar del Plata
 // (app de conteo, tal como se contó) y el stock de Contabilium de cada depósito. Solo lee.
@@ -25,11 +25,23 @@ async function readCatalog(supabase) {
   }
   return out;
 }
+// Ventas por producto (vista del CRM armada desde los renglones de Contabilium). Si todavía no existe, la hoja sigue sin ventas.
+async function readSales(supabase) {
+  const out = [];
+  for (let from = 0; from < 50000; from += 1000) {
+    const { data, error } = await supabase.from("contabilium_ventas_por_codigo").select("codigo,nombre,unidades_6m,unidades_12m,ultima_venta").range(from, from + 999);
+    if (error) return null;
+    out.push(...(data || []));
+    if (!data || data.length < 1000) break;
+  }
+  return out.length ? out : null;
+}
 const COMPANY = { POLIPLAST: "Poliplast", POLIOCHO: "Poliocho", FOAMFACTORY: "Foam Factory", COMARG: "Comarg" };
 const companyName = (key) => COMPANY[key] || key;
 const shortDate = (at) => (at ? `${at.slice(8, 10)}/${at.slice(5, 7)}` : "—");
 const PAGE = 30;
-const COLUMNS = [["name", "Producto"], ["family", "Familia"], ["companies", "Empresa"], ["vd", "V. Domínico (conteo)"], ["mdq", "MDQ (conteo)"], ["cbVd", "V. Domínico (Contabilium)"], ["cbMdq", "MDQ (Contabilium)"], ["lastAt", "Último conteo"], ["status", "Estado"]];
+const BASE_COLUMNS = [["name", "Producto"], ["family", "Familia"], ["companies", "Empresa"], ["vd", "V. Domínico (conteo)"], ["mdq", "MDQ (conteo)"], ["cbVd", "V. Domínico (Contabilium)"], ["cbMdq", "MDQ (Contabilium)"], ["lastAt", "Último conteo"], ["status", "Estado"]];
+const SALES_COLUMNS = [["sales12", "Ventas 12 m"], ["lastSale", "Última venta"]];
 
 const qty = (value) => Number(value).toLocaleString("es-AR", { maximumFractionDigits: 1 });
 const STATUS = { hay: ["Hay", "ok"], poco: ["Queda poco", "warn"], sin: ["Sin stock", "danger"], "sin-conteo": ["Sin conteo", ""] };
@@ -58,6 +70,7 @@ export function StockView({ supabase = null, isAdmin = false }) {
   const [sort, setSort] = useState({ key: "name", dir: "asc" });
   const [page, setPage] = useState(1);
   const [catalog, setCatalog] = useState({ rows: [], loaded: false, error: "" });
+  const [salesRows, setSalesRows] = useState(null);
   const [view, setView] = useState("hoja");
   const [cbBusy, setCbBusy] = useState("");
 
@@ -76,6 +89,7 @@ export function StockView({ supabase = null, isAdmin = false }) {
   useEffect(() => {
     if (!supabase?.from) return undefined;
     let alive = true;
+    readSales(supabase).then((rows) => { if (alive) setSalesRows(rows); }).catch(() => {});
     readCatalog(supabase).then((rows) => { if (alive) setCatalog({ rows, loaded: true, error: "" }); })
       .catch((error) => { if (alive) setCatalog({ rows: [], loaded: true, error: `No se pudo leer el catálogo (${error.message || error}).` }); });
     return () => { alive = false; };
@@ -108,8 +122,10 @@ export function StockView({ supabase = null, isAdmin = false }) {
 
   const products = useMemo(() => pivotStock(data?.rows || [], cb.map), [data, cb.map]);
   const cbIndex = useMemo(() => contabiliumIndex(cb.detail || {}), [cb.detail]);
-  const sheet = useMemo(() => buildSheet({ catalog: catalog.rows, products, cb: cbIndex }), [catalog.rows, products, cbIndex]);
-  const review = useMemo(() => reviewList(cbIndex, sheet), [cbIndex, sheet]);
+  const sales = useMemo(() => (salesRows ? salesIndex(salesRows) : null), [salesRows]);
+  const COLUMNS = sales ? [...BASE_COLUMNS.slice(0, 8), ...SALES_COLUMNS, BASE_COLUMNS[8]] : BASE_COLUMNS;
+  const sheet = useMemo(() => buildSheet({ catalog: catalog.rows, products, cb: cbIndex, sales }), [catalog.rows, products, cbIndex, sales]);
+  const review = useMemo(() => reviewList(cbIndex, sheet, sales), [cbIndex, sheet, sales]);
   const facet = useMemo(() => facets(sheet), [sheet]);
   const filtered = useMemo(() => sortSheet(filterSheet(sheet, { query, ...filters }), sort.key, sort.dir), [sheet, query, filters, sort]);
   const paged = paginate(filtered, page, PAGE);
@@ -170,16 +186,17 @@ export function StockView({ supabase = null, isAdmin = false }) {
       ) : null}
       {cbHasDepots && view === "revisar" ? (
         <div className="stock-adjust">
-          <p className="small">Están en Contabilium con stock pero <strong>no</strong> en el catálogo ni en la app de conteo. Puede ser un producto que se nos pasó (hay que sumarlo al catálogo y a la app de conteo) o algo que no es producto o está obsoleto (impuesto, flete, código viejo). Contabilium no manda el nombre por esta vía: buscá el código allá.</p>
+          <p className="small">Están en Contabilium con stock pero <strong>no</strong> en el catálogo ni en la app de conteo. Puede ser un producto que se nos pasó (hay que sumarlo al catálogo y a la app de conteo) o algo que no es producto o está obsoleto (impuesto, flete, código viejo). {sales ? "Arriba lo que más se vendió en los últimos 12 meses: eso seguro hay que sumarlo." : "Contabilium no manda el nombre por esta vía: buscá el código allá."}</p>
           {review.length === 0 ? <p className="muted">Nada para revisar.</p> : (
             <div className="stock-table" role="table">
-              <div className="stock-row stock-row-review stock-head" role="row"><span>Código</span><span>Empresa</span><span>V. Domínico</span><span>MDQ</span></div>
+              <div className={`stock-row stock-row-review${sales ? " with-sales" : ""} stock-head`} role="row"><span>Código</span><span>Empresa</span><span>V. Domínico</span><span>MDQ</span>{sales ? <><span>Ventas 12 m</span><span>Última venta</span></> : null}</div>
               {review.slice(0, 300).map((row) => (
-                <div className="stock-row stock-row-review" role="row" key={row.sku}>
+                <div className={`stock-row stock-row-review${sales ? " with-sales" : ""}`} role="row" key={row.sku}>
                   <span><strong>{row.sku}</strong>{row.name ? <><br /><span className="muted small">{row.name}</span></> : null}</span>
                   <span data-label="Empresa" className="small">{row.companies.map(companyName).join(", ")}</span>
                   <span data-label="V. Domínico" style={row.cbVd < 0 ? { color: "var(--color-danger-text)" } : undefined}>{row.cbVd == null ? "—" : qty(row.cbVd)}</span>
                   <span data-label="MDQ" style={row.cbMdq < 0 ? { color: "var(--color-danger-text)" } : undefined}>{row.cbMdq == null ? "—" : qty(row.cbMdq)}</span>
+                  {sales ? <><span data-label="Ventas 12 m">{row.sales12 == null ? "—" : qty(row.sales12)}</span><span data-label="Última venta" className="small">{row.lastSale ? shortDate(row.lastSale) + "/" + row.lastSale.slice(2, 4) : "—"}</span></> : null}
                 </div>
               ))}
               {review.length > 300 ? <p className="muted small">Se muestran los 300 con más stock (de {review.length}).</p> : null}
@@ -195,13 +212,13 @@ export function StockView({ supabase = null, isAdmin = false }) {
         <select value={filters.company} onChange={(event) => setFilter("company", event.target.value)} aria-label="Empresa"><option value="">Todas las empresas</option>{facet.companies.map((key) => <option key={key} value={key}>{companyName(key)}</option>)}</select>
         <select value={filters.family} onChange={(event) => setFilter("family", event.target.value)} aria-label="Familia"><option value="">Todas las familias</option>{facet.families.map((name) => <option key={name} value={name}>{name}</option>)}</select>
         {filters.family && facet.subfamilies(filters.family).length ? <select value={filters.subfamily} onChange={(event) => setFilter("subfamily", event.target.value)} aria-label="Subfamilia"><option value="">Todas las subfamilias</option>{facet.subfamilies(filters.family).map((name) => <option key={name} value={name}>{name}</option>)}</select> : null}
-        <select value={filters.status} onChange={(event) => setFilter("status", event.target.value)} aria-label="Estado"><option value="">Todos los estados</option><option value="falta">Sin stock o con poco</option><option value="hay">Hay</option><option value="poco">Queda poco</option><option value="sin">Sin stock</option><option value="sin-conteo">Sin conteo</option></select>
+        <select value={filters.status} onChange={(event) => setFilter("status", event.target.value)} aria-label="Estado"><option value="">Todos los estados</option><option value="falta">Sin stock o con poco</option><option value="hay">Hay</option><option value="poco">Queda poco</option><option value="sin">Sin stock</option><option value="sin-conteo">Sin conteo</option>{sales ? <><option value="vende">Con ventas en 12 meses</option><option value="obsoleto">Sin ventas en 12 meses (obsoleto)</option></> : null}</select>
         <select className="stock-sort-select" value={`${sort.key}:${sort.dir}`} onChange={(event) => { const [key, dir] = event.target.value.split(":"); setSort({ key, dir }); }} aria-label="Ordenar por">{COLUMNS.flatMap(([key, label]) => [<option key={`${key}a`} value={`${key}:asc`}>Ordenar: {label} ▲</option>, <option key={`${key}d`} value={`${key}:desc`}>Ordenar: {label} ▼</option>])}</select>
       </div>
       {!data ? <p className="muted">Leyendo los conteos…</p> : data.error ? <p className="form-notice">{data.error}</p> : filtered.length === 0 ? <p className="muted">No hay productos con ese filtro.</p> : (
         <>
         <div className="stock-table" role="table">
-          <div className="stock-row stock-row-sheet stock-head" role="row">
+          <div className={`stock-row stock-row-sheet${sales ? " with-sales" : ""} stock-head`} role="row">
             {COLUMNS.map(([key, label]) => (
               <span key={key} role="columnheader" aria-sort={sort.key === key ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}>
                 <button type="button" className="stock-sort" onClick={() => sortBy(key)}>{label}{sort.key === key ? (sort.dir === "asc" ? " ▲" : " ▼") : ""}</button>
@@ -211,7 +228,7 @@ export function StockView({ supabase = null, isAdmin = false }) {
           {paged.rows.map((row) => {
             const [label, tone] = STATUS[row.status] || STATUS["sin-conteo"];
             return (
-              <div className="stock-row stock-row-sheet" role="row" key={row.sku}>
+              <div className={`stock-row stock-row-sheet${sales ? " with-sales" : ""}`} role="row" key={row.sku}>
                 <span><strong>{row.name}</strong><br /><span className="muted small">{row.sku}</span></span>
                 <span data-label="Familia" className="small">{row.family || "—"}{row.subfamily ? <span className="muted"> · {row.subfamily}</span> : null}</span>
                 <span data-label="Empresa" className="small">{row.companies.length ? row.companies.map(companyName).join(", ") : <span className="muted">—</span>}</span>
@@ -220,6 +237,8 @@ export function StockView({ supabase = null, isAdmin = false }) {
                 <CbCell value={row.cbVd} label="V. Domínico (Contabilium)" loaded={cb.loaded} />
                 <CbCell value={row.cbMdq} label="MDQ (Contabilium)" loaded={cb.loaded} />
                 <span data-label="Último conteo" className="small">{shortDate(row.lastAt)}</span>
+                {sales ? <span data-label="Ventas 12 m" className={row.sales12 > 0 ? "" : "muted"}>{qty(row.sales12 || 0)}{row.sales6 ? <span className="muted small"> · 6 m: {qty(row.sales6)}</span> : null}</span> : null}
+                {sales ? <span data-label="Última venta" className="small">{row.lastSale ? shortDate(row.lastSale) + "/" + row.lastSale.slice(2, 4) : "—"}</span> : null}
                 <span data-label="Estado"><span className={`badge ${tone}`}>{label}</span></span>
               </div>
             );

@@ -2104,3 +2104,13 @@ th.nowrap, td.nowrap { white-space: nowrap; }
 .stock-adjust { display: grid; gap: 10px; margin-top: 10px; }.stock-adjust > .secondary { justify-self: start; }
 
 .stock-pager { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+
+/* Inicio: Logística de hoy en tarjetas (28/11). */
+.logistics-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.logistics-tile { display: flex; align-items: center; gap: 12px; padding: 14px; text-align: left; border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-panel-bg); color: inherit; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+.logistics-tile:hover, .logistics-tile:focus-visible { transform: translateY(-1px); border-color: rgba(237, 28, 36, .35); box-shadow: 0 6px 18px rgba(0, 0, 0, .06); }
+.logistics-tile-icon { flex: 0 0 auto; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: rgba(237, 28, 36, .1); color: var(--brand-red); }
+.logistics-tile-text { display: grid; gap: 2px; min-width: 0; }
+.logistics-tile-text strong { font-size: 15px; color: var(--color-text-dark); }
+.logistics-tile-text small { color: var(--color-text-gray); font-size: 12.5px; line-height: 1.35; }
+@media (prefers-reduced-motion: reduce) { .logistics-tile { transition: none; } .logistics-tile:hover { transform: none; } }

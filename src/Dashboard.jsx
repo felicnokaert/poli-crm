@@ -3,7 +3,12 @@ import { memo, useEffect, useMemo, useState } from "react";
 import { resolveWeeklyTargets } from "./weekly-targets.mjs";
 import {
   BarChart3,
+  Boxes,
   CheckCircle2,
+  ClipboardCheck,
+  FlaskConical,
+  Tag,
+  Truck,
   CircleAlert,
   Flame,
   ListChecks,
@@ -793,20 +798,27 @@ function AlertsPanel({ showInbox = true, hotLeads, coldQuotes, expiredQuotes, st
 // re-renderizarlo cuando ninguna de sus props cambió realmente.
 // Poliplast App (prueba): la tarjeta de Logística del Inicio (expedición, depósito). Lo de Etiquetas/Conteo/Dosificado
 // todavía no existe adentro de la app: se muestra como próximamente.
+// 28/11 (Felipe: «lo de logística está feísimo»): accesos en tarjetas, cada una con su ícono y para qué sirve.
+const LOGISTICS_TILES = [
+  ["entregas", "Entregas", "Pedidos para despachar, guías y remitos firmados", Truck],
+  ["etiquetas", "Etiquetas", "Lo que falta escanear en cada corte", Tag],
+  ["stock", "Stock", "Conteo y Contabilium, depósito por depósito", Boxes],
+  ["conteo", "Conteo", "Cargar el conteo del día", ClipboardCheck],
+  ["dosificado", "Dosificado", "Kits y planillas para dosificar", FlaskConical],
+];
 function LogisticsCard({ onNavigate, allows }) {
-  const soon = [["etiquetas", "Etiquetas pendientes por corte"], ["conteo", "Conteo de stock del día"], ["dosificado", "Pedidos a dosificar"]].filter(([module]) => allows(module));
+  const tiles = LOGISTICS_TILES.filter(([module]) => module === "entregas" || allows(module));
   return (
-    <section className="panel">
-      <div className="panel-head">
-        <div><span className="eyebrow">Logística</span><h2>Logística de hoy</h2></div>
-        <button type="button" className="primary" onClick={() => onNavigate("entregas")}>Abrir Entregas</button>
+    <section className="panel logistics-card">
+      <div className="panel-head"><div><span className="eyebrow">Logística</span><h2>Logística de hoy</h2></div></div>
+      <div className="logistics-tiles">
+        {tiles.map(([module, title, text, Icon]) => (
+          <button key={module} type="button" className="logistics-tile" onClick={() => onNavigate(module)}>
+            <span className="logistics-tile-icon" aria-hidden="true"><Icon size={20} /></span>
+            <span className="logistics-tile-text"><strong>{title}</strong><small>{text}</small></span>
+          </button>
+        ))}
       </div>
-      <p className="muted small">Pedidos para despachar, guías y remitos firmados: todo en Entregas.</p>
-      {soon.length > 0 && (
-        <ul className="muted small">
-          {soon.map(([module, label]) => <li key={module}><button type="button" className="danger-link" onClick={() => onNavigate(module)}>{label}</button></li>)}
-        </ul>
-      )}
     </section>
   );
 }

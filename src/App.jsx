@@ -808,7 +808,7 @@ export default function App() {
         {/* 28/11 (Felipe: «una sola app»): Dosificado, Conteo y Etiquetas son pantallas propias de la app (sin iframe). */}
         {view === "dosificado" && <Suspense fallback={<Splash text="Cargando dosificado…" />}><DosificadoNativo access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} /></Suspense>}
         {view === "conteo" && <Suspense fallback={<Splash text="Cargando conteo…" />}><ConteoNativo access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} /></Suspense>}
-        {view === "etiquetas" && <Suspense fallback={<Splash text="Cargando etiquetas…" />}><EtiquetasNativa access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} /></Suspense>}
+        {view === "etiquetas" && <Suspense fallback={<Splash text="Cargando etiquetas…" />}><EtiquetasNativa access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} email={signedEmail} getFirma={onlineConfigured && session ? conteoFirma : null} /></Suspense>}
         {view === "recibos" && !demo && <RecibosHub access={previewAccess} />}
         {view === "recibos" && demo && <DemoModule key={view} id={view} access={previewAccess} />}
         {FUTURE_MODULES[view] && !LOGISTICS_NATIVE.has(view) && (demo ? <DemoModule key={view} id={view} access={previewAccess} /> : <ModulePreview id={view} />)}

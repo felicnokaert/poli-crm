@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, createContext, useContext } from 'react';
-import { agendaHoy, agendaDe, alternar, DIAS } from './agendaConteo.mjs';
+import { agendaHoy, agendaDe, alternar, DIAS, DIAS_CORTO } from './agendaConteo.mjs';
 import { conteoDb } from './conteo-db.js';
+import { usePaged, Pager } from '../Pager.jsx';
 import { getPersona, getDeposito, setDeposito, adminDeApp, setIdentidad } from './identidad.js';
 import './conteo.css';
 
@@ -19,7 +20,7 @@ const CATALOGO_KEY = 'catalogo:base';
 let CATALOGO_BASE = { CATS: [], ITEMS: [], CATS_PROD: [], ITEMS_PROD: [] };
 
 
-// El PIN de administrador ya no vive en la app ni en la tabla pública: se verifica en la base (función verificar_pin).
+// Administración (28/11): sin PIN. La da el rol de Poliplast App; su sesión firmada (token) es lo que la base acepta.
 const CONFIG_DEFAULT = {
   contadores: ['Marcos', 'Jeremías', 'Neyen', 'Juan M.', 'Braian'],
   deps: [
@@ -159,8 +160,8 @@ function buildCSV(entries) {
    Misma firma que antes (getShared/setShared/listShared/deleteShared) para no tocar el resto del código.
    Tabla: kv_store(key text primary key, value jsonb, updated_at timestamptz).
    Seguridad: cualquiera puede leer, y los contadores pueden escribir solo conteo:* y log:*.
-   Las claves de administrador (config, catálogo, ajustes) y los borrados solo se aceptan con el PIN,
-   que se verifica dentro de la base mediante funciones (guardar_admin, borrar_admin, verificar_pin, cambiar_pin). */
+   Las claves de administrador (config, catálogo, ajustes) y los borrados solo se aceptan con la sesión de
+   administrador de Poliplast App, que se verifica dentro de la base (guardar_admin, borrar_admin). */
 const CLAVES_ADMIN = ['config', 'catalogo_overrides', 'catalogo_extra', 'catalogo:base'];
 let ADMIN_PIN_SESION = null; // se guarda solo en memoria, mientras el administrador está dentro del panel
 
@@ -225,8 +226,6 @@ function ConteoInterno({ admin = null }) {
   const [copiado, setCopiado] = useState(false);
   const [adminUnlocked, setAdminUnlocked] = useState(() => { if (admin) ADMIN_PIN_SESION = admin.pin; return !!admin; });
   useEffect(() => { if (admin) { ADMIN_PIN_SESION = admin.pin; setAdminUnlocked(true); } }, [admin]);
-  const [pinInput, setPinInput] = useState('');
-  const [nuevoPin, setNuevoPin] = useState('');
   const [productoNuevo, setProductoNuevo] = useState(null); // form de alta de producto
   const [mostrarEliminados, setMostrarEliminados] = useState(false);
   const toastTimer = useRef(null);
@@ -615,34 +614,10 @@ function ConteoInterno({ admin = null }) {
   }
 
   /* ---- acceso de administrador ---- */
-  function pedirPin() {
-    const a = adminDeApp(); // dentro de Poliplast App: administrador sin PIN (la sesión hace de PIN)
-    if (a) { ADMIN_PIN_SESION = a.pin; setAdminUnlocked(true); setModal(null); setScreen('admin'); return; }
-    setPinInput(''); setModal({ tipo: 'pin' });
-  }
-  async function verificarPin() {
-    const intento = pinInput;
-    setPinInput('');
-    try {
-      const { data, error } = await supabase.rpc('verificar_pin', { p_pin: intento });
-      if (!error && data === true) {
-        ADMIN_PIN_SESION = intento;
-        setAdminUnlocked(true); setModal(null);
-        setScreen('admin');
-        return;
-      }
-      showToast(error ? 'No se pudo verificar el PIN. Probá de nuevo.' : 'PIN incorrecto.');
-    } catch (e) { showToast('No se pudo verificar el PIN. Probá de nuevo.'); }
-  }
-  async function cambiarPin() {
-    const nuevo = nuevoPin.trim();
-    if (nuevo.length < 4) { showToast('El PIN tiene que tener al menos 4 dígitos.'); return; }
-    await conBusy(async () => {
-      const { data, error } = await supabase.rpc('cambiar_pin', { p_actual: ADMIN_PIN_SESION || '', p_nuevo: nuevo });
-      if (error || data !== true) throw new Error('No se pudo cambiar el PIN');
-      ADMIN_PIN_SESION = nuevo; setNuevoPin('');
-      showToast('PIN actualizado.');
-    });
+  function entrarAdmin() {
+    const a = adminDeApp(); // el administrador lo da la sesión de Poliplast App (su token es lo que acepta la base)
+    if (!a) return;
+    ADMIN_PIN_SESION = a.pin; setAdminUnlocked(true); setModal(null); setScreen('admin');
   }
 
   /* ============================= render helpers ============================= */
@@ -654,6 +629,9 @@ function ConteoInterno({ admin = null }) {
     return { sub: hechos + ' de ' + arr.length + (arr.length === 1 ? ' contado' : ' contados'), pct: arr.length ? Math.round((hechos / arr.length) * 100) : 0, completo: hechos === arr.length && arr.length > 0 };
   }
 
+  // Informe por páginas (28/11): los hooks van antes de los return de carga/error.
+  const informeRev = React.useMemo(() => (informeEntries || []).slice().reverse(), [informeEntries]);
+  const informePag = usePaged(informeRev, 25, informeRev);
   if (appState === 'loading') {
     return (<div className="pantalla-centro">
       <Splash texto="Cargando catálogo" />
@@ -716,10 +694,9 @@ function ConteoInterno({ admin = null }) {
           <div className={'btn ' + (setupContador && setupDepId ? 'btnmarca' : 'btnoff')} onClick={comenzar}>
             {setupContador && setupDepId ? 'Comenzar conteo' : 'Elegí tu nombre y el depósito'}
           </div>
-          {adminDeApp() && !adminUnlocked && <div className="linksutil" onClick={pedirPin}>Administración</div>}
+          {adminDeApp() && !adminUnlocked && <div className="linksutil" onClick={entrarAdmin}>Administración</div>}
         </div>
-        <Tabs enConteo={enConteo} enAdmin={enAdmin} setScreen={setScreen} sesion={sesion} adminUnlocked={adminUnlocked} onPedirPin={pedirPin} />
-        {modal && modal.tipo === 'pin' && <PinGate pinInput={pinInput} setPinInput={setPinInput} onEntrar={verificarPin} onCerrar={() => setModal(null)} />}
+        <Tabs enConteo={enConteo} enAdmin={enAdmin} setScreen={setScreen} sesion={sesion} adminUnlocked={adminUnlocked} onEntrarAdmin={entrarAdmin} />
       </>)}
 
       {screen === 'cats' && sesion && (<>
@@ -853,14 +830,6 @@ function ConteoInterno({ admin = null }) {
             <div className="navcard" onClick={() => setScreen('admin-presentaciones')}><div><div className="navtit">Productos</div><div className="navsub">Agregar, dar de baja, recategorizar y editar pesos</div></div><div className="chevdark">›</div></div>
             <div className="navcard" onClick={() => setScreen('admin-depositos')}><div><div className="navtit">Depósitos</div><div className="navsub">{config.deps.length} depósitos configurados</div></div><div className="chevdark">›</div></div>
           </div>
-          <div className="block">
-            <div className="label">PIN de administrador</div>
-            <div className="lead" style={{ fontSize: 12.5 }}>Es lo único que separa a un contador de este panel. Por seguridad no se muestra en pantalla. Cambialo si sospechás que alguien más lo tiene.</div>
-            <div className="agregarbox">
-              <input className="input" type="text" inputMode="numeric" placeholder="Nuevo PIN (mínimo 4 dígitos)" value={nuevoPin} onChange={(e) => setNuevoPin(e.target.value)} />
-              <div className={'btn ' + (nuevoPin.trim().length >= 4 ? 'btndark' : 'btnoff')} style={{ height: 48 }} onClick={cambiarPin}>Guardar</div>
-            </div>
-          </div>
           <div className="informecard" onClick={() => { setScreen('informe'); cargarInforme(); }}>
             <div><div className="informetit">Informe de conteos</div><div className="informesub">Ver todo lo cargado y exportar a Excel</div></div>
             <div className="chev">›</div>
@@ -897,27 +866,39 @@ function ConteoInterno({ admin = null }) {
         <Header kicker="Administrador" titulo="Agenda de conteo" mostrarVolver onVolver={volver} />
         <div className="scr">
           <div className="lead">Elegí qué día cuenta cada uno y qué familias completas. Ese día, al entrar a Conteo, le aparece «Hoy te toca contar…» y las familias marcadas con «Hoy». Se guarda al tocar.</div>
-          {Object.entries(agendaDe(config)).map(([d, x]) => (
-            <div key={d} className="block">
-              <div className="label">{DIAS[d]}</div>
-              <div className="dz-muted" style={{ fontSize: 12, margin: '2px 0 6px' }}>Quién cuenta</div>
-              <div className="wrap">
-                {config.contadores.map((c) => (
-                  <div key={c} className={'chip' + (x.personas.includes(c) ? ' chipon' : '')} onClick={() => alternarAgenda(d, 'personas', c)}>{c}</div>
-                ))}
-              </div>
-              {x.personas.length > 0 && (
-                <>
-                <div className="dz-muted" style={{ fontSize: 12, margin: '10px 0 6px' }}>Qué familias (completas)</div>
+          {/* 28/11 (Felipe): lunes a viernes, en una tabla compacta día × persona; las familias de cada día, plegadas. */}
+          {(() => { const ag = agendaDe(config); const dias = Object.keys(DIAS); return (<>
+          <div className="block">
+            <div className="label">Quién cuenta cada día</div>
+            <div className="agtabla-wrap">
+              <table className="agtabla">
+                <thead><tr><th scope="col">Persona</th>{dias.map((d) => <th key={d} scope="col">{DIAS_CORTO[d]}</th>)}</tr></thead>
+                <tbody>{config.contadores.map((c) => (
+                  <tr key={c}>
+                    <th scope="row">{c}</th>
+                    {dias.map((d) => { const on = ag[d].personas.includes(c); return (
+                      <td key={d}><button type="button" className={'agcelda' + (on ? ' on' : '')} aria-pressed={on} aria-label={c + ' cuenta el ' + DIAS[d]} onClick={() => alternarAgenda(d, 'personas', c)}>{on ? '✓' : ''}</button></td>
+                    ); })}
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+          </div>
+          <div className="block">
+            <div className="label">Qué familias se cuentan cada día</div>
+            {dias.map((d) => { const x = ag[d]; return (
+              <details key={d} className="agdia">
+                <summary><b>{DIAS[d]}</b><span className="agdia-res">{x.personas.length ? x.personas.join(', ') : 'nadie'} · {x.familias.length ? x.familias.length + (x.familias.length === 1 ? ' familia' : ' familias') : 'sin familias'} ▾</span></summary>
+                {x.familias.length > 0 && <div className="agdia-elegidas">{x.familias.map(nombreCat).join(' · ')}</div>}
                 <div className="wrap">
                   {CATALOGO_BASE.CATS.map((c) => (
-                    <div key={c.id} className={'chip' + (x.familias.includes(c.id) ? ' chipon' : '')} style={{ fontSize: 12.5 }} onClick={() => alternarAgenda(d, 'familias', c.id)}>{c.nombre}</div>
+                    <div key={c.id} className={'chip' + (x.familias.includes(c.id) ? ' chipon' : '')} style={{ fontSize: 12.5, height: 38 }} onClick={() => alternarAgenda(d, 'familias', c.id)}>{c.nombre}</div>
                   ))}
                 </div>
-                </>
-              )}
-            </div>
-          ))}
+              </details>
+            ); })}
+          </div>
+          </>); })()}
         </div>
         <Tabs enConteo={enConteo} enAdmin={enAdmin} setScreen={setScreen} sesion={sesion} adminUnlocked={adminUnlocked} />
       </>)}
@@ -1109,13 +1090,13 @@ function ConteoInterno({ admin = null }) {
           )}
           {!informeLoading && informeEntries && informeEntries.length > 0 && (
             <div className="stack">
-              {informeEntries.slice().reverse().slice(0, 200).map((r, idx) => (
+              {informePag.rows.map((r, idx) => (
                 <div key={idx} className="filareg">
                   <div><div className="filameta">{r.sku} · {r.contador} · {r.depNombre} · {r.fecha} {r.hora}</div><div className="itemnombre">{r.nombre}</div></div>
                   <div className="filacant"><div className="filacantnum">{n(r.cant)}</div><div className="filacantunidad">{r.unidad}</div></div>
                 </div>
               ))}
-              {informeEntries.length > 200 && <div className="notaexport">Mostrando las últimas 200 cargas de {informeEntries.length}. El Excel exportado incluye todas.</div>}
+              <Pager paged={informePag} label="cargas (el Excel incluye todas)" />
             </div>
           )}
           <div className="block">
@@ -1184,25 +1165,6 @@ function TabsViejas({ enConteo, enAdmin, setScreen, sesion, adminUnlocked }) {
   );
 }
 
-function PinGate({ pinInput, setPinInput, onEntrar, onCerrar }) {
-  return (
-    <div className="overlay">
-      <div className="modalbox">
-        <div className="modaltit">Acceso administrador</div>
-        <div className="modaltxt">Ingresá el PIN para ver el panel de admin.</div>
-        <input
-          className="input" type="password" inputMode="numeric" autoFocus placeholder="PIN"
-          value={pinInput} onChange={(e) => setPinInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') onEntrar(); }}
-        />
-        <div className="modalbtns">
-          <div className="mbtn mbtndark" onClick={onEntrar}>Entrar</div>
-          <div className="mbtn mbtnlight" onClick={onCerrar}>Cancelar</div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function Sheet({ sheet, sheetCant, item, prev, onTecla, onGuardar, onCerrar, busy }) {
   const nota = sheet.modo === 'sumar' ? 'Suma a los ' + n(prev) + ' ya contados'

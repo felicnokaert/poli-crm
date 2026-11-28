@@ -48,12 +48,16 @@ export function ConteoNativo({ access = null, who = null, me = "", getFirma = nu
 
 const ETQ_TABS = { escanear: "Escanear", pendientes: "Pendientes", historial: "Hecho", devoluciones: "Devoluciones", cortes: "Cortes" };
 
-export function EtiquetasNativa({ access = null, who = null, me = "", getFirma = null }) {
+// 28/11 (Felipe): «Mails enviados a Diego» solo en la sesión de Diego (los últimos 10).
+const MAIL_DIEGO = "diegoraul@grupopoliplast.com.ar";
+
+export function EtiquetasNativa({ access = null, who = null, me = "", getFirma = null, email = "" }) {
   const persona = who?.who || me || "";
   const deposito = who?.deposit || "";
   const admin = useAdminLogistica(getFirma, persona, deposito);
   const tabs = Object.keys(ETQ_TABS).filter((id) => !access || accessAllows(access, "etiquetas", ETQ_TABS[id]));
   // «Productividad del equipo»: permiso aparte que arranca apagado (OPT_IN); solo quien lo tiene tildado.
   const productividad = access ? accessAllows(access, "etiquetas", "Productividad del equipo") : false;
-  return <Etiquetas persona={persona} deposito={deposito} admin={admin} productividad={productividad} tabs={tabs} />;
+  const verMails = String(email || "").trim().toLowerCase() === MAIL_DIEGO;
+  return <Etiquetas persona={persona} deposito={deposito} admin={admin} productividad={productividad} tabs={tabs} verMails={verMails} />;
 }

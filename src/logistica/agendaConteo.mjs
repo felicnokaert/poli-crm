@@ -1,7 +1,8 @@
 // Agenda de conteo (27/11, Diego): qué día cuenta quién y qué familias (categorías completas). Se guarda en la configuración
 // de Conteo (kv_store «config», campo «agenda»), la edita un administrador desde el panel y se muestra como «Hoy te toca contar…».
-// Días: 1 = lunes … 6 = sábado (como Date.getDay). Precargado: jueves → Neyen; viernes → Marcos y Braian; familias vacías (las elige Diego).
-export const DIAS = { 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
+// Días: 1 = lunes … 5 = viernes (como Date.getDay; 28/11, Felipe: se trabaja de lunes a viernes, sin sábado). Precargado: jueves → Neyen; viernes → Marcos y Braian; familias vacías (las elige Diego).
+export const DIAS = { 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes' };
+export const DIAS_CORTO = { 1: 'Lun', 2: 'Mar', 3: 'Mié', 4: 'Jue', 5: 'Vie' };
 export const AGENDA_DEFAULT = { 4: { personas: ['Neyen'], familias: [] }, 5: { personas: ['Marcos', 'Braian'], familias: [] } };
 
 /** Día de la semana en Argentina (0 = domingo). */

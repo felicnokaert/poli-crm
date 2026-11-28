@@ -11,7 +11,7 @@ import { technicalAdmin } from '../lib/technical-admin.mjs';
 import { listClientErrors, logClientError } from '../lib/error-log.mjs';
 import { mercadoLibreAccountCron, mercadoLibreAdmin, mercadoLibreAdsCron, mercadoLibreCron, mercadoLibreMarketCron, mercadoLibreClipsCron, mercadoLibreSalesCron } from '../lib/mercadolibre.mjs';
 import { runIntegrationCron } from '../lib/integration-crons.mjs';
-import { contabiliumAdmin, contabiliumCron, contabiliumStockCron } from '../lib/contabilium.mjs';
+import { contabiliumAdmin, contabiliumCron, contabiliumMlCron, contabiliumStockCron } from '../lib/contabilium.mjs';
 import { contabiliumItemsAdmin, contabiliumItemsCron } from '../lib/contabilium-items.mjs';
 import { assistantAi } from '../lib/assistant-ai.mjs';
 import { shopifyAdmin, shopifyCron } from '../lib/shopify.mjs';
@@ -63,6 +63,11 @@ const CRONS = {
   'mercadolibre-publicidad': mercadoLibreAdsCron,
   contabilium: contabiliumCron,
   // 27/11: renglones de los comprobantes (ranking de productos), varias pasadas de madrugada hasta ponerse al día.
+  // 28/11: facturas de Mercado Libre de los últimos 12 meses (una vuelta; después las nuevas las trae «contabilium»).
+  'contabilium-ml-1': contabiliumMlCron,
+  'contabilium-ml-2': contabiliumMlCron,
+  'contabilium-ml-3': contabiliumMlCron,
+  'contabilium-ml-4': contabiliumMlCron,
   'contabilium-renglones-1': contabiliumItemsCron,
   'contabilium-renglones-2': contabiliumItemsCron,
   'contabilium-renglones-3': contabiliumItemsCron,

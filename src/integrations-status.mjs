@@ -16,6 +16,7 @@ export const INTEGRATIONS = [
   { key: 'integration:mercadolibre-ventas-5', name: 'Mercado Libre: resumen de ventas (5.ª cuenta)', when: '07:50' },
   { key: 'integration:mercadolibre-ventas-6', name: 'Mercado Libre: resumen de ventas (6.ª cuenta)', when: '08:05' },
   { key: 'integration:contabilium', name: 'Contabilium: comprobantes y fichas de clientes', when: '07:00' },
+  { key: 'integration:contabilium-ml-1', name: 'Contabilium: facturas de Mercado Libre (12 meses, una vuelta)', when: '00:05' },
   { key: 'integration:contabilium-renglones-1', name: 'Contabilium: renglones de las ventas (ranking de productos)', when: '01:25' },
   { key: 'integration:contabilium-stock-1', name: 'Contabilium: stock por depósito (mañana)', when: '08:25' },
   { key: 'integration:contabilium-stock-2', name: 'Contabilium: stock por depósito (mediodía)', when: '12:25' },

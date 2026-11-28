@@ -25,6 +25,23 @@ poli-app.com.ar y se apunta ahí; los links viejos reenvían solos.
    (send_message entre sesiones) para no pisarse.
 5. Primero se arma en «papel» el orden de módulos y submódulos; después se ejecuta por etapas, cada una con pruebas.
 
+## Decisión 28/11 (Felipe): UNA app nativa, sin apps adentro
+
+«No quiero que una app esté dentro de otra… no quiero que sea un rompecabezas. Poliplast App es la aplicación y ya.»
+Entregas, conteo, etiquetas, dosificado, recibos y cotizador fueron **pruebas piloto**. Cada uno pasa a ser un **módulo nativo** de
+Poliplast App: mismo código (este repositorio), mismo login, mismo menú, mismo diseño, sin iframes ni builds metidos en `public/`.
+Cuando un módulo ya vive nativo y Felipe lo aprueba, su app piloto se apaga (el link viejo reenvía a Poliplast App).
+
+Orden:
+1. **Entregas**: su código ya está en `entregas/` (React + TS): sus pantallas se importan como componentes del menú, con la sesión y el
+   cliente de Supabase de la app (sin `crm:sesion`, sin alto por mensajes).
+2. **Etiquetas, Conteo y Dosificado**: se pasan las pantallas de poliplast-app a este repositorio (con el chat de Logística). Su base
+   (coldwrbfxpdfutbekysr) se sigue leyendo al principio con su propio cliente; unificar bases después.
+3. **Cotizador**: sus pantallas pasan a ser el módulo Cotizador (hoy otro repositorio en iframe).
+4. **Recibos**: lo último (Next.js con lectura de comprobantes en el servidor; hay que acomodarlo al límite de 12 funciones de Vercel).
+
+Esto reemplaza el paso 3 de las Etapas («primero mostrados como hoy Entregas; después nativos»): se va directo a nativo.
+
 ## Menú propuesto (estilo Contabilium, por grupos)
 
 | Grupo | Módulos (submódulos) |

@@ -13,6 +13,7 @@ const get = async (path) => {
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
 };
+const PAGE_SIZE = 30;
 const qty = (value) => Number(value).toLocaleString("es-AR", { maximumFractionDigits: 1 });
 const STATUS = { hay: ["Hay", "ok"], poco: ["Queda poco", "warn"], sin: ["Sin stock", "danger"], "sin-conteo": ["Sin conteo", ""] };
 
@@ -39,6 +40,8 @@ export function StockView({ supabase = null, isAdmin = false }) {
   const [onlyMissing, setOnlyMissing] = useState(false);
   const [showOld, setShowOld] = useState(false);
   const [view, setView] = useState("hoja");
+  const [family, setFamily] = useState("");
+  const [page, setPage] = useState(0);
   const [cbBusy, setCbBusy] = useState("");
 
   useEffect(() => {
@@ -84,8 +87,15 @@ export function StockView({ supabase = null, isAdmin = false }) {
     let rows = searchStock(products, query);
     if (onlyMissing) rows = rows.filter((row) => row.status === "sin" || row.status === "poco");
     if (!showOld) rows = rows.filter((row) => row.vd || row.mdq || row.cbVd != null || row.cbMdq != null);
+    if (family) rows = rows.filter((row) => (row.category || "Sin familia") === family);
     return [...rows].sort((a, b) => a.name.localeCompare(b.name, "es"));
-  }, [products, query, onlyMissing, showOld]);
+  }, [products, query, onlyMissing, showOld, family]);
+  // 28/11 (Felipe): páginas de 30 productos y filtro por familia, como el reporte de Contabilium.
+  const families = useMemo(() => [...new Set(products.map((row) => row.category || "Sin familia"))].sort((a, b) => a.localeCompare(b, "es")), [products]);
+  const pages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
+  const current = Math.min(page, pages - 1);
+  const pageRows = shown.slice(current * PAGE_SIZE, (current + 1) * PAGE_SIZE);
+  useEffect(() => { setPage(0); }, [query, onlyMissing, showOld, family]);
   const matched = products.filter((row) => row.cbVd != null || row.cbMdq != null).length;
   const adjust = useMemo(() => adjustList(products), [products]);
   const downloadAdjust = () => {
@@ -139,13 +149,14 @@ export function StockView({ supabase = null, isAdmin = false }) {
       {view === "ajustar" && cbHasDepots ? null : <>
       <div className="list-toolbar">
         <label className="search"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar producto o SKU (ej. 618, iso, balde)" aria-label="Buscar en el stock" /></label>
+        <select value={family} onChange={(event) => setFamily(event.target.value)} aria-label="Familia"><option value="">Todas las familias</option>{families.map((name) => <option key={name} value={name}>{name}</option>)}</select>
         <label className="small"><input type="checkbox" checked={onlyMissing} onChange={(event) => setOnlyMissing(event.target.checked)} /> Solo sin stock o con poco</label>
         {hasOld ? <label className="small"><input type="checkbox" checked={showOld} onChange={(event) => setShowOld(event.target.checked)} /> Incluir lo contado solo en Berazategui (depósito viejo)</label> : null}
       </div>
       {!data ? <p className="muted">Leyendo los conteos…</p> : data.error ? <p className="form-notice">{data.error}</p> : shown.length === 0 ? <p className="muted">No hay productos con ese filtro.</p> : (
         <div className="stock-table" role="table">
           <div className="stock-row stock-head" role="row"><span>Producto</span><span>V. Domínico (conteo)</span><span>MDQ (conteo)</span><span>V. Domínico (Contabilium)</span><span>MDQ (Contabilium)</span><span>Estado</span></div>
-          {shown.map((row) => {
+          {pageRows.map((row) => {
             const [label, tone] = STATUS[row.status] || STATUS["sin-conteo"];
             return (
               <div className="stock-row" role="row" key={row.sku}>
@@ -160,6 +171,13 @@ export function StockView({ supabase = null, isAdmin = false }) {
           })}
         </div>
       )}
+      {shown.length > PAGE_SIZE ? (
+        <div className="stock-pager" aria-label="Páginas">
+          <button type="button" className="secondary" disabled={current === 0} onClick={() => setPage(current - 1)}>Anterior</button>
+          <span className="muted small">{current * PAGE_SIZE + 1}–{Math.min(shown.length, (current + 1) * PAGE_SIZE)} de {shown.length} · página {current + 1} de {pages}</span>
+          <button type="button" className="secondary" disabled={current >= pages - 1} onClick={() => setPage(current + 1)}>Siguiente</button>
+        </div>
+      ) : null}
       </>}
     </section>
   );

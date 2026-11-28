@@ -2101,3 +2101,5 @@ th.nowrap, td.nowrap { white-space: nowrap; }
 .ranking-week i { display: block; width: 70%; min-width: 8px; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, var(--brand-red), var(--brand-red-dark)); }
 .ranking-week span { position: absolute; bottom: -16px; font-size: 10px; color: var(--color-text-gray); white-space: nowrap; }
 .stock-adjust { display: grid; gap: 10px; margin-top: 10px; }.stock-adjust > .secondary { justify-self: start; }
+
+.stock-pager { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }

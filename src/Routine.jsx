@@ -164,10 +164,10 @@ export function Routine({ date, planChecks = {}, onToggle, onNavigate, tasks = [
         return (
           <div className="routine-plan">
             <div>
-              <strong>Plan Trello del 16/10 al 31/12</strong>
-              <span className="muted small">{sum.total} tarjetas repartidas por día hábil según el bloque del día. {sum.pending === 0 ? "Ya están cargadas en Tareas." : `${sum.pending} sin cargar todavía.`}</span>
+              <strong>Importar plan de Trello</strong>
+              <span className="muted small">{sum.pending === 0 ? "Todas las tarjetas ya están en Tareas." : `${sum.pending} tarjetas para sumar a Tareas.`}</span>
             </div>
-            <button type="button" className="primary" disabled={sum.pending === 0} onClick={onImportPlan}>{sum.pending === 0 ? "Plan cargado" : `Cargar ${sum.pending} tareas`}</button>
+            <button type="button" className="primary" disabled={sum.pending === 0} onClick={onImportPlan}>{sum.pending === 0 ? "Importado" : "Importar"}</button>
           </div>
         );
       })()}

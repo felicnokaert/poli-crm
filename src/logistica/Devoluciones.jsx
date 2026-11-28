@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { conteoDb } from './conteo-db.js';
 import { useConfirm } from '../ConfirmDialog.jsx';
+import { usePaged, Pager } from '../Pager.jsx';
 import { getPersona, getDeposito } from './identidad.js';
 
 const supabase = conteoDb(); // Devoluciones dentro de Poliplast App (28/11): misma base que la app de conteo
@@ -84,6 +85,7 @@ export default function Devoluciones({ avisar }) {
   const aRevisar = l.filter((d) => d.resultado === 'revisar' && !d.resuelto_at);
   const deHoy = l.filter((d) => new Date(d.creado) >= hoy);
   const mostrar = ver === 'revisar' ? aRevisar : ver === 'hoy' ? deHoy : l;
+  const mostrarPag = usePaged(mostrar, 25, ver + ':' + l.length);
 
   if (carga) return <Recibir carga={carga} setCarga={setCarga} por={por} deposito={deposito} alGuardar={(r) => { setCarga(null); setAviso({ tipo: r.resultado === 'ok' ? 'ok' : 'warn', texto: r.resultado === 'ok' ? '✓ Devolución OK: guardada.' : 'Guardada como «A revisar»: la toma Ventas ecommerce (' + VENTAS_ECOMMERCE + ').' }); recargar(); }} />;
 
@@ -115,7 +117,7 @@ export default function Devoluciones({ avisar }) {
       </div>
       {lista === null ? <div className="dz-muted">Cargando…</div>
         : !mostrar.length ? <div className="dz-card dz-muted">{ver === 'revisar' ? 'No hay devoluciones para revisar. 👍' : 'Todavía no hay devoluciones acá.'}</div>
-        : <div className="dev-lista">{mostrar.map((d) => <Tarjeta key={d.id} d={d} onResolver={() => setResolver(d)} />)}</div>}
+        : <><div className="dev-lista">{mostrarPag.rows.map((d) => <Tarjeta key={d.id} d={d} onResolver={() => setResolver(d)} />)}</div><Pager paged={mostrarPag} label="devoluciones" /></>}
 
       {resolver && <Resolver d={resolver} por={por} cerrar={() => setResolver(null)} listo={() => { setResolver(null); avisar('Marcada como resuelta.'); recargar(); }} />}
     </div>

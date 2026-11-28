@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { conteoDb } from './conteo-db.js';
 import { useConfirm } from '../ConfirmDialog.jsx';
+import { usePaged, Pager } from '../Pager.jsx';
 import { getPersona, getDeposito, adminDeApp, setIdentidad, personaDeLaApp, elegirPersona } from './identidad.js';
 import './dosificado.css';
 import './etiquetas.css';
@@ -12,7 +13,6 @@ import { cortesDeHoy, equipo } from './tableroCortes.mjs';
 // Libre (función etiquetas-crm), Hecho, Devoluciones y Cortes. Cambia el marco: pestañas de la app arriba (sin barra abajo),
 // quién sos y depósito de la app, administrador y «Productividad del equipo» según los permisos de Poliplast App.
 const supabase = conteoDb();
-const enMarco = () => true; // dentro de Poliplast App no hay botón «🔒 Admin»: el administrador lo da la app
 let VER_PRODUCTIVIDAD = false; // «Qué ve cada persona» → Etiquetas → Productividad del equipo (lo fija la raíz)
 function Splash({ texto }) { return <p className="dz-muted dz-cargando" role="status">{texto}…</p>; }
 
@@ -112,7 +112,7 @@ function Publicaciones({ lineas }) {
 const TABS_ETQ = [['escanear', 'Escanear'], ['pendientes', 'Pendientes'], ['historial', 'Hecho'], ['devoluciones', 'Devoluciones'], ['cortes', 'Cortes']];
 
 /** Props: persona y deposito (quién sos de la app), admin ({nombre, pin} de la sesión de la app o null), productividad (permiso), tabs (ids permitidos). */
-export default function Etiquetas({ persona = '', deposito = '', admin: adminApp = null, productividad = false, tabs = null }) {
+export default function Etiquetas({ persona = '', deposito = '', admin: adminApp = null, productividad = false, tabs = null, verMails = false }) {
   setIdentidad({ persona, deposito, admin: adminApp });
   VER_PRODUCTIVIDAD = !!productividad;
   const visibles = TABS_ETQ.filter(([id]) => !tabs || tabs.includes(id));
@@ -128,9 +128,8 @@ export default function Etiquetas({ persona = '', deposito = '', admin: adminApp
   const tab = visibles.some(([id]) => id === tabLocal) ? tabLocal : (visibles[0] || TABS_ETQ[0])[0];
   const [ultimo, setUltimo] = useState(null);
   const [cancelPend, setCancelPend] = useState(null);
-  const [adminLocal, setAdmin] = useState(adminDeApp);
-  const admin = adminApp || adminLocal;
-  const [pedirPin, setPedirPin] = useState(false);
+  // El administrador lo da la sesión de Poliplast App (sin PIN ni botón propio).
+  const admin = adminApp || adminDeApp();
   const [toast, setToast] = useState(null);
   const toastT = useRef(null);
   const ocupado = useRef(false);
@@ -280,8 +279,8 @@ export default function Etiquetas({ persona = '', deposito = '', admin: adminApp
           {tab === 'escanear' && <Escanear por={por} escanear={escanear} ultimo={ultimo} hoyCant={deHoy.length} cerrarUltimo={() => setUltimo(null)} />}
           {tab === 'pendientes' && <Pendientes porId={porId} escaneos={escaneos} avisar={avisar} />}
           {tab === 'devoluciones' && <Devoluciones avisar={avisar} />}
-          {tab === 'cortes' && <Cortes admin={admin} pedirAdmin={() => setPedirPin(true)} salirAdmin={() => setAdmin(null)} avisar={avisar} />}
-          {tab === 'historial' &&<Historial por={por} canceladas={canceladas} escaneos={escaneos} admin={admin} pedirAdmin={() => setPedirPin(true)} salirAdmin={() => setAdmin(null)} recargar={recargar} avisar={avisar} escanear={escanear} />}
+          {tab === 'cortes' && <Cortes admin={admin} avisar={avisar} verMails={verMails} />}
+          {tab === 'historial' &&<Historial por={por} canceladas={canceladas} escaneos={escaneos} admin={admin} recargar={recargar} avisar={avisar} escanear={escanear} />}
         </div>
       </div>
 
@@ -298,7 +297,6 @@ export default function Etiquetas({ persona = '', deposito = '', admin: adminApp
         </div>
       )}
 
-      {pedirPin && <PinAdmin onCerrar={() => setPedirPin(false)} onOk={(a) => { setAdmin(a); setPedirPin(false); avisar('Hola ' + a.nombre + ': modo administrador.'); }} avisar={avisar} />}
       {toast && <div className={'dz-toast' + (toast.err ? ' err' : '')} role="status">{toast.msg}</div>}
     </section>
   );
@@ -489,7 +487,7 @@ function Pendientes({ porId, escaneos, avisar }) {
 }
 
 /* ---------------- pantalla: hecho (historial) + carga masiva de respaldo + borrado de administrador ---------------- */
-function Historial({ por, canceladas, escaneos, admin, pedirAdmin, salirAdmin, recargar, avisar, escanear }) {
+function Historial({ por, canceladas, escaneos, admin, recargar, avisar, escanear }) {
   const confirm = useConfirm();
   const [masivo, setMasivo] = useState('');
   const [prog, setProg] = useState(null);
@@ -524,6 +522,7 @@ function Historial({ por, canceladas, escaneos, admin, pedirAdmin, salirAdmin, r
   };
 
   const lista = escaneos.filter((e) => !filtro || e.envio.includes(filtro) || (e.por || '').toLowerCase().includes(filtro.toLowerCase()));
+  const listaPag = usePaged(lista, 25, filtro);
   return (
     <div className="dz-wrap etq-pad0">
       <div className="dz-panel">
@@ -534,11 +533,10 @@ function Historial({ por, canceladas, escaneos, admin, pedirAdmin, salirAdmin, r
       </div>
       <div className="etq-admin-fila">
         <input className="dz-inp" placeholder="Buscar por número o nombre" aria-label="Buscar" value={filtro} onChange={(e) => setFiltro(e.target.value)} />
-        {!enMarco() && <button type="button" className={'dz-adminbtn' + (admin ? ' on' : '')} onClick={() => (admin ? salirAdmin() : pedirAdmin())}>{admin ? '🔓 ' + admin.nombre + ' · salir' : '🔒 Admin'}</button>}
       </div>
       {!lista.length ? <div className="dz-vacio">Todavía no hay escaneos.</div> : (
         <div className="dz-lista">
-          {lista.slice(0, 200).map((e) => (
+          {listaPag.rows.map((e) => (
             <div key={e.envio} className={'dz-card etq-item' + (e.estado === 'cancelado' || canceladas.includes(e.envio) ? ' canc' : '')}>
               <div className="etq-item-top"><span className="etq-env">{e.envio}</span><span className="etq-meta">{e.por} · {hhmm(e.creado)}{e.estado === 'cancelado' ? ' · CANCELADO' : ''}</span></div>
               <div>{e.cuenta && <span className="etq-emp">{e.cuenta}</span>} {e.deposito && <span className="etq-emp">{e.deposito}</span>}</div>
@@ -551,6 +549,7 @@ function Historial({ por, canceladas, escaneos, admin, pedirAdmin, salirAdmin, r
           ))}
         </div>
       )}
+      <Pager paged={listaPag} label="escaneos" />
     </div>
   );
 }
@@ -626,7 +625,7 @@ function Tablero({ cortes, admin }) {
 }
 const iso = (y, m, d) => y + '-' + pad(m + 1) + '-' + pad(d);
 
-function Cortes({ admin, pedirAdmin, salirAdmin, avisar }) {
+function Cortes({ admin, avisar, verMails = false }) {
   const [cortes, setCortes] = useState(null);
   const [cal, setCal] = useState({});
   const [mes, setMes] = useState(() => { const h = new Date(); return { y: h.getFullYear(), m: h.getMonth() }; });
@@ -661,10 +660,10 @@ function Cortes({ admin, pedirAdmin, salirAdmin, avisar }) {
   const [envios, setEnvios] = useState([]);
   const [trabajando, setTrabajando] = useState(false);
   const cargarEnvios = useCallback(async () => {
-    const { data } = await supabase.from('etq_cortes').select('slot,tipo,creado,ok,error,asunto').order('creado', { ascending: false }).limit(15);
+    const { data } = await supabase.from('etq_cortes').select('slot,tipo,creado,ok,error,asunto').order('creado', { ascending: false }).limit(10);
     setEnvios(data || []);
   }, []);
-  useEffect(() => { cargarEnvios(); }, [cargarEnvios]);
+  useEffect(() => { if (verMails) cargarEnvios(); }, [cargarEnvios, verMails]);
   const llamarCorte = async (body, okMsg) => {
     setTrabajando(true);
     const { data, error } = await supabase.functions.invoke('etiquetas-corte', { body: { ...body, nombre: admin.nombre, pin: admin.pin } });
@@ -717,10 +716,10 @@ function Cortes({ admin, pedirAdmin, salirAdmin, avisar }) {
           <span><i className="etq-dia feriado" /> Feriado</span>
         </div>
         {admin && <div className="dz-muted">Tocá un día para cambiarlo: Normal → Con corte → Sin corte → Feriado.</div>}
-        {!enMarco() && <button type="button" className={'dz-adminbtn' + (admin ? ' on' : '')} onClick={() => (admin ? salirAdmin() : pedirAdmin())}>{admin ? '🔓 ' + admin.nombre + ' · salir' : '🔒 Admin'}</button>}
       </div>
-      <div className="dz-panel">
-        <div className="dz-label">Mails enviados a Diego</div>
+      {/* 28/11 (Felipe): solo en la sesión de Diego y solo los últimos 10. */}
+      {verMails && <div className="dz-panel">
+        <div className="dz-label">Últimos 10 mails que te llegaron</div>
         {!envios.length ? <div className="dz-muted">Todavía no se envió ningún corte.</div> : (
           <div className="dz-lista">
             {envios.map((e) => (
@@ -732,30 +731,8 @@ function Cortes({ admin, pedirAdmin, salirAdmin, avisar }) {
           </div>
         )}
         {admin && <button type="button" className="dz-btn dz-secondary" disabled={trabajando} onClick={() => llamarCorte({ accion: 'prueba' }, 'Corte de prueba enviado a Diego.')}>{trabajando ? 'Enviando…' : 'Enviar corte de prueba ahora'}</button>}
-      </div>
+      </div>}
     </div>
   );
 }
 
-function PinAdmin({ onCerrar, onOk, avisar }) {
-  const [sel, setSel] = useState('');
-  const [pin, setPin] = useState('');
-  const ADMINS = ['Felipe', 'Diego', 'Juan', 'David'];
-  return (
-    <div className="dz-overlay" onClick={onCerrar}>
-      <form className="dz-modal" onClick={(e) => e.stopPropagation()} onSubmit={async (e) => {
-        e.preventDefault();
-        if (!sel) { avisar('Elegí quién sos.', true); return; }
-        const { data, error } = await supabase.rpc('dosif_admin_login', { p_nombre: sel, p_pin: pin });
-        if (error || data !== true) { avisar('PIN incorrecto (5 errores seguidos bloquean 15 minutos).', true); setPin(''); return; }
-        onOk({ nombre: sel, pin });
-      }}>
-        <h2 className="dz-h2">Acceso de administrador</h2>
-        <div className="dz-chips">{ADMINS.map((a) => <button type="button" key={a} className={'dz-chip' + (sel === a ? ' on' : '')} onClick={() => setSel(a)}>{a}</button>)}</div>
-        <input className="dz-inp" type="password" inputMode="numeric" autoComplete="off" placeholder="Tu PIN" aria-label="PIN" value={pin} onChange={(e) => setPin(e.target.value)} />
-        <button type="submit" className="dz-btn dz-primary">Entrar</button>
-        <button type="button" className="dz-btn dz-secondary" onClick={onCerrar}>Cancelar</button>
-      </form>
-    </div>
-  );
-}

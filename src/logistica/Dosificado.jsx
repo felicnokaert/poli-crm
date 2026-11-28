@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { conteoDb } from './conteo-db.js';
 import { useConfirm } from '../ConfirmDialog.jsx';
+import { usePaged, Pager } from '../Pager.jsx';
 import { getPersona, getDeposito, setDeposito as setDepositoCompartido, setIdentidad } from './identidad.js';
 import './dosificado.css';
 
@@ -481,9 +482,10 @@ function Kits({ catalogo, avisar, guardarEnCatalogo, guardarVarios, admin, edito
   const [importar, setImportar] = useState(false);
   const [bk, setBk] = useState('');
   const todosKits = catalogo.filter((c) => c.tipo === 'kit' && c.activo !== false);
-  const tk = norm(bk).split(/s+/).filter(Boolean);
+  const tk = norm(bk).split(/\s+/).filter(Boolean);
   const filtrados = todosKits.filter((c) => !tk.length || tk.every((x) => norm(c.sku + ' ' + c.descripcion).includes(x)));
-  const kits = filtrados.slice(0, 60);
+  const kitsPag = usePaged(filtrados, 25, bk);
+  const kits = kitsPag.rows;
   const archivados = catalogo.filter((c) => c.tipo === 'kit' && c.activo === false);
 
   async function archivar(k) {
@@ -523,7 +525,7 @@ function Kits({ catalogo, avisar, guardarEnCatalogo, guardarVarios, admin, edito
           </div>
         ))}
       </div>
-      {filtrados.length > kits.length && <div className="dz-muted">Mostrando {kits.length} de {filtrados.length}. Escribí en el buscador para ver el resto.</div>}
+      <Pager paged={kitsPag} label="kits" />
       {archivados.length > 0 && (
         <details className="dz-detalles"><summary>Kits archivados ({archivados.length})</summary>
           {archivados.map((k) => <div key={k.sku} className="dz-arch"><span className="dz-sku">{k.sku}</span> {k.descripcion} <button type="button" className="dz-link" onClick={() => restaurar(k)}>Restaurar</button></div>)}
@@ -650,6 +652,7 @@ function Registros({ avisar, cfg, admin, adminSes }) {
       (!t.length || t.every((x) => norm(f.sku + ' ' + f.descripcion + ' ' + f.operario).includes(x))));
   }, [filas, desde, hasta, dep, op, txt]);
 
+  const regPag = usePaged(filtradas, 25, filtradas);
   const operariosEnDatos = useMemo(() => [...new Set((filas || []).map((f) => f.operario))].sort(), [filas]);
   const depositosEnDatos = useMemo(() => [...new Set([...cfg.depositos, ...(filas || []).map((f) => f.deposito)])], [filas, cfg]);
   const distintos = new Set(filtradas.map((f) => f.sku)).size;
@@ -762,7 +765,7 @@ function Registros({ avisar, cfg, admin, adminSes }) {
           <div className="dz-label">Detalle</div>
           {movil ? (
             <div className="dz-lm">
-              {filtradas.slice(0, 300).map((f) => (
+              {regPag.rows.map((f) => (
                 <button type="button" key={f.id} className="dz-lm-row" onClick={() => setVer(f)}>
                   <div className="dz-lm-top"><span className="dz-sku">{f.sku}{f.tipo === 'kit' && <span className="dz-badge">KIT</span>}</span><b className="dz-lm-num">×{fmt(f.cant)}</b></div>
                   <div className="dz-lm-desc">{f.descripcion}</div>
@@ -775,7 +778,7 @@ function Registros({ avisar, cfg, admin, adminSes }) {
               <table className="dz-table dz-denso">
                 <thead><tr><th>Fecha</th><th>Hora</th><th>Depósito</th><th>Operario</th><th>SKU</th><th>Descripción</th><th>Cant.</th><th></th></tr></thead>
                 <tbody>
-                  {filtradas.slice(0, 1000).map((f) => (
+                  {regPag.rows.map((f) => (
                     <tr key={f.id}>
                       <td>{fechaAR(f.fecha)}</td><td>{String(f.hora).slice(0, 5)}</td><td>{f.deposito}</td><td>{f.operario}</td>
                       <td className="dz-sku">{f.sku}{f.tipo === 'kit' && <span className="dz-badge">KIT</span>}</td>
@@ -790,7 +793,7 @@ function Registros({ avisar, cfg, admin, adminSes }) {
           )}
         </div>
       )}
-      {filtradas.length > 1000 && <div className="dz-muted">Se muestran las primeras 1000 líneas; el Excel incluye todas las filtradas.</div>}
+      <Pager paged={regPag} label="líneas (el Excel incluye todas las filtradas)" />
 
       {ver && (
         <div className="dz-overlay" onClick={() => setVer(null)}>
@@ -887,6 +890,7 @@ function Resumen({ avisar, cfg, catalogo, admin }) {
   }, [lineas, movs, dep, per, txt, orden, catalogo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* qué se dosificó cada día y quién (ej: "Vie 14/11 — Braian: 10 × KT-REPOXI-1…, 20 × KT-740-47…") */
+  const prodPag = usePaged(productos, 25, productos);
   const porDia = useMemo(() => {
     if (!lineas) return [];
     const dias = new Map();
@@ -1031,7 +1035,7 @@ function Resumen({ avisar, cfg, catalogo, admin }) {
             {!productos.length && <div className="dz-vacio">Todavía no hay dosificados en este filtro.</div>}
             {productos.length > 0 && (movil ? (
               <div className="dz-lm">
-                {productos.slice(0, 200).map((p) => (
+                {prodPag.rows.map((p) => (
                   <div key={p.sku} className="dz-lm-row">
                     <div className="dz-lm-top"><span className="dz-sku">{p.sku}</span><b className={'dz-lm-num' + (p.stock < 0 ? ' dz-neg' : '')}>{fmt(p.stock)}</b></div>
                     <div className="dz-lm-desc">{p.descripcion}</div>
@@ -1044,7 +1048,7 @@ function Resumen({ avisar, cfg, catalogo, admin }) {
                 <table className="dz-table dz-denso">
                   <thead><tr><th>SKU</th><th>Descripción</th><th>Dosificado</th><th>Salidas</th><th>Stock</th><th>Veces</th><th>Última</th></tr></thead>
                   <tbody>
-                    {productos.slice(0, 300).map((p) => (
+                    {prodPag.rows.map((p) => (
                       <tr key={p.sku}>
                         <td className="dz-sku">{p.sku}</td><td className="dz-td-desc" title={p.descripcion}>{p.descripcion}</td>
                         <td className="dz-num">{fmt(p.dosif)}</td><td className="dz-num">{fmt(p.salidas)}</td>
@@ -1056,6 +1060,7 @@ function Resumen({ avisar, cfg, catalogo, admin }) {
                 </table>
               </div>
             ))}
+            <Pager paged={prodPag} label="productos" />
           </div>
 
           <div>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { barWidths, catalogIndex, LEVELS, MEASURES, PERIODS, rankingCsv, rankItems, sinceDate } from "./product-ranking.mjs";
+import { barWidths, catalogIndex, LEVELS, MEASURES, PERIODS, rankingCsv, rankItems, sinceDate, weeklySeries } from "./product-ranking.mjs";
 import { adminFetch } from "./admin-api.mjs";
 
 // 27/11: Ranking de ventas (Contabilium) dentro de Productos. FC y COT suman; NC y NCT restan.
@@ -22,8 +22,8 @@ async function loadAll(query) {
 }
 
 export async function loadRanking(supabase, now = Date.now()) {
-  const since = sinceDate(6, now);
-  const items = await loadAll(() => supabase.from("contabilium_items").select("company,fecha,signo,codigo,nombre,cantidad,neto,rubro,subrubro").gte("fecha", since).order("fecha", { ascending: false }));
+  const since = sinceDate(186, now);
+  const items = await loadAll(() => supabase.from("contabilium_items").select("company,fecha,signo,codigo,nombre,cantidad,neto,neto_usd,rubro,subrubro").gte("fecha", since).order("fecha", { ascending: false }));
   let catalog = [];
   try {
     const [variants, products] = await Promise.all([
@@ -68,12 +68,42 @@ function SyncButton({ onDone }) {
   return <p className="small"><button type="button" className="secondary" disabled={state.busy} onClick={run}>{state.busy ? "Leyendo…" : "Traer renglones ahora"}</button> <span className="muted">{state.text}</span></p>;
 }
 
+function WeeklyChart({ items, rowKey, level, days, company, catalog, label, onClose }) {
+  const [metric, setMetric] = useState("usd");
+  const series = useMemo(() => weeklySeries(items, { key: rowKey, level, days, company, catalog }), [items, rowKey, level, days, company, catalog]);
+  const values = series.rows.map((row) => (metric === "units" ? row.units : row.usd));
+  const max = Math.max(0, ...values);
+  const fmtWeek = (week) => `${week.slice(8, 10)}/${week.slice(5, 7)}`;
+  return (
+    <section className="ranking-weekly" aria-label={`Semanas de ${label}`}>
+      <div className="ranking-weekly-head">
+        <strong>{label}</strong>
+        <div className="segmented" role="tablist" aria-label="Medida del gráfico">
+          <button type="button" role="tab" aria-selected={metric === "usd"} className={metric === "usd" ? "selected" : ""} onClick={() => setMetric("usd")}>USD</button>
+          <button type="button" role="tab" aria-selected={metric === "units"} className={metric === "units" ? "selected" : ""} onClick={() => setMetric("units")}>Unidades</button>
+        </div>
+        <button type="button" className="secondary" onClick={onClose}>Cerrar</button>
+      </div>
+      <div className="ranking-weeks" role="img" aria-label="Ventas por semana">
+        {series.rows.map((row, index) => (
+          <div key={row.week} className="ranking-week" title={`Semana del ${fmtWeek(row.week)}: ${money(row.usd)} · ${units(row.units)}`}>
+            <i style={{ height: `${max > 0 && values[index] > 0 ? Math.max(3, (values[index] / max) * 100) : 0}%` }} />
+            <span>{fmtWeek(row.week)}</span>
+          </div>
+        ))}
+      </div>
+      {series.byCompany.length > 1 && <p className="muted small">Por razón social: {series.byCompany.map((row) => `${row.name} ${money(row.usd)}`).join(" · ")}</p>}
+    </section>
+  );
+}
+
 export function ProductRanking({ supabase, isAdmin = false }) {
   const [state, setState] = useState({ status: "loading", items: [], catalog: [] });
   const [reload, setReload] = useState(0);
-  const [months, setMonths] = useState(1);
+  const [days, setDays] = useState(30);
+  const [open, setOpen] = useState(null);
   const [level, setLevel] = useState("producto");
-  const [measure, setMeasure] = useState("neto");
+  const [measure, setMeasure] = useState("usd");
   const [company, setCompany] = useState("");
   const [rubro, setRubro] = useState("");
   const [subrubro, setSubrubro] = useState("");
@@ -94,7 +124,7 @@ export function ProductRanking({ supabase, isAdmin = false }) {
   }, [supabase, reload]);
 
   const index = useMemo(() => catalogIndex(state.catalog), [state.catalog]);
-  const result = useMemo(() => rankItems(state.items, { months, level, measure, company, rubro, subrubro, query, catalog: index }), [state.items, months, level, measure, company, rubro, subrubro, query, index]);
+  const result = useMemo(() => rankItems(state.items, { days, level, measure, company, rubro, subrubro, query, catalog: index }), [state.items, days, level, measure, company, rubro, subrubro, query, index]);
   const shown = showAll ? result.rows : result.rows.slice(0, SHOWN);
   const widths = useMemo(() => barWidths(shown, measure), [shown, measure]);
   const fmt = measure === "unidades" ? units : money;
@@ -107,16 +137,16 @@ export function ProductRanking({ supabase, isAdmin = false }) {
     </section>
   );
 
-  const periodLabel = PERIODS.find(([value]) => value === months)?.[1] || "";
+  const periodLabel = PERIODS.find(([value]) => value === days)?.[1] || "";
   return (
     <section className="panel ranking">
       <div className="panel-head"><div><span className="eyebrow">Ventas de Contabilium</span><h2>Ranking de {LEVELS.find(([key]) => key === level)?.[1].toLowerCase()}</h2>
-        <p className="muted small">Facturas (FC) y cotizaciones (COT) suman; notas de crédito (NC y NCT) restan. Sin las ventas de Mercado Libre (tienen su propio panel). Importes sin IVA. {periodLabel}: {money(result.totalNet)} · {units(result.totalUnits)}.</p></div></div>
+        <p className="muted small">Todas las razones sociales (POLIPLAST, POLIOCHO, FOAMFACTORY, COMARG). Facturas (FC) y cotizaciones (COT) suman; notas de crédito (NC y NCT) restan. En dólares, sin IVA: cada venta en pesos se divide por el dólar del día en que se facturó. Por ahora sin las ventas facturadas desde Mercado Libre (se suman en el próximo paso). {periodLabel}: {money(result.totalNet)} · {units(result.totalUnits)}.{result.noUsd ? ` ${result.noUsd} renglones todavía sin el dólar calculado.` : ""}</p></div></div>
       {isAdmin && <SyncButton onDone={() => setReload((value) => value + 1)} />}
       {state.items.length === 0 ? <p className="muted">Todavía no hay renglones leídos de Contabilium. Se traen solos de madrugada{isAdmin ? " o con «Traer renglones ahora»" : ""}.</p> : <>
         <div className="ranking-filters">
           <div className="segmented" role="tablist" aria-label="Período">
-            {PERIODS.map(([value, label]) => <button key={value} type="button" role="tab" aria-selected={months === value} className={months === value ? "selected" : ""} onClick={() => setMonths(value)}>{label}</button>)}
+            {PERIODS.map(([value, label]) => <button key={value} type="button" role="tab" aria-selected={days === value} className={days === value ? "selected" : ""} onClick={() => setDays(value)}>{label}</button>)}
           </div>
           <div className="segmented" role="tablist" aria-label="Qué se ordena">
             {LEVELS.map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={level === key} className={level === key ? "selected" : ""} onClick={() => setLevel(key)}>{label}</button>)}
@@ -126,7 +156,7 @@ export function ProductRanking({ supabase, isAdmin = false }) {
           </div>
         </div>
         <div className="ranking-filters">
-          <select value={company} onChange={(event) => setCompany(event.target.value)} aria-label="Empresa"><option value="">Todas las empresas</option>{result.options.companies.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+          <select value={company} onChange={(event) => setCompany(event.target.value)} aria-label="Razón social"><option value="">Todas las razones sociales</option>{result.options.companies.map((item) => <option key={item} value={item}>{item}</option>)}</select>
           <select value={rubro} onChange={(event) => { setRubro(event.target.value); setSubrubro(""); }} aria-label="Rubro"><option value="">Todos los rubros</option>{result.options.rubros.map((item) => <option key={item} value={item}>{item}</option>)}</select>
           <select value={subrubro} onChange={(event) => setSubrubro(event.target.value)} aria-label="Subrubro"><option value="">Todos los subrubros</option>{result.options.subrubros.map((item) => <option key={item} value={item}>{item}</option>)}</select>
           <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar SKU o producto" aria-label="Buscar en el ranking" />
@@ -134,7 +164,7 @@ export function ProductRanking({ supabase, isAdmin = false }) {
         {result.rows.length === 0 ? <p className="muted">No hay ventas con ese filtro en el período.</p> : <>
           <ol className="ranking-bars" aria-label={`Ranking por ${measure === "unidades" ? "unidades" : "facturado"}`}>
             {shown.map((row, position) => (
-              <li key={row.key} className="ranking-bar" title={`${row.label}: ${money(row.net)} · ${units(row.units)}${row.credits ? ` · ${row.credits} nota(s) de crédito` : ""}`}>
+              <li key={row.key} className={`ranking-bar${open === row.key ? " is-open" : ""}`} role="button" tabIndex={0} onClick={() => setOpen(open === row.key ? null : row.key)} onKeyDown={(event) => { if (event.key === "Enter") setOpen(open === row.key ? null : row.key); }} title={`${row.label}: ${money(row.net)} · ${units(row.units)}${row.credits ? ` · ${row.credits} nota(s) de crédito` : ""}`}>
                 <span className="ranking-pos">{row.rank}</span>
                 <span className="ranking-name"><strong>{row.label}</strong>{level === "producto" && <span className="muted small"> {row.sku}{row.rubro ? ` · ${row.rubro}` : ""}</span>}{level === "subrubro" && <span className="muted small"> {row.rubro}</span>}</span>
                 <span className="ranking-track" aria-hidden="true"><i style={{ width: `${widths[position]}%` }} /></span>
@@ -142,9 +172,10 @@ export function ProductRanking({ supabase, isAdmin = false }) {
               </li>
             ))}
           </ol>
+          {open && <WeeklyChart items={state.items} rowKey={open} level={level} days={days} company={company} catalog={index} label={result.rows.find((row) => row.key === open)?.label || ""} onClose={() => setOpen(null)} />}
           <p className="small">
             {result.rows.length > SHOWN && <button type="button" className="secondary" onClick={() => setShowAll(!showAll)}>{showAll ? `Ver solo los ${SHOWN} primeros` : `Ver los ${result.rows.length}`}</button>}{" "}
-            <button type="button" className="secondary" onClick={() => download(rankingCsv(result.rows, level), `ranking-${level}-${months}m.csv`)}>Descargar CSV</button>
+            <button type="button" className="secondary" onClick={() => download(rankingCsv(result.rows, level), `ranking-${level}-${days}d.csv`)}>Descargar CSV</button>
           </p>
         </>}
       </>}

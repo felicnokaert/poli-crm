@@ -347,6 +347,7 @@
 :root[data-theme="dark"] .home-edit-bar .secondary:hover { background: #1c1c1f; }
 :root[data-theme="dark"] .home-widget { background: #1c1c1f; }
 :root[data-theme="dark"] .widget-gallery { background: #1c1c1f; }
+:root[data-theme="dark"] .ranking-weekly { background: #26262a; }
 :root[data-theme="dark"] :root { color: #e7e7e9; }
 :root[data-theme="dark"] .link-button { color: #b4b5b9; }
 :root[data-theme="dark"] .link-button:hover { color: #b4b5b9; }
@@ -823,6 +824,7 @@
   :root:not([data-theme="light"]) .home-edit-bar .secondary:hover { background: #1c1c1f; }
   :root:not([data-theme="light"]) .home-widget { background: #1c1c1f; }
   :root:not([data-theme="light"]) .widget-gallery { background: #1c1c1f; }
+  :root:not([data-theme="light"]) .ranking-weekly { background: #26262a; }
   :root:not([data-theme="light"]) :root { color: #e7e7e9; }
   :root:not([data-theme="light"]) .link-button { color: #b4b5b9; }
   :root:not([data-theme="light"]) .link-button:hover { color: #b4b5b9; }

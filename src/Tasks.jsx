@@ -5,6 +5,7 @@ import { Bot, CheckCircle2, Download, Plus, Search, Upload, X } from "lucide-rea
 import { formatDate } from "./utils.mjs";
 import { Empty, Fact } from "./ui-primitives";
 import { Routine } from "./Routine.jsx";
+import { MyRoutine } from "./MyRoutine.jsx";
 import { Calendar } from "./Calendar.jsx";
 import { AutomationMatrix } from "./AutomationMatrix.jsx";
 import { DayReview } from "./DayReview.jsx";
@@ -125,7 +126,7 @@ function TrelloImport({ items, onImportTasks }) {
   );
 }
 
-function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, onNavigate, onImportPlan, onImportTasks, onAddEvent, onPostpone, onUpdateTask, personal = true, plan = [], automations, onAutomationsChange, supabase = null, allows, demo = false, isAdmin = false }) {
+function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, onNavigate, onImportPlan, onImportTasks, onAddEvent, onPostpone, onUpdateTask, personal = true, plan = [], automations, onAutomationsChange, myRoutine = null, onMyRoutineChange = null, supabase = null, allows, demo = false, isAdmin = false }) {
   const [tab, setTab] = useState("tareas");
   const [filter, setFilter] = useState("pending");
   const [query, setQuery] = useState("");
@@ -153,7 +154,7 @@ function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, o
   const tabs = (
     <div className="segmented routine-tabs" role="tablist" aria-label="Tareas y rutina">
       <button type="button" role="tab" aria-selected={tab === "tareas"} className={tab === "tareas" ? "selected" : ""} onClick={() => setTab("tareas")}>Tareas</button>
-      <button type="button" role="tab" aria-selected={tab === "rutina"} className={tab === "rutina" ? "selected" : ""} onClick={() => setTab("rutina")}>{personal ? "Rutina" : "Cierre del día"}</button>
+      <button type="button" role="tab" aria-selected={tab === "rutina"} className={tab === "rutina" ? "selected" : ""} onClick={() => setTab("rutina")}>{personal || onMyRoutineChange ? "Rutina" : "Cierre del día"}</button>
       <button type="button" role="tab" aria-selected={tab === "calendario"} className={tab === "calendario" ? "selected" : ""} onClick={() => setTab("calendario")}>Calendario</button>
       {personal && onAutomationsChange && <button type="button" role="tab" aria-selected={tab === "automatizaciones"} className={tab === "automatizaciones" ? "selected" : ""} onClick={() => setTab("automatizaciones")}>Automatizaciones</button>}
     </div>
@@ -162,6 +163,7 @@ function TasksBase({ items, onToggle, onOpen, onNew, planChecks, onTogglePlan, o
     return (
       <div className="content-stack">
         {tabs}
+        {!personal && onMyRoutineChange && <MyRoutine date={today()} routine={myRoutine || {}} planChecks={planChecks || {}} onChange={onMyRoutineChange} onTogglePlan={onTogglePlan} />}
         {!personal && <section className="panel"><DayReview date={today()} planChecks={planChecks || {}} tasks={items} onPostpone={onPostpone} onToggleTask={onToggle} includeRoutine={false} /></section>}
         {personal && <Routine date={today()} planChecks={planChecks || {}} onToggle={onTogglePlan} onNavigate={onNavigate} tasks={items} onToggleTask={onToggle} plan={plan} onImportPlan={onImportPlan} onPostpone={onPostpone} />}
       </div>

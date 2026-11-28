@@ -931,6 +931,8 @@ export default function App() {
             isAdmin={isAdminUser}
             automations={data.automations}
             onAutomationsChange={(next) => setData((current) => ({ ...current, automations: next }))}
+            myRoutine={data.myRoutine}
+            onMyRoutineChange={(next) => setData((current) => ({ ...current, myRoutine: next }))}
           />
         )}
         {view === "sales" && (

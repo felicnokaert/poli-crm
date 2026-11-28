@@ -159,6 +159,8 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
     ...(local.doNotContact || remote.doNotContact ? { doNotContact: mergeBlocks(remote.doNotContact, local.doNotContact) } : {}),
     ...(local.prospectRules || remote.prospectRules ? { prospectRules: { ...(remote.prospectRules || {}), ...(local.prospectRules || {}) } } : {}),
     // Matriz de automatizaciones (solo lo que Felipe editó o agregó, por idea): gana lo de este navegador.
+    // 28/11: rutina propia de cada persona (bloques que arma ella); gana la copia más nueva.
+    ...(local.myRoutine || remote.myRoutine ? { myRoutine: String(local.myRoutine?.updatedAt || '') >= String(remote.myRoutine?.updatedAt || '') ? (local.myRoutine || remote.myRoutine) : remote.myRoutine } : {}),
     ...(local.automations || remote.automations ? { automations: Object.fromEntries(Object.entries({ ...(remote.automations || {}), ...(local.automations || {}) }).filter(([, row]) => row)) } : {}),
     ...(local.commissionFloor || remote.commissionFloor ? { commissionFloor: local.commissionFloor || remote.commissionFloor } : {}),
     // Nombres de los vendedores de Contabilium (IDVendedor → persona), los pone un administrador en Empresas → Sin mail.

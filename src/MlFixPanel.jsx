@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Wand2 } from "lucide-react";
 import { adminFetch } from "./admin-api.mjs";
+import { Pager, usePaged } from "./Pager.jsx";
 import { AccountTag } from "./MlAccountTag.jsx";
 
 const LOTE = 10;
@@ -28,6 +29,7 @@ export function MlFixPanel({ session, nickname = {} }) {
 
   const rows = plan ? (kind === "photos" ? plan.photos : plan.descriptions) : [];
   const ready = rows.filter((row) => row.donor);
+  const paged = usePaged(rows, 20, kind);
 
   async function apply() {
     const lote = ready.slice(0, LOTE);
@@ -60,7 +62,7 @@ export function MlFixPanel({ session, nickname = {} }) {
             <button type="button" className="primary" disabled={Boolean(busy) || !ready.length} onClick={apply}>Aplicar a las próximas {Math.min(LOTE, ready.length)}</button>
           </div>
           <ul className="ml-fix-list">
-            {rows.slice(0, 40).map((row) => (
+            {paged.rows.map((row) => (
               <li key={row.id}>
                 <AccountTag name={nickname[row.seller_id] || "cuenta"} /> <strong>{row.title}</strong> <span className="muted small">{row.id}{row.sku ? ` · ${row.sku}` : ""} · {row.sold} vendidas</span>
                 <div className="small">
@@ -71,7 +73,7 @@ export function MlFixPanel({ session, nickname = {} }) {
               </li>
             ))}
           </ul>
-          {rows.length > 40 && <p className="muted small">Y {rows.length - 40} más.</p>}
+          <Pager paged={paged} label="publicaciones" />
         </>
       )}
       {message && <div className="system-message" role="status">{message}</div>}

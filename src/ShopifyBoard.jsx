@@ -336,6 +336,16 @@ function Missing({ supabase, products, variants, session }) {
     try { await callShopify({ op: "missing-decision", skus: [sku], state, note }, session); }
     catch (error) { setDecisions(before); setDecideError(error.message); }
   };
+  // 28/11: los «casi iguales» (mismo producto con otro formato de SKU) se marcan todos juntos como «Ya existe».
+  const decideMany = async (skus, state, note = "") => {
+    if (!skus.length) return;
+    const before = decisions;
+    setDecideError("");
+    const at = new Date().toISOString();
+    setDecisions((current) => ({ ...current, ...Object.fromEntries(skus.map((sku) => [sku, { state, note, at }])) }));
+    try { for (let index = 0; index < skus.length; index += 100) await callShopify({ op: "missing-decision", skus: skus.slice(index, index + 100), state, note }, session); }
+    catch (error) { setDecisions(before); setDecideError(error.message); }
+  };
   useEffect(() => {
     let alive = true;
     readAll(() => supabase.from("ml_items").select("id,sku,title,status,price,sold_quantity,visits_30d,pictures_count,available_quantity,description,attributes,picture_url,thumbnail,permalink").eq("status", "active").order("id"))
@@ -374,6 +384,15 @@ function Missing({ supabase, products, variants, session }) {
           <button type="button" className="ghost" onClick={() => downloadText(`shopify-borradores-${argentinaToday()}.csv`, shopifyImportCsv(shown))}>CSV para importar como borrador</button>
           <button type="button" className="ghost" onClick={() => downloadText(`faltan-en-shopify-${argentinaToday()}.csv`, missingReviewCsv(shown))}>Hoja de revisión (todo lo sugerido)</button>
         </div>
+        {view === "dudosos" && (() => {
+          const twins = shown.filter((row) => row.twin);
+          return twins.length > 0 && (
+            <div className="ml-toolbar">
+              <span className="muted small">{twins.length} tienen un SKU casi igual a uno de la tienda (por ejemplo PS-EMPU46M-1 y PS-EMPU46MSP-1): casi seguro ya están cargados.</span>
+              <button type="button" className="secondary" onClick={() => { if (window.confirm(`Se marcan ${twins.length} como «Ya existe en la tienda». Salen de la lista y no se crean. Se puede deshacer desde «Decididos». ¿Seguimos?`)) decideMany(twins.map((row) => row.sku), "existe", "SKU casi igual"); }}>Marcar los {twins.length} casi iguales como «Ya existe»</button>
+            </div>
+          );
+        })()}
         {decideError && <p className="system-message" role="alert">No se pudo guardar la decisión: {decideError}</p>}
         {shown.length === 0 ? <Empty title="Nada para mostrar" text="Probá con otro filtro." /> : (
           <div className="table-scroll"><table className="sales-history-table ml-board-table">

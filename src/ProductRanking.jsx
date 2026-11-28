@@ -22,7 +22,7 @@ async function loadAll(query) {
 }
 
 export async function loadRanking(supabase, now = Date.now()) {
-  const since = sinceDate(186, now);
+  const since = sinceDate(370, now);
   const items = await loadAll(() => supabase.from("contabilium_items").select("company,fecha,signo,codigo,nombre,cantidad,neto,neto_usd,rubro,subrubro").gte("fecha", since).order("fecha", { ascending: false }));
   let catalog = [];
   try {

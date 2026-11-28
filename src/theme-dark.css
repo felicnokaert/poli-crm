@@ -349,6 +349,10 @@
 :root[data-theme="dark"] .widget-gallery { background: #1c1c1f; }
 :root[data-theme="dark"] .ranking-weekly { background: #26262a; }
 :root[data-theme="dark"] .logistics-tile { background: #26262a; }
+:root[data-theme="dark"] .dr-summary { background: #26262a; }
+:root[data-theme="dark"] .dr-count { background: #26262a; }
+:root[data-theme="dark"] .dr-item { background: #26262a; }
+:root[data-theme="dark"] .dr-pill { background: #1c1c1f; }
 :root[data-theme="dark"] :root { color: #e7e7e9; }
 :root[data-theme="dark"] .link-button { color: #b4b5b9; }
 :root[data-theme="dark"] .link-button:hover { color: #b4b5b9; }
@@ -827,6 +831,10 @@
   :root:not([data-theme="light"]) .widget-gallery { background: #1c1c1f; }
   :root:not([data-theme="light"]) .ranking-weekly { background: #26262a; }
   :root:not([data-theme="light"]) .logistics-tile { background: #26262a; }
+  :root:not([data-theme="light"]) .dr-summary { background: #26262a; }
+  :root:not([data-theme="light"]) .dr-count { background: #26262a; }
+  :root:not([data-theme="light"]) .dr-item { background: #26262a; }
+  :root:not([data-theme="light"]) .dr-pill { background: #1c1c1f; }
   :root:not([data-theme="light"]) :root { color: #e7e7e9; }
   :root:not([data-theme="light"]) .link-button { color: #b4b5b9; }
   :root:not([data-theme="light"]) .link-button:hover { color: #b4b5b9; }

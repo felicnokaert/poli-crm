@@ -2,6 +2,7 @@ import { canSee } from "./module-access.mjs";
 import { TACOS_STATE, TACOS_TARGET, tacosFor } from "./ml-tacos.mjs";
 import { useEffect, useMemo, useState } from "react";
 import { MlImprove } from "./MlImprove.jsx";
+import { MlFixPanel } from "./MlFixPanel.jsx";
 import { MlCompetition, MlTrends } from "./MlCompetition.jsx";
 import { MlEconomics } from "./MlEconomics.jsx";
 import { adminFetch } from "./admin-api.mjs";
@@ -469,6 +470,7 @@ export function MercadoLibreBoard({ supabase, session = null, isAdmin = false, c
       {items && items.length > 0 && tab === "resumen" && (
         <Summary ads={ads} canSeeAds={canSeeAds} accounts={accounts} metricsBySeller={metricsBySeller} seller={seller} items={items} nickname={nickname} permalinks={permalinks} onIssue={showIssue} isAdmin={isAdmin} session={session} supabase={supabase} onReload={() => setReload((value) => value + 1)} />
       )}
+      {items && items.length > 0 && tab === "mejorar" && isAdmin && session && <MlFixPanel session={session} nickname={nickname} />}
       {items && items.length > 0 && tab === "mejorar" && <MlImprove supabase={supabase} items={items} seller={seller} nickname={nickname} />}
       {items && items.length > 0 && tab === "stock" && <MlEconomics supabase={supabase} session={session} isAdmin={isAdmin} items={items} seller={seller} nickname={nickname} />}
       {items && items.length > 0 && tab === "competencia" && <MlCompetition supabase={supabase} session={session} isAdmin={isAdmin} items={items} nickname={nickname} />}

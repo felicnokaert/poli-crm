@@ -53,7 +53,7 @@ export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount, account,
   const markAll = (ids, state) => { const set = new Set(ids); const now = new Date().toISOString(); onChange(list.map((item) => (set.has(item.id) ? { ...item, state, updatedAt: now } : item))); };
   const approveAll = () => { if (window.confirm(`¿Aprobar los ${shown.length} mails de «${STATE_LABEL[filter]}»? Salen según el día que les toca (si activaste el envío automático, solos).`)) markAll(shown.map((item) => item.id), "aprobado"); };
   const toggleAuto = async (enabled) => {
-    if (enabled && !window.confirm(`El CRM va a mandar SOLO los mails aprobados que ya tocan, de lunes a viernes de 9 a 18, hasta ${gmail.limit || 25} por día y de a pocos. Nunca manda a quien está en No contactar ni insiste a quien respondió. ¿Activar?`)) return;
+    if (enabled && !window.confirm(`La app va a mandar SOLO los mails aprobados que ya tocan, de lunes a viernes de 9 a 18, hasta ${gmail.limit || 25} por día y de a pocos. Nunca manda a quien está en No contactar ni insiste a quien respondió. ¿Activar?`)) return;
     try { await gmailCall({ op: "autosend", enabled, perDay: gmail.limit || 25 }, session); reload(); } catch (error) { setMessage(error.message); }
   };
   const removeAll = () => { if (window.confirm(`¿Borrar los ${shown.length} mails de «${STATE_LABEL[filter]}»? No se pueden recuperar.`)) markAll(shown.map((item) => item.id), "borrado"); };
@@ -110,7 +110,7 @@ export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount, account,
         <div>
           <span className="eyebrow">Mails en 3 pasos por prospecto</span>
           <h2><Mail size={18} aria-hidden="true" /> Bandeja de salida</h2>
-          <p className="muted small">El CRM arma el texto y vos decidís. Nada sale solo: revisá, aprobá y mandalo desde tu Gmail con «Abrir en Gmail». Si el destinatario está en No contactar, el borrador se descarta solo.</p>
+          <p className="muted small">La app arma el texto y vos decidís. Nada sale solo: revisá, aprobá y mandalo desde tu Gmail con «Abrir en Gmail». Si el destinatario está en No contactar, el borrador se descarta solo.</p>
         </div>
         <div className="panel-head-actions">
           <button type="button" className="primary" onClick={() => setMessage(onArmQueue())} disabled={!queueCount}><Wand2 size={15} /> Armar para los primeros de la cola ({queueCount})</button>
@@ -128,7 +128,7 @@ export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount, account,
             </>
           ) : (
             <>
-              <span>Para enviar desde el CRM, conectá tu Gmail de grupopoliplast.com.ar (se pide una sola vez).</span>
+              <span>Para enviar desde la app, conectá tu Gmail de grupopoliplast.com.ar (se pide una sola vez).</span>
               <button type="button" className="primary" onClick={connect}><Mail size={15} /> Conectar mi Gmail</button>
             </>
           )}
@@ -160,7 +160,7 @@ export function OutboxPanel({ outbox, onChange, onArmQueue, queueCount, account,
                 <span className="muted small">Para: {item.to} · le toca el {item.dueOn}{item.note ? ` · ${item.note}` : ""}</span>
               </div>
               {item.reply && <p className="outbox-reply" role="note"><strong>{KIND_LABEL[item.reply.kind] || "Respondió"}:</strong> {item.reply.snippet} <span className="muted small">→ {item.reply.action}{item.reply.emails?.length ? ` (${item.reply.emails.join(", ")})` : ""}</span>{item.reply.kind === "otro-contacto" && (item.reply.emails || []).map((address) => <button key={address} type="button" className="secondary" onClick={() => setMessage(onOtherContact?.(item, address) || "")}>Armar mails para {address}</button>)}</p>}
-              {item.sentVia === "gmail" && <span className="muted small">Enviado desde el CRM{item.sentAt ? ` el ${item.sentAt.slice(0, 10)}` : ""}</span>}
+              {item.sentVia === "gmail" && <span className="muted small">Enviado desde la app{item.sentAt ? ` el ${item.sentAt.slice(0, 10)}` : ""}</span>}
               <label className="outbox-field">Asunto
                 <input value={item.subject} onChange={(event) => patch(item.id, { subject: event.target.value })} disabled={item.state === "enviado"} />
               </label>

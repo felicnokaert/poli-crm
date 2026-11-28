@@ -33,7 +33,7 @@ test('el cierre del día lista lo pendiente y permite pasarlo al próximo día h
   const tasks = [{ id: 't1', title: 'Llamar a Pérez', done: false, dueDate: '2026-10-16', priority: 'Alta' }];
   render(React.createElement(DayReview, { date: '2026-10-16', planChecks: {}, tasks, onPostpone: (id, to) => moved.push([id, to]) }));
   assert.ok(screen.getByText('Llamar a Pérez'));
-  fireEvent.click(screen.getByRole('button', { name: /Pasar al próximo día hábil/ }));
+  fireEvent.click(screen.getByRole('button', { name: /Al próximo día/ }));
   assert.deepEqual(moved[0], ['t1', '2026-10-19']);
 });
 

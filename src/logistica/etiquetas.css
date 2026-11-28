@@ -1,0 +1,164 @@
+/* Etiquetas NATIVA en Poliplast App (28/11): mismas reglas que la app de conteo; usa también dosificado.css (clases dz-*). */
+/* Etiquetas: reutiliza las clases dz-* del Dosificado (mismo lenguaje del CRM) y suma lo propio. */
+.logi-etq .dz-wrap { padding-top: 10px; }
+.etq-pad0 { padding: 0 !important; }
+.etq-por { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; background: #292929; color: #fff; }
+.etq-por .dz-label { color: #c9cacc; margin: 0; }
+.etq-por-n { font: 800 20px 'Manrope', sans-serif; }
+.etq-por.falta { background: var(--brand-red, #ed1c24); }
+.etq-por-b { width: auto; padding: 10px 16px; font-size: 14px; }
+.etq-hoy { font-size: 14px; color: #5c5d60; }
+.etq-hoy b { font: 800 22px 'Manrope', sans-serif; color: #1c1c1c; }
+.etq-cam-btn { font-size: 18px; padding: 22px 16px; }
+.etq-manual { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.etq-ok { width: auto; padding: 12px 20px; }
+.etq-camara { display: grid; gap: 10px; }
+.etq-video { width: 100%; max-height: 52vh; object-fit: cover; border-radius: 12px; background: #1c1c1c; }
+.etq-camara { position: relative; }
+.etq-mira { position: absolute; left: 12%; right: 12%; top: 18%; height: 28%; border: 3px solid #ffffffd9; border-radius: 14px; box-shadow: 0 0 0 9999px #0000003a; pointer-events: none; }
+.etq-res { margin-top: 12px; padding: 16px; border-radius: 14px; text-align: center; color: #fff; animation: glass-rise .25s ease both; cursor: pointer; }
+.etq-res.ok { background: linear-gradient(135deg, #1d8a4b, #166e3b); }
+.etq-res.dup { background: linear-gradient(135deg, #b8860b, #946b08); }
+.etq-res.warn { background: linear-gradient(135deg, #d9622b, #b44a1b); }
+.etq-res.err { background: linear-gradient(135deg, #ed1c24, #c9151c); }
+.etq-res-tit { font: 800 20px 'Manrope', sans-serif; }
+.etq-num { font: 700 15px ui-monospace, Menlo, monospace; letter-spacing: .03em; margin: 6px 0 2px; }
+.etq-res .etq-lineas { color: #fff; }
+.etq-lineas { font-size: 15px; font-weight: 600; color: #282828; }
+.etq-alerta { margin-top: 8px; padding: 8px 10px; border-radius: 8px; background: #fff3cd; color: #7a5200; font-weight: 700; font-size: 13.5px; }
+.etq-resumen { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.etq-m { padding: 14px; text-align: center; }
+.etq-m-n { font: 800 34px 'Manrope', sans-serif; color: var(--brand-red, #ed1c24); }
+.etq-m-n.ok { color: #1d8a4b; }
+.etq-alerta-box { border-color: #b8860b55; background: #fff8e0d0; }
+.etq-fila { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; font-size: 13.5px; }
+.etq-env { font: 700 14px ui-monospace, Menlo, monospace; color: #c9151c; }
+.etq-item { display: grid; gap: 4px; padding: 10px 14px; }
+.etq-item.canc { opacity: .7; border-color: #ed1c2455; }
+.etq-item-top { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.etq-meta { font-size: 12.5px; color: #5c5d60; }
+.etq-area { font-family: ui-monospace, Menlo, monospace; font-size: 14px; }
+.etq-admin-fila { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+.etq-cancel .etq-num { font-size: 18px; }
+.etq-corte { display: inline-flex; align-items: center; gap: 8px; cursor: default; }
+.etq-corte button { border: 0; background: #ffffff33; color: #fff; border-radius: 6px; width: 22px; height: 22px; cursor: pointer; }
+.etq-cal-top { display: flex; justify-content: space-between; align-items: center; }
+.etq-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.etq-cal-h { text-align: center; font-size: 11px; font-weight: 700; color: #55565a; padding: 4px 0; }
+.etq-dia { border: 1px solid #29292914; background: #ffffffb3; border-radius: 9px; height: 40px; font: 600 14px 'DM Sans', sans-serif; color: #282828; cursor: pointer; display: inline-block; }
+.etq-dia:disabled { cursor: default; }
+.etq-dia.finde { background: #ededee; color: #8a8b8e; }
+.etq-dia.con { background: #d6f0df; border-color: #1d8a4b66; color: #166e3b; }
+.etq-dia.sin { background: #fff3cd; border-color: #b8860b66; color: #7a5200; }
+.etq-dia.feriado { background: #fbe7e3; border-color: #ed1c2455; color: #c9151c; }
+.etq-leyenda { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: #5c5d60; }
+.etq-leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+.etq-leyenda i { width: 16px; height: 16px; border-radius: 5px; }
+.etq-envio { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #29292912; }
+.etq-envio.mal { color: #a34848; }
+.etq-envio-t { font-weight: 600; font-size: 13.5px; }
+.etq-emp { display: inline-block; padding: 2px 9px; border-radius: 99px; background: #29292914; color: #292929; font-size: 12px; font-weight: 700; letter-spacing: .02em; }
+.etq-pubs { display: grid; gap: 8px; }
+.etq-pub { display: grid; gap: 2px; padding-left: 10px; border-left: 3px solid #ed1c2444; }
+.etq-tit { font-size: 13.5px; color: #3d3e41; line-height: 1.3; }
+.etq-link { font: 700 12.5px ui-monospace, Menlo, monospace; color: #c9151c; text-decoration: none; word-break: break-all; }
+.etq-link:hover { text-decoration: underline; }
+.etq-banner { padding: 10px 12px; border-radius: 12px; font-size: 13.5px; display: grid; gap: 4px; }
+.etq-banner.canc { background: #ed1c24; color: #fff; }
+.etq-banner.canc .etq-env { color: #fff; }
+.etq-banner.cola { background: #fff3cd; color: #7a5200; font-weight: 700; }
+.etq-log { background: #ed1c2418; color: #c9151c; }
+
+/* fecha límite de despacho (Mercado Libre) */
+.etq-limite { display: inline-block; font: 700 12.5px 'DM Sans', sans-serif; padding: 3px 9px; border-radius: 99px; margin-bottom: 6px; background: #eef2f6; color: #3d4a5c; }
+.etq-limite.hoy { background: #fff3cd; color: #7a5200; }
+.etq-limite.urgente { background: #ffe3e5; color: #b3202b; }
+.etq-limite.vencido { background: #ed1c24; color: #fff; }
+
+/* ---------- Devoluciones (25/11) ---------- */
+.dev-panel { display: grid; gap: 12px; }
+.dev-recibe { font-size: 14.5px; color: #3d3e41; }
+.dev-sin { justify-self: start; background: none; border: 0; padding: 4px 0; color: #c9151c; font: 700 14px 'DM Sans', sans-serif; text-decoration: underline; cursor: pointer; }
+.dev-demo { border: 1px dashed #29292933; border-radius: 10px; padding: 10px 12px; background: #fafafa; }
+.dev-demo summary { cursor: pointer; font-weight: 700; color: #4a4b4e; }
+.dev-demo[open] { display: grid; gap: 8px; }
+.dev-demo .dz-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.dev-filtros { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0 10px; }
+.dev-filtros .dz-chip { padding: 8px 14px; min-height: 40px; gap: 6px; }
+.dev-lista { display: grid; gap: 10px; }
+.dev-card { display: grid; gap: 6px; border-left: 4px solid #d4d5d7; }
+.dev-card.ok { border-left-color: #16a34a; }
+.dev-card.revisar { border-left-color: #c9151c; }
+.dev-card.resuelta { border-left-color: #6b7280; opacity: .9; }
+.dev-card-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dev-res { font: 800 12.5px 'DM Sans', sans-serif; padding: 3px 10px; border-radius: 99px; }
+.dev-res.ok { background: #dcfce7; color: #166534; }
+.dev-res.revisar { background: #fde2e2; color: #a11218; }
+.dev-res.resuelta { background: #e5e7eb; color: #374151; }
+.dev-prueba { font: 800 11px 'DM Sans', sans-serif; letter-spacing: .04em; padding: 3px 8px; border-radius: 6px; background: #fff3cd; color: #7a5200; }
+.dev-meta { font-size: 13.5px; color: #4a4b4e; overflow-wrap: anywhere; }
+.dev-linea { font-size: 14.5px; overflow-wrap: anywhere; }
+.dev-est { margin-left: 8px; font: 700 12px 'DM Sans', sans-serif; padding: 2px 8px; border-radius: 99px; background: #f0f0f1; white-space: nowrap; }
+.dev-est.buen { background: #dcfce7; color: #166534; }
+.dev-est.mal { background: #fde2e2; color: #a11218; }
+.dev-est.incompleto { background: #ffedd5; color: #b45309; }
+.dev-fotos { display: flex; gap: 8px; flex-wrap: wrap; }
+.dev-fotos img { width: 76px; height: 76px; object-fit: cover; border-radius: 8px; border: 1px solid #29292914; display: block; }
+.dev-foto { position: relative; }
+.dev-foto button { position: absolute; top: -6px; right: -6px; width: 24px; height: 24px; border-radius: 50%; border: 0; background: #292929; color: #fff; font-size: 15px; line-height: 1; cursor: pointer; }
+.dev-asig { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 13.5px; font-weight: 600; color: #a11218; }
+.dev-recibir { display: grid; gap: 12px; }
+.dev-recibir .dz-panel { display: grid; gap: 12px; }
+.dev-datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.dev-datos > div { display: grid; gap: 2px; background: #f5f5f6; border-radius: 10px; padding: 8px 10px; min-width: 0; }
+.dev-datos > div span { font-size: 12px; color: #6b6c70; }
+.dev-datos > div b { overflow-wrap: anywhere; }
+.dev-datos.form { grid-template-columns: 1fr; }
+.dev-prod-tit { display: grid; gap: 2px; font-size: 15.5px; }
+.dev-prod-form { display: flex; gap: 8px; align-items: center; }
+.dev-prod-form .dz-inp { flex: 1; min-width: 0; }
+.dev-cant { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 600; }
+.dev-cant > span { flex: 1 1 140px; }
+.dev-cant .dz-btn { width: 46px; min-height: 46px; padding: 0; font-size: 22px; }
+.dev-cant .dz-inp { width: 64px; text-align: center; font-size: 18px; font-weight: 700; }
+.dev-estados { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.dev-estbtn { min-height: 52px; border-radius: 10px; border: 1px solid #29292926; background: #fff; font: 700 14px 'DM Sans', sans-serif; color: #292929; cursor: pointer; padding: 6px; }
+.dev-estbtn.buen.on { background: #16a34a; color: #fff; border-color: transparent; }
+.dev-estbtn.mal.on { background: #c9151c; color: #fff; border-color: transparent; }
+.dev-estbtn.incompleto.on { background: #d97706; color: #fff; border-color: transparent; }
+.dev-foto-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; }
+.dev-foto-zona { display: grid; gap: 10px; }
+.dev-resultado { padding: 11px 13px; border-radius: 10px; font-weight: 800; }
+.dev-resultado.ok { background: #dcfce7; color: #166534; }
+.dev-resultado.revisar { background: #fde2e2; color: #a11218; }
+@media (max-width: 380px) { .dev-estbtn { font-size: 12.5px; } }
+
+/* 27/11 tablero de cortes y equipo */
+.etq-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 10px}
+.etq-kpis>div{background:#f5f5f6;border-radius:12px;padding:10px 8px;text-align:center}
+.etq-kpis b{display:block;font-size:26px;line-height:1.1}
+.etq-kpis span{font-size:12px;color:#5c5d60}
+.etq-kpis .mal b{color:#c9151c}
+.etq-barra{height:10px;border-radius:999px;background:#e8e8ea;overflow:hidden;margin:4px 0}
+.etq-barra i{display:block;height:100%;background:#e0a100;border-radius:999px}
+.etq-barra i.ok{background:#1f9d55}
+.etq-barra.chica{height:7px;margin:2px 0}
+.etq-barra.chica i{background:#ed1c24}
+.etq-tcortes{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.etq-tc{border-radius:14px;padding:12px;border:1.5px solid #e2e2e4;background:#fff}
+.etq-tc-top{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:13px}
+.etq-tc-top span{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:#eee}
+.etq-tc-num{display:flex;gap:16px;margin-top:8px}
+.etq-tc-num b{display:block;font-size:22px}
+.etq-tc-num span{font-size:11.5px;color:#5c5d60}
+.etq-tc-ok{border-color:#1f9d5566;background:#f1faf4}.etq-tc-ok .etq-tc-top span{background:#1f9d55;color:#fff}
+.etq-tc-ahora{border-color:#2563eb66;background:#f2f6ff}.etq-tc-ahora .etq-tc-top span{background:#2563eb;color:#fff}
+.etq-tc-prox{opacity:.75}
+.etq-tc-pend{margin-top:8px;font-size:13px;font-weight:700;color:#1f9d55}
+.etq-tc-pend.mal{color:#b45309}
+.etq-equipo{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+.etq-equipo th{text-align:left;font-size:12px;color:#5c5d60;font-weight:600;padding:6px 4px;border-bottom:1px solid #e5e5e5}
+.etq-equipo td{padding:8px 4px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+.etq-equipo small{color:#5c5d60}
+.etq-eq-bar{width:32%}
+@media (max-width:480px){.etq-eq-bar{width:26%}.etq-equipo{font-size:13px}}

@@ -463,6 +463,39 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
     }
   }
 
+  // 26/11 (Felipe: «que busque y devuelva la lista, no un prompt»): la IA busca en la web desde el servidor y la tabla
+  // se revisa con el importador de siempre (vista previa antes de cargar). Cuesta ~US$ 0,15-0,30 por búsqueda (Sonnet 5.5); hay tope diario.
+  // 26/11 (Felipe): la búsqueda con IA queda en pausa; cada uno usa el pedido en la IA que prefiera. Para prenderla: true.
+  const PROSPECT_AI_UI = false;
+  const [aiSearching, setAiSearching] = useState(false);
+  async function searchWithAi() {
+    const family = research.family || planFamily;
+    if (!family || !session?.access_token || aiSearching) return;
+    const now = new Date().toISOString();
+    const scope = research.scope.trim() || 'todo el país';
+    const count = Math.min(Number(research.count) || 10, 10);
+    const job = {
+      id: crypto.randomUUID(), family, scope, count, notes: research.notes, status: 'Buscando con IA…', ai: true, createdAt: now, updatedAt: now,
+      prompt: buildResearchPrompt({ family, scope, count, exclusions: exclusionNames(clients, prospects), notes: research.notes }),
+    };
+    setData((current) => ({ ...current, researchJobs: [...(Array.isArray(current.researchJobs) ? current.researchJobs : []), job] }));
+    setAiSearching(true);
+    setMessage(`La IA está buscando ${family} en ${scope}… tarda entre 20 y 50 segundos.`);
+    try {
+      const { ok, payload } = await api({ action: 'ai-search', prompt: job.prompt });
+      if (!ok) { setJobStatus(job.id, 'Falló la investigación'); setMessage(payload.error || 'La búsqueda con IA no anduvo. Probá de nuevo.'); return; }
+      setJobText((current) => ({ ...current, [job.id]: payload.text }));
+      setJobStatus(job.id, 'Resultado listo');
+      analyzeImport(payload.text, job.id);
+      setMessage(`Listo: la IA hizo ${payload.cost?.searches ?? '?'} búsquedas (costo aprox. US$ ${Number(payload.cost?.usd || 0).toFixed(2)}; ${payload.usedToday} de ${payload.cap} hoy). Revisá la vista previa y cargá las que te sirvan.`);
+    } catch {
+      setJobStatus(job.id, 'Falló la investigación');
+      setMessage('Se cortó la búsqueda con IA. Revisá tu conexión y probá de nuevo.');
+    } finally {
+      setAiSearching(false);
+    }
+  }
+
   // Mientras haya pedidos esperando a Claude, consulta cada 20 s si ya hay resultado.
   const waitingIds = researchJobs.filter((job) => job.remote && !['Resultado listo', 'Importada', 'Falló la investigación'].includes(job.status)).map((job) => job.id).join(',');
   useEffect(() => {
@@ -662,7 +695,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         <div>
           <span className="eyebrow">Cartera</span>
           <h2>Prospección</h2>
-          <p>Empresas que todavía no son clientes. Al marcar un prospecto como Contactado o Con interés pasa a Empresas y desde ahí rige toda la lógica del CRM. Nunca se envían mensajes desde acá: el contacto es siempre manual.</p>
+          <p>Empresas que todavía no son clientes. Al marcar un prospecto como Contactado o Con interés pasa a Empresas y desde ahí rige toda la lógica de la app. Nunca se envían mensajes desde acá: el contacto es siempre manual.</p>
         </div>
         <div className="panel-head-actions">
           <button type="button" className="primary" onClick={() => { setTab('prospectos'); setForm(blankProspect({ family: familyFilter !== 'Todas' ? familyFilter : '' })); }}><Plus size={16} /> Cargar prospecto</button>
@@ -693,18 +726,14 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       {tab === 'limpieza' && <ProspectCleanup prospects={prospects} onDiscard={discardProspects} onKeep={keepProspects} />}
       {tab === 'buscar' && (<>
       <details className="panel research-panel" open>
-        <summary><strong>Investigación profunda: Claude investiga por vos en la web</strong></summary>
+        <summary><strong>Buscar empresas con IA</strong></summary>
         <div className="prospect-search-head">
           <div>
-            <h3>{requests ? 'Pedile a Claude una lista de empresas' : 'Investigación con IA externa'}</h3>
-            {requests && (
-              <ol className="muted small">
-                <li>Elegí familia, zona y cantidad.</li>
-                <li>Tocá «Pedir a Claude que investigue» (no cuesta nada extra).</li>
-                <li>Cuando Claude termina, las empresas aparecen solas en la cola de trabajo, con la fuente de cada dato.</li>
-              </ol>
-            )}
-            <p className="muted">La búsqueda de verdad: una IA con modo de investigación avanzada recorre Google, Maps, sitios y redes y devuelve una tabla con evidencia y fuente por empresa. Tarda entre {RESEARCH_MINUTES.min} y {RESEARCH_MINUTES.max} minutos y no cuesta nada extra: usa tu suscripción a Claude, ChatGPT, Gemini o Perplexity. El CRM arma el pedido (con las empresas que ya tenés excluidas) y después importa el resultado.</p>
+            <ol className="muted small">
+              <li>Elegí familia, zona y cantidad. Antes de buscar más, fijate si ya tenés pendientes en la Orden de llamada: primero lo que ya está.</li>
+              <li>«Preparar pedido para otra IA» arma el pedido (con las empresas que ya tenés excluidas): copialo en la IA que prefieras (Claude, ChatGPT, Gemini o Perplexity) con su modo de investigación.</li>
+              <li>Pegá acá la tabla que te devuelve y revisá la vista previa: si la IA puso «Valor N/10», las de más valor suben solas en la Orden de llamada.</li>
+            </ol>
           </div>
         </div>
         <div className="research-form">
@@ -739,13 +768,14 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
           </label>
         </div>
         <div className="prospect-search-actions">
-          {requests && <button type="button" className="primary big" onClick={requestFromClaude}><Search size={18} /> Pedir a Claude que investigue</button>}
-          <button type="button" className={requests ? 'secondary' : 'primary big'} onClick={prepareResearch}>{requests ? 'Preparar pedido para otra IA' : <><Search size={18} /> Preparar investigación</>}</button>
+          {PROSPECT_AI_UI && session?.access_token && <button type="button" className="primary big" disabled={aiSearching} onClick={searchWithAi}><Search size={18} /> {aiSearching ? 'Buscando con IA…' : 'Buscar con IA ahora'}</button>}
+          {requests && <button type="button" className={PROSPECT_AI_UI ? "secondary" : "primary big"} onClick={requestFromClaude}>Pedir a Claude (sin costo, tarda más)</button>}
+          <button type="button" className="secondary" onClick={prepareResearch}>{requests ? 'Preparar pedido para otra IA' : <><Search size={18} /> Preparar investigación</>}</button>
           <span className="muted small">Se excluyen {exclusionNames(clients, prospects).length} empresas que ya tenés.</span>
         </div>
 
         {researchJobs.length > 0 && (
-          <details className="research-history" open={researchJobs.some((job) => !['Importada', 'Falló la investigación'].includes(job.status))}>
+          <details className="research-history" open={researchJobs.some((job) => job.ai && job.status === 'Resultado listo')}>
           <summary><strong>Historial de pedidos</strong> <span className="muted small">{researchJobs.length} {researchJobs.length === 1 ? 'pedido' : 'pedidos'} · {researchJobs.filter((job) => job.status === 'Importada').length} importados</span></summary>
           <div className="history-list">
             {[...researchJobs].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).map((job) => {
@@ -865,7 +895,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         {searching && (
           <div className="search-progress" role="status" aria-live="polite">
             <span className="bar" />
-            <p>Buscando en OpenStreetMap{zone ? ` (${zone.nombre})` : ''}… puede tardar hasta 1 minuto. Podés seguir usando el CRM; el resultado aparece acá y en el historial. Esta zona vuelve a estar disponible en {60} días.</p>
+            <p>Buscando en OpenStreetMap{zone ? ` (${zone.nombre})` : ''}… puede tardar hasta 1 minuto. Podés seguir usando la app; el resultado aparece acá y en el historial. Esta zona vuelve a estar disponible en {60} días.</p>
           </div>
         )}
 
@@ -898,7 +928,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
 
       <details className="import-box">
         <summary><FileUp size={14} /> Importar o pegar una lista de prospectos</summary>
-        <p className="muted small">Subí un CSV o pegá las filas copiadas de la planilla, con los encabezados en la primera fila (Nombre empresa, Familia, Subfamilia, provincia, ciudad, Maquina, Proveedor, telefono, email, Estado, Comercial, Contacto, observaciones, Fecha de seguimiento, Tipo entidad, Producto / propuesta, Estado comercial, Valor potencial, Próxima acción, Fecha próxima acción). Antes de guardar vas a ver cuántas son nuevas, cuántas ya están en el CRM y cuántas son posibles duplicadas.</p>
+        <p className="muted small">Subí un CSV o pegá las filas copiadas de la planilla, con los encabezados en la primera fila (Nombre empresa, Familia, Subfamilia, provincia, ciudad, Maquina, Proveedor, telefono, email, Estado, Comercial, Contacto, observaciones, Fecha de seguimiento, Tipo entidad, Producto / propuesta, Estado comercial, Valor potencial, Próxima acción, Fecha próxima acción). Antes de guardar vas a ver cuántas son nuevas, cuántas ya están en la app y cuántas son posibles duplicadas.</p>
         <textarea rows={6} value={importText} onChange={(event) => setImportText(event.target.value)} aria-label="Lista de prospectos" placeholder="Pegá acá las filas copiadas de la planilla (con la fila de encabezados)" />
         <div className="import-box-actions">
           <button type="button" className="primary" disabled={!importText.trim()} onClick={() => analyzeImport(importText)}>Revisar lista pegada</button>

@@ -100,7 +100,7 @@ export function sprayContext(quote) {
   if (!quote) return '';
   const { ask, ficha } = quote;
   const lines = [
-    `CÁLCULO DE MATERIAL PARA SPRAY (fórmula del CRM, sin IA): ${fmt(ask.m2)} m² reales${quote.extraPct ? ` + ${quote.extraPct} % de ${ask.substrate?.label || 'desarrollo'} = ${fmt(quote.effM2)} m²` : ' (sin extra de sustrato)'}.`,
+    `CÁLCULO DE MATERIAL PARA SPRAY (fórmula de la app, sin IA): ${fmt(ask.m2)} m² reales${quote.extraPct ? ` + ${quote.extraPct} % de ${ask.substrate?.label || 'desarrollo'} = ${fmt(quote.effM2)} m²` : ' (sin extra de sustrato)'}.`,
     'Fórmula: m² con extra × rinde (kg/m²) = kg de mezcla; se reparte por la relación de mezcla EN PESO de la ficha; los sistemas son tambores cerrados (poliol + isocianato) y se cuentan por el componente que primero pide otro tambor.',
     'El extra por curvatura depende del sustrato (chapa sinusoidal 10 %, más curva 20 a 30 %, losa o madera 0 %): si no lo dijeron, preguntalo.',
     ficha ? `Ficha usada: ${ficha.title}${ficha.ratio ? ` · relación ${ficha.ratio.poliol} : ${ficha.ratio.iso}` : ''}${ficha.drumPoliol ? ` · tambores ${ficha.drumPoliol} kg poliol / ${ficha.drumIso} kg iso` : ''}.` : 'No encontré ficha del producto nombrado.',

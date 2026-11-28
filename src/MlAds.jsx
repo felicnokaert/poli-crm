@@ -114,7 +114,7 @@ export function MlAds({ ads = {}, onSave, accounts = [], session = null }) {
         <div>
           <span className="eyebrow">Mercado Libre · Product Ads</span>
           <h2>Publicidad</h2>
-          <p className="muted">Pegá la tabla de campañas de cada cuenta (Publicidad → Product Ads → Campañas) y el CRM la compara con el objetivo de ROAS. Es una foto del momento en que la pegás: no se actualiza sola. Solo sugiere; no cambia presupuestos ni pausa campañas.</p>
+          <p className="muted">Pegá la tabla de campañas de cada cuenta (Publicidad → Product Ads → Campañas) y la app la compara con el objetivo de ROAS. Es una foto del momento en que la pegás: no se actualiza sola. Solo sugiere; no cambia presupuestos ni pausa campañas.</p>
         </div>
         <div className="inline-actions">
           <button type="button" className="primary" disabled={refresh?.busy} onClick={refreshSpend}>{refresh?.busy ? "Leyendo…" : "Actualizar inversión (TACoS)"}</button>

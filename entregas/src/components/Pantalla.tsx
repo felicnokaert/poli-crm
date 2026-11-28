@@ -3,7 +3,7 @@
 // (agregá ?todos=1 para ver todos).
 // PARCHE CONTEO (25/11, Felipe): más chico y con ETIQUETAS de Mercado Libre (pendientes por hora límite y escaneadas hoy), todo cada 45 s.
 import { Maximize2, Minimize2, ArrowLeft, Moon, Sun } from 'lucide-react'
-import './pantalla.css'
+// Estilos: main.tsx (Entregas suelta) o el módulo nativo de Poliplast App (encerrados, ver src/scope-css.mjs del CRM).
 import { useEffect, useMemo, useState } from 'react'
 import { useDatos } from '../lib/datos'
 import { depositoActual } from '../lib/operador'

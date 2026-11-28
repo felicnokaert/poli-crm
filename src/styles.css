@@ -1655,30 +1655,221 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .shortcuts-guide a.primary { align-self: flex-start; text-decoration: none; padding: 9px 14px; border-radius: 10px; }
 .shortcuts-title { font-size: 14px; margin: 0 0 6px; }
 
-/* Examen semanal del asistente (26/11). */
-.exam-weeks { display: flex; gap: 6px; align-items: flex-end; height: 90px; margin: 10px 0; }
-.exam-week { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
-.exam-bar { width: 100%; max-width: 28px; background: var(--brand-red); border-radius: 4px 4px 0 0; opacity: .85; }
-.exam-results { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 8px; }
-.exam-results .badge.ok { background: var(--color-success-bg); color: var(--color-success); }
-.exam-results .badge.warn { background: #fff1d6; color: #7a5200; }
-.exam-results .badge.danger { background: #fde2e2; color: #9b1c1c; }
-
-/* Stock en una sola hoja (27/11): una fila por producto, conteo y Contabilium por depósito; en el celular, tarjetas. */
-.stock-table { display: grid; gap: 4px; margin-top: 10px; }
-.stock-row { display: grid; grid-template-columns: minmax(0, 2.2fr) repeat(4, minmax(0, 1fr)) 100px; gap: 10px; align-items: center; border-bottom: 1px solid var(--color-border); padding: 8px 4px; }
-.stock-cell { display: inline-flex; align-items: center; gap: 6px; }
-.stock-info { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--color-border); background: transparent; color: var(--color-text-gray); padding: 0; cursor: help; }
-.stock-info:hover, .stock-info:focus-visible { color: var(--brand-red); border-color: var(--brand-red); }
-.stock-head { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-gray); border-bottom: 0; }
-.stock-row .badge.ok { background: var(--color-success-bg); color: var(--color-success); }
-.stock-row .badge.warn { background: #fff1d6; color: #7a5200; }
-.stock-row .badge.danger { background: #fde2e2; color: #9b1c1c; }
+/* Poliplast App (prueba, 25/11): «Ver como», módulos próximamente y mapa del menú. */
+.preview-role { display: grid; gap: 4px; margin-bottom: 12px; }
+.preview-role select { width: 100%; }
+.module-preview h2 { margin: 4px 0 6px; }
+.module-preview-empty { border: 1px dashed var(--color-border); border-radius: 12px; padding: 22px 16px; margin: 8px 0 12px; text-align: center; }
+.plan-overview-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); margin: 12px 0 18px; }
+.plan-overview-group { border: 1px solid var(--color-border); border-radius: 12px; padding: 10px 14px; }
+.plan-overview-group h3 { margin: 0 0 6px; font-size: 0.95rem; }
+.plan-overview-group ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.plan-soon { font-size: 0.72rem; font-weight: 600; color: var(--brand-red); text-transform: uppercase; letter-spacing: 0.03em; }
+.plan-roles { width: 100%; border-collapse: collapse; }
+.plan-roles td, .plan-roles th { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--color-border); vertical-align: top; }
+/* Poliplast App (prueba): módulos con datos inventados y Equipo y cuentas. */
+.demo-tabs { margin: 12px 0; width: fit-content; max-width: 100%; flex-wrap: wrap; }
+.demo-stats { margin: 4px 0 12px; }
+.demo-table td, .demo-table th { white-space: nowrap; }
+.demo-pill { font-style: normal; }
+.demo-scan, .demo-form, .team-access-add { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin: 8px 0; }
+.demo-scan input { flex: 1 1 240px; }
+.demo-form label, .team-access-add label { display: grid; gap: 4px; font-size: 0.85rem; flex: 1 1 180px; }
+.demo-msg { margin: 6px 0; padding: 8px 12px; border-radius: 10px; background: var(--color-border-light); }
+.demo-count { width: 84px; }
+.team-access-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.team-access-list > li { border: 1px solid var(--color-border); border-radius: 12px; padding: 10px 14px; }
+.team-access-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: center; }
+.team-access-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.team-access-modules { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); margin-top: 10px; }
+.team-access-modules fieldset { border: 1px solid var(--color-border-light); border-radius: 10px; padding: 8px 12px; margin: 0; }
+.team-access-modules legend { font-weight: 700; font-size: 0.85rem; padding: 0 4px; }
+.team-access-module > label, .team-access-children label { display: flex; gap: 8px; align-items: center; padding: 3px 0; }
+.team-access-children { padding-left: 24px; font-size: 0.85rem; }
+.maqueta-frame { display: grid; gap: 10px; }
+.maqueta-frame.is-auto iframe { min-height: 0; transition: height 160ms ease-out; }
+.maqueta-frame iframe { width: 100%; height: calc(100vh - 170px); min-height: 560px; border: 0; border-radius: 0; background: transparent; display: block; animation: quote-in 220ms ease-out; }
+@media (max-width: 760px) { .maqueta-frame iframe { height: calc(100vh - 200px); } }
+.expedition-gate { max-width: 560px; margin: 0 auto; display: grid; gap: 12px; }
+.expedition-gate h2 { margin: 6px 0 0; }
+.expedition-options { display: flex; flex-wrap: wrap; gap: 10px; }
+.expedition-options button { min-width: 130px; justify-content: center; padding: 14px 18px; font-size: 1rem; }
+.expedition-go { justify-content: center; padding: 14px; font-size: 1.05rem; }
+.expedition-chip { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; padding: 8px 12px; border-radius: 12px; background: var(--color-border-light); }
+.expedition-chip .secondary { padding: 6px 12px; }
+/* Poliplast App: cotizador propio. */
+.quote-head { display: grid; gap: 14px; }
+.quote-fields { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); align-items: end; }
+.quote-fields label { display: grid; gap: 6px; font-size: 0.85rem; font-weight: 600; }
+.quote-fields .segmented { width: fit-content; }
+.quote-search { display: flex; align-items: center; gap: 10px; border: 1px solid var(--color-border); border-radius: 14px; padding: 4px 14px; background: var(--color-white); }
+.quote-search input { border: 0; flex: 1; padding: 10px 0; background: transparent; outline: none; font-size: 1rem; }
+.quote-results { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 320px; overflow: auto; animation: quote-in 180ms ease-out; }
+.quote-results button { width: 100%; text-align: left; display: grid; gap: 2px; padding: 10px 12px; border: 0; border-radius: 12px; background: transparent; cursor: pointer; }
+.quote-results button:hover, .quote-results button:focus-visible { background: var(--color-border-light); }
+.quote-lines { display: grid; gap: 4px; }
+.quote-line { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--color-border-light); animation: quote-in 220ms ease-out; }
+.quote-line:last-child { border-bottom: 0; }
+.quote-line img, .quote-photo-empty { width: 56px; height: 56px; border-radius: 12px; object-fit: cover; background: var(--color-border-light); }
+.quote-line-main { display: grid; gap: 3px; min-width: 0; }
+.quote-refs { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.quote-refs a { color: inherit; text-decoration: underline; }
+.quote-line-controls { display: flex; align-items: center; gap: 8px; }
+.quote-line-controls input { width: 76px; }
+.quote-line-price { display: grid; text-align: right; min-width: 120px; }
+.quote-line-price span { font-size: 0.8rem; color: var(--color-text-gray); }
+.quote-warn { color: var(--brand-red); }
+.quote-totals .is-strong strong { color: var(--brand-red); }
+.quote-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+@keyframes quote-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .quote-results, .quote-line { animation: none; } }
 @media (max-width: 760px) {
-  .stock-head { display: none; }
-  .stock-row { grid-template-columns: 1fr 1fr; gap: 6px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 10px 12px; }
-  .stock-row > span:first-child { grid-column: 1 / -1; }
-  .stock-row > [data-label]::before { content: attr(data-label); display: block; font-size: 11px; color: var(--color-text-gray); }
+  .quote-line { grid-template-columns: 48px minmax(0, 1fr); }
+  .quote-line img, .quote-photo-empty { width: 48px; height: 48px; }
+  .quote-line-controls { grid-column: 1 / -1; justify-content: space-between; }
+}
+/* Poliplast App: «Algo no anda» y Avisos del equipo. */
+.report-button { color: var(--brand-red); }
+.report-modal { width: min(520px, 100%); animation: quote-in 200ms ease-out; }
+.report-form, .report-sent { display: grid; gap: 12px; }
+.report-form h2, .report-sent h2 { margin: 0; font: 800 22px 'Manrope'; }
+.report-form textarea { width: 100%; border: 1px solid var(--color-border-input); border-radius: 12px; padding: 10px 12px; font: inherit; resize: vertical; }
+.report-severity { display: flex; flex-wrap: wrap; gap: 8px; }
+.report-severity label { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 999px; cursor: pointer; font-size: 0.9rem; }
+.report-severity label.selected { border-color: var(--brand-red); color: var(--brand-red); font-weight: 700; }
+.report-severity input { accent-color: var(--brand-red); }
+.app-reports-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.app-reports-list li { border: 1px solid var(--color-border); border-left: 4px solid var(--color-border); border-radius: 12px; padding: 10px 14px; display: grid; gap: 6px; }
+.app-reports-list li.sev-no-me-deja { border-left-color: var(--brand-red); }
+.app-reports-list li.sev-idea { border-left-color: #2563eb; }
+.app-reports-list p { margin: 0; white-space: pre-wrap; }
+.app-reports-head { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; }
+.app-reports-list .secondary { justify-self: start; padding: 6px 12px; }
+/* Poliplast App (26/11): menú minimizable y animado. */
+@media (min-width: 761px) {
+  .app-shell { transition: grid-template-columns 260ms cubic-bezier(.2, .8, .2, 1); }
+  .app-shell.nav-mini { grid-template-columns: 76px 1fr; }
+  .brand { position: relative; }
+  .brand-iso { display: none; width: 34px; height: 34px; object-fit: contain; }
+  .nav-mini-toggle { position: absolute; right: 0; top: 4px; border: 0; background: transparent; color: #9a9a9f; padding: 6px; border-radius: 10px; cursor: pointer; transition: background .2s ease, color .2s ease, transform .26s ease; }
+  .nav-mini-toggle:hover, .nav-mini-toggle:focus-visible { background: #ffffff14; color: #fff; }
+  .sidebar .nav-label { transition: opacity 180ms ease, transform 220ms ease; white-space: nowrap; }
+  .app-shell.nav-mini .sidebar { padding: 14px 10px; overflow: hidden; }
+  .app-shell.nav-mini .brand { height: auto; padding: 6px 0 14px; flex-direction: column; gap: 10px; }
+  .app-shell.nav-mini .brand-logo { display: none; }
+  .app-shell.nav-mini .brand-iso { display: block; animation: nav-pop 260ms ease-out; }
+  .app-shell.nav-mini .nav-mini-toggle { position: static; }
+  .app-shell.nav-mini .nav-group-title { display: block; height: 1px !important; min-height: 0 !important; line-height: 0; padding: 0 !important; margin: 10px 14px; background: #ffffff1f; border-radius: 1px; font-size: 0; overflow: hidden; pointer-events: none; }
+  .app-shell.nav-mini .nav-group-title > * { display: none; }
+  .app-shell.nav-mini .sidebar nav button { justify-content: center; padding: 10px 0; position: relative; }
+  .app-shell.nav-mini .sidebar nav button:hover { transform: scale(1.06); }
+  .app-shell.nav-mini .nav-label { opacity: 0; width: 0; overflow: hidden; transform: translateX(-6px); position: absolute; }
+  .app-shell.nav-mini .sidebar nav .nav-badge { position: absolute; top: 3px; right: 10px; min-width: 16px; height: 16px; font-size: 9px; padding: 0 4px; }
+  .app-shell.nav-mini .sidebar-note { display: none; }
+  .nav-tip { position: fixed; transform: translateY(-50%); z-index: 60; background: #111; color: #fff; font-size: 12.5px; font-weight: 600; padding: 6px 10px; border-radius: 8px; box-shadow: 0 8px 24px #0005; pointer-events: none; white-space: nowrap; animation: nav-tip-in 140ms ease-out; }
+}
+@keyframes nav-pop { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
+@keyframes nav-tip-in { from { opacity: 0; transform: translate(-4px, -50%); } to { opacity: 1; transform: translateY(-50%); } }
+@media (prefers-reduced-motion: reduce) { .app-shell, .nav-label, .brand-iso, .nav-tip { transition: none !important; animation: none !important; } }
+/* Poliplast App (26/11): campanita de notificaciones. */
+.notif { position: relative; }
+.notif-button { position: relative; }
+.notif-count { position: absolute; top: -4px; right: -4px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--brand-red); color: #fff; font-size: 10px; font-weight: 800; display: grid; place-items: center; animation: nav-pop 220ms ease-out; }
+.notif-panel { position: absolute; right: 0; top: calc(100% + 10px); width: min(380px, calc(100vw - 24px)); max-height: min(70vh, 560px); overflow: auto; background: var(--color-white); border: 1px solid var(--color-border); border-radius: 18px; box-shadow: 0 24px 60px #0f172a2e; z-index: 50; padding: 12px; display: grid; gap: 10px; transform-origin: top right; animation: notif-in 180ms cubic-bezier(.2, .8, .2, 1); }
+.notif-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.notif-head strong { font: 800 16px 'Manrope'; }
+.notif-readall { display: inline-flex; align-items: center; gap: 5px; border: 0; background: transparent; color: var(--brand-red); font-weight: 700; font-size: 12.5px; cursor: pointer; padding: 4px 6px; border-radius: 8px; }
+.notif-readall:disabled { color: var(--color-text-gray); cursor: default; }
+.notif-tabs { width: 100%; }
+.notif-tabs button { flex: 1; }
+.notif-empty { margin: 14px 0; text-align: center; color: var(--color-text-gray); }
+.notif-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.notif-list button { width: 100%; display: flex; gap: 10px; align-items: flex-start; text-align: left; border: 0; background: transparent; padding: 9px 8px; border-radius: 12px; cursor: pointer; transition: background .15s ease; }
+.notif-list button:hover, .notif-list button:focus-visible { background: var(--color-border-light); }
+.notif-dot { flex: 0 0 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: var(--brand-red); }
+.notif-list li.is-read .notif-dot { background: transparent; box-shadow: inset 0 0 0 1px var(--color-border); }
+.notif-list li.is-read b { font-weight: 600; color: var(--color-text-gray); }
+.notif-text { display: grid; gap: 2px; min-width: 0; }
+.notif-text b { font-size: 13.5px; line-height: 1.3; }
+.notif-text small { color: var(--color-text-gray); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@keyframes notif-in { from { opacity: 0; transform: translateY(-6px) scale(.97); } to { opacity: 1; transform: none; } }
+@media (max-width: 760px) { .notif-panel { position: fixed; left: 12px; right: 12px; top: 64px; width: auto; } }
+@media (prefers-reduced-motion: reduce) { .notif-panel, .notif-count { animation: none; } }
+/* Poliplast App (26/11): efectos suaves. Entrada de cada pantalla, tarjetas escalonadas, levantado al pasar el mouse. */
+.view-enter { animation: view-in 320ms cubic-bezier(.2, .8, .2, 1) both; }
+.view-enter .content-stack > *, .view-enter > .content-stack > * { animation: view-rise 420ms cubic-bezier(.2, .8, .2, 1) both; }
+.view-enter .content-stack > *:nth-child(2) { animation-delay: 50ms; }
+.view-enter .content-stack > *:nth-child(3) { animation-delay: 100ms; }
+.view-enter .content-stack > *:nth-child(4) { animation-delay: 150ms; }
+.view-enter .content-stack > *:nth-child(5) { animation-delay: 200ms; }
+.view-enter .content-stack > *:nth-child(n+6) { animation-delay: 240ms; }
+.view-enter .metric-grid > .metric-card:nth-child(2) { animation-delay: 60ms; }
+.view-enter .metric-grid > .metric-card:nth-child(3) { animation-delay: 120ms; }
+.view-enter .metric-grid > .metric-card:nth-child(4) { animation-delay: 180ms; }
+@media (hover: hover) {
+  .view-enter .metric-card:hover { transform: translateY(-3px); box-shadow: 0 14px 34px #0f172a1f; }
+  .view-enter .panel { transition: box-shadow .2s ease; }
+  .view-enter .panel:hover { box-shadow: 0 12px 34px #0f172a14; }
+}
+@keyframes view-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes view-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .view-enter, .view-enter * { animation: none !important; } }
+.quote-screens { width: fit-content; max-width: 100%; }
+.quote-saved { margin: 0; padding: 8px 12px; border-radius: 12px; background: var(--color-border-light); display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.quote-history { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.quote-history li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--color-border-light); animation: quote-in 220ms ease-out; }
+.quote-history li:last-child { border-bottom: 0; }
+.quote-history-main { display: grid; gap: 2px; min-width: 0; }
+.quote-history-main .small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quote-history-total { font-variant-numeric: tabular-nums; }
+.quote-history-actions { display: flex; gap: 6px; }
+.quote-history-actions .secondary { padding: 7px 12px; }
+.quote-status { border-radius: 999px; padding: 5px 10px; font-weight: 700; font-size: 12.5px; border: 1px solid var(--color-border); }
+.quote-status.st-enviada { color: #2563eb; border-color: #2563eb55; }
+.quote-status.st-aceptada { color: #15803d; border-color: #15803d55; }
+.quote-status.st-rechazada { color: var(--color-text-gray); }
+@media (max-width: 760px) { .quote-history li { grid-template-columns: minmax(0, 1fr) auto; } .quote-history-actions { grid-column: 1 / -1; } }
+.readonly-strip { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; justify-content: space-between; margin: 0 0 12px; padding: 8px 14px; border-radius: 12px; background: #fff7e6; border: 1px solid #f5d38a; color: #7a5200; font-size: 13px; }
+.readonly-strip .danger-link { font-size: 12.5px; }
+/* Poliplast App (26/11): menú sin franja blanca, botón de minimizar como pestaña del borde, Acceso rápido. */
+@media (min-width: 761px) {
+  .sidebar nav { flex: 1 1 auto; align-content: start; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: #ffffff26 transparent; }
+  .sidebar { overflow: visible; }
+  .app-shell.nav-mini .sidebar { overflow: visible; }
+  .nav-mini-toggle { position: absolute; right: -24px; top: 84px; width: 26px; height: 26px; padding: 0; display: grid; place-items: center; border-radius: 50%; background: var(--color-white); color: #242424; border: 1px solid var(--color-border); box-shadow: 0 4px 14px #0000002e; z-index: 5; }
+  .nav-mini-toggle:hover, .nav-mini-toggle:focus-visible { background: var(--brand-red); color: #fff; border-color: var(--brand-red); }
+  .app-shell.nav-mini .nav-mini-toggle { position: absolute; right: -22px; top: 56px; }
+  .sidebar nav button { position: relative; }
+  .nav-pin { margin-left: auto; opacity: 0; color: #9a9a9f; display: inline-grid; padding: 2px; border-radius: 6px; transition: opacity .15s ease, color .15s ease; }
+  .sidebar nav button:hover .nav-pin, .nav-pin.is-pinned { opacity: 1; }
+  .nav-pin.is-pinned { color: #fbbf24; }
+  .nav-pin:hover { color: #fbbf24; }
+  .sidebar nav button .nav-badge + .nav-pin { margin-left: 6px; }
+}
+.maqueta-frame.is-loading iframe { opacity: 0; }
+.maqueta-frame iframe { transition: opacity 220ms ease; }
+.notif-toggle-read { border: 0; background: transparent; color: var(--color-text-gray); font-size: 12.5px; cursor: pointer; padding: 4px; justify-self: center; text-decoration: underline; }
+/* Poliplast App (26/11, Felipe: «que no haya que bajar tanto»): densidad compacta en toda la app. Se achican los
+   espacios, las cajas y los números grandes; los textos chicos quedan igual. */
+.app-shell.densa main { padding: 18px 26px 40px; }
+.app-shell.densa .topbar { margin-bottom: 12px; }
+.app-shell.densa .topbar h1 { font-size: 23px; }
+.app-shell.densa .content-stack { gap: 10px; }
+.app-shell.densa main .panel { padding: 12px 14px; border-radius: 14px; }
+.app-shell.densa .panel-head { margin-bottom: 8px; }
+.app-shell.densa .panel-head h2, .app-shell.densa main .panel > h2 { font-size: 15.5px; }
+.app-shell.densa .metric-grid { gap: 10px; }
+.app-shell.densa .metric-card { padding: 11px 13px; gap: 2px 8px; }
+.app-shell.densa .metric-card strong { font-size: 22px; }
+.app-shell.densa .metric-card svg { width: 17px; height: 17px; }
+.app-shell.densa .segmented button { padding-top: 6px; padding-bottom: 6px; }
+.app-shell.densa .day-hero { padding: 14px 16px; }
+.app-shell.densa .primary, .app-shell.densa .secondary { padding: 8px 13px; }
+.app-shell.densa .sidebar nav button { padding-top: 7px; padding-bottom: 7px; }
+@media (max-width: 760px) {
+  .app-shell.densa main { padding: 12px 12px 90px; }
+  .app-shell.densa .topbar h1 { font-size: 21px; }
+  .app-shell.densa .metric-card strong { font-size: 20px; }
 }
 /* Hoja completa (28/11): 9 columnas que se ordenan tocando el título, filtros y páginas de 30. */
 .stock-row.stock-row-sheet { grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr) minmax(0, .9fr) repeat(4, minmax(0, 1fr)) 72px 96px; }
@@ -1716,6 +1907,305 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .company-days-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
 .company-days-list li { display: flex; justify-content: space-between; gap: 10px; align-items: center; border-bottom: 1px solid var(--color-border); padding-bottom: 6px; }
 
-.stock-adjust { display: grid; gap: 10px; margin-top: 10px; }.stock-adjust > .secondary { justify-self: start; }
+/* Precios y condiciones del cotizador (26/11, solo administradores). */
+.price-search { display: flex; gap: 8px; align-items: center; }
+.price-search input { flex: 1; min-width: 0; }
+.price-results { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.price-list-card { border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 12px; display: grid; gap: 10px; margin-top: 10px; }
+.price-list-card header { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tier-table { display: grid; gap: 6px; }
+.tier-row { display: grid; grid-template-columns: 90px 90px 140px minmax(0, 1fr) 32px; gap: 8px; align-items: center; }
+.tier-row input { width: 100%; min-width: 0; }
+.tier-head { font-size: 11px; color: var(--color-text-gray); text-transform: uppercase; letter-spacing: .04em; }
+.condition-list { display: grid; gap: 10px; margin: 8px 0 12px; }
+.condition-row { display: grid; grid-template-columns: 1.2fr .6fr .6fr 2fr auto auto; gap: 8px; align-items: end; border-bottom: 1px solid var(--color-border); padding-bottom: 10px; }
+.condition-row label { display: grid; gap: 4px; font-size: 12px; }
+.condition-row label.check { display: flex; align-items: center; gap: 6px; }
+@media (max-width: 760px) {
+  .tier-row { grid-template-columns: 1fr 1fr 1.3fr 32px; }
+  .tier-row > span.muted { display: none; }
+  .tier-head > span:nth-child(4) { display: none; }
+  .condition-row { grid-template-columns: 1fr 1fr; }
+  .condition-row label.wide { grid-column: span 2; }
+}
+
+/* Examen semanal del asistente (26/11). */
+.exam-weeks { display: flex; gap: 6px; align-items: flex-end; height: 90px; margin: 10px 0; }
+.exam-week { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
+.exam-bar { width: 100%; max-width: 28px; background: var(--brand-red); border-radius: 4px 4px 0 0; opacity: .85; }
+.exam-results { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 8px; }
+.exam-results .badge.ok { background: var(--color-success-bg); color: var(--color-success); }
+.exam-results .badge.warn { background: #fff1d6; color: #7a5200; }
+.exam-results .badge.danger { background: #fde2e2; color: #9b1c1c; }
+
+/* Filtro «precios raros» del cotizador (26/11). */
+.rare-table { display: grid; gap: 4px; }
+.rare-row { display: grid; grid-template-columns: minmax(0, 2.4fr) 1fr 1fr 70px; gap: 10px; align-items: center; text-align: left; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: transparent; color: inherit; padding: 8px 10px; font: inherit; cursor: pointer; }
+.rare-row:hover { background: rgba(127, 127, 127, .08); }
+.rare-head { cursor: default; border: 0; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-gray); }
+.rare-row .badge.warn { background: #fff1d6; color: #7a5200; }
+.rare-row .badge.danger { background: #fde2e2; color: #9b1c1c; }
+@media (max-width: 760px) { .rare-row { grid-template-columns: minmax(0, 1fr) auto; } .rare-row > span:nth-child(2), .rare-row > span:nth-child(3) { grid-column: 1; } .rare-head { display: none; } }
+
+/* Stock en una sola hoja (27/11): una fila por producto, conteo y Contabilium por depósito; en el celular, tarjetas. */
+.stock-table { display: grid; gap: 4px; margin-top: 10px; }
+.stock-row { display: grid; grid-template-columns: minmax(0, 2.2fr) repeat(4, minmax(0, 1fr)) 100px; gap: 10px; align-items: center; border-bottom: 1px solid var(--color-border); padding: 8px 4px; }
+.stock-head { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-gray); border-bottom: 0; }
+.stock-cell { display: inline-flex; align-items: center; gap: 6px; }
+.stock-info { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--color-border); background: transparent; color: var(--color-text-gray); padding: 0; cursor: help; }
+.stock-info:hover, .stock-info:focus-visible { color: var(--brand-red); border-color: var(--brand-red); }
+.stock-row .badge.ok { background: var(--color-success-bg); color: var(--color-success); }
+.stock-row .badge.warn { background: #fff1d6; color: #7a5200; }
+.stock-row .badge.danger { background: #fde2e2; color: #9b1c1c; }
+@media (max-width: 760px) {
+  .stock-head { display: none; }
+  .stock-row { grid-template-columns: 1fr 1fr; gap: 6px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 10px 12px; }
+  .stock-row > span:first-child { grid-column: 1 / -1; }
+  .stock-row > [data-label]::before { content: attr(data-label); display: block; font-size: 11px; color: var(--color-text-gray); }
+}
+
+/* Entrada de Poliplast App (27/11, Felipe: «una linda pantalla que diga Poliplast App»). */
+.login-app { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 0; gap: 0; place-items: stretch; align-items: stretch; background: var(--color-white); }
+.login-app .login-brand { justify-self: stretch; width: 100%; }
+.login-app .login-card { align-self: center; justify-self: center; margin: 32px 20px; box-shadow: none; border: 0; }
+.login-app .login-card h1 { font-size: 30px; letter-spacing: -.01em; }
+.login-brand { position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; padding: 56px; min-height: 100vh; color: #fff; background: radial-gradient(120% 90% at 0% 100%, #ff4b52 0%, transparent 55%), linear-gradient(155deg, #c8121a 0%, #ed1c24 55%, #a80d14 100%); }
+.login-brand::after { content: ""; position: absolute; right: -16%; top: -8%; width: 78%; aspect-ratio: 1; background: url("/poliplast-isotipo-blanco.png") center / contain no-repeat; opacity: .1; pointer-events: none; }
+.login-brand-mark { position: absolute; top: 48px; left: 56px; width: 64px; height: 64px; object-fit: contain; }
+.login-brand-group { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; opacity: .85; }
+.login-brand-name { margin: 0; display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; font: 800 clamp(40px, 5vw, 68px)/.9 'Manrope', sans-serif; letter-spacing: -.02em; }
+.login-brand-name img { width: min(420px, 78%); height: auto; display: block; }
+.login-brand-name span { color: #ffd2d4; }
+.login-brand-line { margin: 6px 0 0; max-width: 30ch; font-size: 17px; line-height: 1.45; opacity: .92; }
+@media (max-width: 860px) {
+  .login-app { grid-template-columns: 1fr; align-content: start; }
+  .login-brand { min-height: 0; padding: 28px 22px 24px; gap: 6px; }
+  .login-brand::after { width: 62%; }
+  .login-brand-mark { position: static; width: 44px; height: 44px; margin-bottom: 10px; }
+  .login-brand-name { font-size: 40px; }
+  .login-brand-line { font-size: 15px; }
+  .login-app .login-card { margin: 0 auto; padding: 24px 20px 32px; }
+  .login-app .login-logo, .login-app .login-card h1 { display: none; }
+  .login-app .login-card > p:first-of-type { margin-top: 0; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .login-brand-name, .login-brand-line { animation: login-rise .6s ease both; }
+  .login-brand-line { animation-delay: .12s; }
+  @keyframes login-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+}
+
+/* Clientes sin mail (27/11). */
+.mail-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.mail-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.4fr) minmax(0, 1.6fr); gap: 10px; align-items: center; border-bottom: 1px solid var(--color-border); padding: 6px 0; }
+.mail-row .link-button { font-size: 14px; text-align: left; color: inherit; text-decoration: none; }
+.mail-row-input { display: flex; gap: 6px; align-items: center; min-width: 0; }
+.mail-row-input input { flex: 1; min-width: 0; }
+.mail-vendors { flex-wrap: wrap; margin: 8px 0; }
+.mail-vendor-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin: 6px 0; }
+.mail-missing { display: grid; gap: 6px; margin-bottom: 10px; }
+@media (max-width: 760px) { .mail-row { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
+/* Ranking de ventas (27/11): barras horizontales finas, una sola serie (un tono), valor en tinta de texto. */
+.ph-tabs { align-self: flex-start; }
+.ranking-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+.ranking-filters select, .ranking-filters input[type="search"] { min-width: 0; flex: 1 1 160px; max-width: 260px; }
+.ranking-bars { list-style: none; margin: 12px 0 8px; padding: 0; display: grid; gap: 2px; }
+.ranking-bar { display: grid; grid-template-columns: 28px minmax(0, 1.6fr) minmax(80px, 2fr) auto; gap: 10px; align-items: center; padding: 6px 4px; border-radius: var(--radius-sm, 6px); }
+.ranking-bar:hover { background: rgba(127, 127, 127, .08); }
+.ranking-pos { font-variant-numeric: tabular-nums; color: var(--color-text-gray); text-align: right; font-size: 12px; }
+.ranking-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ranking-track { height: 10px; background: rgba(127, 127, 127, .10); border-radius: 0 4px 4px 0; overflow: hidden; }
+.ranking-track i { display: block; height: 100%; background: var(--brand-red, #ed1c24); border-radius: 0 4px 4px 0; transition: width .3s ease; }
+.ranking-value { font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+@media (prefers-reduced-motion: reduce) { .ranking-track i { transition: none; } }
+@media (max-width: 760px) {
+  .ranking-bar { grid-template-columns: 24px minmax(0, 1fr) auto; }
+  .ranking-track { grid-column: 2 / 4; grid-row: 2; }
+}
+
+/* Inicio como widgets (27/11): editar, arrastrar, quitar y galería. */
+.home-edit-entry { display: flex; justify-content: flex-end; margin: -4px 0 -6px; }
+.home-edit-start { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 6px 12px; }
+.home-edit-bar { position: sticky; top: 8px; z-index: 30; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: 12px 14px; border-radius: 14px; background: #1d1d1f; color: #fff; box-shadow: 0 14px 40px rgba(0, 0, 0, .18); }
+.home-edit-copy { display: grid; gap: 2px; }
+.home-edit-copy strong { font-size: 14px; }
+.home-edit-copy span { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 12px; opacity: .78; }
+.home-edit-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.home-edit-actions button { display: inline-flex; align-items: center; gap: 6px; }
+.home-edit-bar .ghost, .home-edit-bar .secondary { background: rgba(255, 255, 255, .1); color: #fff; border-color: rgba(255, 255, 255, .22); }
+.home-edit-bar .ghost:hover, .home-edit-bar .secondary:hover { background: rgba(255, 255, 255, .18); }
+.home-board { display: grid; gap: 12px; }
+.home-board.is-dragging { user-select: none; -webkit-user-select: none; }
+.home-widget { position: relative; border: 1.5px dashed var(--color-border); border-radius: 16px; background: var(--color-white); overflow: hidden; transition: box-shadow .18s ease, border-color .18s ease, transform .18s ease; }
+.home-widget:hover { border-color: rgba(237, 28, 36, .45); }
+.home-widget.is-lifted { border-style: solid; border-color: var(--brand-red, #ed1c24); box-shadow: 0 18px 44px rgba(0, 0, 0, .18); transform: scale(1.01); z-index: 2; }
+.home-widget-bar { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--color-border); background: rgba(127, 127, 127, .05); }
+.home-widget-handle { display: inline-grid; place-items: center; width: 34px; height: 34px; border: 0; border-radius: 9px; background: transparent; color: var(--color-text-gray); cursor: grab; touch-action: none; }
+.home-widget-handle:hover, .home-widget-handle:focus-visible { background: rgba(127, 127, 127, .14); color: var(--color-text-dark); }
+.home-board.is-dragging .home-widget-handle { cursor: grabbing; }
+.home-widget-icon { color: var(--brand-red, #ed1c24); flex: none; }
+.home-widget-name { flex: 1; min-width: 0; font-weight: 700; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-widget-remove { display: inline-grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 50%; background: rgba(237, 28, 36, .1); color: #b4141b; cursor: pointer; transition: background .15s ease, transform .15s ease; }
+.home-widget-remove:hover { background: rgba(237, 28, 36, .2); transform: scale(1.06); }
+.home-widget-body { pointer-events: none; max-height: 150px; overflow: hidden; padding: 0 2px; opacity: .72; -webkit-mask-image: linear-gradient(180deg, #000 60%, transparent); mask-image: linear-gradient(180deg, #000 60%, transparent); }
+.home-widget-body > .panel, .home-widget-body > section { margin: 0; box-shadow: none; border: 0; }
+.home-widget-placeholder { margin: 0; padding: 14px 16px 22px; }
+.home-board-empty { padding: 20px; text-align: center; border: 1.5px dashed var(--color-border); border-radius: 16px; }
+.widget-gallery-backdrop { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: 16px; background: rgba(15, 15, 18, .45); backdrop-filter: blur(2px); }
+.widget-gallery { width: min(560px, 100%); max-height: min(640px, calc(100vh - 32px)); display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: 18px; background: var(--color-white); box-shadow: 0 30px 80px rgba(0, 0, 0, .28); }
+.widget-gallery-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.widget-gallery-head h2 { margin: 2px 0 0; }
+.widget-gallery-search { width: 100%; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--color-border-input, var(--color-border)); border-radius: 12px; }
+.widget-gallery-search:focus-within { border-color: var(--brand-red, #ed1c24); box-shadow: 0 0 0 3px rgba(237, 28, 36, .14); }
+.widget-gallery-search input:focus-visible { outline: none; }
+.widget-gallery-search input { flex: 1; min-width: 0; width: 100%; border: 0; outline: none; box-shadow: none; background: transparent; color: inherit; padding: 12px 0; font: inherit; }
+.widget-gallery-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; overflow-y: auto; }
+.widget-option { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; padding: 12px; border: 1px solid var(--color-border); border-radius: 14px; background: transparent; color: inherit; font: inherit; cursor: pointer; transition: border-color .15s ease, background .15s ease, transform .15s ease; }
+.widget-option:hover, .widget-option:focus-visible { border-color: rgba(237, 28, 36, .5); background: rgba(237, 28, 36, .04); transform: translateY(-1px); }
+.widget-option-icon { flex: none; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; background: rgba(237, 28, 36, .1); color: var(--brand-red, #ed1c24); }
+.widget-option-text { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.widget-option-text small { color: var(--color-text-gray); line-height: 1.35; }
+.widget-option-add { flex: none; display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: var(--brand-red, #ed1c24); }
+@media (max-width: 760px) {
+  .home-edit-bar { top: 4px; padding: 10px; gap: 8px; }
+  .home-edit-copy span { display: none; }
+  .home-edit-actions { width: 100%; flex-wrap: nowrap; gap: 6px; }
+  .home-edit-actions button { padding: 8px 10px; font-size: 13px; }
+  .home-edit-actions .primary { margin-left: auto; }
+  .home-edit-reset-label { display: none; }
+  .home-widget-body { max-height: 110px; }
+  .widget-gallery-backdrop { place-items: end center; padding: 0; }
+  .widget-gallery { border-radius: 18px 18px 0 0; max-height: 82vh; }
+  .widget-option-add span, .widget-option-add { font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-widget, .home-widget-remove, .widget-option { transition: none; }
+  .home-widget.is-lifted { transform: none; }
+}
+/* Menú sin barra de desplazamiento (27/11, Felipe): Inicio suelto arriba, ítems y títulos más compactos, pie en dos
+   renglones (Ver como + estado y links legales) y la barra del menú oculta. Si lo abierto no entra, el menú cierra solo
+   los grupos que no son el de la pantalla actual (AppSidebar.jsx). */
+@media (min-width: 761px) {
+  .sidebar { padding: 10px 10px 8px; }
+  .sidebar .brand { height: 58px; padding: 2px 2px 12px; }
+  .sidebar .brand-logo { height: 40px; }
+  .sidebar nav:not(.mobile-tabbar) { gap: 4px; scrollbar-width: none; }
+  .sidebar nav:not(.mobile-tabbar)::-webkit-scrollbar { display: none; }
+  .sidebar .nav-group { gap: 1px; }
+  .sidebar .nav-group-title { padding: 5px 10px 3px; font-size: 9.5px; }
+  .sidebar nav button:not(.nav-group-title), .app-shell.densa .sidebar nav button:not(.nav-group-title) { padding: 6px 10px; font-size: 13px; gap: 9px; }
+  .sidebar nav button:not(.nav-group-title) svg { width: 17px; height: 17px; flex: 0 0 auto; }
+  .sidebar .nav-solo { margin-bottom: 4px; padding-bottom: 6px; border-bottom: 1px solid #ffffff14; }
+  .app-shell.nav-mini .sidebar .nav-solo { border-bottom: 0; }
+  .sidebar-note { padding: 8px 6px 0; border-top-color: #ffffff1a; }
+  .sidebar-note .preview-role { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .sidebar-note .preview-role .eyebrow { margin: 0; white-space: nowrap; font-size: 9.5px; }
+  .sidebar-note .preview-role select { flex: 1 1 auto; min-width: 0; padding: 4px 8px; font-size: 12.5px; border-radius: 8px; height: 30px; }
+  .sidebar-note .legal-links { margin-top: 0; gap: 4px 10px; align-items: center; flex-wrap: nowrap; overflow: hidden; }
+  .sidebar-note .legal-links a { font-size: 10.5px; white-space: nowrap; color: #9aa3a0; }
+  .sidebar-status { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; color: #9aa3a0; white-space: nowrap; }
+  .sidebar-status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #9aa3a0; }
+  .sidebar-status.on::before { background: #22c55e; }
+}
+@media (max-width: 760px) { .sidebar .brand-iso, .sidebar .nav-mini-toggle { display: none; } }
 
 th.nowrap, td.nowrap { white-space: nowrap; }
+
+/* Ranking: gráfico semanal al tocar un producto (28/11). */
+.ranking-bar { cursor: pointer; }
+.ranking-bar.is-open { background: rgba(237, 28, 36, .07); }
+.ranking-weekly { border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 12px; margin: 8px 0 12px; background: var(--color-panel-bg); }
+.ranking-weekly-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; justify-content: space-between; margin-bottom: 10px; }
+.ranking-weeks { display: flex; align-items: flex-end; gap: 4px; height: 150px; overflow-x: auto; padding-bottom: 18px; }
+.ranking-week { flex: 1 0 22px; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; position: relative; }
+.ranking-week i { display: block; width: 70%; min-width: 8px; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, var(--brand-red), var(--brand-red-dark)); }
+.ranking-week span { position: absolute; bottom: -16px; font-size: 10px; color: var(--color-text-gray); white-space: nowrap; }
+.stock-adjust { display: grid; gap: 10px; margin-top: 10px; }.stock-adjust > .secondary { justify-self: start; }
+
+
+/* Inicio: Logística de hoy en tarjetas (28/11). */
+.logistics-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.logistics-tile { display: flex; align-items: center; gap: 12px; padding: 14px; text-align: left; border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-panel-bg); color: inherit; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+.logistics-tile:hover, .logistics-tile:focus-visible { transform: translateY(-1px); border-color: rgba(237, 28, 36, .35); box-shadow: 0 6px 18px rgba(0, 0, 0, .06); }
+.logistics-tile-icon { flex: 0 0 auto; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: rgba(237, 28, 36, .1); color: var(--brand-red); }
+.logistics-tile-text { display: grid; gap: 2px; min-width: 0; }
+.logistics-tile-text strong { font-size: 15px; color: var(--color-text-dark); }
+.logistics-tile-text small { color: var(--color-text-gray); font-size: 12.5px; line-height: 1.35; }
+@media (prefers-reduced-motion: reduce) { .logistics-tile { transition: none; } .logistics-tile:hover { transform: none; } }
+
+/* Acceso rápido vacío: cómo fijar (28/11). La estrella se ve tenue siempre, no solo al pasar el mouse. */
+.nav-hint { margin: 2px 12px 8px; font-size: 11.5px; line-height: 1.35; color: #9a9a9f; }
+.nav-hint svg { vertical-align: -1px; color: #fbbf24; }
+@media (hover: hover) { .sidebar nav button .nav-pin { opacity: .28; } .sidebar nav button:hover .nav-pin, .nav-pin.is-pinned { opacity: 1; } }
+
+/* Cierre del día rediseñado (28/11). */
+.day-review .dr-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.day-review .dr-head h3 { display: flex; align-items: center; gap: 7px; margin: 0 0 2px; }
+.dr-empty { margin: 6px 0; padding: 16px; border: 1px dashed var(--color-border); border-radius: var(--radius-xl); text-align: center; color: var(--color-text-gray); }
+.dr-summary { display: flex; align-items: center; gap: 16px; padding: 12px 14px; border: 1px solid var(--color-border); border-radius: var(--radius-xl); background: var(--color-panel-bg); margin-bottom: 12px; }
+.dr-progress { position: relative; flex: 0 0 64px; width: 64px; height: 64px; }
+.dr-progress svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.dr-ring-bg { fill: none; stroke: var(--color-border); stroke-width: 3.2; }
+.dr-ring { fill: none; stroke: var(--color-success); stroke-width: 3.2; stroke-linecap: round; transition: stroke-dasharray .4s ease; }
+.dr-progress span { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 800; font-size: 14px; color: var(--color-text-dark); }
+.dr-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; flex: 1 1 auto; }
+.dr-stat { display: grid; gap: 1px; padding: 6px 8px; border-radius: 10px; }
+.dr-stat b { font-size: 20px; line-height: 1.1; color: var(--color-text-dark); }
+.dr-stat span { font-size: 11.5px; color: var(--color-text-gray); }
+.dr-stat.good b { color: var(--color-success); }
+.dr-stat.warn b { color: var(--color-amber-text); }
+.dr-stat.bad b { color: var(--color-danger-text); }
+.dr-groups { display: grid; gap: 8px; }
+.dr-group { border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
+.dr-group.warn { border-left: 4px solid #d9a400; }
+.dr-group.bad { border-left: 4px solid var(--color-danger-text); }
+.dr-group.good { border-left: 4px solid var(--color-success); }
+.dr-group-head { width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 0; background: transparent; color: inherit; cursor: pointer; text-align: left; }
+.dr-count { margin-left: 4px; padding: 1px 8px; border-radius: 999px; background: #eeeeef; font-size: 12px; font-weight: 700; }
+.dr-caret { margin-left: auto; transition: transform .15s ease; }
+.dr-caret.is-open { transform: rotate(180deg); }
+.dr-list { list-style: none; margin: 0; padding: 0 12px 10px; display: grid; gap: 6px; }
+.dr-item { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--color-panel-bg); }
+.dr-title { font-size: 14px; color: var(--color-text-dark); }
+.dr-title small { color: var(--color-text-gray); }
+.dr-ok { color: var(--color-success); vertical-align: -2px; }
+.dr-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.dr-pill { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-white); color: var(--color-text-mid); font-size: 12px; font-weight: 600; cursor: pointer; }
+.dr-pill.good { border-color: rgba(52, 118, 99, .35); color: var(--color-success); }
+@media (max-width: 560px) { .dr-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dr-summary { align-items: flex-start; } }
+
+/* Rutina propia (28/11). */
+.my-routine-bar { height: 6px; border-radius: 999px; background: var(--color-border); overflow: hidden; margin: 4px 0 12px; }
+.my-routine-bar i { display: block; height: 100%; background: var(--color-success); transition: width .3s ease; }
+.my-routine-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.my-routine-item { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-panel-bg); color: var(--color-text-dark); text-align: left; cursor: pointer; font-size: 14.5px; }
+.my-routine-item svg { color: var(--color-text-gray); flex: 0 0 auto; }
+.my-routine-item.is-done { background: var(--color-success-bg); }
+.my-routine-item.is-done svg { color: var(--color-success); }
+.my-routine-item.is-done span:last-child { text-decoration: line-through; color: var(--color-text-gray); }
+.my-routine-time { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--color-text-mid); min-width: 44px; }
+.my-routine-edit { display: grid; gap: 10px; }
+.my-routine-form { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; gap: 8px; }
+.my-routine-suggest { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0; }
+.my-routine-blocks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.my-routine-blocks li { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: 10px; }
+.my-routine-blocks strong { flex: 1 1 160px; font-weight: 600; }
+.my-routine-days { display: inline-flex; gap: 3px; }
+.my-routine-days button { width: 28px; height: 26px; border: 1px solid var(--color-border); border-radius: 7px; background: transparent; color: var(--color-text-gray); font-size: 11px; font-weight: 700; cursor: pointer; }
+.my-routine-days button.is-on { background: var(--brand-red); border-color: var(--brand-red); color: #fff; }
+@media (max-width: 560px) { .my-routine-form { grid-template-columns: 1fr; } }
+
+.ph-photos summary { cursor: pointer; padding: 4px 0; }
+.ph-photos[open] summary { margin-bottom: 10px; }
+
+/* QA 28/11 (celular): la barra de arriba se estiraba en pantallas con poco contenido (la grilla repartía el alto sobrante) y
+   la fecha, la hora y el clima ocupaban ~200 px en cada pantalla. Ahora la barra queda de su alto y el clima solo en Inicio,
+   en una línea. */
+@media (max-width: 760px) {
+  .app-shell { grid-template-rows: auto 1fr; align-content: start; }
+  .topbar.is-compact .eyebrow, .topbar.is-compact .local-info { display: none; }
+  .topbar .local-info { display: flex; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 6px 0 0; max-width: 100%; }
+  .topbar .local-info::-webkit-scrollbar { display: none; }
+  .topbar .local-chip { flex: 0 0 auto; }
+  .topbar > div:first-child { flex: 1 1 auto; min-width: 0; }
+  .topbar .top-actions { flex: 0 0 auto; }
+}

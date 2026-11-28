@@ -212,7 +212,7 @@ export function MercadoLibreSync({ supabase, session }) {
           </tbody>
         </table></div>
       )}
-      {(counts.items !== null || counts.questions !== null) && <p className="muted small">Guardado en el CRM: {counts.items ?? 0} publicaciones y {counts.questions ?? 0} preguntas respondidas.</p>}
+      {(counts.items !== null || counts.questions !== null) && <p className="muted small">Guardado en la app: {counts.items ?? 0} publicaciones y {counts.questions ?? 0} preguntas respondidas.</p>}
     </section>
   );
 }

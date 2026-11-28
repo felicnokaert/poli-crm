@@ -154,13 +154,6 @@ function WhatsAppInboxBase({
   };
   return (
     <div className="content-stack">
-      {whatsappHealth && whatsappHealth.ok === false && (
-        <section className="panel whatsapp-alert" role="alert">
-          <strong>WhatsApp: hay una línea para revisar</strong>
-          <ul>{(whatsappHealth.problems || []).map((line, index) => <li key={index}>{line}</li>)}</ul>
-          {onNavigate && <button type="button" className="secondary" onClick={() => onNavigate("settings")}>Ir a Datos para el diagnóstico</button>}
-        </section>
-      )}
       {myChannels.length > 1 && (
         <div className="segmented routine-tabs" role="tablist" aria-label="Línea de WhatsApp" style={{ width: "fit-content", maxWidth: "100%", overflowX: "auto" }}>
           <button type="button" role="tab" aria-selected={channel === "all"} className={channel === "all" ? "selected" : ""} onClick={() => setChannel("all")}>Todas</button>

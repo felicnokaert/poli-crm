@@ -41,7 +41,7 @@ export function validateChannelDraft(draft, { existing = [], editingKey = null }
   const invalid = members.filter((email) => !EMAIL_PATTERN.test(email));
   if (invalid.length) errors.push(`Correo inválido: ${invalid.join(', ')}.`);
   const outside = members.filter((email) => EMAIL_PATTERN.test(email) && !email.endsWith(CORPORATE_DOMAIN) && email !== BACKUP_EMAIL);
-  if (outside.length) errors.push(`Solo cuentas ${CORPORATE_DOMAIN} pueden usar el CRM: ${outside.join(', ')}.`);
+  if (outside.length) errors.push(`Solo cuentas ${CORPORATE_DOMAIN} pueden usar la app: ${outside.join(', ')}.`);
   return { errors, members, phoneId, label, color };
 }
 

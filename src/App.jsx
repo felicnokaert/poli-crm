@@ -11,7 +11,6 @@ import {
 } from "./app-shared";
 import { Tasks, TaskDetail, TaskForm } from "./Tasks";
 import { WhatsAppDerivations } from "./WhatsAppDerivations";
-import { AutomationPause } from "./AutomationPause.jsx";
 // Tras una publicación nueva, la parte pedida puede llegar vacía ("Cannot read properties of undefined (reading 'Clients')"):
 // se reintenta una vez y, si sigue sin venir, se recarga la página una sola vez para tomar la versión nueva.
 // 21/11 (Felipe: «que las pestañas tarden lo menos posible»): cada pantalla se baja aparte, pero ahora se precargan
@@ -50,7 +49,11 @@ const lazyNamed = (loader, name) => (LAZY_LOADERS.push(loader), lazy(async () =>
 const TechnicalDocumentsAdmin = lazyNamed(() => import("./TechnicalDocuments"), "TechnicalDocumentsAdmin");
 const MapaCobertura = lazyNamed(() => import("./MapaCobertura"), "MapaCobertura");
 const CotizadorFrame = lazyNamed(() => import("./CotizadorFrame"), "CotizadorFrame");
-const EntregasFrame = lazyNamed(() => import("./EntregasFrame"), "EntregasFrame");
+const LOGISTICS_NATIVE = new Set(["dosificado", "conteo", "etiquetas"]);
+const EntregasNativa = lazyNamed(() => import("./EntregasNativa"), "default");
+const DosificadoNativo = lazyNamed(() => import("./logistica/LogisticaNativo.jsx"), "DosificadoNativo");
+const ConteoNativo = lazyNamed(() => import("./logistica/LogisticaNativo.jsx"), "ConteoNativo");
+const EtiquetasNativa = lazyNamed(() => import("./logistica/LogisticaNativo.jsx"), "EtiquetasNativa");
 // Único de los cinco named exports de Academy.jsx que se usa acá - los
 // otros (CommercialKnowledge, Coach, QuickReplies, Training) son internos,
 // consumidos solo por el propio <Academy> - así que separarla en su propio
@@ -89,6 +92,7 @@ const Sales = lazy(() => import("./Sales"));
 const Clients = lazyNamed(() => import("./Clients"), "Clients");
 const Prospeccion = lazyNamed(() => import("./Prospeccion"), "Prospeccion");
 const Contacts = lazyNamed(() => import("./Clients"), "Contacts");
+const ClientEmails = lazyNamed(() => import("./ClientEmails.jsx"), "ClientEmails");
 const ClientsDataTools = lazyNamed(() => import("./ClientsDataTools.jsx"), "ClientsDataTools");
 const WeeklyTargets = lazyNamed(() => import("./WeeklyTargets.jsx"), "WeeklyTargets");
 const Conversations = lazyNamed(() => import("./Conversations"), "Conversations");
@@ -113,8 +117,25 @@ import { useSalesActions } from "./hooks/useSalesActions";
 import { useInboxActions } from "./hooks/useInboxActions";
 import { useRapypClients } from "./hooks/useRapypClients";
 import { useClientActions } from "./hooks/useClientActions";
-import { AppSidebar, NAV_ITEMS } from "./AppSidebar.jsx";
+import { AppSidebar, NAV_GROUPS, NAV_ITEMS } from "./AppSidebar.jsx";
+import { FUTURE_MODULES, PREVIEW_ROLE_KEY } from "./poliplast-app-plan.mjs";
+import { accessAllows } from "./team-access.mjs";
+import { useMyAccess, useTeamStore } from "./team-store.js";
+import { TeamAccess } from "./TeamAccess.jsx";
+import { DemoModule } from "./DemoModules.jsx";
+import { QuoteBuilder } from "./QuoteBuilder.jsx";
 import { StockView } from "./StockView.jsx";
+import { myClientsWithoutEmail } from "./client-emails.mjs";
+import { businessDaysFromToday } from "./quote-model.mjs";
+import { AppReports, ReportProblem } from "./ReportProblem.jsx";
+import { NotificationBell } from "./NotificationBell.jsx";
+import { buildNotifications } from "./notifications.mjs";
+import { useOpsAlerts } from "./hooks/useOpsAlerts.js";
+import { adminFetch } from "./admin-api.mjs";
+import { EntregasEmbed } from "./MaquetaFrame.jsx";
+import { ExpeditionChip, ExpeditionGate, readExpeditionWho, saveExpeditionWho, useExpeditionOperators } from "./ExpeditionGate.jsx";
+import { AppPlanOverview, ModulePreview } from "./ModulePreview.jsx";
+import { isDemoMode, isPreviewSite, withDemoData } from "./demo-mode.mjs";
 import { canSee as canSeeModule, firstAllowedView } from "./module-access.mjs";
 import { useModuleAccess } from "./hooks/useModuleAccess.js";
 import { AppTopbar } from "./AppTopbar.jsx";
@@ -134,21 +155,22 @@ const STORAGE_KEY = "poliplast-sales-copilot-v1";
 // Mismos 6 grupos que arma navGroups más abajo - repetidos acá porque hacen
 // falta antes de que el componente pueda armar navGroups (son el estado
 // inicial "todo colapsado").
-const NAV_GROUP_NAMES = ["Hoy", "Ventas", "Canales online", "Cartera", "Aprender", "Más"];
+const NAV_GROUP_NAMES = ["Inicio", "Ventas", "Canales online", "Logística", "Administración", "Equipo", "Configuración"];
 
 function loadState() {
+  let state = initialState;
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    return stored
-      ? { ...initialState, ...stored, inbox: stored.inbox || [] }
-      : initialState;
-  } catch {
-    return initialState;
-  }
+    state = stored ? { ...initialState, ...stored, inbox: stored.inbox || [] } : initialState;
+    // Poliplast App: los datos INVENTADOS de la prueba nunca se mezclan con una cuenta real.
+    if (onlineConfigured && stored?.demo) state = initialState;
+  } catch { /* copia local rota: arranca vacío */ }
+  // Poliplast App (prueba): en el link de prueba se cargan datos inventados la primera vez.
+  return isDemoMode({ online: onlineConfigured }) ? withDemoData(state) : state;
 }
 
 const VIEW_KEY = "poliplast-current-view";
-const SAVED_VIEWS = new Set(["dashboard", "conversations", "inbox", "tasks", "sales", "clients", "prospecting", "mercadolibre", "shopify", "mejoras", "productos", "academy", "quoter", "entregas", "stock", "map", "techdocs", "profile", "settings"]);
+const SAVED_VIEWS = new Set(["dashboard", "conversations", "inbox", "tasks", "sales", "clients", "prospecting", "mercadolibre", "shopify", "mejoras", "productos", "academy", "quoter", "entregas", "map", "techdocs", "profile", "settings", "plan", "team", "avisos", "etiquetas", "conteo", "dosificado", "recibos", "facturacion", "compras", "stock"]);
 function readSavedView() {
   try {
     const saved = sessionStorage.getItem(VIEW_KEY);
@@ -196,25 +218,58 @@ export default function App() {
   const [pickedView, setView] = useState(() => (mlCallbackParams() ? "settings" : readSavedView()));
   const deniedModules = useModuleAccess(supabase, session?.user?.email, Boolean(onlineConfigured && session));
   // Si a esta cuenta le quitaron la pantalla (guardada o abierta desde un atajo), cae en la primera que sí puede ver.
-  const view = canSeeModule(session?.user?.email, deniedModules, pickedView) ? pickedView : firstAllowedView(session?.user?.email, deniedModules);
-  // Entregas precargada (ver abajo): solo si la persona la puede ver y sin ahorro de datos.
-  const canSeeEntregas = canSeeModule(session?.user?.email, deniedModules, "entregas");
-  const [entregasWarm, setEntregasWarm] = useState(false);
-  useEffect(() => {
-    if (view === "entregas") { setEntregasWarm(true); return undefined; }
-    if (entregasWarm || !session || !canSeeEntregas) return undefined;
-    const saveData = navigator.connection?.saveData || /2g/.test(navigator.connection?.effectiveType || "");
-    if (saveData) return undefined;
-    const timer = setTimeout(() => setEntregasWarm(true), 4000);
-    return () => clearTimeout(timer);
-  }, [view, entregasWarm, session, canSeeEntregas]);
-  // Al volver a mostrarla, que recalcule la parte visible (estaba escondida).
-  useEffect(() => {
-    if (view !== "entregas") return undefined;
-    const frame = requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
-    return () => cancelAnimationFrame(frame);
-  }, [view]);
+  // Poliplast App (prueba): «Ver como» un rol. Solo filtra el menú en este navegador; no cambia permisos.
+  const [previewRole, setPreviewRole] = useState(() => { try { return localStorage.getItem(PREVIEW_ROLE_KEY) || "admin"; } catch { return "admin"; } });
+  // Equipo y cuentas (prueba): roles y módulos de cada persona, guardados en este navegador.
+  const signedEmail = session?.user?.email || "";
+  const isAdminUser = !onlineConfigured || isChannelAdmin(signedEmail);
+  const teamStore = useTeamStore({ online: Boolean(onlineConfigured && session), supabase, isAdmin: isAdminUser });
+  const team = teamStore.team;
+  const myAccess = useMyAccess({ online: Boolean(onlineConfigured && session), supabase, email: signedEmail });
+  const accessFor = (value) => {
+    if (String(value).startsWith("person:")) return team.find((person) => `person:${person.email}` === value) || { role: "comercial" };
+    return { role: value || "admin", overrides: {} };
+  };
+  // Lo que se ve: el administrador puede «ver como» un rol o una persona; el resto ve lo suyo (rol + cambios).
+  const previewAccess = isAdminUser ? accessFor(previewRole) : myAccess;
+  // Inicio adaptable: una tarjeta aparece si la persona ve su módulo y el rol que se está mirando también.
+  const allowsHomeModule = useCallback((module) => canSeeModule(session?.user?.email, deniedModules, module) && accessAllows(previewAccess, module), [session?.user?.email, deniedModules, previewAccess]);
+  const pickPreviewRole = (role) => {
+    setPreviewRole(role);
+    try { localStorage.setItem(PREVIEW_ROLE_KEY, role); } catch { /* sin almacenamiento */ }
+    if (!accessAllows(accessFor(role), view)) setView("dashboard");
+  };
+  const demo = isDemoMode({ online: onlineConfigured });
+  // Conteo/Dosificado/Cortes sin PIN: el servidor firma persona, depósito y si es administrador de Logística.
+  const conteoFirma = useCallback(({ persona, deposito }) => adminFetch({ action: "app-firma", persona, deposito })
+    .then((response) => (response.ok ? response.json() : null)).then((body) => body?.firma || null).catch(() => null), []);
+  // Link de prueba (con tus datos reales o con datos inventados): módulos de otras apps desde el mismo link.
+  const previewSite = isPreviewSite();
+  // Si a esta cuenta le quitaron la pantalla (por permiso o por su rol), cae en la primera que sí puede ver.
+  const viewAllowed = (id) => canSeeModule(signedEmail, deniedModules, id) && accessAllows(previewAccess, id);
+  const view = viewAllowed(pickedView) ? pickedView : (viewAllowed("dashboard") ? "dashboard" : firstAllowedView(signedEmail, deniedModules));
   useEffect(() => { try { sessionStorage.setItem(VIEW_KEY, view); } catch { /* sin almacenamiento */ } }, [view]);
+  // Cuenta de expedición (compartida): antes de usar la app se elige quién es y el depósito.
+  const isExpedition = previewAccess.role === "expedicion" || signedEmail.toLowerCase() === "expedicion@grupopoliplast.com.ar";
+  const [expeditionWho, setExpeditionWhoState] = useState(readExpeditionWho);
+  const expeditionOperators = useExpeditionOperators(onlineConfigured && session ? supabase : null);
+  const setExpeditionWho = (value) => { setExpeditionWhoState(value); saveExpeditionWho(value); };
+  // Campanita (26/11): tareas vencidas o de hoy, alertas abiertas y, para administradores, avisos del equipo.
+  const opsAlerts = useOpsAlerts(onlineConfigured && session ? supabase : null);
+  const [teamReports, setTeamReports] = useState([]);
+  useEffect(() => {
+    if (!onlineConfigured || !session || !isAdminUser) return undefined;
+    let alive = true;
+    const load = () => adminFetch({ action: "app-report", op: "list" }).then((response) => response.json()).then((body) => { if (alive) setTeamReports(body.items || []); }).catch(() => {});
+    load();
+    const timer = setInterval(load, 5 * 60000);
+    return () => { alive = false; clearInterval(timer); };
+  }, [session, isAdminUser]);
+  // Clientes de la cartera sin mail (27/11): el conteo va en la pestaña y en la campanita.
+  const clientsWithoutEmail = useMemo(() => myClientsWithoutEmail(data.clients || []).length, [data.clients]);
+  const notificationItems = useMemo(() => buildNotifications({ tasks: data.tasks || [], alerts: opsAlerts || [], reports: teamReports, noEmail: clientsWithoutEmail, today: today(), allows: (module) => accessAllows(previewAccess, module) }), [data.tasks, opsAlerts, teamReports, previewAccess, clientsWithoutEmail]);
+  const markNotificationsRead = useCallback((ids) => setData((current) => ({ ...current, notificationsRead: [...new Set([...(current.notificationsRead || []), ...ids])].slice(-600) })), []);
+  const setHomeLayout = useCallback((layout) => setData((current) => ({ ...current, homeLayout: layout })), []);
   const [mapTab, setMapTab] = useState("aplicadores");
   // Empresa con la que se abre el cotizador (desde "Cotizar" en la ficha); null = cotización libre.
   const [quoterClient, setQuoterClient] = useState(null);
@@ -222,6 +277,10 @@ export default function App() {
   const [showForm, setShowForm] = useState(false);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
+  const [showReport, setShowReport] = useState(false);
+  // Menú minimizable (Felipe 26/11): solo íconos, con el nombre al pasar el mouse. Se recuerda en este equipo.
+  const [navMini, setNavMini] = useState(() => { try { return localStorage.getItem("poliplast-app-nav-mini") === "1"; } catch { return false; } });
+  const toggleNavMini = () => setNavMini((current) => { const next = !current; try { localStorage.setItem("poliplast-app-nav-mini", next ? "1" : "0"); } catch { /* sin almacenamiento */ } return next; });
   const [theme, setTheme] = useState(readTheme);
   const [clientsTab, setClientsTab] = useState("empresas");
   const [showTaskForm, setShowTaskForm] = useState(false);
@@ -698,7 +757,7 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${navMini && !narrowScreen ? " nav-mini" : ""} densa`}>
       <AppSidebar
         view={view}
         onSelect={(id) => { if (id === "quoter") setQuoterClient(null); setView(id); }}
@@ -709,11 +768,18 @@ export default function App() {
         inboxSignalCount={inboxSignalCount}
         email={session?.user?.email}
         denied={deniedModules}
+        previewRole={previewRole}
+        previewAccess={previewAccess}
+        previewName={previewAccess.name || ""}
+        onPreviewRole={pickPreviewRole}
+        mini={navMini && !narrowScreen}
+        onToggleMini={narrowScreen ? null : toggleNavMini}
       />
 
       <main>
         <AppTopbar
           title={NAV_ITEMS.find(([id]) => id === view)?.[1]}
+          compact={view !== "dashboard"}
           myChannels={myChannels}
           primaryChannel={data.primaryChannel}
           readiness={readiness}
@@ -723,10 +789,29 @@ export default function App() {
           onThemeChange={setTheme}
           onOpenPalette={() => setShowPalette(true)}
           onOpenShortcuts={() => setShowShortcutsHelp(true)}
+          onReport={() => setShowReport(true)}
+          notifications={<NotificationBell items={notificationItems} read={data.notificationsRead || EMPTY_ARRAY} onRead={markNotificationsRead} onNavigate={(item) => { if (item.taskId) setSelectedTaskId(item.taskId); else { if (item.clientsTab) setClientsTab(item.clientsTab); setView(item.view); } }} />}
           profileLabel={data.profileName || session?.user?.email || ""}
           onLogConversation={LOG_CONVERSATION_VIEWS.includes(view) ? () => setShowForm(true) : null}
         />
+        {previewSite && onlineConfigured && typeof window !== "undefined" && window.__poliplastReadOnly && (
+          <div className="readonly-strip" role="status">
+            <span><b>Link de prueba · solo lectura.</b> Ves los datos reales y al día; lo que toques acá no se guarda en ningún lado.</span>
+            <button type="button" className="danger-link" onClick={() => { try { localStorage.removeItem(STORAGE_KEY); } catch { /* sin almacenamiento */ } window.location.reload(); }}>Descartar lo que toqué</button>
+          </div>
+        )}
+        {isExpedition && <ExpeditionChip value={expeditionWho} onChange={setExpeditionWho} />}
+        {isExpedition && !expeditionWho ? <ExpeditionGate operators={expeditionOperators} onPick={setExpeditionWho} /> : (
         <ErrorBoundary key={view} view={view}>
+        <div className="view-enter">
+        {/* 28/11 (Felipe: «una sola app»): Dosificado, Conteo y Etiquetas son pantallas propias de la app (sin iframe). */}
+        {view === "dosificado" && <Suspense fallback={<Splash text="Cargando dosificado…" />}><DosificadoNativo access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} /></Suspense>}
+        {view === "conteo" && <Suspense fallback={<Splash text="Cargando conteo…" />}><ConteoNativo access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} /></Suspense>}
+        {view === "etiquetas" && <Suspense fallback={<Splash text="Cargando etiquetas…" />}><EtiquetasNativa access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} /></Suspense>}
+        {FUTURE_MODULES[view] && !LOGISTICS_NATIVE.has(view) && (demo ? <DemoModule key={view} id={view} access={previewAccess} /> : <ModulePreview id={view} />)}
+        {view === "avisos" && isAdminUser && <AppReports online={Boolean(onlineConfigured && session)} />}
+        {view === "team" && isAdminUser && <TeamAccess team={team} onChange={teamStore.save} rolesTable={teamStore.rolesTable} status={teamStore.status} groups={NAV_GROUPS} onViewAs={(person) => pickPreviewRole(`person:${person.email}`)} />}
+        {view === "plan" && <AppPlanOverview groups={NAV_GROUPS} role={previewRole} onRole={pickPreviewRole} onResetDemo={demo ? () => { if (window.confirm("¿Volver a cargar los datos de prueba? Se pierde lo que tocaste en la prueba.")) { setData((current) => withDemoData(current, { force: true })); } } : null} />}
 
         {view === "dashboard" && (
           <Dashboard
@@ -742,7 +827,7 @@ export default function App() {
             planChecks={data.planChecks}
             showRoutine={isFelipeTools}
             showWelcome={shouldShowWelcome(data)}
-            welcomeName={data.profileName}
+            welcomeName={isExpedition && expeditionWho ? expeditionWho.who : data.profileName}
             onDismissWelcome={dismissWelcome}
             onNewInteraction={openNewInteractionForm}
             dailySignals={data.dailySignals}
@@ -752,6 +837,9 @@ export default function App() {
             prospects={data.prospects || EMPTY_ARRAY}
             showWeekly={canSeeWeeklySummary(session?.user?.email)}
             isAdmin={isChannelAdmin(session?.user?.email)}
+            allowsModule={allowsHomeModule}
+            homeLayout={data.homeLayout}
+            onHomeLayout={setHomeLayout}
             onToggle={toggleTask}
             onOpenTask={setSelectedTaskId}
             onOpenInteraction={setSelectedInteractionId}
@@ -771,7 +859,6 @@ export default function App() {
         )}
         {view === "inbox" && (
           <Suspense fallback={<Splash text="Cargando bandeja…" />}>
-            {onlineConfigured && session && isChannelAdmin(session?.user?.email) && <AutomationPause />}
             {onlineConfigured && session && (
               <WhatsAppDerivations
                 supabase={supabase}
@@ -830,10 +917,13 @@ export default function App() {
             personal={isFelipeTools}
             onAddEvent={addEvent}
             supabase={onlineConfigured && session ? supabase : null}
-            allows={(module) => canSeeModule(session?.user?.email, deniedModules, module)}
-            isAdmin={isChannelAdmin(session?.user?.email)}
+            allows={allowsHomeModule}
+            demo={demo}
+            isAdmin={isAdminUser}
             automations={data.automations}
             onAutomationsChange={(next) => setData((current) => ({ ...current, automations: next }))}
+            myRoutine={data.myRoutine}
+            onMyRoutineChange={(next) => setData((current) => ({ ...current, myRoutine: next }))}
           />
         )}
         {view === "sales" && (
@@ -859,7 +949,7 @@ export default function App() {
         )}
         {view === "clients" && (
           <div className="segmented routine-tabs" role="tablist" aria-label="Empresas y contactos" style={{ marginBottom: 12, width: "fit-content" }}>
-            {[["empresas", "Empresas"], ["contactos", "Personas de contacto"], ["directorio", "Directorio e importar"]].map(([key, label]) => (
+            {[["empresas", "Empresas"], ["contactos", "Personas de contacto"], ["sinmail", `Sin mail${clientsWithoutEmail ? ` · ${clientsWithoutEmail}` : ""}`], ["directorio", "Directorio e importar"]].map(([key, label]) => (
               <button key={key} type="button" role="tab" aria-selected={clientsTab === key} className={clientsTab === key ? "selected" : ""} onClick={() => setClientsTab(key)}>{label}</button>
             ))}
           </div>
@@ -867,6 +957,19 @@ export default function App() {
         {view === "clients" && clientsTab === "directorio" && (
           <Suspense fallback={<Splash text="Cargando…" />}>
             <ClientsDataTools data={data} setData={setData} supabase={supabase} session={session} online={Boolean(onlineConfigured && session)} />
+          </Suspense>
+        )}
+        {view === "clients" && clientsTab === "sinmail" && (
+          <Suspense fallback={<Splash text="Cargando…" />}>
+            <ClientEmails
+              clients={data.clients}
+              supabase={onlineConfigured && session ? supabase : null}
+              isAdmin={isAdminUser}
+              onOpenClient={setSelectedClientId}
+              onSaveEmail={(id, email) => { const client = (data.clients || []).find((item) => item.id === id); if (client) updateClient({ ...client, email }); }}
+              vendorNames={data.contabiliumVendors || {}}
+              onVendorNames={(next) => setData((current) => ({ ...current, contabiliumVendors: next }))}
+            />
           </Suspense>
         )}
         {view === "clients" && clientsTab === "contactos" && (
@@ -907,9 +1010,10 @@ export default function App() {
             <MercadoLibreBoard hiddenTabs={deniedModules} email={session?.user?.email} supabase={supabase} session={session} isAdmin={isChannelAdmin(session?.user?.email)} canSeeAds={isFelipeTools} ads={data.mlAds || {}} onAdsChange={(next) => setData((current) => ({ ...current, mlAds: next }))} />
           </Suspense>
         )}
+        {view === "stock" && <StockView supabase={onlineConfigured && session ? supabase : null} isAdmin={isAdminUser} />}
         {view === "productos" && (
           <Suspense fallback={<Splash text="Cargando Productos…" />}>
-            <ProductHub supabase={supabase} />
+            <ProductHub supabase={supabase} isAdmin={isChannelAdmin(session?.user?.email)} userEmail={session?.user?.email || ""} />
           </Suspense>
         )}
         {view === "mejoras" && (
@@ -934,21 +1038,32 @@ export default function App() {
             />
           </Suspense>
         )}
-        {view === "stock" && <StockView supabase={onlineConfigured && session ? supabase : null} isAdmin={isChannelAdmin(session?.user?.email)} />}
-        {view === "quoter" && (
+        {view === "quoter" && previewSite && (
+          <QuoteBuilder
+            supabase={onlineConfigured && session ? supabase : null}
+            clients={data.clients}
+            initialClient={quoterClient}
+            sellerName={data.profileName || ""}
+            userId={session?.user?.id || ""}
+            isAdmin={isAdminUser}
+            who={String(session?.user?.email || "")}
+            onFollowUp={({ number, client }) => setData((current) => ({ ...current, tasks: [...(current.tasks || []), { ...blankTask(), id: crypto.randomUUID(), company: client || "Sin empresa", clientId: (current.clients || []).find((item) => String(item.company || "").toLowerCase() === String(client || "").toLowerCase())?.id || "", title: `Seguimiento de cotización ${number}${client ? ` · ${client}` : ""}`, dueDate: businessDaysFromToday(2), priority: "Media", source: "quote-followup", quoteNumber: number, done: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }] }))}
+            onCloseFollowUp={(number) => setData((current) => ({ ...current, tasks: (current.tasks || []).map((task) => (task.source === "quote-followup" && task.quoteNumber === number && !task.done ? { ...task, done: true, completedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : task)) }))}
+            onQuoted={(clientId) => setData((current) => ({ ...current, clients: current.clients.map((client) => (client.id === clientId ? { ...client, lastQuotedAt: today(), updatedAt: new Date().toISOString() } : client)) }))}
+          />
+        )}
+        {view === "quoter" && !previewSite && (
           <Suspense fallback={<Splash text="Cargando cotizador…" />}>
             <CotizadorFrame session={session} client={quoterClient} />
           </Suspense>
         )}
-        {/* 25/11 (Felipe: «Entregas demora muchísimo»): se precarga escondida unos segundos después de abrir y queda abierta al
-            cambiar de pestaña, así al tocar Entregas ya está lista. */}
-        {(view === "entregas" || entregasWarm) && session && (
-          <div hidden={view !== "entregas"} aria-hidden={view !== "entregas"}>
-            <Suspense fallback={view === "entregas" ? <Splash text="Cargando entregas…" /> : null}>
-              <EntregasFrame session={session} />
-            </Suspense>
-          </div>
+        {/* 28/11 (Felipe: «una sola app, no una adentro de otra»): Entregas es una pantalla NATIVA (sin iframe). */}
+        {view === "entregas" && !demo && (
+          <Suspense fallback={<Splash text="Cargando entregas…" />}>
+            <EntregasNativa supabase={onlineConfigured && session ? supabase : null} access={previewAccess} readOnly={Boolean(typeof window !== "undefined" && window.__poliplastReadOnly)} />
+          </Suspense>
         )}
+        {view === "entregas" && demo && <EntregasEmbed base="/entregas-maqueta/" access={previewAccess} who={isExpedition ? expeditionWho : null} />}
         {view === "map" && (
           <>
             <div className="segmented" role="tablist" aria-label="Tipo de mapa" style={{ marginBottom: 12, width: "fit-content" }}>
@@ -986,7 +1101,10 @@ export default function App() {
             />
           </Suspense>
         )}
+        </div>
         </ErrorBoundary>
+        )}
+        <ReportProblem open={showReport} onClose={() => setShowReport(false)} view={view} viewLabel={NAV_ITEMS.find(([id]) => id === view)?.[1] || view} name={isExpedition && expeditionWho ? `${expeditionWho.who} (expedición)` : data.profileName || ""} online={Boolean(onlineConfigured && session)} />
       </main>
 
       <Suspense fallback={null}>

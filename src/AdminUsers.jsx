@@ -100,7 +100,7 @@ export function AdminUsers({ supabase, session, adminEmails = [] }) {
         <div>
           <span className="eyebrow">Solo para Felipe</span>
           <h2><Users size={18} /> Equipo y cuentas {users ? `(${users.length})` : ""}</h2>
-          <p>Quién se registró en el CRM y qué ve cada persona. En "Qué ve" destildás lo que no tiene que ver (Perfil y Datos siempre se ven). Esto oculta pantallas y pestañas; los datos delicados además los protege la base.</p>
+          <p>Quién se registró en la app y qué ve cada persona. En "Qué ve" destildás lo que no tiene que ver (Perfil y Datos siempre se ven). Esto oculta pantallas y pestañas; los datos delicados además los protege la base.</p>
         </div>
       </div>
       {message && <div className="system-message">{message}</div>}

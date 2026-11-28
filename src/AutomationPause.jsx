@@ -19,7 +19,7 @@ function Activity() {
   }
   return (
     <details className="automation-activity" onToggle={(event) => { if (event.target.open && !data) load(); }}>
-      <summary>Ver lo que hizo el CRM solo (últimos 7 días)</summary>
+      <summary>Ver lo que hizo la app solo (últimos 7 días)</summary>
       {error && <p className="muted small">{error}</p>}
       {data && (
         <>

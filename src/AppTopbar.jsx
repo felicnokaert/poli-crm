@@ -1,4 +1,4 @@
-import { HelpCircle, Plus, Search } from "lucide-react";
+import { HelpCircle, MessageSquareWarning, Plus, Search } from "lucide-react";
 import { Spinner } from "./ui-primitives";
 import { CHANNELS, longToday, profileInitials } from "./app-shared";
 import { applyTheme, nextTheme } from "./theme.mjs";
@@ -31,9 +31,9 @@ function displayedChannel(readiness, key) {
   };
 }
 
-export function AppTopbar({ title, myChannels, primaryChannel, readiness, syncStatus, onRetrySave, theme, onThemeChange, onOpenPalette, onOpenShortcuts, profileLabel, onLogConversation }) {
+export function AppTopbar({ title, myChannels, primaryChannel, readiness, syncStatus, onRetrySave, theme, onThemeChange, onOpenPalette, onOpenShortcuts, onReport = null, notifications = null, profileLabel, onLogConversation, compact = false }) {
   return (
-    <header className="topbar">
+    <header className={`topbar${compact ? " is-compact" : ""}`}>
       <div>
         <span className="eyebrow">{longToday()}</span>
         <LocalInfo />
@@ -84,17 +84,23 @@ export function AppTopbar({ title, myChannels, primaryChannel, readiness, syncSt
         <button
           type="button"
           className="icon-button"
-          aria-label="Buscar en todo el CRM"
-          title="Buscar en todo el CRM (Ctrl+K)"
+          aria-label="Buscar en toda la app"
+          title="Buscar en toda la app (Ctrl+K)"
           onClick={onOpenPalette}
         >
           <Search size={18} />
         </button>
+        {notifications}
+        {onReport && (
+          <button type="button" className="icon-button report-button" aria-label="Algo no anda: avisar" title="Algo no anda: avisar" onClick={onReport}>
+            <MessageSquareWarning size={18} />
+          </button>
+        )}
         <button
           type="button"
           className="icon-button"
-          aria-label="Ayuda: guía del CRM y atajos"
-          title="Ayuda: guía del CRM y atajos"
+          aria-label="Ayuda: guía de la app y atajos"
+          title="Ayuda: guía de la app y atajos"
           onClick={onOpenShortcuts}
         >
           <HelpCircle size={18} />

@@ -1,3 +1,5 @@
+// Poliplast App: en el link de prueba con datos reales, nada se escribe (tiene que ir antes que todo).
+import './preview-readonly.mjs';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';

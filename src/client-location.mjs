@@ -27,7 +27,7 @@ export function pendientesDeUbicacion(clients = []) {
     const sinProvincia = provinciaVacia(client.province);
     const sinCiudad = ciudadVacia(client.city);
     if (!sinProvincia && !sinCiudad) continue;
-    const conDocumento = soloDigitos(doc).length >= 7 && soloDigitos(doc) === doc; // CUIT/DNI; si no, doc es el id interno del CRM
+    const conDocumento = soloDigitos(doc).length >= 7 && soloDigitos(doc) === doc; // CUIT/DNI; si no, doc es el id interno de la app
     lista.push({
       doc,
       conDocumento,

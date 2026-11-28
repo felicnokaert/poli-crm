@@ -96,7 +96,7 @@ export function ContabiliumTest({ session }) {
         <div>
           <span className="eyebrow">Conexión</span>
           <h2><PlugZap size={18} /> Contabilium</h2>
-          <p>Prueba las claves de API de las empresas y trae sus comprobantes al CRM. Solo lee: no crea, cambia ni borra nada en Contabilium.</p>
+          <p>Prueba las claves de API de las empresas y trae sus comprobantes a la app. Solo lee: no crea, cambia ni borra nada en Contabilium.</p>
         </div>
         <div className="panel-head-actions">
           <button type="button" className="secondary" disabled={Boolean(busy)} onClick={test}>{busy === "test" ? "Probando…" : "Probar conexión"}</button>

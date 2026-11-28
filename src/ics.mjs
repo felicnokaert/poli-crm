@@ -74,7 +74,7 @@ function eachDay(from, to) {
 
 // options: { from, to, routine, tasks, events, holidays } ; tasks = lista de tareas del CRM.
 export function buildIcs(tasks = [], { from, to, routine = true, includeTasks = true, includeEvents = true, skipDays = [], now = new Date() } = {}) {
-  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Grupo Poliplast//CRM//ES', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:CRM Poliplast', `X-WR-TIMEZONE:${TZ}`];
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Grupo Poliplast//CRM//ES', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:Poliplast App', `X-WR-TIMEZONE:${TZ}`];
   let count = 0;
   const inRange = (date) => date && date >= from && date <= to;
   if (routine) {

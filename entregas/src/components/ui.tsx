@@ -116,8 +116,24 @@ export function Modal({ titulo, subtitulo, onClose, children, pie }: {
         {pie && <div className="modal-foot">{pie}</div>}
       </div>
     </div>,
-    document.body,
+    destinoFlotante(),
   )
+}
+
+/**
+ * Dónde se dibujan las ventanas: en <body>. Dentro de Poliplast App (módulo nativo, estilos encerrados en `.ent-nativo`)
+ * van en una capa propia con esa clase, así conservan su diseño.
+ */
+function destinoFlotante(): HTMLElement {
+  if (!document.querySelector('.ent-nativo')) return document.body
+  let capa = document.getElementById('ent-nativo-capa')
+  if (!capa) {
+    capa = document.createElement('div')
+    capa.id = 'ent-nativo-capa'
+    capa.className = 'ent-nativo embebido marco-poliplast ent-capa'
+    document.body.appendChild(capa)
+  }
+  return capa
 }
 
 // ---------------------------------------------------------------- Avisos flotantes

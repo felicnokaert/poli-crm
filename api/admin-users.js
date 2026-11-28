@@ -14,13 +14,16 @@ import { runIntegrationCron } from '../lib/integration-crons.mjs';
 import { contabiliumAdmin, contabiliumCron, contabiliumMlCron, contabiliumStockCron } from '../lib/contabilium.mjs';
 import { contabiliumItemsAdmin, contabiliumItemsCron } from '../lib/contabilium-items.mjs';
 import { assistantAi } from '../lib/assistant-ai.mjs';
+import { appReportsAdmin } from '../lib/app-reports.mjs';
+import { appFirmaAdmin, publicKeyHandler } from '../lib/app-firma.mjs';
+import { asHolidays, companyDaysAdmin, readCompanyDays } from '../lib/company-days.mjs';
+import { pricingEngineAdmin } from '../lib/pricing-engine.mjs';
+import { db as storeFor } from '../lib/mercadolibre.mjs';
+import { feriadosHandler } from '../lib/feriados.mjs';
 import { shopifyAdmin, shopifyCron } from '../lib/shopify.mjs';
 import { etiquetasHandler } from '../lib/etiquetas.mjs';
 import { entregasApiHandler } from '../lib/entregas-api.mjs';
 import { bnaDollarHandler } from '../lib/bna-dollar.mjs';
-import { feriadosHandler } from '../lib/feriados.mjs';
-import { asHolidays, companyDaysAdmin, readCompanyDays } from '../lib/company-days.mjs';
-import { db as storeFor } from '../lib/mercadolibre.mjs';
 import { gmailAdmin, gmailAutoSendCron, gmailCallback } from '../lib/gmail-service.mjs';
 
 // Una sola función para las tareas de administrador (el plan de Vercel limita la cantidad de funciones):
@@ -109,6 +112,7 @@ export default async function handler(request, response) {
   if (request.query?.dolar) return bnaDollarHandler(request, response);
   // Feriados nacionales + días cerrados de la empresa (lib/company-days.mjs), para el calendario y Entregas.
   if (request.query?.feriados) return feriadosHandler(request, response, fetch, async (year) => asHolidays(await readCompanyDays(storeFor(process.env, fetch)), year));
+  if (request.query?.['app-firma-publica']) return publicKeyHandler(request, response);
   const cron = request.method === 'GET' ? CRONS[request.query?.cron] : null;
   if (cron) {
     const result = await runIntegrationCron(request.query.cron, (req) => cron(req), request);
@@ -126,9 +130,12 @@ export default async function handler(request, response) {
     : action === 'shopify' ? await shopifyAdmin(request)
     : action === 'alerts' ? await alertsAdmin(request)
     : action === 'trello-plan' ? await trelloPlanAdmin(request)
+    : action === 'pricing-engine' ? await pricingEngineAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'company-days' ? await companyDaysAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'whatsapp-auto' ? await whatsappAutoAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'automation-pause' ? await automationPauseAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
+    : action === 'app-firma' ? await appFirmaAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
+    : action === 'app-report' ? await appReportsAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'gmail' ? await gmailAdmin(request)
     : action === 'ai-exam' ? await examAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })
     : action === 'training' ? await trainingAdmin(request, process.env, fetch, { authenticate: authenticatedCorporateUser, isAdmin: isAdminEmail })

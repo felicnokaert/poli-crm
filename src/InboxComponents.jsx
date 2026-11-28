@@ -185,7 +185,7 @@ export function InboxRow({
             className="danger-link"
             onClick={() => onDelete(item.event_id)}
           >
-            Eliminar del CRM
+            Eliminar de la app
           </button>
         </div>
       ) : (
@@ -209,7 +209,7 @@ export function InboxRow({
             className="danger-link"
             onClick={() => onDelete(item.event_id)}
           >
-            Eliminar del CRM
+            Eliminar de la app
           </button>
         </div>
       )}
@@ -373,7 +373,7 @@ export function InboxDraftModal({ draft, setDraft, onClose, onConfirm }) {
             <span className="eyebrow">Copiloto · vos aportás el criterio</span>
             <h2>¿Quién es y qué hacemos con esta conversación?</h2>
             <p>
-              Confirmá lo que el mensaje no puede decirnos. El CRM nunca
+              Confirmá lo que el mensaje no puede decirnos. La app nunca
               responde al contacto.
             </p>
           </div>
@@ -503,7 +503,7 @@ export function InboxDraftModal({ draft, setDraft, onClose, onConfirm }) {
             <legend>Triage comercial · una sola vez por empresa</legend>
             <div className="triage-summary">
               <strong>{triageResult.score}/12 · {triageResult.complete ? `Prioridad ${triageResult.priority}` : `${triageResult.known}/6 confirmadas`}</strong>
-              <span>Los campos sin evidencia quedan sin confirmar; el CRM no completa supuestos.</span>
+              <span>Los campos sin evidencia quedan sin confirmar; la app no completa supuestos.</span>
             </div>
             <div className="triage-grid">
               {TRIAGE_VARIABLES.map((variable) => (

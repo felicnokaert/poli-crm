@@ -159,10 +159,18 @@ export function mergeWorkspaceState(local = EMPTY_STATE, remote = EMPTY_STATE) {
     ...(local.doNotContact || remote.doNotContact ? { doNotContact: mergeBlocks(remote.doNotContact, local.doNotContact) } : {}),
     ...(local.prospectRules || remote.prospectRules ? { prospectRules: { ...(remote.prospectRules || {}), ...(local.prospectRules || {}) } } : {}),
     // Matriz de automatizaciones (solo lo que Felipe editó o agregó, por idea): gana lo de este navegador.
+    // 28/11: rutina propia de cada persona (bloques que arma ella); gana la copia más nueva.
+    ...(local.myRoutine || remote.myRoutine ? { myRoutine: String(local.myRoutine?.updatedAt || '') >= String(remote.myRoutine?.updatedAt || '') ? (local.myRoutine || remote.myRoutine) : remote.myRoutine } : {}),
     ...(local.automations || remote.automations ? { automations: Object.fromEntries(Object.entries({ ...(remote.automations || {}), ...(local.automations || {}) }).filter(([, row]) => row)) } : {}),
     ...(local.commissionFloor || remote.commissionFloor ? { commissionFloor: local.commissionFloor || remote.commissionFloor } : {}),
+    // Nombres de los vendedores de Contabilium (IDVendedor → persona), los pone un administrador en Empresas → Sin mail.
+    ...(local.contabiliumVendors || remote.contabiliumVendors ? { contabiliumVendors: { ...(remote.contabiliumVendors || {}), ...(local.contabiliumVendors || {}) } } : {}),
     ...(local.weeklyTargets || remote.weeklyTargets ? { weeklyTargets: local.weeklyTargets || remote.weeklyTargets } : {}),
     ...(local.welcomeDismissed || remote.welcomeDismissed ? { welcomeDismissed: true } : {}),
+    // Poliplast App: notificaciones leídas (se juntan las de todos los equipos de la persona; últimas 600).
+    ...(local.notificationsRead || remote.notificationsRead ? { notificationsRead: [...new Set([...(remote.notificationsRead || []), ...(local.notificationsRead || [])])].slice(-600) } : {}),
+    // Poliplast App: orden y tarjetas ocultas del Inicio de cada uno; gana el cambio más reciente.
+    ...(local.homeLayout || remote.homeLayout ? { homeLayout: String(local.homeLayout?.updatedAt || '') >= String(remote.homeLayout?.updatedAt || '') ? local.homeLayout || remote.homeLayout : remote.homeLayout } : {}),
     mergeLogs: mergeRecords(local.mergeLogs, remote.mergeLogs),
     duplicateReviewDecisions: mergeRecords(local.duplicateReviewDecisions, remote.duplicateReviewDecisions),
     // Huellas de los archivos de prospectos ya importados (regla 7.3: avisar si se sube el mismo).

@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { AccountTag } from "./MlAccountTag";
 import { filterHub, HUB_FILTERS, listingLabel } from "./product-hub.mjs";
 import { loadProductHub } from "./product-hub-data.js";
+import { ProductRanking } from "./ProductRanking.jsx";
+import { MlCatalogLink } from "./MlCatalogLink.jsx";
+import { PhotoBulkUpload } from "./PhotoBulkUpload.jsx";
 
 // 20/11: Productos = una ficha por SKU que junta cotizador, Mercado Libre y Shopify, con dónde conviene venderlo
 // y avisos (⚠ precio raro, catálogo perdido, calidad, tendencia). Solo mira: no cambia nada en ningún canal.
@@ -52,7 +55,38 @@ function Detail({ row }) {
   );
 }
 
-export function ProductHub({ supabase }) {
+// 27/11: dos miradas de los productos: por canal (esta) y el ranking de ventas de Contabilium.
+// 28/11 (Felipe: «Catálogo ↔ Mercado Libre es repetitivo, habría que hacer una fusión»): el cruce catálogo ↔ ML (fotos,
+// SKU, descripción) pasa de Base técnica a Productos. «Subir fotos» queda adentro, plegado, solo para lo que no está
+// publicado en ningún canal (las fotos de lo publicado salen de las publicaciones).
+export function ProductHub({ supabase, isAdmin = false, userEmail = "" }) {
+  const [tab, setTab] = useState("canales");
+  const tabs = (
+    <div className="segmented ph-tabs" role="tablist" aria-label="Productos">
+      <button type="button" role="tab" aria-selected={tab === "canales"} className={tab === "canales" ? "selected" : ""} onClick={() => setTab("canales")}>Por canal</button>
+      <button type="button" role="tab" aria-selected={tab === "ranking"} className={tab === "ranking" ? "selected" : ""} onClick={() => setTab("ranking")}>Ranking de ventas</button>
+      <button type="button" role="tab" aria-selected={tab === "catalogo"} className={tab === "catalogo" ? "selected" : ""} onClick={() => setTab("catalogo")}>Catálogo y fotos</button>
+    </div>
+  );
+  return (
+    <div className="content-stack">
+      {tabs}
+      {tab === "ranking" && <ProductRanking supabase={supabase} isAdmin={isAdmin} />}
+      {tab === "canales" && <ProductChannels supabase={supabase} />}
+      {tab === "catalogo" && <>
+        <MlCatalogLink supabase={supabase} isAdmin={isAdmin} userEmail={userEmail} />
+        {isAdmin && (
+          <details className="panel ph-photos">
+            <summary><strong>Subir fotos propias</strong> <span className="muted small">· solo para productos que no están publicados en ningún canal</span></summary>
+            <PhotoBulkUpload supabase={supabase} isAdmin={isAdmin} userEmail={userEmail} />
+          </details>
+        )}
+      </>}
+    </div>
+  );
+}
+
+function ProductChannels({ supabase }) {
   const [state, setState] = useState({ status: "loading", rows: [], dollar: null });
   const [filter, setFilter] = useState("todos");
   const [query, setQuery] = useState("");

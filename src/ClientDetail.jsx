@@ -1,4 +1,5 @@
 import { CustomerBasePanel } from "./CustomerBasePanel.jsx";
+import { MissingEmailNotice } from "./ClientEmails.jsx";
 import { useEffect, useState } from "react";
 import { ExternalLink, X } from "lucide-react";
 import { formatDate } from "./utils.mjs";
@@ -397,6 +398,7 @@ export function ClientDetail({
                 </p>
               </article>
             </div>
+            <MissingEmailNotice client={client} supabase={supabase} onSave={onSave} />
             <div className="client-facts">
               <Fact label="Tipo" value={client.sourceType} />
               <Fact label="CUIT" value={client.cuit} />
@@ -501,7 +503,7 @@ export function ClientDetail({
                 Nueva tarea
               </button>
               {onQuote ? (
-                <button type="button" className="secondary" onClick={() => onQuote(client)} title="Abre el cotizador adentro del CRM con esta empresa elegida. Al guardar la cotización se marca sola la fecha de «Coticé hoy» (no es una venta).">
+                <button type="button" className="secondary" onClick={() => onQuote(client)} title="Abre el cotizador adentro de la app con esta empresa elegida. Al guardar la cotización se marca sola la fecha de «Coticé hoy» (no es una venta).">
                   Cotizar
                 </button>
               ) : (

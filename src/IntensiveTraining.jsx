@@ -31,7 +31,7 @@ export function IntensiveTraining({ supabase }) {
   return (
     <section className="panel" aria-label="Entrenamiento intensivo">
       <h3>Entrenamiento intensivo (hasta el {state.until?.split("-").reverse().slice(0, 2).join("/")})</h3>
-      <p className="muted small">Prendido, el CRM aprende solo cada hora y media, aunque nadie lo mire: junta las respuestas que el equipo ya dio en Mercado Libre y lee las fichas técnicas de Base técnica. Usa SOLO esos datos (no inventa) y lo que se contradice no lo guarda. Lo aprendido queda marcado como «aprendido solo, sin revisar», separado de lo que enseñaste vos.</p>
+      <p className="muted small">Prendido, la app aprende solo cada hora y media, aunque nadie lo mire: junta las respuestas que el equipo ya dio en Mercado Libre y lee las fichas técnicas de Base técnica. Usa SOLO esos datos (no inventa) y lo que se contradice no lo guarda. Lo aprendido queda marcado como «aprendido solo, sin revisar», separado de lo que enseñaste vos.</p>
       <div className="assistant-teach-actions">
         <label className="check-row"><input type="checkbox" checked={Boolean(state.enabled)} disabled={Boolean(busy)} onChange={(event) => run("set", { op: "set", enabled: event.target.checked, dailyBudget: state.dailyBudget })} /> <strong>{state.enabled ? "Prendido" : "Apagado"}</strong></label>
         <label className="small">Tope por día: <select value={state.dailyBudget} disabled={Boolean(busy)} onChange={(event) => run("set", { op: "set", enabled: state.enabled, dailyBudget: Number(event.target.value) })}>{[5, 10, 20, 30].map((value) => <option key={value} value={value}>{usd(value)}</option>)}</select></label>

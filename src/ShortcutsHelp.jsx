@@ -1,3 +1,4 @@
+import { isPreviewSite } from "./demo-mode.mjs";
 import { X } from "lucide-react";
 import { useModalEscape } from "./app-shared";
 
@@ -12,7 +13,7 @@ import { useModalEscape } from "./app-shared";
 export function ShortcutsHelp({ onClose }) {
   useModalEscape(onClose);
   const shortcuts = [
-    ["Ctrl + K", "Buscar empresas, tareas y prospectos en todo el CRM"],
+    ["Ctrl + K", "Buscar empresas, tareas y prospectos en toda la app"],
     ["/", "Buscar en la pantalla actual"],
     ["n", "Nueva tarea"],
     ["Esc", "Cerrar el formulario o ficha abierta"],
@@ -39,7 +40,7 @@ export function ShortcutsHelp({ onClose }) {
         </div>
         {/* 21/11: la guía del CRM a un toque (en el celular los atajos de teclado no sirven). */}
         <p className="shortcuts-guide">
-          <a className="primary" href="/guia/" target="_blank" rel="noreferrer">Abrir la guía del CRM</a>
+          <a className="primary" href={isPreviewSite() ? "/guia-app/" : "/guia/"} target="_blank" rel="noreferrer">Abrir la guía de la app</a>
           <span>Qué hace cada sección y cómo usarla. Si una sección no te sirve, avisale a Felipe y te la saca.</span>
         </p>
         <h3 className="shortcuts-title">Atajos de teclado (compu)</h3>

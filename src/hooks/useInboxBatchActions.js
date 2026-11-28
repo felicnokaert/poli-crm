@@ -96,7 +96,7 @@ export function useInboxBatchActions({ data, setData, confirm, session }) {
     if (
       !keys.size ||
       !(await confirm(
-        `¿Eliminar del CRM ${keys.size} ${keys.size === 1 ? "contacto seleccionado" : "contactos seleccionados"}? Los chats originales de WhatsApp no se modifican.`,
+        `¿Eliminar de la app ${keys.size} ${keys.size === 1 ? "contacto seleccionado" : "contactos seleccionados"}? Los chats originales de WhatsApp no se modifican.`,
         { danger: true, confirmLabel: "Eliminar" },
       ))
     )
@@ -127,7 +127,7 @@ export function useInboxBatchActions({ data, setData, confirm, session }) {
     if (!event) return;
     if (
       !(await confirm(
-        "¿Quitar del CRM esta captura anterior? El chat original de WhatsApp no se modifica.",
+        "¿Quitar de la app esta captura anterior? El chat original de WhatsApp no se modifica.",
         { danger: true, confirmLabel: "Quitar" },
       ))
     )
@@ -152,7 +152,7 @@ export function useInboxBatchActions({ data, setData, confirm, session }) {
     if (!items.length) return;
     if (
       !(await confirm(
-        `¿Quitar del CRM las ${items.length} capturas en cuarentena? Los chats originales de WhatsApp no se modifican.`,
+        `¿Quitar de la app las ${items.length} capturas en cuarentena? Los chats originales de WhatsApp no se modifican.`,
         { danger: true, confirmLabel: "Quitar todo" },
       ))
     )

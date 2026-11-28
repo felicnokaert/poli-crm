@@ -124,7 +124,7 @@ function ClientsBase({ clients, query, setQuery, onOpenClient, onMergeClients, m
             <div><strong>{duplicateCounts.low}</strong><span>Revisar nombre</span></div>
           </div>
           <p className="duplicate-note">
-            Son sugerencias de revisión. El CRM no fusiona ni modifica ninguna ficha automáticamente.
+            Son sugerencias de revisión. La app no fusiona ni modifica ninguna ficha automáticamente.
           </p>
           <div className="duplicate-list">
             {duplicateCandidates.map((candidate) => {

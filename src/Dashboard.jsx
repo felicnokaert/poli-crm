@@ -1,10 +1,14 @@
 import { AttentionPanel } from "./AttentionPanel.jsx";
-import { AutomationPause } from "./AutomationPause.jsx";
 import { memo, useEffect, useMemo, useState } from "react";
 import { resolveWeeklyTargets } from "./weekly-targets.mjs";
 import {
   BarChart3,
+  Boxes,
   CheckCircle2,
+  ClipboardCheck,
+  FlaskConical,
+  Tag,
+  Truck,
   CircleAlert,
   Flame,
   ListChecks,
@@ -18,6 +22,8 @@ import { buildCustomerBase } from "./customer-base.mjs";
 import { overdueQueue } from "./daily-queues.mjs";
 import { businessFacts } from "./assistant-business.mjs";
 import { weekActivity, weeklySummaryText } from "./weekly-summary.mjs";
+import { addBlock, addableBlocks, editableLayout, factoryLayout, hideBlock, moveVisible, reorderBlock, visibleBlockIds } from "./home-layout.mjs";
+import { HomeEditBar, WidgetBoard, WidgetGallery } from "./HomeEditor.jsx";
 import { useTeamSharedNotes } from "./hooks/useSharedNotesSync";
 import { findColdQuotes } from "./cold-quotes.mjs";
 import { findStaleHotLeads } from "./hot-leads-radar.mjs";
@@ -347,7 +353,7 @@ function WelcomePanel({ name, onNavigate, onNewInteraction, onDismiss }) {
           <h2>{name ? `Bienvenido/a, ${name}` : "Bienvenido/a"}</h2>
         </div>
       </div>
-      <p>Este es tu espacio personal: lo que cargues acá lo ves solo vos. Tres pasos para arrancar (y la <a href="/guia/" target="_blank" rel="noreferrer">guía del CRM</a>, también en el botón «?» de arriba):</p>
+      <p>Este es tu espacio personal: lo que cargues acá lo ves solo vos. Tres pasos para arrancar (y la <a href="/guia/" target="_blank" rel="noreferrer">guía de la app</a>, también en el botón «?» de arriba):</p>
       <div className="day-mode-list">
         {steps.map(([number, title, text, action, onClick]) => (
           <div className="day-mode-item" key={number}>
@@ -505,7 +511,22 @@ function DashboardBase({
   prospects = [],
   showWeekly = false,
   isAdmin = false,
+  allowsModule = null,
+  homeLayout = null,
+  onHomeLayout = null,
 }) {
+  // Poliplast App (prueba): tarjetas según los módulos de la persona, en el orden que ella eligió.
+  const allows = allowsModule || (() => true);
+  const layout = homeLayout || null;
+  // Editar como widgets (27/11): se trabaja sobre un borrador y «Listo» lo guarda; «Cancelar» lo descarta.
+  const [draft, setDraft] = useState(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const editing = Boolean(draft);
+  const working = editing ? draft : layout;
+  const shownIds = visibleBlockIds(working, allows, isAdmin);
+  const startEditing = () => setDraft(editableLayout(layout, allows));
+  const finishEditing = () => { if (draft) onHomeLayout?.(draft); setDraft(null); setGalleryOpen(false); };
+  const cancelEditing = () => { setDraft(null); setGalleryOpen(false); };
   const targets = resolveWeeklyTargets(weeklyTargets);
   const clientsById = new Map(clients.map((client) => [client.id, client]));
   const now = today();
@@ -558,7 +579,12 @@ function DashboardBase({
           onDismiss={onDismissWelcome}
         />
       )}
-      {!showWelcome && (
+      {!showWelcome && !allows("tasks") && (
+        <section className="day-hero">
+          <div className="day-hero-head"><div><h2>{greetingFor()}{welcomeName ? `, ${welcomeName}` : ""}</h2></div></div>
+        </section>
+      )}
+      {!showWelcome && allows("tasks") && (
         <DayHero
           name={welcomeName}
           overdueTasks={overdueTasks}
@@ -569,46 +595,75 @@ function DashboardBase({
           onToggle={onToggle}
         />
       )}
-      {!showWelcome && showRoutine && <MyDay planChecks={planChecks || {}} tasks={tasks} onNavigate={onNavigate} />}
-      <DayMode
-        overdueTasks={overdueTasks}
-        dueTodayTasks={dueTodayTasks}
-        hotLeads={hotLeads}
-        coldQuotes={coldQuotes}
-        repurchaseRadar={repurchaseRadar}
-        staleClients={staleClients}
-        expiredQuotes={expiredQuotes}
-        myChannels={myChannels}
-        onNavigate={onNavigate}
-        onOpenTask={onOpenTask}
-        onOpenEvent={onOpenEvent}
-      />
-      <section className="metric-grid metric-grid-week">
-        {cards.map(([label, value, note, Icon, urgent]) => (
-          <article className={`metric-card${urgent ? " is-urgent" : ""}`} key={label}>
-            <Icon size={20} />
-            <span>{label}</span>
-            <strong><CountUp value={value} /></strong>
-            <small>{note}</small>
-          </article>
-        ))}
-      </section>
-      {whatsappHealth && whatsappHealth.ok === false && myChannels.includes("general") && (
-        <section className="panel whatsapp-alert" role="alert">
-          <strong>WhatsApp: hay algo para revisar</strong>
-          <ul>{whatsappHealth.problems.map((line, index) => <li key={index}>{line}</li>)}</ul>
-          <button type="button" className="secondary" onClick={() => onNavigate("settings")}>Ir a Datos para el diagnóstico</button>
-        </section>
+      {onHomeLayout && (
+        <HomeEditBar
+          editing={editing}
+          onStart={startEditing}
+          onDone={finishEditing}
+          onCancel={cancelEditing}
+          onReset={() => setDraft(factoryLayout(allows))}
+          onOpenGallery={() => setGalleryOpen(true)}
+          addableCount={editing ? addableBlocks(draft, allows, isAdmin).length : 0}
+        />
       )}
-      {supabase && showWeekly && <WeeklySummaryCard supabase={supabase} clients={clients} prospects={prospects} tasks={tasks} isAdmin={isAdmin} />}
-      {supabase && isAdmin && <AutomationPause />}
-      {supabase && isAdmin && <AttentionPanel supabase={supabase} session={session} isAdmin={isAdmin} onNavigate={onNavigate} compact />}
-      {supabase && <OverdueCard supabase={supabase} clients={clients} onNavigate={onNavigate} />}
-      <AlertsPanel showInbox={isAdmin} hotLeads={hotLeads} coldQuotes={coldQuotes} expiredQuotes={expiredQuotes} staleClients={staleClients} repurchaseRadar={repurchaseRadar} onNavigate={onNavigate} />
-      <AutomationSummary tasks={tasks} cronStatus={cronStatus} />
-      {supabase && isAdmin && <IntegrationsAlert supabase={supabase} onNavigate={onNavigate} />}
+      {editing && (
+        <WidgetGallery
+          open={galleryOpen}
+          blocks={addableBlocks(draft, allows, isAdmin)}
+          onAdd={(id) => { setDraft((current) => addBlock(current, id)); setGalleryOpen(false); }}
+          onClose={() => setGalleryOpen(false)}
+        />
+      )}
+      {editing ? (
+        <WidgetBoard
+          ids={shownIds}
+          render={renderBlock}
+          onRemove={(id) => setDraft((current) => hideBlock(current, id))}
+          onReorder={(id, target, place) => setDraft((current) => reorderBlock(current, id, target, place))}
+          onMove={(id, direction) => setDraft((current) => moveVisible(current, id, direction, allows, isAdmin))}
+        />
+      ) : shownIds.map((id) => renderBlock(id))}
     </div>
   );
+  function renderBlock(id) {
+        if (id === "miDia") return !showWelcome && showRoutine ? <MyDay key={id} planChecks={planChecks || {}} tasks={tasks} onNavigate={onNavigate} /> : null;
+        if (id === "plan") return (
+          <DayMode
+            key={id}
+            overdueTasks={overdueTasks}
+            dueTodayTasks={dueTodayTasks}
+            hotLeads={hotLeads}
+            coldQuotes={coldQuotes}
+            repurchaseRadar={repurchaseRadar}
+            staleClients={staleClients}
+            expiredQuotes={expiredQuotes}
+            myChannels={myChannels}
+            onNavigate={onNavigate}
+            onOpenTask={onOpenTask}
+            onOpenEvent={onOpenEvent}
+          />
+        );
+        if (id === "metricas") return (
+          <section key={id} className="metric-grid metric-grid-week">
+            {cards.map(([label, value, note, Icon, urgent]) => (
+              <article className={`metric-card${urgent ? " is-urgent" : ""}`} key={label}>
+                <Icon size={20} />
+                <span>{label}</span>
+                <strong><CountUp value={value} /></strong>
+                <small>{note}</small>
+              </article>
+            ))}
+          </section>
+        );
+        if (id === "semana") return supabase && showWeekly ? <WeeklySummaryCard key={id} supabase={supabase} clients={clients} prospects={prospects} tasks={tasks} isAdmin={isAdmin} /> : null;
+        if (id === "atender") return supabase && isAdmin ? <AttentionPanel key={id} supabase={supabase} session={session} isAdmin={isAdmin} onNavigate={onNavigate} compact /> : null;
+        if (id === "atrasados") return supabase ? <OverdueCard key={id} supabase={supabase} clients={clients} onNavigate={onNavigate} /> : null;
+        if (id === "alertas") return <AlertsPanel key={id} showInbox={isAdmin} hotLeads={hotLeads} coldQuotes={coldQuotes} expiredQuotes={expiredQuotes} staleClients={staleClients} repurchaseRadar={repurchaseRadar} onNavigate={onNavigate} />;
+        if (id === "automatico") return <AutomationSummary key={id} tasks={tasks} cronStatus={cronStatus} />;
+        if (id === "logistica") return <LogisticsCard key={id} onNavigate={onNavigate} allows={allows} />;
+        if (id === "conexiones") return supabase && isAdmin ? <IntegrationsAlert key={id} supabase={supabase} onNavigate={onNavigate} /> : null;
+        return null;
+  }
 }
 
 // Clientes que se pasaron de su frecuencia de compra (22/10), con la facturación de Contabilium. Espera unos
@@ -741,5 +796,32 @@ function AlertsPanel({ showInbox = true, hotLeads, coldQuotes, expiredQuotes, st
 // (sync status, edición de otras vistas, etc.) y este componente hace un
 // trabajo de armado de radares/listas nada gratis, así que conviene evitar
 // re-renderizarlo cuando ninguna de sus props cambió realmente.
+// Poliplast App (prueba): la tarjeta de Logística del Inicio (expedición, depósito). Lo de Etiquetas/Conteo/Dosificado
+// todavía no existe adentro de la app: se muestra como próximamente.
+// 28/11 (Felipe: «lo de logística está feísimo»): accesos en tarjetas, cada una con su ícono y para qué sirve.
+const LOGISTICS_TILES = [
+  ["entregas", "Entregas", "Pedidos para despachar, guías y remitos firmados", Truck],
+  ["etiquetas", "Etiquetas", "Lo que falta escanear en cada corte", Tag],
+  ["stock", "Stock", "Conteo y Contabilium, depósito por depósito", Boxes],
+  ["conteo", "Conteo", "Cargar el conteo del día", ClipboardCheck],
+  ["dosificado", "Dosificado", "Kits y planillas para dosificar", FlaskConical],
+];
+function LogisticsCard({ onNavigate, allows }) {
+  const tiles = LOGISTICS_TILES.filter(([module]) => module === "entregas" || allows(module));
+  return (
+    <section className="panel logistics-card">
+      <div className="panel-head"><div><span className="eyebrow">Logística</span><h2>Logística de hoy</h2></div></div>
+      <div className="logistics-tiles">
+        {tiles.map(([module, title, text, Icon]) => (
+          <button key={module} type="button" className="logistics-tile" onClick={() => onNavigate(module)}>
+            <span className="logistics-tile-icon" aria-hidden="true"><Icon size={20} /></span>
+            <span className="logistics-tile-text"><strong>{title}</strong><small>{text}</small></span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export const Dashboard = memo(DashboardBase);
 

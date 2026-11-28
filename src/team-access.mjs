@@ -11,12 +11,16 @@ export const childKey = (module, label) => {
   return `${module}.${known ? known[0] : slug(label)}`;
 };
 
+// Módulos nuevos de Poliplast App (28/11, regla de Felipe: «todo módulo nuevo lo ve solo Felipe hasta que él lo habilite»):
+// una cuenta SIN rol no los ve; se habilitan dándole un rol (Jefe de depósito, Expedición…) o tildándolos en «Qué ve cada persona».
+export const NEW_MODULES = new Set(['etiquetas', 'conteo', 'dosificado', 'recibos', 'facturacion', 'compras']);
+
 export function accessAllows(access = {}, module, child = '') {
   const overrides = access.overrides || {};
   if (access.role === 'admin') return true;
   if (module === 'profile') return true;
   // Sin rol asignado (cuentas de antes): ve todo, como hoy; solo cuentan los módulos que se le sacaron.
-  const base = module in overrides ? Boolean(overrides[module]) : (access.role ? roleAllows(access.role, module) : true);
+  const base = module in overrides ? Boolean(overrides[module]) : (access.role ? roleAllows(access.role, module) : !NEW_MODULES.has(module));
   if (!base || !child) return base;
   const key = childKey(module, child);
   return key in overrides ? Boolean(overrides[key]) : !OPT_IN.has(key);
@@ -45,7 +49,7 @@ export function toggleAccess(person, module, child = '') {
     const next = !(key in overrides ? overrides[key] : byDefault);
     if (next === byDefault) delete overrides[key]; else overrides[key] = next;
   } else {
-    const roleDefault = person.role ? roleAllows(person.role, module) : true;
+    const roleDefault = person.role ? roleAllows(person.role, module) : !NEW_MODULES.has(module);
     const now = module in overrides ? overrides[module] : roleDefault;
     if (!now === roleDefault) delete overrides[module]; else overrides[module] = !now;
   }

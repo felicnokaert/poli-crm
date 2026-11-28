@@ -32,7 +32,8 @@ export const MODULES = [
 export const ALWAYS_ALLOWED = ['profile', 'settings'];
 
 // Solo administradores (Felipe, 21/11): Por revisar es de Felipe e Historial (WhatsApp) queda para más adelante.
-export const ADMIN_ONLY = ['inbox', 'conversations'];
+// 28/11 (producción): «Cómo queda la app», «Equipo y cuentas» y «Avisos del equipo» también son solo de administradores.
+export const ADMIN_ONLY = ['inbox', 'conversations', 'plan', 'team', 'avisos'];
 
 export const moduleKey = (module, child = '') => (child ? `${module}.${child}` : module);
 

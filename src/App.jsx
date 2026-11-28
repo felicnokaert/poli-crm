@@ -49,7 +49,6 @@ const lazyNamed = (loader, name) => (LAZY_LOADERS.push(loader), lazy(async () =>
 const TechnicalDocumentsAdmin = lazyNamed(() => import("./TechnicalDocuments"), "TechnicalDocumentsAdmin");
 const MapaCobertura = lazyNamed(() => import("./MapaCobertura"), "MapaCobertura");
 const CotizadorFrame = lazyNamed(() => import("./CotizadorFrame"), "CotizadorFrame");
-const EntregasFrame = lazyNamed(() => import("./EntregasFrame"), "EntregasFrame");
 const LOGISTICS_NATIVE = new Set(["dosificado", "conteo", "etiquetas"]);
 const EntregasNativa = lazyNamed(() => import("./EntregasNativa"), "default");
 const DosificadoNativo = lazyNamed(() => import("./logistica/LogisticaNativo.jsx"), "DosificadoNativo");
@@ -249,23 +248,6 @@ export default function App() {
   // Si a esta cuenta le quitaron la pantalla (por permiso o por su rol), cae en la primera que sí puede ver.
   const viewAllowed = (id) => canSeeModule(signedEmail, deniedModules, id) && accessAllows(previewAccess, id);
   const view = viewAllowed(pickedView) ? pickedView : (viewAllowed("dashboard") ? "dashboard" : firstAllowedView(signedEmail, deniedModules));
-  // Entregas precargada (ver abajo): solo si la persona la puede ver y sin ahorro de datos.
-  const canSeeEntregas = viewAllowed("entregas") && !previewSite;
-  const [entregasWarm, setEntregasWarm] = useState(false);
-  useEffect(() => {
-    if (view === "entregas") { setEntregasWarm(true); return undefined; }
-    if (entregasWarm || !session || !canSeeEntregas) return undefined;
-    const saveData = navigator.connection?.saveData || /2g/.test(navigator.connection?.effectiveType || "");
-    if (saveData) return undefined;
-    const timer = setTimeout(() => setEntregasWarm(true), 4000);
-    return () => clearTimeout(timer);
-  }, [view, entregasWarm, session, canSeeEntregas]);
-  // Al volver a mostrarla, que recalcule la parte visible (estaba escondida).
-  useEffect(() => {
-    if (view !== "entregas") return undefined;
-    const frame = requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
-    return () => cancelAnimationFrame(frame);
-  }, [view]);
   useEffect(() => { try { sessionStorage.setItem(VIEW_KEY, view); } catch { /* sin almacenamiento */ } }, [view]);
   // Cuenta de expedición (compartida): antes de usar la app se elige quién es y el depósito.
   const isExpedition = previewAccess.role === "expedicion" || signedEmail.toLowerCase() === "expedicion@grupopoliplast.com.ar";
@@ -273,16 +255,16 @@ export default function App() {
   const expeditionOperators = useExpeditionOperators(onlineConfigured && session ? supabase : null);
   const setExpeditionWho = (value) => { setExpeditionWhoState(value); saveExpeditionWho(value); };
   // Campanita (26/11): tareas vencidas o de hoy, alertas abiertas y, para administradores, avisos del equipo.
-  const opsAlerts = useOpsAlerts(previewSite && onlineConfigured && session ? supabase : null);
+  const opsAlerts = useOpsAlerts(onlineConfigured && session ? supabase : null);
   const [teamReports, setTeamReports] = useState([]);
   useEffect(() => {
-    if (!previewSite || !onlineConfigured || !session || !isAdminUser) return undefined;
+    if (!onlineConfigured || !session || !isAdminUser) return undefined;
     let alive = true;
     const load = () => adminFetch({ action: "app-report", op: "list" }).then((response) => response.json()).then((body) => { if (alive) setTeamReports(body.items || []); }).catch(() => {});
     load();
     const timer = setInterval(load, 5 * 60000);
     return () => { alive = false; clearInterval(timer); };
-  }, [previewSite, session, isAdminUser]);
+  }, [session, isAdminUser]);
   // Clientes de la cartera sin mail (27/11): el conteo va en la pestaña y en la campanita.
   const clientsWithoutEmail = useMemo(() => myClientsWithoutEmail(data.clients || []).length, [data.clients]);
   const notificationItems = useMemo(() => buildNotifications({ tasks: data.tasks || [], alerts: opsAlerts || [], reports: teamReports, noEmail: clientsWithoutEmail, today: today(), allows: (module) => accessAllows(previewAccess, module) }), [data.tasks, opsAlerts, teamReports, previewAccess, clientsWithoutEmail]);
@@ -775,7 +757,7 @@ export default function App() {
   }
 
   return (
-    <div className={`app-shell${navMini && !narrowScreen ? " nav-mini" : ""}${previewSite ? " densa" : ""}`}>
+    <div className={`app-shell${navMini && !narrowScreen ? " nav-mini" : ""} densa`}>
       <AppSidebar
         view={view}
         onSelect={(id) => { if (id === "quoter") setQuoterClient(null); setView(id); }}
@@ -807,8 +789,8 @@ export default function App() {
           onThemeChange={setTheme}
           onOpenPalette={() => setShowPalette(true)}
           onOpenShortcuts={() => setShowShortcutsHelp(true)}
-          onReport={previewSite ? () => setShowReport(true) : null}
-          notifications={previewSite ? <NotificationBell items={notificationItems} read={data.notificationsRead || EMPTY_ARRAY} onRead={markNotificationsRead} onNavigate={(item) => { if (item.taskId) setSelectedTaskId(item.taskId); else { if (item.clientsTab) setClientsTab(item.clientsTab); setView(item.view); } }} /> : null}
+          onReport={() => setShowReport(true)}
+          notifications={<NotificationBell items={notificationItems} read={data.notificationsRead || EMPTY_ARRAY} onRead={markNotificationsRead} onNavigate={(item) => { if (item.taskId) setSelectedTaskId(item.taskId); else { if (item.clientsTab) setClientsTab(item.clientsTab); setView(item.view); } }} />}
           profileLabel={data.profileName || session?.user?.email || ""}
           onLogConversation={LOG_CONVERSATION_VIEWS.includes(view) ? () => setShowForm(true) : null}
         />
@@ -821,7 +803,7 @@ export default function App() {
         {isExpedition && <ExpeditionChip value={expeditionWho} onChange={setExpeditionWho} />}
         {isExpedition && !expeditionWho ? <ExpeditionGate operators={expeditionOperators} onPick={setExpeditionWho} /> : (
         <ErrorBoundary key={view} view={view}>
-        <div className={previewSite ? "view-enter" : undefined}>
+        <div className="view-enter">
         {/* 28/11 (Felipe: «una sola app»): Dosificado, Conteo y Etiquetas son pantallas propias de la app (sin iframe). */}
         {view === "dosificado" && <Suspense fallback={<Splash text="Cargando dosificado…" />}><DosificadoNativo access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} /></Suspense>}
         {view === "conteo" && <Suspense fallback={<Splash text="Cargando conteo…" />}><ConteoNativo access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} /></Suspense>}
@@ -1075,22 +1057,13 @@ export default function App() {
             <CotizadorFrame session={session} client={quoterClient} />
           </Suspense>
         )}
-        {/* 28/11 (Felipe: «una sola app, no una adentro de otra»): en el link de prueba Entregas es una pantalla NATIVA (sin iframe). */}
-        {view === "entregas" && previewSite && !demo && (
+        {/* 28/11 (Felipe: «una sola app, no una adentro de otra»): Entregas es una pantalla NATIVA (sin iframe). */}
+        {view === "entregas" && !demo && (
           <Suspense fallback={<Splash text="Cargando entregas…" />}>
             <EntregasNativa supabase={onlineConfigured && session ? supabase : null} access={previewAccess} readOnly={Boolean(typeof window !== "undefined" && window.__poliplastReadOnly)} />
           </Suspense>
         )}
         {view === "entregas" && demo && <EntregasEmbed base="/entregas-maqueta/" access={previewAccess} who={isExpedition ? expeditionWho : null} />}
-        {/* 25/11 (Felipe: «Entregas demora muchísimo»): se precarga escondida unos segundos después de abrir y queda abierta al
-            cambiar de pestaña, así al tocar Entregas ya está lista. */}
-        {(view === "entregas" || entregasWarm) && session && !previewSite && (
-          <div hidden={view !== "entregas"} aria-hidden={view !== "entregas"}>
-            <Suspense fallback={view === "entregas" ? <Splash text="Cargando entregas…" /> : null}>
-              <EntregasFrame session={session} />
-            </Suspense>
-          </div>
-        )}
         {view === "map" && (
           <>
             <div className="segmented" role="tablist" aria-label="Tipo de mapa" style={{ marginBottom: 12, width: "fit-content" }}>

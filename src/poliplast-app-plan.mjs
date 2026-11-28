@@ -25,9 +25,9 @@ export const SUBMODULES = {
   etiquetas: ['Escanear', 'Pendientes', 'Hecho', 'Devoluciones', 'Cortes', 'Productividad del equipo'],
   conteo: ['Categorías', 'Administración'],
   dosificado: ['Cargar', 'Kits', 'Registros', 'Resumen'],
-  recibos: ['Comprobantes recibidos', 'Clientes y saldos', 'Enlaces de carga', 'Entrenamiento'],
+  recibos: ['Bandeja de pagos', 'Cobranzas', 'Recibos', 'Cheques', 'Cajas', 'Salidas de caja', 'Cierre de caja', 'Resumen', 'Conciliación', 'Cruce con el diario', 'Cuentas', 'Clientes', 'Guía'],
   facturacion: ['Comprobantes (Contabilium)', 'Saldos', 'Notas de crédito'],
-  compras: ['Qué se termina', 'Proveedores sugeridos', 'Pedidos y negociación'],
+  compras: ['Qué se termina'],
   tasks: ['Tareas', 'Rutina / Cierre del día', 'Calendario', 'Automatizaciones'],
   academy: ['Productos', 'Práctica', 'Competencia', 'Equipo'],
   techdocs: ['Documentos', 'Qué productos tienen ficha', 'Catálogo ↔ Mercado Libre'],
@@ -38,24 +38,28 @@ export const SUBMODULES = {
 };
 
 // Módulos que todavía no existen dentro de la app: se muestran como «próximamente».
+// Recibos (28/11): mientras se pasa a pantallas propias, cada submódulo abre su sección de PoliRecibos en una pestaña
+// nueva (sin iframe: Felipe no quiere una app dentro de otra y la sesión de Recibos es de otra base).
+export const RECIBOS_URL = 'https://poli-recibos.vercel.app';
+export const RECIBOS_LINKS = [
+  ['Bandeja de pagos', '/pagos', 'Comprobantes que llegaron: leer, asignar cliente y confirmar.'],
+  ['Cobranzas', '/cobranzas', 'Armar la cobranza y cargarla en Contabilium.'],
+  ['Recibos', '/recibos', 'Recibos emitidos y su envío (con revisión).'],
+  ['Cheques', '/cheques', 'Cheques y e-cheqs: fechas, estado y depósito.'],
+  ['Cajas', '/cajas', 'Movimientos de cada caja.'],
+  ['Salidas de caja', '/cajas/salidas', 'Pagos y retiros de efectivo.'],
+  ['Cierre de caja', '/cajas/cierre', 'Cierre del día con lo contado.'],
+  ['Resumen', '/resumen', 'Totales por empresa, medio y período.'],
+  ['Conciliación', '/conciliacion', 'Cruce con el extracto bancario (Excel).'],
+  ['Cruce con el diario', '/diario', 'Cruce con el diario contable (solo lectura).'],
+  ['Cuentas', '/cuentas', 'Cuentas bancarias y a qué empresa pertenecen.'],
+  ['Clientes', '/clientes', 'Clientes, CUIT y saldos.'],
+  ['Guía', '/guia/', 'Cómo se usa Recibos, paso a paso.'],
+];
+
 export const FUTURE_MODULES = {
   // 28/11: Etiquetas, Conteo y Dosificado ya no son «próximamente»: son pantallas nativas de la app (src/logistica/).
-  recibos: {
-    label: 'Recibos',
-    status: 'Ya funciona en su propia app (Poli-Recibos)',
-    text: 'Se suben los comprobantes de pago (PDF, fotos, capturas): los lee solo, avisa si ya tienen recibo o están repetidos, administración asigna el cliente y confirma, y arma la cobranza para Contabilium. Por ahora se abre en su propia pestaña, con su propio usuario; la unión dentro de la app (mismo usuario y misma pantalla) es el próximo paso.',
-    url: 'https://poli-recibos.vercel.app/login',
-  },
-  facturacion: {
-    label: 'Facturación',
-    status: 'Futuro',
-    text: 'Los comprobantes de Contabilium (que hoy ya se copian para la ficha del cliente) en una pantalla propia: saldos, notas de crédito y facturas por empresa.',
-  },
-  compras: {
-    label: 'Compras',
-    status: 'Futuro',
-    text: 'A partir del consumo de Contabilium y Mercado Libre: qué se está por terminar, quién lo vende, proveedores sugeridos y negociación por mail o WhatsApp siempre con aprobación de una persona.',
-  },
+  // 28/11: Facturación y Compras ya son pantallas reales (src/Facturacion.jsx, src/Compras.jsx).
 };
 
 // Roles = conjuntos de módulos (después se ajusta por persona en Equipo y cuentas). Perfil y Datos siempre.

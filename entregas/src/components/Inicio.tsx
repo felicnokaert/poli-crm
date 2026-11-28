@@ -9,6 +9,7 @@ import { duracion, resumenLead } from '../lib/leadtime'
 import type { Estado, Evento } from '../lib/types'
 import { PedidoFila } from './Pedidos'
 import { AvisoCierre } from './ResumenDia'
+import { ShopifyPedidos } from './ShopifyPedidos'
 import { Empty, ICONO_ESTADO } from './ui'
 
 export function Inicio() {
@@ -66,6 +67,8 @@ export function Inicio() {
       </div>
 
       <AvisoCierre />
+
+      <ShopifyPedidos />
 
       {cargando ? (
         <div className="kpis">{Array.from({ length: 7 }, (_, i) => <div key={i} className="skeleton" style={{ height: 96, borderRadius: 14 }} />)}</div>

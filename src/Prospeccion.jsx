@@ -1,3 +1,4 @@
+import { Pager, usePaged } from "./Pager.jsx";
 import { signatureFor } from './mail-signature.mjs';
 import { ProspectRulesPanel } from './ProspectRulesPanel.jsx';
 import QuickReplies from './QuickReplies.jsx';
@@ -93,7 +94,6 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const stopSites = useRef(false);
   // Último clic deshacible (marcar o eliminar): un error de dedo no saca a nadie de la cola para siempre.
   const [undo, setUndo] = useState(null);
-  const [pageSize, setPageSize] = useState(LIST_PAGE);
   const [importText, setImportText] = useState('');
   const [importPlan, setImportPlan] = useState(null);
   const [includePossible, setIncludePossible] = useState([]);
@@ -637,8 +637,9 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
   const bySearch = searchFilter ? visible.filter((item) => item.searchId === searchFilter) : visible;
   const prospectsById = useMemo(() => new Map(prospects.map((item) => [item.id, item])), [prospects]);
   const shown = dailyList ? bySearch.filter((item) => dailyList.includes(item.id)) : bySearch;
-  // Planilla y Tarjetas muestran de a 100: dibujar 500 filas juntas hacía lento cambiar de vista.
-  const page = shown.slice(0, pageSize);
+  // Planilla y Tarjetas van por páginas de 25 (28/11, Felipe: nada de «ver más»).
+  const paged = usePaged(shown, 25, [familyFilter, stateFilter, searchFilter, Boolean(dailyList), listView].join("|"));
+  const page = paged.rows;
 
   const togglePossible = (id) => setIncludePossible((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   const phoneErrors = importPlan ? (importPlan.cellErrors || []).filter((item) => item.field === 'phone').length : 0;
@@ -940,11 +941,11 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
       </details>
 
       <div className="panel-head-actions prospect-toolbar">
-        <select aria-label="Familia" value={familyFilter} onChange={(event) => { setFamilyFilter(event.target.value); setDailyList(null); setPageSize(LIST_PAGE); }}>
+        <select aria-label="Familia" value={familyFilter} onChange={(event) => { setFamilyFilter(event.target.value); setDailyList(null); }}>
           <option value="Todas">Todas las familias</option>
           {PROSPECT_FAMILIES.map((item) => <option key={item.key}>{item.key}</option>)}
         </select>
-        <select aria-label="Estado" value={stateFilter} onChange={(event) => { setStateFilter(event.target.value); setDailyList(null); setPageSize(LIST_PAGE); }}>
+        <select aria-label="Estado" value={stateFilter} onChange={(event) => { setStateFilter(event.target.value); setDailyList(null); }}>
           <option value="Todos">Todos los estados</option>
           {PROSPECT_STATES.map((item) => <option key={item}>{item}</option>)}
         </select>
@@ -982,9 +983,7 @@ function ProspeccionBase({ data, setData, userEmail, onOpenClient, session, citi
         </div>
       )}
 
-      {listView !== 'cola' && shown.length > page.length && (
-        <div className="panel-head-actions"><span className="muted small">Se muestran {page.length} de {shown.length}.</span><button type="button" className="secondary" onClick={() => setPageSize((size) => size + LIST_PAGE)}>Ver {Math.min(LIST_PAGE, shown.length - page.length)} más</button></div>
-      )}
+      {listView !== 'cola' && <Pager paged={paged} label="prospectos" />}
       {undo && (
         <div className="undo-toast" role="status" aria-live="polite">
           <span>{undo.text}</span>

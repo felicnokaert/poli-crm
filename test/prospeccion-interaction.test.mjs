@@ -466,12 +466,13 @@ describe("Prospección - deshacer y páginas", () => {
     assert.deepEqual(snapshots.at(-1).deletedRecordIds.prospects, []);
   });
 
-  test("la planilla muestra de a 100", async () => {
+  test("la planilla va por páginas de 25 (sin «ver más»)", async () => {
     const prospects = Array.from({ length: 130 }, (_, i) => ({ id: `p${i}`, company: `Empresa ${i}`, state: "No contactado", source: "x" }));
     await mountWith({ clients: [], prospects });
     fireEvent.click(screen.getByText("Planilla"));
-    assert.ok(screen.getByText("Se muestran 100 de 130."));
-    fireEvent.click(screen.getByText("Ver 30 más"));
-    assert.equal(screen.queryByText(/Se muestran/), null);
+    assert.ok(screen.getByText("Mostrando 1–25 de 130 prospectos"));
+    assert.equal(screen.queryByText(/más$/), null);
+    fireEvent.click(screen.getByRole("button", { name: "6" }));
+    assert.ok(screen.getByText("Mostrando 126–130 de 130 prospectos"));
   });
 });

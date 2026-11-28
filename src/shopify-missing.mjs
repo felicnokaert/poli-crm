@@ -301,7 +301,8 @@ export function filterMissing(rows = [], { query = '', view = '', decisions = {}
     if (view === 'grupos') return Boolean(row.group);
     if (view === 'sumar') return Boolean(row.joinsProduct) && !(row.twin || row.lookalike);
     if (view === 'dudosos') return Boolean(row.twin || row.lookalike);
-    return true;
+    // 28/11: «Pendientes» ya no trae los que casi seguro están cargados con otro SKU: van a «Posible duplicado».
+    return !(row.twin || row.lookalike);
   });
 }
 

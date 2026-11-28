@@ -1,3 +1,4 @@
+import { Pager, usePaged } from "./Pager.jsx";
 import { memo, useEffect, useState } from "react";
 import { ChevronRight, Search } from "lucide-react";
 import { filterInteractionsByDate, groupConversationHistory } from "./conversation-history.mjs";
@@ -18,12 +19,6 @@ function ConversationsBase({ items, clients, onOpen, onOpenClient }) {
   const [temperature, setTemperature] = useState("all");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [visibleCount, setVisibleCount] = useState(CONVERSATIONS_PAGE_SIZE);
-  // Volver a la primera página cada vez que cambia un filtro - si no, con un
-  // filtro nuevo podés quedar mostrando "20 de 3" sin ver nada.
-  useEffect(() => {
-    setVisibleCount(CONVERSATIONS_PAGE_SIZE);
-  }, [query, family, temperature, fromDate, toDate]);
   const conversations = groupConversationHistory(filterInteractionsByDate(items, fromDate, toDate));
   const clientIds = new Set(clients.map((client) => client.id));
   const clientsById = new Map(clients.map((client) => [client.id, client]));
@@ -40,6 +35,7 @@ function ConversationsBase({ items, clients, onOpen, onOpenClient }) {
     const matchesTemperature = temperature === "all" || (liveTemperature || item.temperature || "Tibio") === temperature;
     return matchesQuery && matchesFamily && matchesTemperature;
   });
+  const paged = usePaged(filtered, CONVERSATIONS_PAGE_SIZE, [query, family, temperature, fromDate, toDate].join("|"));
   return (
     <section className="panel">
       <div className="panel-head">
@@ -78,7 +74,7 @@ function ConversationsBase({ items, clients, onOpen, onOpenClient }) {
       </div>
       {filtered.length ? (
         <div className="conversation-list">
-          {filtered.slice(0, visibleCount).map((item) => {
+          {paged.rows.map((item) => {
             const validClientIds = (item.clientIds || [item.clientId]).filter((id) => clientIds.has(id));
             const hasClient = validClientIds.length === 1;
             // La temperatura mostrada acá es la actual de la ficha del
@@ -142,17 +138,7 @@ function ConversationsBase({ items, clients, onOpen, onOpenClient }) {
           }
         />
       )}
-      {filtered.length > visibleCount && (
-        <div className="conversation-list-more">
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => setVisibleCount((count) => count + CONVERSATIONS_PAGE_SIZE)}
-          >
-            Mostrar más ({filtered.length - visibleCount} restantes)
-          </button>
-        </div>
-      )}
+      <Pager paged={paged} label="conversaciones" />
     </section>
   );
 }

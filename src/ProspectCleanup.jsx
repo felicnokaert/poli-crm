@@ -1,3 +1,4 @@
+import { Pager, usePaged } from "./Pager.jsx";
 import { useMemo, useState } from "react";
 import { Download, Eraser, Undo2 } from "lucide-react";
 import { CONTACT_LABEL, FIT_LABEL, FABRICANTE_OUTCOME, classifyAll, cleanupCsv, cleanupSummary } from "./prospect-cleanup.mjs";
@@ -11,7 +12,6 @@ export function ProspectCleanup({ prospects, onDiscard, onKeep }) {
   const [fit, setFit] = useState("todos");
   const [family, setFamily] = useState("todas");
   const [text, setText] = useState("");
-  const [limit, setLimit] = useState(PAGE);
   const summary = useMemo(() => cleanupSummary(prospects), [prospects]);
   const pending = useMemo(() => classifyAll(prospects).filter((row) => row.status === "pendiente"), [prospects]);
   const families = useMemo(() => [...new Set(pending.map((row) => row.prospect.family).filter(Boolean))].sort(), [pending]);
@@ -22,6 +22,7 @@ export function ProspectCleanup({ prospects, onDiscard, onKeep }) {
       && (family === "todas" || row.prospect.family === family)
       && (!query || `${row.prospect.company} ${row.prospect.city} ${row.prospect.rubro}`.toLowerCase().includes(query)));
   }, [pending, contact, fit, family, text]);
+  const paged = usePaged(filtered, 25, [contact, fit, family, text].join("|"));
   const toDrop = pending.filter((row) => row.fit === "bajar");
   const download = () => {
     const blob = new Blob([cleanupCsv(filtered)], { type: "text/csv;charset=utf-8" });
@@ -66,13 +67,13 @@ export function ProspectCleanup({ prospects, onDiscard, onKeep }) {
       </div>
       <div className="cleanup-filters">
         <label>Teléfono
-          <select value={contact} onChange={(event) => { setContact(event.target.value); setLimit(PAGE); }}>
+          <select value={contact} onChange={(event) => { setContact(event.target.value); }}>
             <option value="todos">Todos</option>
             {Object.entries(CONTACT_LABEL).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
           </select>
         </label>
         <label>Encaje
-          <select value={fit} onChange={(event) => { setFit(event.target.value); setLimit(PAGE); }}>
+          <select value={fit} onChange={(event) => { setFit(event.target.value); }}>
             <option value="todos">Todos</option>
             <option value="alta">Prioridad</option>
             <option value="normal">Sin juicio</option>
@@ -82,13 +83,13 @@ export function ProspectCleanup({ prospects, onDiscard, onKeep }) {
           </select>
         </label>
         <label>Familia
-          <select value={family} onChange={(event) => { setFamily(event.target.value); setLimit(PAGE); }}>
+          <select value={family} onChange={(event) => { setFamily(event.target.value); }}>
             <option value="todas">Todas</option>
             {families.map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
         </label>
         <label>Buscar
-          <input value={text} onChange={(event) => { setText(event.target.value); setLimit(PAGE); }} placeholder="Empresa, ciudad o rubro" />
+          <input value={text} onChange={(event) => { setText(event.target.value); }} placeholder="Empresa, ciudad o rubro" />
         </label>
       </div>
       <div className="cleanup-actions">
@@ -97,7 +98,7 @@ export function ProspectCleanup({ prospects, onDiscard, onKeep }) {
         <span className="muted small">{filtered.length} de {pending.length} a la vista</span>
       </div>
       <div className="cleanup-list">
-        {filtered.slice(0, limit).map((row) => (
+        {paged.rows.map((row) => (
           <article key={row.prospect.id} className={`cleanup-row fit-${row.fit}`}>
             <div className="cleanup-main">
               <strong>{row.prospect.company || "Sin nombre"}</strong>
@@ -112,7 +113,7 @@ export function ProspectCleanup({ prospects, onDiscard, onKeep }) {
           </article>
         ))}
         {!filtered.length && <p className="muted">No hay prospectos con ese filtro.</p>}
-        {filtered.length > limit && <button type="button" className="secondary" onClick={() => setLimit(limit + PAGE)}>Mostrar {Math.min(PAGE, filtered.length - limit)} más</button>}
+        <Pager paged={paged} label="prospectos" />
       </div>
     </section>
   );

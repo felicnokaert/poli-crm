@@ -1,3 +1,4 @@
+import { Pager, usePaged } from "./Pager.jsx";
 import { useEffect, useMemo, useState } from "react";
 import { AccountTag } from "./MlAccountTag";
 import { filterHub, HUB_FILTERS, listingLabel } from "./product-hub.mjs";
@@ -91,7 +92,6 @@ function ProductChannels({ supabase }) {
   const [filter, setFilter] = useState("todos");
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState("");
-  const [limit, setLimit] = useState(PAGE);
 
   useEffect(() => {
     if (!supabase?.from) { setState({ status: "offline", rows: [], dollar: null }); return undefined; }
@@ -103,8 +103,9 @@ function ProductChannels({ supabase }) {
   }, [supabase]);
 
   const list = useMemo(() => filterHub(state.rows, { filter, query }), [state.rows, filter, query]);
+  const paged = usePaged(list, 25, [filter, query].join("|"));
   const counts = useMemo(() => Object.fromEntries(HUB_FILTERS.map(([key]) => [key, filterHub(state.rows, { filter: key }).length])), [state.rows]);
-  useEffect(() => { setLimit(PAGE); }, [filter, query]);
+
 
   if (state.status === "loading") return <div className="ml-skeleton" role="status" aria-label="Cargando"><i /><i /><i /></div>;
   if (state.status === "offline") return <section className="panel"><p className="muted">Productos necesita la cuenta en línea.</p></section>;
@@ -123,7 +124,7 @@ function ProductChannels({ supabase }) {
         </div>
         {list.length === 0 ? <p className="muted">No hay productos con ese filtro.</p> : (
           <ul className="ph-list">
-            {list.slice(0, limit).map((row) => {
+            {paged.rows.map((row) => {
               const warn = row.alerts.find((alert) => alert.key === "precio-raro");
               const isOpen = open === row.sku;
               return (
@@ -149,7 +150,7 @@ function ProductChannels({ supabase }) {
             })}
           </ul>
         )}
-        {list.length > limit && <button type="button" className="secondary" onClick={() => setLimit(limit + PAGE)}>Ver {Math.min(PAGE, list.length - limit)} más (de {list.length})</button>}
+        <Pager paged={paged} label="productos" />
       </section>
     </div>
   );

@@ -1,3 +1,4 @@
+import { Pager, usePaged } from "./Pager.jsx";
 import { useMemo, useRef, useState } from "react";
 import { Download, Upload } from "lucide-react";
 import { formatCuit } from "./map-clients-adapter.mjs";
@@ -30,12 +31,12 @@ const PASO = 25;
 // con los CUIT pendientes (o se carga el export de Contabilium) y se completan SOLO los campos vacíos.
 export function PendientesUbicacion({ clients, onApplyLocations }) {
   const entradaRef = useRef(null);
-  const [visibles, setVisibles] = useState(PASO);
   const [plan, setPlan] = useState(null);
   const [aviso, setAviso] = useState({ texto: "", error: false });
   const [trabajando, setTrabajando] = useState(false);
 
   const pendientes = useMemo(() => pendientesDeUbicacion(clients || []), [clients]);
+  const paged = usePaged(pendientes, PASO);
   const resumen = useMemo(() => resumenPendientes(pendientes), [pendientes]);
 
   async function descargarPlanilla() {
@@ -165,7 +166,7 @@ export function PendientesUbicacion({ clients, onApplyLocations }) {
           <table className="mapa-share-lista">
             <thead><tr><th>Cliente</th><th>CUIT</th><th>Última compra</th><th>Falta</th></tr></thead>
             <tbody>
-              {pendientes.slice(0, visibles).map((p) => (
+              {paged.rows.map((p) => (
                 <tr key={p.doc}>
                   <td>{p.nombre}</td>
                   <td>{p.conDocumento ? formatCuit(p.doc) : "—"}</td>
@@ -175,11 +176,7 @@ export function PendientesUbicacion({ clients, onApplyLocations }) {
               ))}
             </tbody>
           </table>
-          {visibles < pendientes.length && (
-            <button type="button" className="secondary" onClick={() => setVisibles((n) => n + PASO * 4)}>
-              Ver más ({pendientes.length - visibles} restantes)
-            </button>
-          )}
+          <Pager paged={paged} label="clientes" />
         </>
       )}
     </div>

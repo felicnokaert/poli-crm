@@ -1717,3 +1717,5 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .company-days-list li { display: flex; justify-content: space-between; gap: 10px; align-items: center; border-bottom: 1px solid var(--color-border); padding-bottom: 6px; }
 
 .stock-adjust { display: grid; gap: 10px; margin-top: 10px; }.stock-adjust > .secondary { justify-self: start; }
+
+th.nowrap, td.nowrap { white-space: nowrap; }

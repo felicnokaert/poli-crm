@@ -11,7 +11,11 @@ let actual = { persona: "", deposito: "", admin: null };
 export function setIdentidad({ persona = "", deposito = "", admin = null } = {}) {
   actual = { persona: String(persona || ""), deposito: canonDep(deposito || leer(KD)), admin };
 }
-export const getPersona = () => actual.persona;
+const KP = "poliplast-logistica-persona";
+/** Quién sos: el de la app; si la app no lo sabe (cuenta compartida sin «quién sos»), el que se eligió en la pantalla. */
+export const getPersona = () => actual.persona || leer(KP);
+export const personaDeLaApp = () => Boolean(actual.persona);
+export const elegirPersona = (n) => { try { if (n) localStorage.setItem(KP, n); else localStorage.removeItem(KP); } catch { /* sin storage */ } };
 export const getDeposito = () => actual.deposito || canonDep(leer(KD));
 export const setDeposito = (d) => { const v = canonDep(d); actual = { ...actual, deposito: v }; guardar(KD, v); };
 /** {nombre, pin} para las funciones de administrador de la base (el «pin» es el token de la sesión de la app), o null. */

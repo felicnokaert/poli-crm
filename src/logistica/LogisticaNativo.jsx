@@ -3,6 +3,7 @@ import { accessAllows } from "../team-access.mjs";
 import { conteoDb } from "./conteo-db.js";
 import Dosificado from "./Dosificado.jsx";
 import Conteo from "./Conteo.jsx";
+import Etiquetas from "./Etiquetas.jsx";
 
 // Logística nativa (28/11): las pantallas de la app de conteo, ya dentro de Poliplast App (sin iframes). Acá se resuelve lo
 // que antes hacía el marco: quién sos y depósito (de la app) y si es administrador de Logística: la app firma
@@ -42,4 +43,16 @@ export function ConteoNativo({ access = null, who = null, me = "", getFirma = nu
   const admin = useAdminLogistica(getFirma, persona, deposito);
   const puedeAdmin = !access || accessAllows(access, "conteo", "Administración");
   return <Conteo persona={persona} deposito={deposito} admin={puedeAdmin ? admin : null} />;
+}
+
+const ETQ_TABS = { escanear: "Escanear", pendientes: "Pendientes", historial: "Hecho", devoluciones: "Devoluciones", cortes: "Cortes" };
+
+export function EtiquetasNativa({ access = null, who = null, me = "", getFirma = null }) {
+  const persona = who?.who || me || "";
+  const deposito = who?.deposit || "";
+  const admin = useAdminLogistica(getFirma, persona, deposito);
+  const tabs = Object.keys(ETQ_TABS).filter((id) => !access || accessAllows(access, "etiquetas", ETQ_TABS[id]));
+  // «Productividad del equipo»: permiso aparte que arranca apagado (OPT_IN); solo quien lo tiene tildado.
+  const productividad = access ? accessAllows(access, "etiquetas", "Productividad del equipo") : false;
+  return <Etiquetas persona={persona} deposito={deposito} admin={admin} productividad={productividad} tabs={tabs} />;
 }

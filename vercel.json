@@ -101,7 +101,7 @@
       ]
     },
     {
-      "source": "/((?!mapa|entregas-maqueta|entregas-app|conteo-maqueta).*)",
+      "source": "/((?!mapa|entregas-maqueta|entregas-app|conteo-maqueta|conteo-app).*)",
       "headers": [
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "X-Frame-Options", "value": "DENY" },
@@ -112,7 +112,7 @@
       ]
     },
     {
-      "source": "/(entregas-maqueta|entregas-app|conteo-maqueta)(/.*)?",
+      "source": "/(entregas-maqueta|entregas-app|conteo-maqueta|conteo-app)(/.*)?",
       "headers": [
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "X-Frame-Options", "value": "SAMEORIGIN" },

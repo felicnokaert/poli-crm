@@ -10,7 +10,7 @@ import { Star } from "lucide-react";
 import { isChannelAdmin } from "./user-channels.mjs";
 
 // Menú lateral de Poliplast App (rama de prueba, 25/11): 7 grupos según docs/PLAN_POLIPLAST_APP.md.
-// Lo marcado como futuro (Etiquetas, Conteo, Dosificado, Recibos, Facturación, Compras) abre una vista «próximamente».
+// Lo marcado como futuro (Recibos, Facturación, Compras) abre una vista «próximamente». Etiquetas, Conteo y Dosificado son la app de conteo real (28/11).
 export const NAV_GROUPS = [
   // Inicio va suelto arriba (27/11, Felipe: «que no sea un menú»): el grupo no muestra título ni se pliega.
   ["Inicio", [

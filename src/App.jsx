@@ -816,8 +816,10 @@ export default function App() {
         {isExpedition && !expeditionWho ? <ExpeditionGate operators={expeditionOperators} onPick={setExpeditionWho} /> : (
         <ErrorBoundary key={view} view={view}>
         <div className={previewSite ? "view-enter" : undefined}>
-        {FUTURE_MODULES[view] && previewSite && CONTEO_MODULES[view] && <ConteoMaqueta key={view} module={view} access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} />}
-        {FUTURE_MODULES[view] && !(previewSite && CONTEO_MODULES[view]) && (demo ? <DemoModule key={view} id={view} access={previewAccess} /> : <ModulePreview id={view} />)}
+        {/* 28/11 (Logística): Etiquetas, Conteo y Dosificado son la app de conteo REAL en /conteo-app/ (mismo origen, datos
+            reales); en el link de prueba sigue la maqueta (/conteo-maqueta/: datos inventados, no escribe nada de verdad). */}
+        {CONTEO_MODULES[view] && <ConteoMaqueta key={view} module={view} base={previewSite ? "/conteo-maqueta/" : "/conteo-app/"} access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} />}
+        {FUTURE_MODULES[view] && !CONTEO_MODULES[view] && (demo ? <DemoModule key={view} id={view} access={previewAccess} /> : <ModulePreview id={view} />)}
         {view === "avisos" && isAdminUser && <AppReports online={Boolean(onlineConfigured && session)} />}
         {view === "team" && isAdminUser && <TeamAccess team={team} onChange={teamStore.save} rolesTable={teamStore.rolesTable} status={teamStore.status} groups={NAV_GROUPS} onViewAs={(person) => pickPreviewRole(`person:${person.email}`)} />}
         {view === "plan" && <AppPlanOverview groups={NAV_GROUPS} role={previewRole} onRole={pickPreviewRole} onResetDemo={demo ? () => { if (window.confirm("¿Volver a cargar los datos de prueba? Se pierde lo que tocaste en la prueba.")) { setData((current) => withDemoData(current, { force: true })); } } : null} />}

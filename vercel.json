@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
+  "git": { "deploymentEnabled": { "@(!(main|poliplast-app))": false, "*/**": false } },
   "cleanUrls": true,
   "crons": [
     { "path": "/api/cron-daily-maintenance", "schedule": "0 6 * * *" },

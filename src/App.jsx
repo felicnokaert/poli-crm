@@ -52,6 +52,7 @@ const CotizadorFrame = lazyNamed(() => import("./CotizadorFrame"), "CotizadorFra
 const EntregasFrame = lazyNamed(() => import("./EntregasFrame"), "EntregasFrame");
 const EntregasNativa = lazyNamed(() => import("./EntregasNativa"), "default");
 const DosificadoNativo = lazyNamed(() => import("./logistica/LogisticaNativo.jsx"), "DosificadoNativo");
+const ConteoNativo = lazyNamed(() => import("./logistica/LogisticaNativo.jsx"), "ConteoNativo");
 // Único de los cinco named exports de Academy.jsx que se usa acá - los
 // otros (CommercialKnowledge, Coach, QuickReplies, Training) son internos,
 // consumidos solo por el propio <Academy> - así que separarla en su propio
@@ -822,7 +823,8 @@ export default function App() {
             reales); en el link de prueba sigue la maqueta (/conteo-maqueta/: datos inventados, no escribe nada de verdad). */}
         {/* 28/11 (Felipe: «una sola app»): Dosificado ya es una pantalla propia; Etiquetas y Conteo siguen con el puente hasta pasarlos. */}
         {view === "dosificado" && <Suspense fallback={<Splash text="Cargando dosificado…" />}><DosificadoNativo access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} /></Suspense>}
-        {CONTEO_MODULES[view] && view !== "dosificado" && <ConteoMaqueta key={view} module={view} base={previewSite ? "/conteo-maqueta/" : "/conteo-app/"} access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} />}
+        {view === "conteo" && <Suspense fallback={<Splash text="Cargando conteo…" />}><ConteoNativo access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} /></Suspense>}
+        {CONTEO_MODULES[view] && view !== "dosificado" && view !== "conteo" && <ConteoMaqueta key={view} module={view} base={previewSite ? "/conteo-maqueta/" : "/conteo-app/"} access={previewAccess} who={isExpedition ? expeditionWho : null} me={String(session?.user?.user_metadata?.full_name || "")} getFirma={onlineConfigured && session ? conteoFirma : null} />}
         {FUTURE_MODULES[view] && !CONTEO_MODULES[view] && (demo ? <DemoModule key={view} id={view} access={previewAccess} /> : <ModulePreview id={view} />)}
         {view === "avisos" && isAdminUser && <AppReports online={Boolean(onlineConfigured && session)} />}
         {view === "team" && isAdminUser && <TeamAccess team={team} onChange={teamStore.save} rolesTable={teamStore.rolesTable} status={teamStore.status} groups={NAV_GROUPS} onViewAs={(person) => pickPreviewRole(`person:${person.email}`)} />}

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { accessAllows } from "../team-access.mjs";
 import { conteoDb } from "./conteo-db.js";
 import Dosificado from "./Dosificado.jsx";
+import Conteo from "./Conteo.jsx";
 
 // Logística nativa (28/11): las pantallas de la app de conteo, ya dentro de Poliplast App (sin iframes). Acá se resuelve lo
 // que antes hacía el marco: quién sos y depósito (de la app) y si es administrador de Logística: la app firma
@@ -33,4 +34,12 @@ export function DosificadoNativo({ access = null, who = null, me = "", getFirma 
   const admin = useAdminLogistica(getFirma, persona, deposito);
   const tabs = Object.keys(DOSIF_TABS).filter((id) => !access || accessAllows(access, "dosificado", DOSIF_TABS[id]));
   return <Dosificado persona={persona} deposito={deposito} admin={admin} tabs={tabs} />;
+}
+
+export function ConteoNativo({ access = null, who = null, me = "", getFirma = null }) {
+  const persona = who?.who || me || "";
+  const deposito = who?.deposit || "";
+  const admin = useAdminLogistica(getFirma, persona, deposito);
+  const puedeAdmin = !access || accessAllows(access, "conteo", "Administración");
+  return <Conteo persona={persona} deposito={deposito} admin={puedeAdmin ? admin : null} />;
 }

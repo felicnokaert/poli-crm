@@ -5,6 +5,8 @@ import { persistEvents } from '../lib/storage.mjs';
 import { autoReplyEvents } from '../lib/whatsapp-autoreply.mjs';
 import { logError } from '../lib/log.mjs';
 import { logWebhookCall, summarizePayload } from '../lib/webhook-log.mjs';
+import { handleShopifyWebhook } from '../lib/shopify-orders.mjs';
+import { db } from '../lib/mercadolibre.mjs';
 
 export const config = { api: { bodyParser: false } };
 
@@ -50,6 +52,18 @@ export default async function handler(request, response) {
     if (error instanceof PayloadTooLargeError) return response.status(413).json({ ok: false, error: 'payload_too_large' });
     logError('whatsapp-webhook', 'failed reading request body', {}, error);
     return response.status(400).json({ ok: false, error: 'invalid_body' });
+  }
+
+  // 28/11: avisos de pedidos nuevos de Shopify (/api/shopify-webhook se reescribe acá: el plan de Vercel limita las funciones
+  // y la firma de Shopify también necesita el cuerpo crudo). Ver lib/shopify-orders.mjs.
+  if (request.query?.shopify) {
+    try {
+      const result = await handleShopifyWebhook({ rawBody, headers: request.headers }, db(process.env, fetch));
+      return response.status(result.status).json(result.body);
+    } catch (error) {
+      logError('shopify-webhook', 'failed handling order', {}, error);
+      return response.status(500).json({ ok: false });
+    }
   }
 
   const signature = request.headers['x-hub-signature-256'];

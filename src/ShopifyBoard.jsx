@@ -478,8 +478,18 @@ export function ShopifyBoard({ supabase, session, isAdmin, hiddenTabs = null, em
     setBusy(true); setMessage("");
     try {
       const result = await callShopify({ op: "sync" }, session);
-      setMessage(`Listo: ${result.products} productos, ${result.variants} variantes y ${result.orders} pedidos de 30 días.${result.errors?.length ? ` Aviso: ${result.errors.join(" · ")}` : ""}`);
+      setMessage(`Listo: ${result.products} productos, ${result.variants} variantes y ${result.orders} pedidos de 30 días.${result.pedidos?.added ? ` ${result.pedidos.added} pedidos nuevos pasaron a Entregas.` : ""}${result.errors?.length ? ` Aviso: ${result.errors.join(" · ")}` : ""}`);
       setReload((value) => value + 1);
+    } catch (error) { setMessage(error.message); }
+    setBusy(false);
+  }
+
+  // 28/11: aviso de pedidos nuevos → tarjeta verde en Entregas + mail a Brenda e info@ (se activa una vez).
+  async function subscribe() {
+    setBusy(true); setMessage("");
+    try {
+      const result = await callShopify({ op: "webhooks" }, session);
+      setMessage(result.created?.length ? `Listo: Shopify ya avisa cada pedido nuevo (${result.created.join(", ")}).` : "El aviso de pedidos ya estaba activo.");
     } catch (error) { setMessage(error.message); }
     setBusy(false);
   }
@@ -495,6 +505,7 @@ export function ShopifyBoard({ supabase, session, isAdmin, hiddenTabs = null, em
         <div className="ml-toolbar">
           <span className="muted small">{data.status === "ready" ? `Última actualización: ${when(syncedAt)} · se actualiza solo cada mañana` : "Tienda Shopify, solo lectura"}</span>
           {isAdmin && <button type="button" className="secondary" disabled={busy} onClick={sync}><RefreshCw size={14} /> {busy ? "Actualizando…" : "Actualizar ahora"}</button>}
+          {isAdmin && <button type="button" className="secondary" disabled={busy} onClick={subscribe} title="Cada pedido nuevo aparece en Entregas (tarjeta verde) y sale un mail a Brenda e info@">Activar aviso de pedidos</button>}
         </div>
         {message && <p className="muted small" role="status">{message}</p>}
       </section>

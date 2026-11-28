@@ -99,6 +99,25 @@ export interface Pedido {
   despacho_at?: string | null
 }
 
+/** Pedido de la tienda online (Shopify) que todavía hay que facturar, remitir y preparar (28/11). */
+export interface PedidoShopify {
+  id: string
+  name: string
+  created_at: string
+  total: number | null
+  currency: string
+  delivery: '' | 'SHIPPING' | 'PICK_UP'
+  shipping_title: string
+  items: { sku: string; title: string; qty: number; price: number | null }[]
+  cliente: { nombre?: string; empresa?: string; telefono?: string; email?: string; direccion?: string; localidad?: string; provincia?: string; cp?: string }
+  cancelado: boolean
+  factura_at: string | null
+  remito_at: string | null
+  produccion_at: string | null
+  pasos_por: string | null
+}
+export type PasoShopify = 'factura' | 'remito' | 'produccion'
+
 export interface Evento {
   id: number
   pedido_id: string

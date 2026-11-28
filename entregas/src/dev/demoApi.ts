@@ -5,10 +5,20 @@ import { puedeTransicionar } from '../lib/estados'
 import { aISO, hoyISO } from '../lib/fechas'
 import { depositoActual, operadorActual } from '../lib/operador'
 import {
-  CONFIG_DEFAULT, type Archivo, type Config, type Estado, type Evento, type Expreso, type Pedido, type Rol, type Usuario,
+  CONFIG_DEFAULT, type Archivo, type Config, type Estado, type Evento, type Expreso, type PasoShopify, type Pedido, type PedidoShopify, type Rol, type Usuario,
 } from '../lib/types'
 
 const CLAVE = 'poli-entregas-maqueta-v2'
+
+// Pedidos de Shopify de ejemplo (28/11): solo en memoria, se reinician al recargar.
+const shopify: PedidoShopify[] = [
+  { id: 'gid://shopify/Order/9001', name: '#1181', created_at: new Date(Date.now() - 3 * 3_600_000).toISOString(), total: 45900, currency: 'ARS', delivery: 'SHIPPING', shipping_title: 'Envío a domicilio',
+    items: [{ sku: 'PS-PU46-1', title: 'Espuma PU-46 x3', qty: 1, price: 45900 }], cliente: { nombre: 'Ana Pérez', telefono: '11 5555-0000', localidad: 'Quilmes', provincia: 'Buenos Aires' },
+    cancelado: false, factura_at: null, remito_at: null, produccion_at: null, pasos_por: null },
+  { id: 'gid://shopify/Order/9002', name: '#1182', created_at: new Date(Date.now() - 26 * 3_600_000).toISOString(), total: 182500, currency: 'ARS', delivery: 'PICK_UP', shipping_title: 'Retiro en Villa Domínico',
+    items: [{ sku: 'KT-EASYSPRAY-6', title: 'Kit Profesional EasySpray x6', qty: 1, price: 182500 }], cliente: { nombre: 'Taller Gómez' },
+    cancelado: false, factura_at: new Date(Date.now() - 20 * 3_600_000).toISOString(), remito_at: null, produccion_at: null, pasos_por: 'brenda@grupopoliplast.com.ar' },
+]
 
 interface Estado_ {
   usuarioId: string | null
@@ -286,6 +296,13 @@ export function crearDemoApi(): Api {
       guardar()
     },
     async telefonoCliente() { return null },
+    async pedidosShopify() { return demora(shopify.filter((p) => !p.remito_at && !p.cancelado).map((p) => ({ ...p }))) },
+    async marcarPasoShopify(id: string, paso: PasoShopify, hecho: boolean) {
+      const p = shopify.find((x) => x.id === id)
+      if (p) { p[`${paso}_at`] = hecho ? new Date().toISOString() : null; p.pasos_por = 'maqueta' }
+      oyentes.forEach((cb) => cb())
+      return demora(undefined)
+    },
     async eventosRecientes(desde) { return demora(db.eventos.filter((e) => e.created_at >= desde).sort((a, b) => b.created_at.localeCompare(a.created_at))) },
     escuchar(cb) { oyentes.add(cb); return () => oyentes.delete(cb) },
   }

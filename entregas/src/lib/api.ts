@@ -1,5 +1,5 @@
 import type {
-  Archivo, CamposEditables, Config, DatosCambio, Estado, Evento, Expreso, NuevoPedido, Pedido, Rol, RolAsignado, TipoArchivo, Usuario,
+  Archivo, CamposEditables, Config, DatosCambio, Estado, Evento, Expreso, NuevoPedido, PasoShopify, Pedido, PedidoShopify, Rol, RolAsignado, TipoArchivo, Usuario,
 } from './types'
 
 export interface DetallePedido {
@@ -43,6 +43,11 @@ export interface Api {
   telefonoCliente(cuit: string | null, razonSocial: string): Promise<string | null>
   /** Eventos recientes (para "Novedades"). */
   eventosRecientes(desde: string): Promise<Evento[]>
+
+  /** Pedidos de Shopify sin remito todavía (28/11). Opcional: expedición no los ve. */
+  pedidosShopify?(): Promise<PedidoShopify[]>
+  /** Marca o desmarca un paso (factura, remito, producción). Con el remito queda cerrado. */
+  marcarPasoShopify?(id: string, paso: PasoShopify, hecho: boolean): Promise<void>
 
   /** Avisa cuando cambia algo en pedidos o eventos (tiempo real). Devuelve la función para dejar de escuchar. */
   escuchar(cb: () => void): () => void

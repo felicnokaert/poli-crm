@@ -74,9 +74,7 @@ export function LoginScreen() {
   return (
     <div className="login-shell login-app">
       <aside className="login-brand" aria-hidden="true">
-        <img className="login-brand-mark" src="/poliplast-isotipo-blanco.png" alt="" />
-        <p className="login-brand-group">Grupo Poliplast</p>
-        <p className="login-brand-name">Poliplast <span>App</span></p>
+        <p className="login-brand-name"><img src="/poliplast-logo-blanco.png" alt="Grupo Poliplast" /><span>App</span></p>
         <p className="login-brand-line">Ventas, entregas, depósito y canales online en un solo lugar.</p>
       </aside>
       <section className="login-card">

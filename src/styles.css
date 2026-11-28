@@ -1952,16 +1952,17 @@ main .metric:hover, main .channel-card:hover, main .unit-card:hover, main .histo
 .login-app .login-card { align-self: center; justify-self: center; margin: 32px 20px; box-shadow: none; border: 0; }
 .login-app .login-card h1 { font-size: 30px; letter-spacing: -.01em; }
 .login-brand { position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; padding: 56px; min-height: 100vh; color: #fff; background: radial-gradient(120% 90% at 0% 100%, #ff4b52 0%, transparent 55%), linear-gradient(155deg, #c8121a 0%, #ed1c24 55%, #a80d14 100%); }
-.login-brand::after { content: ""; position: absolute; right: -14%; top: -10%; width: 70%; aspect-ratio: 1; border-radius: 50%; border: 56px solid rgba(255, 255, 255, .07); pointer-events: none; }
+.login-brand::after { content: ""; position: absolute; right: -16%; top: -8%; width: 78%; aspect-ratio: 1; background: url("/poliplast-isotipo-blanco.png") center / contain no-repeat; opacity: .1; pointer-events: none; }
 .login-brand-mark { position: absolute; top: 48px; left: 56px; width: 64px; height: 64px; object-fit: contain; }
 .login-brand-group { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; opacity: .85; }
-.login-brand-name { margin: 0; font: 800 clamp(44px, 6vw, 76px)/.95 'Manrope', sans-serif; letter-spacing: -.03em; }
+.login-brand-name { margin: 0; display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; font: 800 clamp(40px, 5vw, 68px)/.9 'Manrope', sans-serif; letter-spacing: -.02em; }
+.login-brand-name img { width: min(420px, 78%); height: auto; display: block; }
 .login-brand-name span { color: #ffd2d4; }
 .login-brand-line { margin: 6px 0 0; max-width: 30ch; font-size: 17px; line-height: 1.45; opacity: .92; }
 @media (max-width: 860px) {
   .login-app { grid-template-columns: 1fr; align-content: start; }
   .login-brand { min-height: 0; padding: 28px 22px 24px; gap: 6px; }
-  .login-brand::after { width: 60%; border-width: 30px; }
+  .login-brand::after { width: 62%; }
   .login-brand-mark { position: static; width: 44px; height: 44px; margin-bottom: 10px; }
   .login-brand-name { font-size: 40px; }
   .login-brand-line { font-size: 15px; }

@@ -8,6 +8,9 @@
 export const PERIODS = [[30, '30 días'], [90, '90 días'], [180, '6 meses']];
 export const LEVELS = [['producto', 'Productos'], ['rubro', 'Rubros'], ['subrubro', 'Subrubros']];
 export const MEASURES = [['usd', 'Facturado en USD (sin IVA)'], ['unidades', 'Unidades']];
+// 28/11: venta directa o facturada desde Mercado Libre (canal del renglón; sin dato = directa).
+export const CHANNELS = [['', 'Todo'], ['directo', 'Directo'], ['ml', 'Mercado Libre']];
+const channelOf = (item) => (item.canal === 'ml' ? 'ml' : 'directo');
 export const NO_RUBRO = 'Sin rubro';
 
 const plain = (value = '') => String(value).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -37,7 +40,7 @@ export function classify(item = {}, catalog = new Map()) {
 }
 
 // Junta los renglones del período (y filtros) por el nivel pedido y ordena de mayor a menor por la medida.
-export function rankItems(items = [], { days = 30, now = Date.now(), level = 'producto', measure = 'usd', company = '', rubro = '', subrubro = '', query = '', catalog = new Map() } = {}) {
+export function rankItems(items = [], { days = 30, now = Date.now(), level = 'producto', measure = 'usd', channel = '', company = '', rubro = '', subrubro = '', query = '', catalog = new Map() } = {}) {
   const since = sinceDate(days, now);
   let noUsd = 0;
   const words = plain(query).split(/\s+/).filter(Boolean);
@@ -49,6 +52,7 @@ export function rankItems(items = [], { days = 30, now = Date.now(), level = 'pr
     if (!item || !item.fecha || item.fecha < since) continue;
     const sign = Number(item.signo) || 0;
     if (!sign) continue;
+    if (channel && channelOf(item) !== channel) continue;
     const info = classify(item, catalog);
     options.companies.add(item.company);
     if (company && item.company !== company) continue;
@@ -105,7 +109,7 @@ export function rankingCsv(rows = [], level = 'producto') {
 }
 
 // Semanas de un producto (o rubro/subrubro) en el período: unidades y USD por semana (lunes), para el gráfico al entrar.
-export function weeklySeries(items = [], { key = '', level = 'producto', days = 90, now = Date.now(), company = '', catalog = new Map() } = {}) {
+export function weeklySeries(items = [], { key = '', level = 'producto', days = 90, now = Date.now(), company = '', channel = '', catalog = new Map() } = {}) {
   const since = sinceDate(days, now);
   const monday = (date) => { const d = new Date(`${date}T12:00:00Z`); const day = (d.getUTCDay() + 6) % 7; d.setUTCDate(d.getUTCDate() - day); return d.toISOString().slice(0, 10); };
   const weeks = new Map();
@@ -117,7 +121,7 @@ export function weeklySeries(items = [], { key = '', level = 'producto', days = 
   for (const item of items) {
     if (!item?.fecha || item.fecha < since) continue;
     const sign = Number(item.signo) || 0;
-    if (!sign || (company && item.company !== company)) continue;
+    if (!sign || (company && item.company !== company) || (channel && channelOf(item) !== channel)) continue;
     const info = classify(item, catalog);
     const itemKey = level === 'rubro' ? info.rubro : level === 'subrubro' ? `${info.rubro}|${info.subrubro}` : info.key;
     if (itemKey !== key) continue;

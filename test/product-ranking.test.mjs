@@ -79,3 +79,13 @@ test('dólares: USD tal cual, pesos divididos por el dólar del día; semanas po
   assert.equal(series.rows.reduce((sum, row) => sum + row.usd, 0), 600);
   assert.deepEqual(series.byCompany.map((row) => row.name), ['POLIPLAST', 'POLIOCHO']);
 });
+
+test('canal: directo o Mercado Libre', () => {
+  const mixed = [
+    { company: 'POLIPLAST', fecha: '2026-11-20', signo: 1, codigo: 'A', nombre: 'A', cantidad: 1, neto_usd: 10, canal: 'ml' },
+    { company: 'POLIPLAST', fecha: '2026-11-20', signo: 1, codigo: 'A', nombre: 'A', cantidad: 1, neto_usd: 5 },
+  ];
+  assert.equal(rankItems(mixed, { days: 30, now: NOW }).totalNet, 15);
+  assert.equal(rankItems(mixed, { days: 30, now: NOW, channel: 'ml' }).totalNet, 10);
+  assert.equal(rankItems(mixed, { days: 30, now: NOW, channel: 'directo' }).totalNet, 5);
+});

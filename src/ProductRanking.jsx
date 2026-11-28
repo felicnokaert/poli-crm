@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { barWidths, catalogIndex, LEVELS, MEASURES, PERIODS, rankingCsv, rankItems, sinceDate, weeklySeries } from "./product-ranking.mjs";
+import { barWidths, catalogIndex, CHANNELS, LEVELS, MEASURES, PERIODS, rankingCsv, rankItems, sinceDate, weeklySeries } from "./product-ranking.mjs";
 import { adminFetch } from "./admin-api.mjs";
 
 // 27/11: Ranking de ventas (Contabilium) dentro de Productos. FC y COT suman; NC y NCT restan.
@@ -23,7 +23,7 @@ async function loadAll(query) {
 
 export async function loadRanking(supabase, now = Date.now()) {
   const since = sinceDate(370, now);
-  const items = await loadAll(() => supabase.from("contabilium_items").select("company,fecha,signo,codigo,nombre,cantidad,neto,neto_usd,rubro,subrubro").gte("fecha", since).order("fecha", { ascending: false }));
+  const items = await loadAll(() => supabase.from("contabilium_items").select("company,fecha,signo,codigo,nombre,cantidad,neto,neto_usd,canal,rubro,subrubro").gte("fecha", since).order("fecha", { ascending: false }));
   let catalog = [];
   try {
     const [variants, products] = await Promise.all([
@@ -68,9 +68,9 @@ function SyncButton({ onDone }) {
   return <p className="small"><button type="button" className="secondary" disabled={state.busy} onClick={run}>{state.busy ? "Leyendo…" : "Traer renglones ahora"}</button> <span className="muted">{state.text}</span></p>;
 }
 
-function WeeklyChart({ items, rowKey, level, days, company, catalog, label, onClose }) {
+function WeeklyChart({ items, rowKey, level, days, company, channel, catalog, label, onClose }) {
   const [metric, setMetric] = useState("usd");
-  const series = useMemo(() => weeklySeries(items, { key: rowKey, level, days, company, catalog }), [items, rowKey, level, days, company, catalog]);
+  const series = useMemo(() => weeklySeries(items, { key: rowKey, level, days, company, channel, catalog }), [items, rowKey, level, days, company, channel, catalog]);
   const values = series.rows.map((row) => (metric === "units" ? row.units : row.usd));
   const max = Math.max(0, ...values);
   const fmtWeek = (week) => `${week.slice(8, 10)}/${week.slice(5, 7)}`;
@@ -104,6 +104,7 @@ export function ProductRanking({ supabase, isAdmin = false }) {
   const [open, setOpen] = useState(null);
   const [level, setLevel] = useState("producto");
   const [measure, setMeasure] = useState("usd");
+  const [channel, setChannel] = useState("");
   const [company, setCompany] = useState("");
   const [rubro, setRubro] = useState("");
   const [subrubro, setSubrubro] = useState("");
@@ -124,7 +125,7 @@ export function ProductRanking({ supabase, isAdmin = false }) {
   }, [supabase, reload]);
 
   const index = useMemo(() => catalogIndex(state.catalog), [state.catalog]);
-  const result = useMemo(() => rankItems(state.items, { days, level, measure, company, rubro, subrubro, query, catalog: index }), [state.items, days, level, measure, company, rubro, subrubro, query, index]);
+  const result = useMemo(() => rankItems(state.items, { days, level, measure, channel, company, rubro, subrubro, query, catalog: index }), [state.items, days, level, measure, channel, company, rubro, subrubro, query, index]);
   const shown = showAll ? result.rows : result.rows.slice(0, SHOWN);
   const widths = useMemo(() => barWidths(shown, measure), [shown, measure]);
   const fmt = measure === "unidades" ? units : money;
@@ -141,7 +142,7 @@ export function ProductRanking({ supabase, isAdmin = false }) {
   return (
     <section className="panel ranking">
       <div className="panel-head"><div><span className="eyebrow">Ventas de Contabilium</span><h2>Ranking de {LEVELS.find(([key]) => key === level)?.[1].toLowerCase()}</h2>
-        <p className="muted small">Todas las razones sociales (POLIPLAST, POLIOCHO, FOAMFACTORY, COMARG). Facturas (FC) y cotizaciones (COT) suman; notas de crédito (NC y NCT) restan. En dólares, sin IVA: cada venta en pesos se divide por el dólar del día en que se facturó. Por ahora sin las ventas facturadas desde Mercado Libre (se suman en el próximo paso). {periodLabel}: {money(result.totalNet)} · {units(result.totalUnits)}.{result.noUsd ? ` ${result.noUsd} renglones todavía sin el dólar calculado.` : ""}</p></div></div>
+        <p className="muted small">Todas las razones sociales (POLIPLAST, POLIOCHO, FOAMFACTORY, COMARG). Facturas (FC) y cotizaciones (COT) suman; notas de crédito (NC y NCT) restan. En dólares, sin IVA: cada venta en pesos se divide por el dólar del día en que se facturó. Incluye lo facturado desde Mercado Libre (filtrá por canal). {periodLabel}: {money(result.totalNet)} · {units(result.totalUnits)}.{result.noUsd ? ` ${result.noUsd} renglones todavía sin el dólar calculado.` : ""}</p></div></div>
       {isAdmin && <SyncButton onDone={() => setReload((value) => value + 1)} />}
       {state.items.length === 0 ? <p className="muted">Todavía no hay renglones leídos de Contabilium. Se traen solos de madrugada{isAdmin ? " o con «Traer renglones ahora»" : ""}.</p> : <>
         <div className="ranking-filters">
@@ -150,6 +151,9 @@ export function ProductRanking({ supabase, isAdmin = false }) {
           </div>
           <div className="segmented" role="tablist" aria-label="Qué se ordena">
             {LEVELS.map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={level === key} className={level === key ? "selected" : ""} onClick={() => setLevel(key)}>{label}</button>)}
+          </div>
+          <div className="segmented" role="tablist" aria-label="Canal">
+            {CHANNELS.map(([key, label]) => <button key={key || "todo"} type="button" role="tab" aria-selected={channel === key} className={channel === key ? "selected" : ""} onClick={() => setChannel(key)}>{label}</button>)}
           </div>
           <div className="segmented" role="tablist" aria-label="Medida">
             {MEASURES.map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={measure === key} className={measure === key ? "selected" : ""} onClick={() => setMeasure(key)}>{label}</button>)}
@@ -172,7 +176,7 @@ export function ProductRanking({ supabase, isAdmin = false }) {
               </li>
             ))}
           </ol>
-          {open && <WeeklyChart items={state.items} rowKey={open} level={level} days={days} company={company} catalog={index} label={result.rows.find((row) => row.key === open)?.label || ""} onClose={() => setOpen(null)} />}
+          {open && <WeeklyChart items={state.items} rowKey={open} level={level} days={days} company={company} channel={channel} catalog={index} label={result.rows.find((row) => row.key === open)?.label || ""} onClose={() => setOpen(null)} />}
           <p className="small">
             {result.rows.length > SHOWN && <button type="button" className="secondary" onClick={() => setShowAll(!showAll)}>{showAll ? `Ver solo los ${SHOWN} primeros` : `Ver los ${result.rows.length}`}</button>}{" "}
             <button type="button" className="secondary" onClick={() => download(rankingCsv(result.rows, level), `ranking-${level}-${days}d.csv`)}>Descargar CSV</button>

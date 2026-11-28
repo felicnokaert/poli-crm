@@ -24,3 +24,14 @@ test('Solo lectura: responde como si se hubiera guardado', async () => {
   const api = await fakeWrite('/api/admin-users', { method: 'POST', body: '{}' }).json();
   assert.equal(api.readOnly, true);
 });
+
+test('las funciones que guardan (Logística, Entregas) también se frenan', () => {
+  const CONTEO = 'https://coldwrbfxpdfutbekysr.supabase.co/rest/v1/rpc';
+  for (const fn of ['etq_escanear', 'etq_deshacer', 'etq_guardar_config', 'guardar_admin', 'borrar_admin', 'cambiar_pin', 'dosif_resync_planilla']) {
+    assert.equal(isWrite(`${CONTEO}/${fn}`, { method: 'POST' }), true, fn);
+  }
+  assert.equal(isWrite(`${REST}/rpc/entregas_cambiar_estado`, { method: 'POST' }), true);
+  for (const fn of ['dosif_admin_login', 'verificar_pin', 'dosif_planilla_url']) assert.equal(isWrite(`${CONTEO}/${fn}`, { method: 'POST' }), false, fn);
+  assert.equal(isWrite(`${REST}/rpc/search_ml_knowledge`, { method: 'POST' }), false);
+  assert.equal(isWrite('https://coldwrbfxpdfutbekysr.supabase.co/rest/v1/kv_store', { method: 'POST' }), true);
+});

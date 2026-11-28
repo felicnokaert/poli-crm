@@ -4,6 +4,8 @@
 // de Supabase (es el primer import de main.jsx), así todas las llamadas pasan por acá.
 import { isPreviewSite } from './demo-mode.mjs';
 
+// Funciones de la base que ESCRIBEN (28/11: Logística nativa usa la base de conteo con funciones que guardan; Entregas también).
+const WRITE_RPC = /\/rpc\/(etq_|guardar_|borrar_|cambiar_|dosif_resync|entregas_cambiar|entregas_editar)/;
 const READ_OPS = new Set(['status', 'list', 'activity', 'probe', 'scopes', 'sent-ids', 'get', 'quote']);
 
 // ¿Esta llamada escribe? (PostgREST: todo lo que no es GET/HEAD, salvo las funciones rpc que solo leen;
@@ -13,7 +15,8 @@ export function isWrite(url, init = {}) {
   if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return false;
   const text = String(url);
   if (/\/auth\/v1\//.test(text)) return false; // iniciar o renovar la sesión
-  if (/\/rest\/v1\/rpc\//.test(text)) return false; // funciones de lectura (listados, nombres)
+  if (WRITE_RPC.test(text)) return true;
+  if (/\/rest\/v1\/rpc\//.test(text)) return false; // funciones de lectura (listados, nombres, login con PIN)
   if (/\/rest\/v1\//.test(text) || /\/storage\/v1\//.test(text)) return true;
   if (/\/api\/admin-users/.test(text)) {
     try {

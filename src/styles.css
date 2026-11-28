@@ -2216,3 +2216,10 @@ th.nowrap, td.nowrap { white-space: nowrap; }
 .recibos-card:hover { border-color: var(--brand-red, #ed1c24); transform: translateY(-1px); }
 .recibos-card strong { display: inline-flex; align-items: center; gap: 6px; }
 @media (prefers-reduced-motion: reduce) { .recibos-card { transition: none; } .recibos-card:hover { transform: none; } }
+
+/* Cotizador nativo: stock de Contabilium (28/11) */
+.stock-badge { display: inline-flex; align-self: flex-start; width: fit-content; margin-top: 3px; padding: 1px 8px; border-radius: 99px; font-size: 12px; font-weight: 700; }
+.stock-badge.is-ok { background: #e7f3ec; color: #22684a; }
+.stock-badge.is-none { background: #fbe7e3; color: #a33a2f; }
+:root[data-theme="dark"] .stock-badge.is-ok { background: #1d3a2b; color: #8fd4ad; }
+:root[data-theme="dark"] .stock-badge.is-none { background: #3e2220; color: #f0a59b; }

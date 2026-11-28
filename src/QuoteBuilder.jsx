@@ -4,6 +4,7 @@ import { currentListPrices } from "./assistant-prices.mjs";
 import { PriceAdmin } from "./PriceAdmin.jsx";
 import { PriceCalculator, usePricingState } from "./PricingEngine.jsx";
 import { loadDollar } from "./product-hub-data.js";
+import { loadStock, normCode, stockLabel } from "./quote-stock.mjs";
 import { MODES, ars, channelRefs, lineTotals, pickRow, quoteTotals, rarePrice, usd, whatsappText, wholesaleWarnings } from "./quote-model.mjs";
 import { STATUSES, linesFromItems, listQuotes, quoteNumber, quoteRow, saveQuote, setQuoteStatus } from "./quote-store.js";
 
@@ -65,6 +66,7 @@ export function QuoteBuilder({ supabase, userId = "", clients = [], initialClien
   const [lines, setLines] = useState([]);
   const [copied, setCopied] = useState(false);
   const [message, setMessage] = useState("");
+  const [stock, setStock] = useState({ map: new Map(), at: "" });
 
   useEffect(() => {
     if (!supabase) return;
@@ -72,6 +74,7 @@ export function QuoteBuilder({ supabase, userId = "", clients = [], initialClien
     supabase.from("payment_policies").select("id,name,customer_text,discount_percent,surcharge_percent,active,sort_order").eq("active", true).order("sort_order").then(({ data }) => setPayments(data || []));
     supabase.from("wholesale_order_policies").select("brand,threshold_net_usd,mix_products,active").then(({ data }) => setPolicies(data || []));
     loadDollar().then(setDollar);
+    loadStock(supabase).then(setStock);
   }, [supabase]);
 
   useEffect(() => {
@@ -234,7 +237,7 @@ export function QuoteBuilder({ supabase, userId = "", clients = [], initialClien
           <ul className="quote-results">
             {searching && !results.length && <li className="muted small">Buscando…</li>}
             {results.map((variant) => (
-              <li key={variant.id}><button type="button" onClick={() => add(variant)}><strong>{variant.name}</strong><span className="muted small">{variant.sku || "sin SKU"}{variant.brand ? ` · ${variant.brand}` : ""}</span></button></li>
+              <li key={variant.id}><button type="button" onClick={() => add(variant)}><strong>{variant.name}</strong><span className="muted small">{variant.sku || "sin SKU"}{variant.brand ? ` · ${variant.brand}` : ""}</span><StockBadge stock={stock} sku={variant.sku} /></button></li>
             ))}
           </ul>
         )}
@@ -252,6 +255,7 @@ export function QuoteBuilder({ supabase, userId = "", clients = [], initialClien
                 <div className="quote-line-main">
                   <strong>{line.name}</strong>
                   <span className="muted small">{line.sku || "sin SKU"}{line.brand ? ` · ${line.brand}` : ""}{line.row ? ` · ${line.row.list}` : ""}{line.row?.fallback ? " (no hay lista de ese tipo)" : ""}</span>
+                  <StockBadge stock={stock} sku={line.sku} />
                   {line.loading && <span className="muted small">Cargando precio…</span>}
                   {!line.loading && !line.row && <span className="quote-warn small">Sin precio vigente en las listas.</span>}
                   <span className="quote-refs small">
@@ -305,4 +309,12 @@ function CalculatorScreen({ supabase, clients }) {
   const [state] = usePricingState();
   if (!state) return <p className="muted">Cargando…</p>;
   return <PriceCalculator supabase={supabase} clients={clients} state={state} />;
+}
+
+// Stock de Contabilium por depósito (V. Domínico y Mar del Plata), sin dato no muestra nada.
+function StockBadge({ stock, sku }) {
+  const label = sku ? stockLabel(stock.map.get(normCode(sku))) : null;
+  if (!label) return null;
+  const when = stock.at ? new Date(stock.at).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
+  return <span className={`stock-badge ${label.tone === "ok" ? "is-ok" : "is-none"}`} title={when ? `Contabilium, actualizado ${when}` : "Contabilium"}>{label.text}</span>;
 }

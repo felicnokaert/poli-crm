@@ -115,7 +115,7 @@ export function facets(rows = []) {
 // CSV de lo que se ve (una fila por producto).
 const cell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
 export function productsCsv(rows = []) {
-  const head = ['Producto', 'Estado', 'Marca', 'Tipo', 'Variantes', 'Precio mínimo', 'Precio máximo', 'Stock', 'SKUs', 'Le falta', 'Link'];
+  const head = ['Producto', 'Estado', 'Marca', 'Tipo', 'Variantes', 'Precio mínimo', 'Precio máximo', 'Stock', 'SKUs', 'Problemas', 'Link'];
   const lines = rows.map((row) => [
     row.product.title, statusLabel(row.product.status), row.product.vendor, row.product.product_type, row.variants.length, row.minPrice, row.maxPrice, row.product.total_inventory,
     row.variants.map((variant) => variant.sku).filter(Boolean).join(' '), row.issues.map(issueLabel).join(' | '), row.product.online_url,

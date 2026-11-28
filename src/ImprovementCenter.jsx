@@ -7,7 +7,7 @@ import { Empty } from "./ui-primitives";
 // Centro de mejoras (24/10): la lista de trabajo para dejar limpios Mercado Libre y Shopify. Cuánto falta de cada cosa,
 // cómo viene bajando y un "Ver cuáles" que lleva directo a esas publicaciones o productos. Solo lee; no cambia nada afuera.
 const argentinaToday = () => new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
-const ML_COLUMNS = "id,seller_id,status,clips_count,pictures_count,description_length,health,available_quantity,sold_quantity,visits_30d,item_updated_at,sku,variation_skus";
+const ML_COLUMNS = "id,seller_id,status,clips_count,pictures_count,description_length,health,available_quantity,sold_quantity,visits_30d,item_updated_at,sku,variation_skus,variations_count";
 const OPEN_KEYS = { ml: "poliplast-open-ml", shopify: "poliplast-open-shopify" };
 
 async function readAll(query) {

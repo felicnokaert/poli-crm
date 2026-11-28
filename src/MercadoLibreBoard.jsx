@@ -6,7 +6,7 @@ import { MlCompetition, MlTrends } from "./MlCompetition.jsx";
 import { MlEconomics } from "./MlEconomics.jsx";
 import { adminFetch } from "./admin-api.mjs";
 import { ArrowDownRight, ArrowUpRight, CircleAlert, Clapperboard, Eye, MessageCircleQuestion, PauseCircle, Percent, PlayCircle, RefreshCw, Search, ShoppingBag, Store, Wallet } from "lucide-react";
-import { ACCOUNT_COLORS, ML_ISSUES, ML_SORTS, ML_STATUS, accountTone, countQuestions, filterBoard, issuesOf, statusLabel, summarizeBoard } from "./ml-board.mjs";
+import { ACCOUNT_COLORS, ML_ISSUES, ML_SORTS, ML_STATUS, accountTone, countQuestions, filterBoard, issueName, issuesOf, statusLabel, summarizeBoard, variantsWithoutSku } from "./ml-board.mjs";
 import { AccountTag } from "./MlAccountTag.jsx";
 import { CHART_METRICS, DailyChart } from "./DailyChart.jsx";
 import { MEDAL, PERIODS, REPUTATION, buildAlerts, change, combineMetrics, latestBySeller, periodStats } from "./ml-summary.mjs";
@@ -18,7 +18,7 @@ import { MlAds } from "./MlAds.jsx";
 // reputación y qué atender, en 7/14/30 días contra el período anterior) y Publicaciones de las 3 cuentas.
 // Solo muestra lo que se trajo de Mercado Libre (actualización diaria y Más → Datos); no cambia nada allá.
 const PAGE = 100;
-const COLUMNS = "id,seller_id,title,permalink,status,price,currency,sold_quantity,available_quantity,pictures_count,health,thumbnail,description_length,item_updated_at,visits_7d,visits_30d,clips_count,sku,variation_skus";
+const COLUMNS = "id,seller_id,title,permalink,status,price,currency,sold_quantity,available_quantity,pictures_count,health,thumbnail,description_length,item_updated_at,visits_7d,visits_30d,clips_count,sku,variation_skus,variations_count";
 const money = (value, currency) => (typeof value === "number" ? value.toLocaleString("es-AR", { style: "currency", currency: currency || "ARS", maximumFractionDigits: 0 }) : "—");
 const number = (value) => (typeof value === "number" ? value.toLocaleString("es-AR") : "—");
 const percent = (value) => (typeof value === "number" ? `${(value * 100).toLocaleString("es-AR", { maximumFractionDigits: 2 })} %` : "—");
@@ -332,7 +332,7 @@ function Listings({ items, accounts, nickname, questionCounts, seller, issue, se
         ))}
       </div>
       <div className="segmented" role="tablist" aria-label="Qué les falta">
-        {[["", "Sin filtro"], ...ML_ISSUES.map(([key, label]) => [key, `${label} (${summary.issues[key]})`])].map(([key, label]) => (
+        {[["", "Sin filtro"], ...ML_ISSUES.map((issue) => [issue[0], `${issueName(issue)} (${summary.issues[issue[0]]})`])].map(([key, label]) => (
           <button key={key || "ninguno"} type="button" role="tab" aria-selected={issue === key} className={issue === key ? "selected" : ""} onClick={() => setIssue(key)}>{label}</button>
         ))}
       </div>
@@ -346,14 +346,14 @@ function Listings({ items, accounts, nickname, questionCounts, seller, issue, se
       {items.length > 0 && shown.length === 0 && <Empty text="No hay publicaciones con ese filtro." />}
       {page.length > 0 && (
         <div className="table-scroll"><table className="sales-history-table ml-board-table">
-          <thead><tr><th>Publicación</th><th>Cuenta</th><th>Estado</th><th>Precio</th><th>Vendidas</th><th>Stock</th><th>Visitas 7 d</th><th>Visitas 30 d</th><th>Preguntas</th><th>Clip</th><th>Le falta</th></tr></thead>
+          <thead><tr><th>Publicación</th><th>Cuenta</th><th>Estado</th><th>Precio</th><th>Vendidas</th><th>Stock</th><th className="nowrap">Visitas 7 días</th><th className="nowrap">Visitas 30 días</th><th>Preguntas</th><th>Clip</th><th>Problemas</th></tr></thead>
           <tbody>
             {page.map((item) => (
               <tr key={item.id}>
                 <td>
                   <a className="ml-board-title" href={item.permalink} target="_blank" rel="noreferrer">
                     {item.thumbnail && <img src={item.thumbnail} alt="" width="40" height="40" loading="lazy" />}
-                    <span>{item.title}<small className="muted"> · {item.id}{item.sku ? ` · ${item.sku}` : Array.isArray(item.variation_skus) && item.variation_skus.length ? ` · SKU por variación (${item.variation_skus.length})` : ""}</small></span>
+                    <span>{item.title}<small className="muted"> · {item.id}{item.sku ? ` · ${item.sku}` : Array.isArray(item.variation_skus) && item.variation_skus.length ? ` · SKU por variación (${item.variation_skus.length}${variantsWithoutSku(item) ? `, ${variantsWithoutSku(item)} sin SKU` : ''})` : ""}</small></span>
                   </a>
                 </td>
                 <td><AccountTag name={nickname[item.seller_id] || item.seller_id} /></td>
